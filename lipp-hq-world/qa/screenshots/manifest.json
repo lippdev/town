@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T03:07:49.283Z",
+  "generatedAt": "2026-10-30T03:16:29.278Z",
   "url": "http://127.0.0.1:4173",
   "viewport": {
     "width": 1440,
@@ -15,9 +15,9 @@
     {
       "name": "overview-default",
       "file": "qa/screenshots/overview-default.png",
-      "sha256": "6138891897873f40",
-      "mean": 58.37,
-      "stdDev": 73.03,
+      "sha256": "f4f1a3d6c359018b",
+      "mean": 57.95,
+      "stdDev": 72.76,
       "width": 1440,
       "height": 900,
       "view": {
@@ -57,55 +57,11 @@
       "signCount": 9
     },
     {
-      "name": "camera-south",
-      "file": "qa/screenshots/camera-south.png",
-      "sha256": "681209c6d85357f4",
-      "mean": 50.58,
-      "stdDev": 67.42,
-      "width": 1440,
-      "height": 900,
-      "view": {
-        "azimuthDeg": 0,
-        "elevationDeg": 34,
-        "distance": 57,
-        "target": [
-          0,
-          0,
-          0
-        ]
-      },
-      "framing": {
-        "minX": 0.1424,
-        "minY": 0.2839,
-        "maxX": 0.8576,
-        "maxY": 0.7554,
-        "centerX": 0.5,
-        "centerY": 0.5196,
-        "widthFraction": 0.7152,
-        "heightFraction": 0.4715
-      },
-      "framingBypassed": false,
-      "cutawayWalls": [
-        "cap-v0-south",
-        "cap-v1-south",
-        "comando-south",
-        "comunidade-south",
-        "conteudo-south",
-        "engenharia-south",
-        "hall-south",
-        "operacoes-south",
-        "pesquisa-south",
-        "produto-south",
-        "reunioes-south"
-      ],
-      "signCount": 9
-    },
-    {
       "name": "camera-zoom-in",
       "file": "qa/screenshots/camera-zoom-in.png",
-      "sha256": "aed254805d8198a6",
-      "mean": 125,
-      "stdDev": 75.43,
+      "sha256": "74816bf10c5534aa",
+      "mean": 123.81,
+      "stdDev": 76.01,
       "width": 1440,
       "height": 900,
       "view": {
@@ -121,11 +77,9 @@
       "framing": null,
       "framingBypassed": true,
       "cutawayWalls": [
-        "cap-v1-south",
         "comando-south",
         "comunidade-south",
         "conteudo-east",
-        "conteudo-south",
         "engenharia-south",
         "hall-south",
         "operacoes-east",
@@ -215,11 +169,9 @@
       }
     ],
     "cutawayWalls": [
-      "cap-v1-south",
       "comando-south",
       "comunidade-south",
       "conteudo-east",
-      "conteudo-south",
       "engenharia-south",
       "hall-south",
       "operacoes-east",

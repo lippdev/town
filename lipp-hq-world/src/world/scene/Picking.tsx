@@ -15,6 +15,18 @@ export function registerPickable(object: import("three").Object3D) {
   if (!pickables.includes(object)) pickables.push(object);
 }
 
+/** Sobe a árvore até achar a marcação de agente ou sala. */
+function pickInfo(object: import("three").Object3D): { agentId?: string; roomId?: string } {
+  let node: import("three").Object3D | null = object;
+  while (node) {
+    const agentId = node.userData?.agentId as string | undefined;
+    const roomId = node.userData?.roomId as string | undefined;
+    if (agentId || roomId) return { agentId, roomId };
+    node = node.parent;
+  }
+  return {};
+}
+
 function collectPickables(): import("three").Object3D[] {
   return pickables.filter((object) => {
     let root: import("three").Object3D | null = object;
@@ -62,14 +74,13 @@ export function Picking() {
 
       const hits = raycaster.intersectObjects(collectPickables(), true);
       for (const hit of hits) {
-        const agentId = hit.object.userData?.agentId as string | undefined;
-        if (agentId && AGENTS_BY_ID[agentId]) {
-          useHQStore.getState().selectAgent(agentId);
+        const info = pickInfo(hit.object);
+        if (info.agentId && AGENTS_BY_ID[info.agentId]) {
+          useHQStore.getState().selectAgent(info.agentId);
           return;
         }
-        const roomId = hit.object.userData?.roomId as string | undefined;
-        if (roomId) {
-          useHQStore.getState().selectRoom(roomId);
+        if (info.roomId) {
+          useHQStore.getState().selectRoom(info.roomId);
           return;
         }
       }

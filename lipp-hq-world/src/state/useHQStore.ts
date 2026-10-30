@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
+import type { AgentAnimationState, ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
 
 export interface CameraView {
   azimuthDeg: number;
@@ -23,6 +23,8 @@ interface HQState {
   events: HQEvent[];
   cameraCommand: CameraCommand | null;
   cameraView: CameraView | null;
+  agentStates: Record<string, AgentAnimationState>;
+  setAgentState: (agentId: string, state: AgentAnimationState, summary?: string) => void;
   setWallMode: (mode: WallMode) => void;
   selectRoom: (roomId: string | null) => void;
   selectAgent: (agentId: string | null) => void;
@@ -45,6 +47,25 @@ export const useHQStore = create<HQState>((set) => ({
   events: [],
   cameraCommand: null,
   cameraView: null,
+  agentStates: {},
+
+  setAgentState: (agentId, agentState, summary) =>
+    set((state) => {
+      const event: HQEvent | null = summary
+        ? {
+            id: `${agentId}-${agentState}-${Date.now()}`,
+            timestamp: Date.now(),
+            agentId,
+            source: state.dataSource,
+            type: agentState === "working" ? "agent.working" : agentState === "idle" ? "agent.idle" : "agent.started",
+            summary,
+          }
+        : null;
+      return {
+        agentStates: { ...state.agentStates, [agentId]: agentState },
+        events: event ? [event, ...state.events].slice(0, MAX_EVENTS) : state.events,
+      };
+    }),
 
   setWallMode: (wallMode) => set({ wallMode }),
   selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null }),

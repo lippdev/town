@@ -48,6 +48,7 @@ export interface HqQaApi {
     azimuth: number;
   } | null;
   select: (roomId: string) => void;
+  getAgentScreenPoint: (agentId: string) => { x: number; y: number } | null;
   focus: (roomId: string) => void;
   reset: () => void;
   getSelection: () => { roomId: string | null; agentId: string | null };
@@ -166,6 +167,23 @@ export function QaBridge() {
         };
       },
       select: (roomId) => useHQStore.getState().selectRoom(roomId),
+      getAgentScreenPoint: (agentId) => {
+        let found: { x: number; y: number } | null = null;
+        scene.traverse((object) => {
+          if (found) return;
+          if (object.name === `agent-${agentId}` && "position" in object) {
+            const world = new Vector3();
+            object.getWorldPosition(world);
+            world.y += 0.9;
+            const projected = world.clone().project(camera);
+            found = {
+              x: ((projected.x + 1) / 2) * window.innerWidth,
+              y: ((1 - projected.y) / 2) * window.innerHeight,
+            };
+          }
+        });
+        return found;
+      },
       focus: (roomId) => useHQStore.getState().focusRoom(roomId),
       reset: () => useHQStore.getState().resetCamera(),
       getSelection: () => {
