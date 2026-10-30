@@ -5,10 +5,10 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** Stage 3 — ambientação e acabamento.
+**Stage em andamento:** nenhum — **MVP entregue** (GO final, rubrica 38/40).
 
-**Último fechado:** Stage 2 — câmera e paredes dinâmicas, a fase bloqueante
-(GO do revisor independente em 2026-10-30).
+**Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
+Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40**.
 
 ## Provas mecânicas do Gate 2 (harness)
 

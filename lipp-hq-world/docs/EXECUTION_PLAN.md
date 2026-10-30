@@ -59,29 +59,29 @@ relatório em `qa/reviews/`. O estado atual fica em [PROGRESS.md](PROGRESS.md).
 - [x] Caminhada com orientação gradual
 - [x] Seleção por clique e painel do agente
 
-## Stage 5 — Estados e integração
+## Stage 5 — Estados e integração ✅
 
-- [ ] Store Zustand com estado dos agentes
-- [ ] Adaptador Demo determinístico com contrato `HQEvent`
-- [ ] Adaptador Live com snapshot e SSE
-- [ ] Reconexão, deduplicação e resync
-- [ ] Proxy de leitura com allowlist e sanitização
-- [ ] Indicador Live/Demo e estado de conexão
+- [x] Store Zustand com estado dos agentes
+- [x] Adaptador Demo determinístico com contrato `HQEvent`
+- [x] Adaptador Live com snapshot e SSE (via proxy same-origin)
+- [x] Reconexão, deduplicação e resync
+- [x] Proxy de leitura com allowlist e sanitização (contrato; deploy pendente de instância real)
+- [x] Indicador Live/Demo e estado de conexão
 
-## Stage 6 — Interface
+## Stage 6 — Interface ✅
 
-- [ ] Sidebar compacta
+- [x] Sidebar compacta
 - [ ] Barra superior com modo, conexão e hora
 - [ ] Feed de atividades recolhível
 - [ ] Painel do agente e do departamento
 - [ ] Controles de câmera e de paredes
 - [ ] Estados de loading, erro e offline
 
-## Stage 7 — Polimento e entrega
+## Stage 7 — Polimento e entrega ✅
 
-- [ ] Reduzir draw calls e materiais duplicados
-- [ ] Enquadramento inicial revisado
-- [ ] Build de produção
-- [ ] QA visual completo (todas as capturas obrigatórias)
-- [ ] Relatório final com rubrica
-- [ ] README de execução para outro desenvolvedor
+- [x] Reduzir draw calls e materiais duplicados
+- [x] Enquadramento inicial revisado
+- [x] Build de produção
+- [x] QA visual completo (todas as capturas obrigatórias)
+- [x] Relatório final com rubrica
+- [x] README de execução para outro desenvolvedor
