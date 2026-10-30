@@ -2,6 +2,8 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { CAMERA } from "@/config/constants";
+import { Hud } from "@/components/hud/Hud";
+import { LiveConnection } from "@/integrations/openmausbot/LiveConnection";
 import { HQScene } from "@/world/scene/HQScene";
 import { ReadySignal } from "@/app/ReadySignal";
 
@@ -32,6 +34,8 @@ export function App() {
           <HQScene />
         </Suspense>
       </Canvas>
+      <Hud />
+      <LiveConnection />
       <ReadySignal />
     </div>
   );
