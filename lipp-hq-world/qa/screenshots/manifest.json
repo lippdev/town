@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T03:16:29.278Z",
+  "generatedAt": "2026-10-30T03:45:57.232Z",
   "url": "http://127.0.0.1:4173",
   "viewport": {
     "width": 1440,
@@ -57,11 +57,277 @@
       "signCount": 9
     },
     {
+      "name": "camera-north",
+      "file": "qa/screenshots/camera-north.png",
+      "sha256": "b850d5cabc35053a",
+      "mean": 47.79,
+      "stdDev": 59.38,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 180,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1424,
+        "minY": 0.2839,
+        "maxX": 0.8576,
+        "maxY": 0.7554,
+        "centerX": 0.5,
+        "centerY": 0.5196,
+        "widthFraction": 0.7152,
+        "heightFraction": 0.4715
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-v0-north",
+        "cap-v1-north",
+        "comando-north",
+        "comunidade-north",
+        "conteudo-north",
+        "engenharia-north",
+        "hall-north",
+        "operacoes-north",
+        "pesquisa-north",
+        "produto-north",
+        "reunioes-north"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-east",
+      "file": "qa/screenshots/camera-east.png",
+      "sha256": "fad2fbce081947d2",
+      "mean": 49.78,
+      "stdDev": 66.28,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 90,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.199,
+        "minY": 0.2495,
+        "maxX": 0.801,
+        "maxY": 0.8461,
+        "centerX": 0.5,
+        "centerY": 0.5478,
+        "widthFraction": 0.602,
+        "heightFraction": 0.5966
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-h0-east",
+        "cap-h1-east",
+        "comando-east",
+        "comunidade-east",
+        "conteudo-east",
+        "engenharia-east",
+        "hall-east",
+        "operacoes-east",
+        "pesquisa-east",
+        "produto-east",
+        "reunioes-east"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-south",
+      "file": "qa/screenshots/camera-south.png",
+      "sha256": "d20394c33dda6179",
+      "mean": 49.97,
+      "stdDev": 66.87,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 0,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1424,
+        "minY": 0.2839,
+        "maxX": 0.8576,
+        "maxY": 0.7554,
+        "centerX": 0.5,
+        "centerY": 0.5196,
+        "widthFraction": 0.7152,
+        "heightFraction": 0.4715
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-v0-south",
+        "cap-v1-south",
+        "comando-south",
+        "comunidade-south",
+        "conteudo-south",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-south",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-west",
+      "file": "qa/screenshots/camera-west.png",
+      "sha256": "9ba3e7b04e8625c6",
+      "mean": 48.96,
+      "stdDev": 60.21,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": -90,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.199,
+        "minY": 0.2495,
+        "maxX": 0.801,
+        "maxY": 0.8461,
+        "centerX": 0.5,
+        "centerY": 0.5478,
+        "widthFraction": 0.602,
+        "heightFraction": 0.5966
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-h0-west",
+        "cap-h1-west",
+        "comando-west",
+        "comunidade-west",
+        "conteudo-west",
+        "engenharia-west",
+        "hall-west",
+        "operacoes-west",
+        "pesquisa-west",
+        "produto-west",
+        "reunioes-west"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-diagonal-a",
+      "file": "qa/screenshots/camera-diagonal-a.png",
+      "sha256": "bb69fa0e099dd610",
+      "mean": 52.11,
+      "stdDev": 68.94,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 40,
+        "elevationDeg": 30,
+        "distance": 55,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1309,
+        "minY": 0.2344,
+        "maxX": 0.8784,
+        "maxY": 0.9493,
+        "centerX": 0.5046,
+        "centerY": 0.5918,
+        "widthFraction": 0.7475,
+        "heightFraction": 0.7149
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-east",
+        "operacoes-south",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-diagonal-b",
+      "file": "qa/screenshots/camera-diagonal-b.png",
+      "sha256": "56ce5363a9b29450",
+      "mean": 47.8,
+      "stdDev": 62.27,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 140,
+        "elevationDeg": 30,
+        "distance": 55,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1216,
+        "minY": 0.2344,
+        "maxX": 0.8691,
+        "maxY": 0.9493,
+        "centerX": 0.4954,
+        "centerY": 0.5918,
+        "widthFraction": 0.7475,
+        "heightFraction": 0.7149
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-east",
+        "comando-north",
+        "comunidade-north",
+        "conteudo-east",
+        "conteudo-north",
+        "engenharia-east",
+        "hall-north",
+        "operacoes-east",
+        "operacoes-north",
+        "pesquisa-east",
+        "pesquisa-north",
+        "produto-north",
+        "reunioes-north"
+      ],
+      "signCount": 9
+    },
+    {
       "name": "camera-zoom-in",
       "file": "qa/screenshots/camera-zoom-in.png",
-      "sha256": "74816bf10c5534aa",
-      "mean": 123.81,
-      "stdDev": 76.01,
+      "sha256": "2e2f38fc8ea0f1c7",
+      "mean": 124.01,
+      "stdDev": 76.12,
       "width": 1440,
       "height": 900,
       "view": {
@@ -77,9 +343,448 @@
       "framing": null,
       "framingBypassed": true,
       "cutawayWalls": [
+        "comando-east",
         "comando-south",
         "comunidade-south",
         "conteudo-east",
+        "engenharia-east",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-east",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "walls-auto-north",
+      "file": "qa/screenshots/walls-auto-north.png",
+      "sha256": "938cccd4a60bbab1",
+      "mean": 53.59,
+      "stdDev": 62.43,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 180,
+        "elevationDeg": 32,
+        "distance": 52,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.0949,
+        "minY": 0.2758,
+        "maxX": 0.9051,
+        "maxY": 0.7747,
+        "centerX": 0.5,
+        "centerY": 0.5252,
+        "widthFraction": 0.8102,
+        "heightFraction": 0.4989
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-v0-north",
+        "cap-v1-north",
+        "comando-north",
+        "comunidade-north",
+        "conteudo-north",
+        "engenharia-north",
+        "hall-north",
+        "operacoes-north",
+        "pesquisa-north",
+        "produto-north",
+        "reunioes-north"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "walls-auto-south",
+      "file": "qa/screenshots/walls-auto-south.png",
+      "sha256": "ce48d3a28cacb7d5",
+      "mean": 56.58,
+      "stdDev": 70.55,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 0,
+        "elevationDeg": 32,
+        "distance": 52,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.0949,
+        "minY": 0.2758,
+        "maxX": 0.9051,
+        "maxY": 0.7747,
+        "centerX": 0.5,
+        "centerY": 0.5252,
+        "widthFraction": 0.8102,
+        "heightFraction": 0.4989
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "cap-v0-south",
+        "cap-v1-south",
+        "comando-south",
+        "comunidade-south",
+        "conteudo-south",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-south",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "walls-auto-diagonal",
+      "file": "qa/screenshots/walls-auto-diagonal.png",
+      "sha256": "781d6ae43bfa3cfb",
+      "mean": 57.27,
+      "stdDev": 71.55,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 50,
+        "elevationDeg": 30,
+        "distance": 52,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1407,
+        "minY": 0.2196,
+        "maxX": 0.9205,
+        "maxY": 1.0056,
+        "centerX": 0.5306,
+        "centerY": 0.6126,
+        "widthFraction": 0.7798,
+        "heightFraction": 0.786
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "conteudo-south",
+        "engenharia-east",
+        "engenharia-south",
+        "hall-east",
+        "hall-south",
+        "operacoes-east",
+        "operacoes-south",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-east",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "walls-low",
+      "file": "qa/screenshots/walls-low.png",
+      "sha256": "503bafdf5050471d",
+      "mean": 45.51,
+      "stdDev": 62.76,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 45,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.155,
+        "minY": 0.2124,
+        "maxX": 0.8739,
+        "maxY": 0.9729,
+        "centerX": 0.5144,
+        "centerY": 0.5927,
+        "widthFraction": 0.7189,
+        "heightFraction": 0.7605
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "conteudo-south",
+        "engenharia-east",
+        "engenharia-south",
+        "hall-east",
+        "hall-south",
+        "operacoes-east",
+        "operacoes-south",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-east",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "walls-full",
+      "file": "qa/screenshots/walls-full.png",
+      "sha256": "df480dabeb76de57",
+      "mean": 53.29,
+      "stdDev": 71.17,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 45,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.155,
+        "minY": 0.2124,
+        "maxX": 0.8739,
+        "maxY": 0.9729,
+        "centerX": 0.5144,
+        "centerY": 0.5927,
+        "widthFraction": 0.7189,
+        "heightFraction": 0.7605
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "conteudo-south",
+        "engenharia-east",
+        "engenharia-south",
+        "hall-east",
+        "hall-south",
+        "operacoes-east",
+        "operacoes-south",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-east",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "drag-right-rotate",
+      "file": "qa/screenshots/drag-right-rotate.png",
+      "sha256": "5adf4a4d91085f86",
+      "mean": 48.69,
+      "stdDev": 61.53,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": -78.98,
+        "elevationDeg": 34,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": null,
+      "framingBypassed": true,
+      "cutawayWalls": [
+        "cap-h0-west",
+        "cap-h1-west",
+        "comando-south",
+        "comando-west",
+        "comunidade-south",
+        "comunidade-west",
+        "conteudo-west",
+        "engenharia-south",
+        "engenharia-west",
+        "hall-west",
+        "operacoes-west",
+        "pesquisa-west",
+        "produto-west",
+        "reunioes-west"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "drag-vertical-orbit",
+      "file": "qa/screenshots/drag-vertical-orbit.png",
+      "sha256": "15a6ea1f8fcb90b3",
+      "mean": 64.55,
+      "stdDev": 75.49,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 11.19,
+        "elevationDeg": 65.94,
+        "distance": 57,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": null,
+      "framingBypassed": true,
+      "cutawayWalls": [
+        "cap-v0-south",
+        "cap-v1-south",
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "conteudo-south",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-south",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "room-selected-focus",
+      "file": "qa/screenshots/room-selected-focus.png",
+      "sha256": "ebf7659b1e20ae09",
+      "mean": 89.2,
+      "stdDev": 80.45,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 26.59,
+        "elevationDeg": 65.73,
+        "distance": 26,
+        "target": [
+          -11.399999999999999,
+          0.9,
+          -8.7
+        ]
+      },
+      "framing": {
+        "minX": 0.2731,
+        "minY": 0.1847,
+        "maxX": 0.7182,
+        "maxY": 0.8232,
+        "centerX": 0.4956,
+        "centerY": 0.504,
+        "widthFraction": 0.4451,
+        "heightFraction": 0.6385
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "comunidade-west",
+        "conteudo-north",
+        "engenharia-south",
+        "hall-west",
+        "operacoes-north",
+        "produto-west",
+        "reunioes-west"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "camera-reset",
+      "file": "qa/screenshots/camera-reset.png",
+      "sha256": "6e233b6443ebe61d",
+      "mean": 57.8,
+      "stdDev": 72.6,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 40.31,
+        "elevationDeg": 37.33,
+        "distance": 54.42,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1252,
+        "minY": 0.1814,
+        "maxX": 0.885,
+        "maxY": 1.025,
+        "centerX": 0.5051,
+        "centerY": 0.6032,
+        "widthFraction": 0.7598,
+        "heightFraction": 0.8436
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "engenharia-east",
+        "engenharia-south",
+        "hall-south",
+        "operacoes-east",
+        "operacoes-south",
+        "pesquisa-east",
+        "pesquisa-south",
+        "produto-south",
+        "reunioes-south"
+      ],
+      "signCount": 9
+    },
+    {
+      "name": "stability-nudge",
+      "file": "qa/screenshots/stability-nudge.png",
+      "sha256": "9dc6c01089a5995e",
+      "mean": 57.36,
+      "stdDev": 72,
+      "width": 1440,
+      "height": 900,
+      "view": {
+        "azimuthDeg": 46,
+        "elevationDeg": 30,
+        "distance": 52,
+        "target": [
+          0,
+          0,
+          0
+        ]
+      },
+      "framing": {
+        "minX": 0.1273,
+        "minY": 0.2204,
+        "maxX": 0.914,
+        "maxY": 1.0019,
+        "centerX": 0.5207,
+        "centerY": 0.6111,
+        "widthFraction": 0.7867,
+        "heightFraction": 0.7815
+      },
+      "framingBypassed": false,
+      "cutawayWalls": [
+        "comando-south",
+        "comunidade-south",
+        "conteudo-east",
+        "engenharia-east",
         "engenharia-south",
         "hall-south",
         "operacoes-east",
@@ -93,6 +798,16 @@
     }
   ],
   "consoleErrors": [],
+  "initialView": {
+    "azimuthDeg": 40.31,
+    "elevationDeg": 37.33,
+    "distance": 54.42,
+    "target": [
+      0,
+      0,
+      0
+    ]
+  },
   "scene": {
     "signs": [
       {
@@ -172,6 +887,7 @@
       "comando-south",
       "comunidade-south",
       "conteudo-east",
+      "engenharia-east",
       "engenharia-south",
       "hall-south",
       "operacoes-east",
@@ -189,7 +905,7 @@
     "offCenterShots": [],
     "tooSmallShots": [],
     "duplicateShots": false,
-    "resetProvenByIdenticalShot": false,
+    "resetProvenByIdenticalShot": true,
     "consoleErrorCount": 0,
     "signCount": 9
   }

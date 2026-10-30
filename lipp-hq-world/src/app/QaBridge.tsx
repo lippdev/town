@@ -49,8 +49,8 @@ export interface HqQaApi {
   } | null;
   select: (roomId: string) => void;
   getAgentScreenPoint: (agentId: string) => { x: number; y: number } | null;
-  focus: (roomId: string) => void;
-  reset: () => void;
+  focus: (roomId: string, options?: { instant?: boolean }) => void;
+  reset: (options?: { instant?: boolean }) => void;
   getSelection: () => { roomId: string | null; agentId: string | null };
 }
 
@@ -184,8 +184,8 @@ export function QaBridge() {
         });
         return found;
       },
-      focus: (roomId) => useHQStore.getState().focusRoom(roomId),
-      reset: () => useHQStore.getState().resetCamera(),
+      focus: (roomId, options) => useHQStore.getState().focusRoom(roomId, options),
+      reset: (options) => useHQStore.getState().resetCamera(options),
       getSelection: () => {
         const state = useHQStore.getState();
         return { roomId: state.selectedRoomId, agentId: state.selectedAgentId };

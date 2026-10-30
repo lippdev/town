@@ -197,19 +197,26 @@ const setWallMode = (mode) => async (page) => {
 };
 
 /**
- * Espera a vista assentar: duas leituras consecutivas idênticas. Elimina o
- * resíduo de damping entre a animação e a captura.
+ * Espera a vista alcançar o valor esperado (com tolerância mínima) — a prova
+ * só vale se o valor for o do comando, não um frame do meio do caminho.
  */
-async function waitForViewStable(page, timeoutMs = 8000) {
+async function waitForViewNear(
+  page,
+  expected,
+  { toleranceDeg = 0.08, timeoutMs = 12000 } = {},
+) {
   const deadline = Date.now() + timeoutMs;
-  let last = JSON.stringify(await page.evaluate(() => window.__HQ_QA__.getView()));
   while (Date.now() < deadline) {
-    await page.waitForTimeout(450);
-    const current = JSON.stringify(await page.evaluate(() => window.__HQ_QA__.getView()));
-    if (current === last) return;
-    last = current;
+    const view = await page.evaluate(() => window.__HQ_QA__.getView());
+    const gaps = {
+      az: Math.abs(view.azimuthDeg - expected.azimuthDeg),
+      el: Math.abs(view.elevationDeg - expected.elevationDeg),
+      dist: Math.abs(view.distance - expected.distance),
+    };
+    if (gaps.az < toleranceDeg && gaps.el < toleranceDeg && gaps.dist < 0.05) return;
+    await page.waitForTimeout(400);
   }
-  throw new Error("A vista da câmera não assentou a tempo.");
+  throw new Error(`A vista não chegou ao valor esperado: ${JSON.stringify(expected)}`);
 }
 
 const SHOTS = {
@@ -251,12 +258,12 @@ const SHOTS = {
     await rightDrag(page, { dx: 0, dy: 160 });
   },
   "room-selected-focus": async (page) => {
-    await page.evaluate(() => window.__HQ_QA__.focus("engenharia"));
-    await waitForViewStable(page);
+    await page.evaluate(() => window.__HQ_QA__.focus("engenharia", { instant: true }));
+    await page.waitForTimeout(SETTLE_MS + 1200);
   },
   "camera-reset": async (page) => {
-    await page.evaluate(() => window.__HQ_QA__.reset());
-    await waitForViewStable(page);
+    await page.evaluate(() => window.__HQ_QA__.reset({ instant: true }));
+    await waitForViewNear(page, globalThis.__initialView);
   },
   "stability-nudge": async (page) => {
     await setWallMode("auto")(page);
@@ -304,6 +311,10 @@ async function main() {
     await page.goto(options.url, { waitUntil: "load", timeout: 60000 });
     await page.waitForFunction(() => window.__HQ_WORLD_READY__ === true, { timeout: 60000 });
     await page.waitForTimeout(SETTLE_MS);
+
+    // Vista inicial de referência para a prova do reset.
+    globalThis.__initialView = await page.evaluate(() => window.__HQ_QA__.getView());
+    report.initialView = globalThis.__initialView;
 
     report.webgl = await page.evaluate(() => {
       const canvas = document.querySelector("canvas");

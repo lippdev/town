@@ -12,6 +12,8 @@ export interface CameraCommand {
   kind: "focus" | "reset";
   roomId?: string;
   nonce: number;
+  /** true: aplica sem animação (usado pelo harness de QA). */
+  instant?: boolean;
 }
 
 interface HQState {
@@ -29,8 +31,8 @@ interface HQState {
   selectRoom: (roomId: string | null) => void;
   selectAgent: (agentId: string | null) => void;
   clearSelection: () => void;
-  focusRoom: (roomId: string) => void;
-  resetCamera: () => void;
+  focusRoom: (roomId: string, options?: { instant?: boolean }) => void;
+  resetCamera: (options?: { instant?: boolean }) => void;
   pushEvent: (event: HQEvent) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setDataSource: (source: DataSource) => void;
@@ -71,14 +73,14 @@ export const useHQStore = create<HQState>((set) => ({
   selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null }),
   selectAgent: (selectedAgentId) => set({ selectedAgentId }),
   clearSelection: () => set({ selectedRoomId: null, selectedAgentId: null }),
-  focusRoom: (roomId) =>
+  focusRoom: (roomId, options) =>
     set({
       selectedRoomId: roomId,
       selectedAgentId: null,
-      cameraCommand: { kind: "focus", roomId, nonce: Date.now() },
+      cameraCommand: { kind: "focus", roomId, nonce: Date.now(), ...options },
     }),
-  resetCamera: () =>
-    set({ cameraCommand: { kind: "reset", nonce: Date.now() } }),
+  resetCamera: (options) =>
+    set({ cameraCommand: { kind: "reset", nonce: Date.now(), ...options } }),
   pushEvent: (event) =>
     set((state) => ({ events: [event, ...state.events].slice(0, MAX_EVENTS) })),
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),

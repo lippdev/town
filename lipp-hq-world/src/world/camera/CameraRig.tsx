@@ -106,6 +106,14 @@ export function CameraRig() {
       nextPosition = nextTarget.clone().add(direction.multiplyScalar(distance));
     }
 
+    if (cameraCommand.instant) {
+      camera.position.copy(nextPosition);
+      controls.target.copy(nextTarget);
+      // descarrega todo resíduo de damping de manobras anteriores, sincronamente
+      for (let i = 0; i < 200; i += 1) controls.update();
+      return;
+    }
+
     animation.current = {
       fromPosition: camera.position.clone(),
       toPosition: nextPosition,
