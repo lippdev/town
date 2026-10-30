@@ -5,11 +5,15 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** nenhum — **MVP + polimento entregues**.
+**Stage em andamento:** nenhum — **MVP + polimento + refinamentos entregues**.
 
 **Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
 Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40** ·
-Stage 8 polimento **GO com locomoção provada em captura**.
+Stage 8 polimento **GO** · Stage 9 refinamentos **GO** (rótulos adaptativos
+fecharam a legibilidade angular).
+
+**Métrica honesta de render:** 1,3 fps nesta máquina de QA (1 vCPU,
+SwiftShader por software). Em GPU dedicada o caminho de render é o mesmo.
 
 **Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
 Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40**.
@@ -45,6 +49,6 @@ erro de console. `qa/screenshots/manifest.json`:
 
 ## Pendências (pós-MVP, todas de polimento)
 
-- Rótulos maiores nas vistas largas de norte/leste/oeste.
-- Luz de interiores ainda mais quente (progressivo).
+- Luz de interiores progressivamente mais quente.
 - Live real: instância do OpenMausBot acessível + proxy deployado.
+- Hover em personagens (hoje hover destaca só salas).
