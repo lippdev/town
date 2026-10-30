@@ -5,7 +5,10 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** nenhum — **MVP entregue** (GO final, rubrica 38/40).
+**Stage em andamento:** Stage 8 — polimento visual (luz quente, decoração,
+provas de animação), fechando com revisão independente.
+
+**MVP entregue:** GO final, rubrica 38/40.
 
 **Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
 Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40**.
