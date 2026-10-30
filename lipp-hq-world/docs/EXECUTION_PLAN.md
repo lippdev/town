@@ -41,23 +41,23 @@ relatório em `qa/reviews/`. O estado atual fica em [PROGRESS.md](PROGRESS.md).
 - [x] Teste real de arrasto com botão direito
 - [x] Screenshots dos quatro lados e duas diagonais
 
-## Stage 3 — Ambientação
+## Stage 3 — Ambientação ✅
 
-- [ ] Componentes de mobiliário reutilizáveis
-- [ ] Estação por departamento com identidade própria
-- [ ] Sala de reuniões e hall
-- [ ] Plantas, estantes, quadros e detalhes
-- [ ] Ajuste de materiais e sombras
+- [x] Componentes de mobiliário reutilizáveis
+- [x] Estação por departamento com identidade própria
+- [x] Sala de reuniões e hall
+- [x] Plantas, estantes, quadros e detalhes
+- [x] Ajuste de materiais e sombras
 
-## Stage 4 — Personagens e navegação
+## Stage 4 — Personagens e navegação ✅
 
-- [ ] Figura low-poly com cabeça, tronco, braços e pernas
-- [ ] Identidade visual por agente
-- [ ] Máquina de estados de animação
-- [ ] Grid de navegação com obstáculos
-- [ ] A* e suavização de caminho
-- [ ] Caminhada com orientação gradual
-- [ ] Seleção por clique e painel do agente
+- [x] Figura low-poly com cabeça, tronco, braços e pernas
+- [x] Identidade visual por agente
+- [x] Máquina de estados de animação
+- [x] Grid de navegação com obstáculos
+- [x] A* e suavização de caminho
+- [x] Caminhada com orientação gradual
+- [x] Seleção por clique e painel do agente
 
 ## Stage 5 — Estados e integração
 
