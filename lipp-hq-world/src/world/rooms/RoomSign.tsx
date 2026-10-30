@@ -79,6 +79,10 @@ export function RoomSign({ room }: RoomSignProps) {
         <boxGeometry args={[plateWidth + 0.08, plateHeight + 0.08, 0.07]} />
         <meshStandardMaterial color="#0d1420" roughness={0.6} metalness={0.2} />
       </mesh>
+      <mesh position={[0, 1.78, 0]} castShadow>
+        <boxGeometry args={[0.07, plateHeight + 0.08, plateWidth + 0.08]} />
+        <meshStandardMaterial color="#0d1420" roughness={0.6} metalness={0.2} />
+      </mesh>
       <mesh position={[0, 1.78, 0.041]}>
         <planeGeometry args={[plateWidth, plateHeight]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
@@ -87,6 +91,18 @@ export function RoomSign({ room }: RoomSignProps) {
         <planeGeometry args={[plateWidth, plateHeight]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
+
+      {/* Face cruzada: legível no outro sentido do corredor. */}
+      <group rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0, 1.78, 0.046]}>
+          <planeGeometry args={[plateWidth, plateHeight]} />
+          <meshBasicMaterial map={texture} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 1.78, -0.046]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[plateWidth, plateHeight]} />
+          <meshBasicMaterial map={texture} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
