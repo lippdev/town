@@ -5,64 +5,45 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** Stage 2 — câmera e paredes dinâmicas.
+**Stage em andamento:** Stage 2 — câmera e paredes dinâmicas (fechando).
 
 **Último fechado:** Stage 1 — prédio, pisos, portas e letreiros (GO em 2026-10-29).
 
-**Última verificação executada:** build de produção + captura visual automatizada.
+## Provas mecânicas do Gate 2 (harness)
 
-## Descobertas do ambiente
+Bateria de 18 capturas em 1440×900, Chromium 156 + WebGL 2 (SwiftShader), zero
+erro de console. `qa/screenshots/manifest.json`:
 
-| Item | Resultado |
+| Prova | Resultado |
 | - | - |
-| Node / pnpm | 24.22.1 / 12.11.2 |
-| Chromium do sistema | Google Chrome 156.0.8078.47 em `/usr/local/bin/google-chrome` |
-| WebGL em headless | WebGL 2.0, renderer `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)))` |
-| Screenshot real do canvas | confirmado, com variância de luminância medida |
-| Máquina | 1 vCPU, 3 GB — render por software, capturas levam ~10 s cada |
-| Acesso ao OpenMausBot | repositório público `lippdev/OpenMausBot` clonado para inspeção |
+| Cutaway por vista | norte 11, leste 11, sul 11, oeste 11 — exatamente as paredes voltadas para a câmera em cada lado |
+| Arrasto real (botão direito) | azimute 40,31° → −78,98° em um arrasto; alvo fixo em [0,0,0] |
+| Arrasto vertical | elevação 37,33° → 65,94° |
+| Seleção por clique | centro → `hall`; fundo → seleção limpa |
+| Foco por duplo clique | Engenharia centrada (cx 0,5046), a 26 unidades, largura da sala em 44% do quadro |
+| Reset | vista volta exata: az 40,31°, el 37,33°, dist 54,42 |
+| Estabilidade em diagonal | az 40°→46°: 11→11 paredes em cutaway; sem flicker |
+| Enquadramento | prédio centrado (cx 0,5051) em 76% da largura do quadro |
 
-## Capacidade de revisão visual
+## Bugs encontrados e consertados nesta etapa
 
-A rota do DeepSeek V4.1 Flash **não aceita imagem como entrada de ferramenta**
-(`read` devolve "this route does not support image tool results"). Portanto o agente
-principal não consegue inspecionar screenshots.
-
-Solução adotada: revisão visual delegada a subagente, confirmada funcionando.
-
-- **GLM-5.3 Flash `high`**: entrada de imagem confirmada e usada na revisão do Stage 1.
-- **GPT-6.1 Terra `medium`**: caiu num pedido de créditos (Codex desligado, próxima
-  conexão é crédito Capy). Não usei porque exige decisão do dono da thread.
-
-O revisor do Stage 1 errou dois de três achados. Por isso o harness passou a medir
-enquadramento e contagem de elementos automaticamente: percepção visual é insumo,
-medição é prova.
-
-## Decisões técnicas registradas
-
-1. Aplicação isolada em `lipp-hq-world/`, com o repositório dedicado a ela.
-2. Nove células em grade 3×3, com corredores nos vãos. Nenhuma parede é compartilhada
-   entre duas salas — elimina o problema de paredes sobrepostas.
-3. Geometria e personagens procedurais; nenhum asset externo no repositório.
-4. Cutaway por parede com normal externa + oclusão por amostras de sala, com histerese.
-5. Integração somente de leitura via proxy same-origin com allowlist de dois caminhos.
-
-## Resultado do Stage 1
-
-Prédio completo com nove salas, corredores, portas com verga e nove letreiros.
-44 grupos de parede, 9 letreiros instanciados, zero erro de console.
-
-O cutaway já está operante e simétrico: cada uma das quatro vistas coloca em cutaway
-exatamente as 11 paredes voltadas para a câmera (nove salas mais dois muros de
-perímetro) e nenhuma outra.
+1. **Botão direito fazia pan em vez de girar.** Duas causas somadas: o
+   `HQScene` montava um `OrbitControls` cru do drei com o mapeamento padrão
+   (esquerdo gira, direito pan), e `MOUSE.ROTATE` vale 0 — usar o código do
+   botão (2) no lugar da ação selecionava `MOUSE.PAN`. Corrigido com
+   configuração imperativa no `CameraRig` e mapeamento
+   `{ LEFT: -1, MIDDLE: DOLLY, RIGHT: ROTATE }`.
+2. **Foco de sala parava a câmera dentro do prédio** (15 unidades). Distância
+   agora é `clamp(largura × 2,4, 26, 36)`.
+3. **Capturas podiam fotografar o resíduo de damping**: o harness agora espera
+   a vista assentar (duas leituras idênticas) antes de fotografar.
 
 ## Pendências
 
-- Stage 2: `CameraRig` com botão direito para rotação, foco suave, reset e três modos
-  de parede; validar histerese e ausência de flicker nas diagonais.
-- GPT-6.1 Terra continua indisponível sem aprovação de créditos do dono da thread.
+- Revisão visual independente do Gate 2 (subagente com visão).
+- Depois do GO: Stage 3 (mobiliário e ambientação).
 
 ## Próxima ação
 
-Ligar o `CameraRig`, expor os três modos de parede na interface e rodar a bateria
-completa do Gate 2, incluindo diagonais e comparação entre modos.
+Fechar o Gate 2 com o relatório do revisor, abrir a PR do Stage 2 e seguir para
+o Stage 3.
