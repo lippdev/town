@@ -5,12 +5,13 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** nenhum — **MVP + polimento + refinamentos entregues**.
+**Stage em andamento:** nenhum — **auditoria geral fechada: 39/40, GO**.
 
 **Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
 Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40** ·
-Stage 8 polimento **GO** · Stage 9 refinamentos **GO** (rótulos adaptativos
-fecharam a legibilidade angular).
+Stage 8 polimento **GO** · Stage 9 refinamentos **GO** ·
+Auditoria geral **39/40 GO** (3 violações de spec corrigidas, testes, CI,
+responsividade, conteúdo nos quadros).
 
 **Métrica honesta de render:** 1,3 fps nesta máquina de QA (1 vCPU,
 SwiftShader por software). Em GPU dedicada o caminho de render é o mesmo.
