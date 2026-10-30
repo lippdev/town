@@ -395,6 +395,36 @@ async function main() {
       };
     });
 
+    // Responsividade: mesma cena em três viewports da spec.
+    const responsiveViewports = [
+      { width: 1280, height: 800, name: "responsive-1280x800" },
+      { width: 1366, height: 768, name: "responsive-1366x768" },
+      { width: 1920, height: 1080, name: "responsive-1920x1080" },
+    ];
+    if (options.shots.length === 0) {
+      for (const viewport of responsiveViewports) {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.waitForTimeout(1600);
+        const filePath = path.join(outDir, `${viewport.name}.png`);
+        await page.screenshot({ path: filePath, animations: "allow" });
+        const analysis = await analyze(page, filePath);
+        const state = await sceneState(page);
+        const bytes = await fs.readFile(filePath);
+        report.shots.push({
+          name: viewport.name,
+          file: path.relative(ROOT, filePath),
+          sha256: crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16),
+          ...analysis,
+          view: state?.view ?? null,
+          framing: state?.framing ?? null,
+          cutawayWalls: state?.cutawayWalls ?? [],
+        });
+      }
+      // volta ao viewport de referência
+      await page.setViewportSize({ width: options.width, height: options.height });
+      await page.waitForTimeout(1200);
+    }
+
     const names = options.shots.length > 0 ? options.shots : Object.keys(SHOTS);
     for (const name of names) {
       const action = SHOTS[name];
@@ -438,7 +468,9 @@ async function main() {
     (shot) => shot.framing && (shot.framing.centerX < 0.4 || shot.framing.centerX > 0.6),
   );
   const tooSmall = report.shots.filter(
-    (shot) => shot.framing && shot.framing.widthFraction < 0.3,
+    (shot) =>
+      shot.framing &&
+      shot.framing.widthFraction < (shot.name.startsWith("responsive-") ? 0.45 : 0.3),
   );
   // Reset: a vista precisa voltar ao padrão dentro de tolerância. Pixels podem
   // diferir por um resíduo de damping no instante da captura.
