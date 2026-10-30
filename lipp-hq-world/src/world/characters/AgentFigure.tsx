@@ -2,6 +2,7 @@ import { forwardRef, useMemo, type ReactNode } from "react";
 import type { Group, Object3D } from "three";
 import { PALETTE } from "@/config/constants";
 import { sharedCapsule, sharedCylinder, sharedSphere } from "@/world/materials";
+import type { CharacterPreset } from "@/world/characters/appearance";
 import type { AgentDefinition } from "@/types/hq";
 
 export interface AgentFigureHandle {
@@ -19,14 +20,13 @@ export interface AgentFigureHandle {
 interface AgentFigureProps {
   agent: AgentDefinition;
   selected: boolean;
+  /** Aparência resolvida (biblioteca de personagens); ausente = visual de fábrica. */
+  appearance?: CharacterPreset;
   figureRef: (handle: AgentFigureHandle) => void;
   onHoverChange?: (hovered: boolean) => void;
   children?: ReactNode;
 }
 
-const SKIN = "#e8b98a";
-const PANTS = "#2f3742";
-const SHOES = "#1e242e";
 const EYES = "#242a33";
 
 /**
@@ -36,7 +36,7 @@ const EYES = "#242a33";
  * trabalho abaixa o quadril e dobra as pernas na cadeira.
  */
 export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
-  function AgentFigure({ agent, selected, figureRef, onHoverChange, children }) {
+  function AgentFigure({ agent, selected, appearance, figureRef, onHoverChange, children }) {
     const parts = useMemo<AgentFigureHandle>(
       () => ({
         group: null as unknown as Group,
@@ -59,7 +59,12 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
     };
 
     const shirt = agent.color;
-    const hair = agent.hairColor ?? PALETTE.chair;
+    const skin = appearance?.skin ?? "#e8b98a";
+    const hair = appearance?.hair ?? agent.hairColor ?? PALETTE.chair;
+    const hairStyle = appearance?.hairStyle ?? "curto";
+    const pants = appearance?.pants ?? "#2f3742";
+    const shoes = appearance?.shoes ?? "#1e242e";
+    const accessory = appearance?.accessory ?? "nenhum";
 
     return (
       <group
@@ -90,21 +95,21 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
         <group ref={assign("hips")}>
           <group ref={assign("leftLeg")} position={[-0.11, 0.68, 0]}>
             <mesh position={[0, -0.3, 0]} castShadow geometry={sharedCapsule(0.075, 0.46)}>
-              <meshStandardMaterial color={PANTS} roughness={0.8} metalness={0.03} />
+              <meshStandardMaterial color={pants} roughness={0.8} metalness={0.03} />
             </mesh>
             <mesh position={[0, -0.65, 0.05]} castShadow>
               <boxGeometry args={[0.16, 0.09, 0.27]} />
-              <meshStandardMaterial color={SHOES} roughness={0.7} metalness={0.05} />
+              <meshStandardMaterial color={shoes} roughness={0.7} metalness={0.05} />
             </mesh>
           </group>
 
           <group ref={assign("rightLeg")} position={[0.11, 0.68, 0]}>
             <mesh position={[0, -0.3, 0]} castShadow geometry={sharedCapsule(0.075, 0.46)}>
-              <meshStandardMaterial color={PANTS} roughness={0.8} metalness={0.03} />
+              <meshStandardMaterial color={pants} roughness={0.8} metalness={0.03} />
             </mesh>
             <mesh position={[0, -0.65, 0.05]} castShadow>
               <boxGeometry args={[0.16, 0.09, 0.27]} />
-              <meshStandardMaterial color={SHOES} roughness={0.7} metalness={0.05} />
+              <meshStandardMaterial color={shoes} roughness={0.7} metalness={0.05} />
             </mesh>
           </group>
 
@@ -120,7 +125,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
               <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
             </mesh>
             <mesh position={[0, -0.54, 0]} castShadow geometry={sharedSphere(0.075, 12, 10)}>
-              <meshStandardMaterial color={SKIN} roughness={0.65} metalness={0} />
+              <meshStandardMaterial color={skin} roughness={0.65} metalness={0} />
             </mesh>
           </group>
 
@@ -132,13 +137,13 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
               <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
             </mesh>
             <mesh position={[0, -0.54, 0]} castShadow geometry={sharedSphere(0.075, 12, 10)}>
-              <meshStandardMaterial color={SKIN} roughness={0.65} metalness={0} />
+              <meshStandardMaterial color={skin} roughness={0.65} metalness={0} />
             </mesh>
           </group>
 
           <group ref={assign("head")} position={[0, 1.42, 0]}>
             <mesh position={[0, 0.15, 0]} castShadow geometry={sharedSphere(0.22, 18, 14)}>
-              <meshStandardMaterial color={SKIN} roughness={0.6} metalness={0} />
+              <meshStandardMaterial color={skin} roughness={0.6} metalness={0} />
             </mesh>
             <mesh position={[-0.085, 0.15, 0.185]} geometry={sharedSphere(0.028, 8, 8)}>
               <meshStandardMaterial color={EYES} roughness={0.35} metalness={0} />
@@ -146,12 +151,41 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
             <mesh position={[0.085, 0.15, 0.185]} geometry={sharedSphere(0.028, 8, 8)}>
               <meshStandardMaterial color={EYES} roughness={0.35} metalness={0} />
             </mesh>
-            <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.225, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
-              <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
-            </mesh>
-            <mesh position={[0, 0.16, -0.09]} castShadow geometry={sharedSphere(0.17, 14, 10)}>
-              <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
-            </mesh>
+            {hairStyle === "raspado" ? (
+              <mesh position={[0, 0.21, -0.01]} castShadow geometry={sharedSphere(0.222, 18, 10, 0, Math.PI * 2, 0, Math.PI / 3.4)}>
+                <meshStandardMaterial color={hair} roughness={0.85} metalness={0.05} />
+              </mesh>
+            ) : (
+              <>
+                <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.225, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
+                  <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+                </mesh>
+                <mesh position={[0, 0.16, -0.09]} castShadow geometry={sharedSphere(0.17, 14, 10)}>
+                  <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+                </mesh>
+              </>
+            )}
+            {hairStyle === "coque" && (
+              <mesh position={[0, 0.42, -0.05]} castShadow geometry={sharedSphere(0.085, 12, 10)}>
+                <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+              </mesh>
+            )}
+            {accessory === "oculos" && (
+              <group position={[0, 0.15, 0.2]}>
+                <mesh position={[-0.085, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.058, 0.058, 0.014, 12]} />
+                  <meshStandardMaterial color={EYES} roughness={0.3} metalness={0.1} />
+                </mesh>
+                <mesh position={[0.085, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.058, 0.058, 0.014, 12]} />
+                  <meshStandardMaterial color={EYES} roughness={0.3} metalness={0.1} />
+                </mesh>
+                <mesh position={[0, 0, 0]}>
+                  <boxGeometry args={[0.06, 0.012, 0.012]} />
+                  <meshStandardMaterial color={EYES} roughness={0.3} metalness={0.1} />
+                </mesh>
+              </group>
+            )}
           </group>
         </group>
       </group>

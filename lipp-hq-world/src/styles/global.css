@@ -426,3 +426,68 @@ button.sidebar-row:hover {
   cursor: pointer;
   margin-top: 8px;
 }
+
+/* ---- Biblioteca de personagens (painel do agente) ---- */
+.appearance-picker {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hq-panel-border);
+}
+
+.appearance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  font-weight: 600;
+  color: #b8c4d8;
+}
+
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+/* miniatura: uma figurinha vertical — cabelo, rosto, camisa (cor do
+   agente, sempre) e calça do preset */
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--hq-panel-border);
+  border-radius: 7px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.preset-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(140, 170, 215, 0.5);
+}
+
+.preset-card.active {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 1px #7dd3fc;
+}
+
+.preset-hair {
+  flex: 0.7;
+  border-radius: 3px 3px 0 0;
+}
+
+.preset-skin {
+  flex: 1;
+  margin: 0 26%;
+}
+
+.preset-body {
+  flex: 1.5;
+}
+
+.preset-pants {
+  flex: 0.9;
+}

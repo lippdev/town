@@ -50,6 +50,8 @@ const FRAMING_EXEMPT = new Set([
   "drag-right-rotate",
   "drag-vertical-orbit",
   "camera-zoom-in",
+  // close-up intencional na sala do agente para mostrar o visual escolhido
+  "appearance-picker",
 ]);
 
 function parseArgs(argv) {
@@ -310,6 +312,17 @@ const SHOTS = {
       return inCorridor || nearHall;
     }, 60000);
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(false));
+  },
+  "appearance-picker": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 40, elevationDeg: 32, distance: 26 })(page);
+    // escolhe um personagem pronto para o Pulse pela UI real (painel do agente)
+    await page.getByRole("button", { name: "Agentes" }).click();
+    await page.getByRole("button", { name: /Pulse/ }).click();
+    await page.getByRole("option", { name: "Nox" }).click();
+    // aproxima a sala do Pulse para o novo visual ficar legível na captura
+    await setView({ azimuthDeg: 45, elevationDeg: 34, distance: 11, target: [-11.4, 0, -8.7] })(page);
+    await page.waitForTimeout(SETTLE_MS + 600);
   },
   "agents-meeting": async (page) => {
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(true));

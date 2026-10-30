@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
 import { PROJECTS } from "@/agents/agents";
+import { CHARACTER_PRESETS } from "@/world/characters/appearance";
 import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
 
@@ -113,8 +114,10 @@ function AgentRow({ agentId }: { agentId: string }) {
       type="button"
       className="sidebar-row agent-row"
       onClick={() => {
-        selectAgent(agentId);
+        // foco da câmera limpa a seleção de agente (painel de sala), então a
+        // seleção vem depois: o clique na lista abre o painel DO AGENTE
         focusRoom(agent.roomId);
+        selectAgent(agentId);
       }}
     >
       <span className="agent-dot" style={{ background: agent.color }} aria-hidden />
@@ -226,6 +229,46 @@ function ActivityFeed() {
   );
 }
 
+function AppearancePicker({ agentId }: { agentId: string }) {
+  const agent = AGENTS_BY_ID[agentId];
+  const presetId = useHQStore((state) => state.agentPresets[agentId] ?? null);
+  const setAgentPreset = useHQStore((state) => state.setAgentPreset);
+  if (!agent) return null;
+
+  return (
+    <div className="appearance-picker">
+      <div className="appearance-head">
+        <span>Visual</span>
+        <button
+          type="button"
+          className={presetId === null ? "chip active" : "chip"}
+          onClick={() => setAgentPreset(agentId, null)}
+        >
+          Padrão
+        </button>
+      </div>
+      <div className="appearance-grid" role="listbox" aria-label="Personagens prontos">
+        {CHARACTER_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            role="option"
+            aria-selected={presetId === preset.id}
+            aria-label={preset.label}
+            title={preset.label}
+            className={presetId === preset.id ? "preset-card active" : "preset-card"}
+            onClick={() => setAgentPreset(agentId, preset.id)}
+          >
+            <span className="preset-hair" style={{ background: preset.hair }} aria-hidden />
+            <span className="preset-skin" style={{ background: preset.skin }} aria-hidden />
+            <span className="preset-body" style={{ background: agent.color }} aria-hidden />
+            <span className="preset-pants" style={{ background: preset.pants }} aria-hidden /></button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AgentPanel() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const selectedRoomId = useHQStore((state) => state.selectedRoomId);
@@ -249,6 +292,7 @@ function AgentPanel() {
         </div>
         {summary.summary && <p>{summary.summary}</p>}
         <p className="panel-resp">{summary.agent.responsibility}</p>
+        <AppearancePicker agentId={summary.agent.id} />
       </div>
     );
   }

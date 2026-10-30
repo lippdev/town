@@ -7,6 +7,7 @@ import { useReducedMotion } from "@/app/useReducedMotion";
 import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
+import { resolveAppearance } from "@/world/characters/appearance";
 import { findPath, type NavPoint } from "@/world/navigation/navGrid";
 
 /** Hash determinístico por id — substitui Math.random no cenário demo. */
@@ -128,6 +129,7 @@ declare module "@/world/characters/Agents" {
 export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const dataSource = useHQStore((state) => state.dataSource);
+  const agentPresets = useHQStore((state) => state.agentPresets);
   const agents = AGENTS;
   const reducedMotion = useReducedMotion();
   const reducedRef = useRef(reducedMotion);
@@ -260,10 +262,12 @@ export function Agents() {
       {agents.map((agent) => {
         const spot = deskSpot(agent.id);
         const showLabel = hoveredAgentId === agent.id || selectedAgentId === agent.id;
+        const appearance = resolveAppearance(agent, agentPresets[agent.id] ?? null);
         return (
           <AgentFigure
             key={agent.id}
             agent={agent}
+            appearance={appearance}
             selected={selectedAgentId === agent.id}
             figureRef={(handle) => {
               // refs de filhos chegam antes do grupo pai: só registre com grupo pronto

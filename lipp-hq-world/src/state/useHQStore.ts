@@ -41,9 +41,35 @@ interface HQState {
   pushEvent: (event: HQEvent) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setDataSource: (source: DataSource) => void;
+  agentPresets: Record<string, string>;
+  setAgentPreset: (agentId: string, presetId: string | null) => void;
 }
 
 const MAX_EVENTS = 60;
+
+/** Persistência local da aparência escolhida por agente (UX local, V0). */
+const PRESET_STORAGE_KEY = "lipp-hq-world:agent-presets:v1";
+
+function loadAgentPresets(): Record<string, string> {
+  try {
+    const raw = window.localStorage.getItem(PRESET_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return {};
+    const entries = Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === "string");
+    return Object.fromEntries(entries);
+  } catch {
+    return {};
+  }
+}
+
+function saveAgentPresets(presets: Record<string, string>): void {
+  try {
+    window.localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+  } catch {
+    // sem localStorage (modo privado etc.): a escolha vale só para a sessão
+  }
+}
 
 export const useHQStore = create<HQState>((set) => ({
   wallMode: "auto",
@@ -95,4 +121,13 @@ export const useHQStore = create<HQState>((set) => ({
     set((state) => ({ events: [event, ...state.events].slice(0, MAX_EVENTS) })),
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
   setDataSource: (dataSource) => set({ dataSource }),
+  agentPresets: loadAgentPresets(),
+  setAgentPreset: (agentId, presetId) =>
+    set((state) => {
+      const next = { ...state.agentPresets };
+      if (presetId === null) delete next[agentId];
+      else next[agentId] = presetId;
+      saveAgentPresets(next);
+      return { agentPresets: next };
+    }),
 }));
