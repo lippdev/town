@@ -121,7 +121,10 @@ export function Agents() {
   const indexRef = useRef(0);
 
   useFrame((_, rawDelta) => {
+    // animação de pose usa delta travado; locomoção usa o delta real, senão o
+    // personagem anda em câmera lenta em renders lentos
     const delta = Math.min(rawDelta, 0.12);
+    const locomotionDelta = Math.min(rawDelta, 1.0);
     indexRef.current += delta;
 
     for (const [agentId, runtime] of runtimes) {
@@ -153,7 +156,7 @@ export function Agents() {
               runtime.pendingState = undefined;
             }
           } else {
-            const step = Math.min(WALK_SPEED * delta, distance);
+            const step = Math.min(WALK_SPEED * locomotionDelta, distance);
             group.position.x += (dx / distance) * step;
             group.position.z += (dz / distance) * step;
             const targetHeading = Math.atan2(dx, dz);

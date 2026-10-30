@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T11:54:14.415Z",
+  "generatedAt": "2026-10-30T12:00:51.491Z",
   "url": "http://127.0.0.1:4173",
   "viewport": {
     "width": 1440,
@@ -15,9 +15,9 @@
     {
       "name": "agents-walking",
       "file": "qa/screenshots/agents-walking.png",
-      "sha256": "ee827cb9edd87685",
-      "mean": 61.17,
-      "stdDev": 77.53,
+      "sha256": "31bc2319001c05da",
+      "mean": 61.16,
+      "stdDev": 77.51,
       "width": 1440,
       "height": 900,
       "view": {
@@ -53,52 +53,6 @@
         "pesquisa-east",
         "pesquisa-south",
         "produto-south",
-        "reunioes-south"
-      ],
-      "signCount": 9
-    },
-    {
-      "name": "agents-meeting",
-      "file": "qa/screenshots/agents-meeting.png",
-      "sha256": "ba75246da95911c2",
-      "mean": 90.12,
-      "stdDev": 85.79,
-      "width": 1440,
-      "height": 900,
-      "view": {
-        "azimuthDeg": 41.44,
-        "elevationDeg": 48.02,
-        "distance": 26,
-        "target": [
-          11.399999999999999,
-          0.9,
-          8.7
-        ]
-      },
-      "framing": {
-        "minX": -0.1461,
-        "minY": -0.3341,
-        "maxX": 1.0278,
-        "maxY": 0.9413,
-        "centerX": 0.4409,
-        "centerY": 0.3036,
-        "widthFraction": 1.1739,
-        "heightFraction": 1.2754
-      },
-      "framingBypassed": false,
-      "cutawayWalls": [
-        "comando-south",
-        "comunidade-south",
-        "conteudo-east",
-        "engenharia-east",
-        "engenharia-south",
-        "hall-south",
-        "operacoes-east",
-        "operacoes-south",
-        "pesquisa-east",
-        "pesquisa-south",
-        "produto-south",
-        "reunioes-east",
         "reunioes-south"
       ],
       "signCount": 9
@@ -202,7 +156,6 @@
       "pesquisa-east",
       "pesquisa-south",
       "produto-south",
-      "reunioes-east",
       "reunioes-south"
     ],
     "wallGroups": 44

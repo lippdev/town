@@ -219,6 +219,17 @@ async function waitForViewNear(
   throw new Error(`A vista não chegou ao valor esperado: ${JSON.stringify(expected)}`);
 }
 
+/** Espera um predicado sobre a pose do agente ficar verdadeiro. */
+async function waitForAgentPredicate(page, agentId, predicate, timeoutMs = 40000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const pose = await page.evaluate((id) => window.__HQ_QA__.getAgentPose(id), agentId);
+    if (pose && predicate(pose)) return;
+    await page.waitForTimeout(300);
+  }
+  throw new Error(`Predicado da pose de ${agentId} nunca ficou verdadeiro.`);
+}
+
 /** Espera o agente chegar a um ponto (distância máxima) ou mudar de estado. */
 async function waitForAgentNear(page, agentId, target, maxDistance, timeoutMs = 30000) {
   const deadline = Date.now() + timeoutMs;
@@ -287,13 +298,17 @@ const SHOTS = {
     await setWallMode("auto")(page);
     await setView({ azimuthDeg: 45, elevationDeg: 38, distance: 57 })(page);
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(true));
-    const scoutStart = await page.evaluate(() => window.__HQ_QA__.getAgentPose("scout"));
     await page.evaluate(() => {
       window.__HQ_QA__.demoCommand("scout", "walking");
       window.__HQ_QA__.demoCommand("ink", "walking");
     });
-    if (!scoutStart) throw new Error("Pose inicial do Scout indisponível.");
-    await waitForAgentNear(page, "scout", { x: scoutStart.x, z: scoutStart.z }, 2.4, 60000);
+    // congela quando o Scout estiver no corredor oeste (x entre -6,5 e -4,3)
+    // ou a menos de 3 unidades do waypoint do hall
+    await waitForAgentPredicate(page, "scout", (pose) => {
+      const inCorridor = pose.x > -6.5 && pose.x < -4.3;
+      const nearHall = Math.hypot(pose.x + 1.2, pose.z - 0.8) < 3;
+      return inCorridor || nearHall;
+    }, 60000);
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(false));
   },
   "agents-meeting": async (page) => {
