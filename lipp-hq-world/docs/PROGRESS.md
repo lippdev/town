@@ -5,7 +5,9 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** Stage 0 — Discovery técnico (fechando).
+**Stage em andamento:** Stage 2 — câmera e paredes dinâmicas.
+
+**Último fechado:** Stage 1 — prédio, pisos, portas e letreiros (GO em 2026-10-29).
 
 **Última verificação executada:** build de produção + captura visual automatizada.
 
@@ -26,8 +28,15 @@ A rota do DeepSeek V4.1 Flash **não aceita imagem como entrada de ferramenta**
 (`read` devolve "this route does not support image tool results"). Portanto o agente
 principal não consegue inspecionar screenshots.
 
-Solução adotada: revisão visual delegada a subagente no GPT-6.1 Terra, que está
-entre os três modelos permitidos no projeto. Pendente de confirmação no Stage 0.
+Solução adotada: revisão visual delegada a subagente, confirmada funcionando.
+
+- **GLM-5.3 Flash `high`**: entrada de imagem confirmada e usada na revisão do Stage 1.
+- **GPT-6.1 Terra `medium`**: caiu num pedido de créditos (Codex desligado, próxima
+  conexão é crédito Capy). Não usei porque exige decisão do dono da thread.
+
+O revisor do Stage 1 errou dois de três achados. Por isso o harness passou a medir
+enquadramento e contagem de elementos automaticamente: percepção visual é insumo,
+medição é prova.
 
 ## Decisões técnicas registradas
 
@@ -38,11 +47,22 @@ entre os três modelos permitidos no projeto. Pendente de confirmação no Stage
 4. Cutaway por parede com normal externa + oclusão por amostras de sala, com histerese.
 5. Integração somente de leitura via proxy same-origin com allowlist de dois caminhos.
 
+## Resultado do Stage 1
+
+Prédio completo com nove salas, corredores, portas com verga e nove letreiros.
+44 grupos de parede, 9 letreiros instanciados, zero erro de console.
+
+O cutaway já está operante e simétrico: cada uma das quatro vistas coloca em cutaway
+exatamente as 11 paredes voltadas para a câmera (nove salas mais dois muros de
+perímetro) e nenhuma outra.
+
 ## Pendências
 
-- Confirmar revisão visual multimodal por subagente.
-- Validar aparência da cena base (laje, piso, câmera) antes de empilhar geometria.
+- Stage 2: `CameraRig` com botão direito para rotação, foco suave, reset e três modos
+  de parede; validar histerese e ausência de flicker nas diagonais.
+- GPT-6.1 Terra continua indisponível sem aprovação de créditos do dono da thread.
 
 ## Próxima ação
 
-Fechar o Stage 0, abrir o PR e iniciar o Stage 1 (pisos, paredes, portas e placas).
+Ligar o `CameraRig`, expor os três modos de parede na interface e rodar a bateria
+completa do Gate 2, incluindo diagonais e comparação entre modos.

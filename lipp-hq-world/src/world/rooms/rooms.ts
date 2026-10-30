@@ -199,3 +199,40 @@ export function roomSize(room: RoomDefinition): { width: number; depth: number }
     depth: room.bounds.maxZ - room.bounds.minZ,
   };
 }
+
+/** Ponto no plano da parede, no meio do vão da porta. */
+export function doorPoint(room: RoomDefinition, door: DoorDefinition): Vector3Tuple {
+  const { bounds } = room;
+  switch (door.side) {
+    case "north":
+      return [door.center, 0, bounds.minZ];
+    case "south":
+      return [door.center, 0, bounds.maxZ];
+    case "west":
+      return [bounds.minX, 0, door.center];
+    case "east":
+      return [bounds.maxX, 0, door.center];
+  }
+}
+
+/** Normal apontando do vão da porta para dentro da sala. */
+export function doorInward(door: DoorDefinition): Vector3Tuple {
+  switch (door.side) {
+    case "north":
+      return [0, 0, 1];
+    case "south":
+      return [0, 0, -1];
+    case "west":
+      return [1, 0, 0];
+    case "east":
+      return [-1, 0, 0];
+  }
+}
+
+/** Centro da sala, com altura de piso. */
+export function roomCenterXZ(room: RoomDefinition): { x: number; z: number } {
+  return {
+    x: (room.bounds.minX + room.bounds.maxX) / 2,
+    z: (room.bounds.minZ + room.bounds.maxZ) / 2,
+  };
+}

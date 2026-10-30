@@ -1,28 +1,26 @@
 import { OrbitControls } from "@react-three/drei";
-import { BASE_SLAB, CAMERA, PALETTE } from "@/config/constants";
+import { CAMERA, PALETTE } from "@/config/constants";
+import { QaBridge } from "@/app/QaBridge";
 import { SceneLighting } from "@/world/lighting/SceneLighting";
 import { BaseSlab } from "@/world/scene/BaseSlab";
+import { FloorPlates } from "@/world/rooms/FloorPlates";
+import { RoomSigns } from "@/world/rooms/RoomSigns";
+import { DynamicWalls } from "@/world/walls/DynamicWalls";
 
 /**
- * Cena raiz do Lipp HQ World. No Stage 0 monta apenas a laje e a iluminação,
- * provando o pipeline WebGL de ponta a ponta antes da geometria do prédio.
+ * Cena raiz do Lipp HQ World: laje, pisos, paredes dinâmicas e letreiros.
+ * O prédio é montado a partir da planta declarativa em `world/rooms/rooms.ts`.
  */
 export function HQScene() {
   return (
     <>
       <color attach="background" args={[PALETTE.background]} />
+      <fog attach="fog" args={[PALETTE.background, 62, 168]} />
       <SceneLighting />
       <BaseSlab />
-      <mesh
-        position={[0, 0.01, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry
-          args={[BASE_SLAB.maxX - BASE_SLAB.minX - 1.2, BASE_SLAB.maxZ - BASE_SLAB.minZ - 1.2]}
-        />
-        <meshStandardMaterial color={PALETTE.corridorFloor} roughness={0.95} metalness={0} />
-      </mesh>
+      <FloorPlates />
+      <DynamicWalls />
+      <RoomSigns />
       <OrbitControls
         makeDefault
         enableDamping
@@ -33,6 +31,7 @@ export function HQScene() {
         minPolarAngle={CAMERA.minPolarAngle}
         maxPolarAngle={CAMERA.maxPolarAngle}
       />
+      <QaBridge />
     </>
   );
 }

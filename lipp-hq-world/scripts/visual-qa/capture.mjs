@@ -3,12 +3,13 @@
  * Harness de validação visual do Lipp HQ World.
  *
  * Abre a aplicação num Chromium real com WebGL habilitado, espera o primeiro
- * frame, executa as capturas pedidas e valida cada imagem (luminância média e
- * desvio padrão), para que um canvas preto nunca passe como evidência.
+ * frame, posiciona a câmera por uma ponte de QA determinística e valida cada
+ * captura: luminância média e desvio padrão (para reprovar canvas preto ou
+ * chapado) e enquadramento do prédio na tela.
  *
  * Uso:
  *   node scripts/visual-qa/capture.mjs --serve --out qa/screenshots
- *   node scripts/visual-qa/capture.mjs --url http://127.0.0.1:4173 --shots overview-default
+ *   node scripts/visual-qa/capture.mjs --url http://127.0.0.1:4173 --shots camera-north
  */
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
@@ -37,6 +38,19 @@ const GL_FLAGS = [
   "--disable-gpu-sandbox",
   "--ignore-gpu-blocklist",
 ];
+
+const SETTLE_MS = 900;
+
+/**
+ * Capturas cujo enquadramento não é julgado: os testes de arrasto terminam em
+ * qualquer azimute (o centro do AABB se desloca por perspectiva) e o zoom é
+ * intencionalmente recortado.
+ */
+const FRAMING_EXEMPT = new Set([
+  "drag-right-rotate",
+  "drag-vertical-orbit",
+  "camera-zoom-in",
+]);
 
 function parseArgs(argv) {
   const options = {
@@ -145,8 +159,22 @@ async function analyze(page, filePath) {
   }, `data:image/png;base64,${base64}`);
 }
 
-/** Roda um arrasto horizontal com o botão direito no centro do canvas. */
-async function rightDrag(page, { dx = 320, dy = 0, steps = 24 } = {}) {
+async function sceneState(page) {
+  return page.evaluate(() => {
+    const api = window.__HQ_QA__;
+    if (!api) return null;
+    return {
+      view: api.getView(),
+      framing: api.getFraming(),
+      cutawayWalls: api.getCutawayWalls(),
+      signs: api.getSignPositions(),
+      wallGroups: api.countWalls(),
+    };
+  });
+}
+
+/** Arrasto com o botão direito no centro do canvas. */
+async function rightDrag(page, { dx = 0, dy = 0, steps = 24 } = {}) {
   const box = await page.locator("canvas").boundingBox();
   if (!box) throw new Error("Canvas não encontrado para o teste de arrasto.");
   const startX = box.x + box.width / 2;
@@ -155,16 +183,56 @@ async function rightDrag(page, { dx = 320, dy = 0, steps = 24 } = {}) {
   await page.mouse.down({ button: "right" });
   await page.mouse.move(startX + dx, startY + dy, { steps });
   await page.mouse.up({ button: "right" });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(SETTLE_MS);
 }
+
+const setView = (view) => async (page) => {
+  await page.evaluate((options) => window.__HQ_QA__?.setView(options), view);
+  await page.waitForTimeout(SETTLE_MS);
+};
+
+const setWallMode = (mode) => async (page) => {
+  await page.evaluate((value) => window.__HQ_QA__?.setWallMode(value), mode);
+  await page.waitForTimeout(SETTLE_MS);
+};
 
 const SHOTS = {
   "overview-default": async () => {},
+  "camera-north": setView({ azimuthDeg: 180, elevationDeg: 34, distance: 57 }),
+  "camera-east": setView({ azimuthDeg: 90, elevationDeg: 34, distance: 57 }),
+  "camera-south": setView({ azimuthDeg: 0, elevationDeg: 34, distance: 57 }),
+  "camera-west": setView({ azimuthDeg: 270, elevationDeg: 34, distance: 57 }),
+  "camera-diagonal-a": setView({ azimuthDeg: 40, elevationDeg: 30, distance: 55 }),
+  "camera-diagonal-b": setView({ azimuthDeg: 140, elevationDeg: 30, distance: 55 }),
+  "camera-zoom-in": setView({ azimuthDeg: 35, elevationDeg: 28, distance: 30 }),
+  "walls-auto-north": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 180, elevationDeg: 32, distance: 52 })(page);
+  },
+  "walls-auto-south": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 0, elevationDeg: 32, distance: 52 })(page);
+  },
+  "walls-auto-diagonal": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 50, elevationDeg: 30, distance: 52 })(page);
+  },
+  "walls-low": async (page) => {
+    await setWallMode("low")(page);
+    await setView({ azimuthDeg: 45, elevationDeg: 34, distance: 57 })(page);
+  },
+  "walls-full": async (page) => {
+    await setWallMode("full")(page);
+    await setView({ azimuthDeg: 45, elevationDeg: 34, distance: 57 })(page);
+  },
   "drag-right-rotate": async (page) => {
-    await rightDrag(page, { dx: 340 });
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 30, elevationDeg: 34, distance: 57 })(page);
+    await rightDrag(page, { dx: 320 });
   },
   "drag-vertical-orbit": async (page) => {
-    await rightDrag(page, { dx: 0, dy: 180 });
+    await setView({ azimuthDeg: 30, elevationDeg: 34, distance: 57 })(page);
+    await rightDrag(page, { dx: 0, dy: 160 });
   },
 };
 
@@ -181,11 +249,7 @@ async function main() {
   await waitForServer(options.url);
 
   const executablePath = await findChrome();
-  const browser = await chromium.launch({
-    executablePath,
-    args: GL_FLAGS,
-  });
-
+  const browser = await chromium.launch({ executablePath, args: GL_FLAGS });
   const context = await browser.newContext({
     viewport: { width: options.width, height: options.height },
     deviceScaleFactor: 1,
@@ -211,8 +275,7 @@ async function main() {
   try {
     await page.goto(options.url, { waitUntil: "load", timeout: 60000 });
     await page.waitForFunction(() => window.__HQ_WORLD_READY__ === true, { timeout: 60000 });
-    // Deixa o damping/mixer assentarem antes da primeira captura.
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(SETTLE_MS);
 
     report.webgl = await page.evaluate(() => {
       const canvas = document.querySelector("canvas");
@@ -236,31 +299,56 @@ async function main() {
       const filePath = path.join(outDir, `${name}.png`);
       await page.screenshot({ path: filePath, animations: "allow" });
       const analysis = await analyze(page, filePath);
+      const state = await sceneState(page);
+      const framingChecked = !FRAMING_EXEMPT.has(name);
       const bytes = await fs.readFile(filePath);
       report.shots.push({
         name,
         file: path.relative(ROOT, filePath),
         sha256: crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16),
         ...analysis,
+        view: state?.view ?? null,
+        framing: framingChecked ? (state?.framing ?? null) : null,
+        framingBypassed: !framingChecked,
+        cutawayWalls: state?.cutawayWalls ?? [],
+        signCount: state?.signs?.length ?? null,
       });
     }
+
+    const last = await sceneState(page);
+    report.scene = {
+      signs: last?.signs ?? [],
+      cutawayWalls: last?.cutawayWalls ?? [],
+      wallGroups: last?.wallGroups ?? 0,
+    };
   } finally {
     await browser.close();
     if (server) server.kill("SIGTERM");
   }
 
   const blank = report.shots.filter((shot) => shot.stdDev < 4 || shot.mean < 6);
-  const duplicated = new Map();
-  for (const shot of report.shots) {
-    duplicated.set(shot.sha256, (duplicated.get(shot.sha256) ?? 0) + 1);
-  }
-  const identical = [...duplicated.entries()].filter(([, count]) => count > 1);
+  const offCenter = report.shots.filter(
+    (shot) => shot.framing && (shot.framing.centerX < 0.4 || shot.framing.centerX > 0.6),
+  );
+  const tooSmall = report.shots.filter(
+    (shot) => shot.framing && shot.framing.widthFraction < 0.3,
+  );
+  const hashes = new Map();
+  for (const shot of report.shots) hashes.set(shot.sha256, (hashes.get(shot.sha256) ?? 0) + 1);
+  const identical = [...hashes.entries()].filter(([, count]) => count > 1);
 
   report.verdict = {
-    ok: blank.length === 0 && consoleErrors.length === 0,
+    ok:
+      blank.length === 0 &&
+      consoleErrors.length === 0 &&
+      offCenter.length === 0 &&
+      tooSmall.length === 0,
     blankShots: blank.map((shot) => shot.name),
+    offCenterShots: offCenter.map((shot) => shot.name),
+    tooSmallShots: tooSmall.map((shot) => shot.name),
     duplicateShots: identical.length > 0,
     consoleErrorCount: consoleErrors.length,
+    signCount: report.scene.signs.length,
   };
 
   const manifestPath = path.join(outDir, "manifest.json");
@@ -268,12 +356,13 @@ async function main() {
 
   console.log(JSON.stringify(report, null, 2));
 
-  if (blank.length > 0) {
-    console.error(`Capturas em branco ou chapadas: ${blank.map((s) => s.name).join(", ")}`);
-  }
-  if (consoleErrors.length > 0) {
+  if (blank.length > 0) console.error(`Capturas em branco: ${blank.map((s) => s.name).join(", ")}`);
+  if (offCenter.length > 0)
+    console.error(`Enquadramento fora do centro: ${offCenter.map((s) => s.name).join(", ")}`);
+  if (tooSmall.length > 0)
+    console.error(`Prédio pequeno demais: ${tooSmall.map((s) => s.name).join(", ")}`);
+  if (consoleErrors.length > 0)
     console.error(`Erros de console detectados: ${consoleErrors.length}`);
-  }
   if (!report.verdict.ok) process.exitCode = 1;
 }
 

@@ -13,18 +13,18 @@ relatório em `qa/reviews/`. O estado atual fica em [PROGRESS.md](PROGRESS.md).
 - [x] Definir estratégia segura de integração (proxy de leitura, somente GET)
 - [x] Definir contratos TypeScript (`src/types/hq.ts`)
 - [x] Criar plano e documentação
-- [ ] Confirmar revisão visual multimodal do subagente
+- [x] Confirmar revisão visual multimodal do subagente
 
-## Stage 1 — Fundação e mapa 3D
+## Stage 1 — Fundação e mapa 3D ✅
 
-- [ ] Gerador de pisos por sala
-- [ ] Gerador de paredes a partir das bounds das salas
-- [ ] Portas como vãos reais com verga
-- [ ] Muros de perímetro dos corredores
-- [ ] Pisos diferenciados (sala, corredor, hall)
-- [ ] Placas de identificação por departamento
-- [ ] Iluminação por sala
-- [ ] Screenshots de overview e perspectiva alternativa
+- [x] Gerador de pisos por sala
+- [x] Gerador de paredes a partir das bounds das salas
+- [x] Portas como vãos reais com verga
+- [x] Muros de perímetro dos corredores
+- [x] Pisos diferenciados (sala, corredor, hall)
+- [x] Placas de identificação por departamento
+- [ ] Iluminação por sala (movida para o Stage 3)
+- [x] Screenshots de overview e perspectiva alternativa
 
 ## Stage 2 — Câmera e paredes dinâmicas (bloqueante)
 
