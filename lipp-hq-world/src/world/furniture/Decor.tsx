@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { PALETTE } from "@/config/constants";
 import type { RoomDefinition } from "@/types/hq";
 
 interface DecorProps {
@@ -104,9 +103,3 @@ export function Couch({ position, rotation = 0 }: { position: [number, number, n
     </group>
   );
 }
-
-export function hallDecor(): { position: [number, number, number]; rotation: number } {
-  return { position: [0, 0, 0], rotation: 0 };
-}
-
-export const DECOR_PALETTE = PALETTE;

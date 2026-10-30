@@ -6,6 +6,15 @@ import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
 import { findPath, type NavPoint } from "@/world/navigation/navGrid";
+
+/** Hash determinístico por id — substitui Math.random no cenário demo. */
+function deterministicHash(text: string): number {
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) % 997;
+  }
+  return hash;
+}
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
 
 const WALK_SPEED = 1.55;
@@ -82,7 +91,8 @@ function deskSpot(agentId: string): NavPoint {
 function meetingSpot(): NavPoint {
   const room = ROOMS_BY_ID.reunioes;
   const center = roomCenter(room);
-  return { x: center[0], z: center[2] };
+  // cadeira ao norte da mesa, não o centro dela
+  return { x: center[0], z: center[2] - 1.25 };
 }
 
 function hallSpot(index: number): NavPoint {
@@ -116,7 +126,6 @@ declare module "@/world/characters/Agents" {
 export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const dataSource = useHQStore((state) => state.dataSource);
-  const frames = useRef<Map<string, AgentFigureHandle>>(new Map());
   const agents = AGENTS;
   const indexRef = useRef(0);
 
@@ -134,8 +143,13 @@ export function Agents() {
       // alimenta o estado a partir da fonte de dados
       const state = useHQStore.getState().agentStates[agentId];
       if (state && state !== runtime.state && runtime.state !== "walking") {
-        runtime.state = state;
-        runtime.source = dataSource;
+        if (state === "meeting") {
+          // navega até a mesa e só então assume a pose de reunião
+          walkTo(runtime, meetingSpot(), "meeting");
+        } else {
+          runtime.state = state;
+          runtime.source = dataSource;
+        }
       }
 
       const { group, hips, leftLeg, rightLeg, leftArm, rightArm, torso, head, ring } = figure;
@@ -214,10 +228,9 @@ export function Agents() {
         if (torso) torso.position.z = 0;
 
         if (runtime.state === "meeting") {
-          const target = meetingSpot();
-          group.position.x += (target.x - group.position.x) * Math.min(1, delta * 0.9);
-          group.position.z += (target.z - group.position.z) * Math.min(1, delta * 0.9);
-          runtime.heading += (Math.PI - runtime.heading) * Math.min(1, delta * 2);
+          // orientação para a mesa; a posição chegou por navegação, nunca por
+          // interpolação direta (personagem não atravessa parede)
+          runtime.heading += (0 - runtime.heading) * Math.min(1, delta * 2);
         }
       }
 
@@ -226,8 +239,7 @@ export function Agents() {
         runtime.walkTimer += delta;
         if (runtime.walkTimer > runtime.nextIdleWalkAt) {
           runtime.walkTimer = 0;
-          runtime.nextIdleWalkAt = 14 + Math.random() * 16;
-          indexRef.current = indexRef.current;
+          runtime.nextIdleWalkAt = 14 + (deterministicHash(agentId) % 16);
           const hallIndex = [...runtimes.keys()].indexOf(agentId);
           walkTo(runtime, hallSpot(hallIndex), "idle");
         }
@@ -247,7 +259,6 @@ export function Agents() {
             figureRef={(handle) => {
               // refs de filhos chegam antes do grupo pai: só registre com grupo pronto
               if (!handle.group) return;
-              frames.current.set(agent.id, handle);
               getRuntime(agent).figure = handle;
               handle.group.position.set(spot.x, 0, spot.z);
               registerPickable(handle.group);
@@ -257,11 +268,5 @@ export function Agents() {
       })}
     </group>
   );
-}
-
-/** Aplica um estado vindo da fonte de dados (Live ou Demo). */
-export function applyAgentState(agentId: string, state: AgentAnimationState, summary?: string) {
-  const store = useHQStore.getState();
-  store.setAgentState(agentId, state, summary);
 }
 

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import type { Object3D } from "three";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2 } from "three";
 import { useHQStore } from "@/state/useHQStore";
@@ -9,15 +10,15 @@ const raycaster = new Raycaster();
 const pointer = new Vector2();
 
 /** Grupos marcados como selecionáveis, varridos da cena a cada clique. */
-let pickables: import("three").Object3D[] = [];
+const pickables: Object3D[] = [];
 
-export function registerPickable(object: import("three").Object3D) {
+export function registerPickable(object: Object3D) {
   if (!pickables.includes(object)) pickables.push(object);
 }
 
 /** Sobe a árvore até achar a marcação de agente ou sala. */
-function pickInfo(object: import("three").Object3D): { agentId?: string; roomId?: string } {
-  let node: import("three").Object3D | null = object;
+function pickInfo(object: Object3D): { agentId?: string; roomId?: string } {
+  let node: Object3D | null = object;
   while (node) {
     const agentId = node.userData?.agentId as string | undefined;
     const roomId = node.userData?.roomId as string | undefined;
@@ -27,9 +28,9 @@ function pickInfo(object: import("three").Object3D): { agentId?: string; roomId?
   return {};
 }
 
-function collectPickables(): import("three").Object3D[] {
+function collectPickables(): Object3D[] {
   return pickables.filter((object) => {
-    let root: import("three").Object3D | null = object;
+    let root: Object3D | null = object;
     while (root) {
       if (!root.parent && root.type !== "Scene") return false;
       root = root.parent;

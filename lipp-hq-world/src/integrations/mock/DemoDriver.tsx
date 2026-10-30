@@ -53,6 +53,11 @@ export function DemoDriver() {
       const step = (now - last) / 1000;
       last = now;
 
+      // Honestidade em primeiro lugar: o cenário simulado NUNCA roda em Live.
+      if (useHQStore.getState().dataSource !== "demo") {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       if (useHQStore.getState().demoPaused) {
         raf = requestAnimationFrame(tick);
         return;

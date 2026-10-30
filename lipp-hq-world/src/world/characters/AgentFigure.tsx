@@ -29,7 +29,7 @@ const PANTS = "#2f3742";
  * A pose de trabalho abaixa o quadril e dobra as pernas na cadeira.
  */
 export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
-  function AgentFigure({ agent, selected, figureRef }, _forwardedRef) {
+  function AgentFigure({ agent, selected, figureRef }) {
     const parts = useMemo<AgentFigureHandle>(
       () => ({
         group: null as unknown as Group,
