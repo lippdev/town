@@ -5,10 +5,11 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** Stage 8 — polimento visual (luz quente, decoração,
-provas de animação), fechando com revisão independente.
+**Stage em andamento:** nenhum — **MVP + polimento entregues**.
 
-**MVP entregue:** GO final, rubrica 38/40.
+**Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
+Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40** ·
+Stage 8 polimento **GO com locomoção provada em captura**.
 
 **Cadeia de gates:** Stage 0 GO · Stage 1 GO · Stage 2 GO (bloqueante) ·
 Stages 3–4 GO · Stages 5–6 integrados · Stage 7 final **38/40**.
@@ -42,12 +43,8 @@ erro de console. `qa/screenshots/manifest.json`:
 3. **Capturas podiam fotografar o resíduo de damping**: o harness agora espera
    a vista assentar (duas leituras idênticas) antes de fotografar.
 
-## Pendências
+## Pendências (pós-MVP, todas de polimento)
 
-- Revisão visual independente do Gate 2 (subagente com visão).
-- Depois do GO: Stage 3 (mobiliário e ambientação).
-
-## Próxima ação
-
-Fechar o Gate 2 com o relatório do revisor, abrir a PR do Stage 2 e seguir para
-o Stage 3.
+- Rótulos maiores nas vistas largas de norte/leste/oeste.
+- Luz de interiores ainda mais quente (progressivo).
+- Live real: instância do OpenMausBot acessível + proxy deployado.
