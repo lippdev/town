@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T03:54:56.712Z",
+  "generatedAt": "2026-10-30T03:58:03.791Z",
   "url": "http://127.0.0.1:4173",
   "viewport": {
     "width": 1440,
@@ -15,9 +15,9 @@
     {
       "name": "overview-default",
       "file": "qa/screenshots/overview-default.png",
-      "sha256": "49a2b75c14e96027",
-      "mean": 59.67,
-      "stdDev": 72.14,
+      "sha256": "48f7e8c1e0d5fdb9",
+      "mean": 59.57,
+      "stdDev": 71.96,
       "width": 1440,
       "height": 900,
       "view": {
@@ -59,9 +59,9 @@
     {
       "name": "camera-north",
       "file": "qa/screenshots/camera-north.png",
-      "sha256": "f0b77f56059b3762",
-      "mean": 49.08,
-      "stdDev": 59.28,
+      "sha256": "c4ee59e7fa6d29f9",
+      "mean": 49.04,
+      "stdDev": 59.2,
       "width": 1440,
       "height": 900,
       "view": {
@@ -103,9 +103,9 @@
     {
       "name": "camera-east",
       "file": "qa/screenshots/camera-east.png",
-      "sha256": "a0a9da6bc1df7e03",
-      "mean": 51.82,
-      "stdDev": 65.8,
+      "sha256": "8d9e2c2e775cc799",
+      "mean": 51.78,
+      "stdDev": 65.72,
       "width": 1440,
       "height": 900,
       "view": {
@@ -147,9 +147,9 @@
     {
       "name": "camera-south",
       "file": "qa/screenshots/camera-south.png",
-      "sha256": "ca3b436204cb61d4",
-      "mean": 52.13,
-      "stdDev": 66.38,
+      "sha256": "9f65d772df91bcb9",
+      "mean": 52.02,
+      "stdDev": 66.16,
       "width": 1440,
       "height": 900,
       "view": {
@@ -191,9 +191,9 @@
     {
       "name": "camera-west",
       "file": "qa/screenshots/camera-west.png",
-      "sha256": "8988e7b4299d103c",
-      "mean": 50.85,
-      "stdDev": 59.86,
+      "sha256": "1642d02bd413dba9",
+      "mean": 50.82,
+      "stdDev": 59.8,
       "width": 1440,
       "height": 900,
       "view": {
@@ -235,9 +235,9 @@
     {
       "name": "camera-diagonal-a",
       "file": "qa/screenshots/camera-diagonal-a.png",
-      "sha256": "7910c621cd271461",
-      "mean": 54.14,
-      "stdDev": 68.47,
+      "sha256": "2824d74376c2fd1d",
+      "mean": 54.03,
+      "stdDev": 68.26,
       "width": 1440,
       "height": 900,
       "view": {
@@ -279,9 +279,9 @@
     {
       "name": "camera-diagonal-b",
       "file": "qa/screenshots/camera-diagonal-b.png",
-      "sha256": "68cb71c57cab8396",
-      "mean": 49.74,
-      "stdDev": 61.99,
+      "sha256": "d0b1cd66deddd28f",
+      "mean": 49.7,
+      "stdDev": 61.9,
       "width": 1440,
       "height": 900,
       "view": {
@@ -325,9 +325,9 @@
     {
       "name": "camera-zoom-in",
       "file": "qa/screenshots/camera-zoom-in.png",
-      "sha256": "406ad919260dd0e5",
-      "mean": 115.41,
-      "stdDev": 76.2,
+      "sha256": "3f39400c3919fa77",
+      "mean": 115.23,
+      "stdDev": 76.03,
       "width": 1440,
       "height": 900,
       "view": {
@@ -361,9 +361,9 @@
     {
       "name": "walls-auto-north",
       "file": "qa/screenshots/walls-auto-north.png",
-      "sha256": "bf99db214c086340",
-      "mean": 54.93,
-      "stdDev": 62.15,
+      "sha256": "7ccf2214a358a92f",
+      "mean": 54.88,
+      "stdDev": 62.04,
       "width": 1440,
       "height": 900,
       "view": {
@@ -405,9 +405,9 @@
     {
       "name": "walls-auto-south",
       "file": "qa/screenshots/walls-auto-south.png",
-      "sha256": "c432d077523dc4da",
-      "mean": 58.42,
-      "stdDev": 69.79,
+      "sha256": "d9abfa1f8b7a14ad",
+      "mean": 58.29,
+      "stdDev": 69.54,
       "width": 1440,
       "height": 900,
       "view": {
@@ -449,9 +449,9 @@
     {
       "name": "walls-auto-diagonal",
       "file": "qa/screenshots/walls-auto-diagonal.png",
-      "sha256": "c8db137eba0ea463",
-      "mean": 59.33,
-      "stdDev": 70.94,
+      "sha256": "db352fd1fc530926",
+      "mean": 59.22,
+      "stdDev": 70.75,
       "width": 1440,
       "height": 900,
       "view": {
@@ -497,9 +497,9 @@
     {
       "name": "walls-low",
       "file": "qa/screenshots/walls-low.png",
-      "sha256": "f1c7832ae6bdc39b",
-      "mean": 47.66,
-      "stdDev": 62.4,
+      "sha256": "3bd2569ad3ed034d",
+      "mean": 47.57,
+      "stdDev": 62.2,
       "width": 1440,
       "height": 900,
       "view": {
@@ -545,9 +545,9 @@
     {
       "name": "walls-full",
       "file": "qa/screenshots/walls-full.png",
-      "sha256": "74bb79a5c287376c",
-      "mean": 55.47,
-      "stdDev": 70.62,
+      "sha256": "435ce15a784d3a29",
+      "mean": 55.46,
+      "stdDev": 70.49,
       "width": 1440,
       "height": 900,
       "view": {
@@ -593,9 +593,9 @@
     {
       "name": "drag-right-rotate",
       "file": "qa/screenshots/drag-right-rotate.png",
-      "sha256": "847ea090126319d4",
-      "mean": 50.75,
-      "stdDev": 61.26,
+      "sha256": "e883e34fcbf8711c",
+      "mean": 50.7,
+      "stdDev": 61.03,
       "width": 1440,
       "height": 900,
       "view": {
@@ -632,13 +632,13 @@
     {
       "name": "drag-vertical-orbit",
       "file": "qa/screenshots/drag-vertical-orbit.png",
-      "sha256": "2c369362ac057949",
-      "mean": 67.02,
-      "stdDev": 74.32,
+      "sha256": "a3e3243e664bed7f",
+      "mean": 66.95,
+      "stdDev": 74.23,
       "width": 1440,
       "height": 900,
       "view": {
-        "azimuthDeg": 9.54,
+        "azimuthDeg": 9.52,
         "elevationDeg": 65.94,
         "distance": 57,
         "target": [
@@ -668,13 +668,13 @@
     {
       "name": "room-selected-focus",
       "file": "qa/screenshots/room-selected-focus.png",
-      "sha256": "788874cbd2175185",
-      "mean": 85.51,
-      "stdDev": 77.63,
+      "sha256": "3c101c38a8a7f14b",
+      "mean": 85.42,
+      "stdDev": 77.5,
       "width": 1440,
       "height": 900,
       "view": {
-        "azimuthDeg": 25.54,
+        "azimuthDeg": 25.55,
         "elevationDeg": 65.87,
         "distance": 26,
         "target": [
@@ -710,9 +710,9 @@
     {
       "name": "camera-reset",
       "file": "qa/screenshots/camera-reset.png",
-      "sha256": "087f87c7f3e9a53c",
-      "mean": 60.02,
-      "stdDev": 71.71,
+      "sha256": "95253c98f456817d",
+      "mean": 59.92,
+      "stdDev": 71.53,
       "width": 1440,
       "height": 900,
       "view": {
@@ -755,9 +755,9 @@
     {
       "name": "stability-nudge",
       "file": "qa/screenshots/stability-nudge.png",
-      "sha256": "08418ec7cd65d5b6",
-      "mean": 59.44,
-      "stdDev": 71.21,
+      "sha256": "a436e8f4ac3bb096",
+      "mean": 59.34,
+      "stdDev": 71,
       "width": 1440,
       "height": 900,
       "view": {
