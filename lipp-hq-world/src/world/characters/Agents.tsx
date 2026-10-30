@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
 import { useHQStore } from "@/state/useHQStore";
 import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
@@ -128,6 +129,7 @@ export function Agents() {
   const dataSource = useHQStore((state) => state.dataSource);
   const agents = AGENTS;
   const indexRef = useRef(0);
+  const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
   useFrame((_, rawDelta) => {
     // animação de pose usa delta travado; locomoção usa o delta real, senão o
@@ -251,6 +253,7 @@ export function Agents() {
     <group name="agents">
       {agents.map((agent) => {
         const spot = deskSpot(agent.id);
+        const showLabel = hoveredAgentId === agent.id || selectedAgentId === agent.id;
         return (
           <AgentFigure
             key={agent.id}
@@ -263,7 +266,27 @@ export function Agents() {
               handle.group.position.set(spot.x, 0, spot.z);
               registerPickable(handle.group);
             }}
-          />
+            onHoverChange={(hovered) => setHoveredAgentId(hovered ? agent.id : null)}
+          >
+            {showLabel && (
+              <Html center position={[0, 2.05, 0]} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+                <div
+                  style={{
+                    background: "rgba(13, 21, 36, 0.92)",
+                    border: `1px solid ${agent.color}`,
+                    borderRadius: 8,
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#e6ecf5",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {agent.name} · {agent.role}
+                </div>
+              </Html>
+            )}
+          </AgentFigure>
         );
       })}
     </group>

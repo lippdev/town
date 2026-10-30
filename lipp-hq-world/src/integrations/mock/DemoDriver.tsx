@@ -39,6 +39,8 @@ const CYCLE_LENGTH = 34;
  * eventos da interface com a marcação de simulação.
  */
 export function DemoDriver() {
+  const demoRestart = useHQStore((state) => state.demoRestart);
+
   useEffect(() => {
     const store = useHQStore.getState();
     store.setDataSource("demo");
@@ -84,7 +86,7 @@ export function DemoDriver() {
 
     let raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [demoRestart]);
 
   return null;
 }
