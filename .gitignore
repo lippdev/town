@@ -1,0 +1,28 @@
+# Dependências
+node_modules/
+.pnpm-store/
+vendor/
+.venv/
+__pycache__/
+
+# Build
+dist/
+build/
+.next/
+.turbo/
+out/
+
+# Ambiente (nunca commitar)
+.env
+.env.*
+!.env.example
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
