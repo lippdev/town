@@ -5,9 +5,10 @@ qualquer commit.
 
 ## Estado atual
 
-**Stage em andamento:** Stage 2 — câmera e paredes dinâmicas (fechando).
+**Stage em andamento:** Stage 3 — ambientação e acabamento.
 
-**Último fechado:** Stage 1 — prédio, pisos, portas e letreiros (GO em 2026-10-29).
+**Último fechado:** Stage 2 — câmera e paredes dinâmicas, a fase bloqueante
+(GO do revisor independente em 2026-10-30).
 
 ## Provas mecânicas do Gate 2 (harness)
 

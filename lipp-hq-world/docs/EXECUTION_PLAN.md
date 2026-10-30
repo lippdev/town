@@ -26,20 +26,20 @@ relatório em `qa/reviews/`. O estado atual fica em [PROGRESS.md](PROGRESS.md).
 - [ ] Iluminação por sala (movida para o Stage 3)
 - [x] Screenshots de overview e perspectiva alternativa
 
-## Stage 2 — Câmera e paredes dinâmicas (bloqueante)
+## Stage 2 — Câmera e paredes dinâmicas (bloqueante) ✅
 
-- [ ] OrbitControls com botão direito para rotação
-- [ ] Bloqueio de menu de contexto só no canvas
-- [ ] Limites de zoom e ângulo
-- [ ] Foco suave em sala
-- [ ] Reset de câmera
-- [ ] `occlusion.ts` puro com interseção de segmentos 2D
-- [ ] Histerese de entrada e saída
-- [ ] `useWallVisibility` com interpolação em `useFrame`
-- [ ] Três modos de parede: auto, baixa, completa
-- [ ] Painel oculto sai do raycast
-- [ ] Teste real de arrasto com botão direito
-- [ ] Screenshots dos quatro lados e duas diagonais
+- [x] OrbitControls com botão direito para rotação
+- [x] Bloqueio de menu de contexto só no canvas
+- [x] Limites de zoom e ângulo
+- [x] Foco suave em sala
+- [x] Reset de câmera
+- [x] `occlusion.ts` puro com interseção de segmentos 2D
+- [x] Histerese de entrada e saída
+- [x] `useWallVisibility` com interpolação em `useFrame`
+- [x] Três modos de parede: auto, baixa, completa
+- [x] Painel oculto sai do raycast
+- [x] Teste real de arrasto com botão direito
+- [x] Screenshots dos quatro lados e duas diagonais
 
 ## Stage 3 — Ambientação
 
