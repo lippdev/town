@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { chartTexture } from "@/world/furniture/Furniture";
 import type { RoomDefinition } from "@/types/hq";
 
 interface DecorProps {
@@ -32,7 +33,7 @@ export function WallArt({ room }: DecorProps) {
       </mesh>
       <mesh position={[0, 0, 0.032]}>
         <planeGeometry args={[1.18, 0.76]} />
-        <meshStandardMaterial color={room.color} roughness={0.75} metalness={0} opacity={0.55} transparent />
+        <meshStandardMaterial map={chartTexture(room.color)} roughness={0.75} metalness={0} />
       </mesh>
     </group>
   );
@@ -77,6 +78,33 @@ export function DeskClutter({ room }: DecorProps) {
       <mesh position={[cx - 0.15, 0.79, z - 0.12]} castShadow>
         <boxGeometry args={[0.5, 0.02, 0.18]} />
         <meshStandardMaterial color="#2c333f" roughness={0.6} metalness={0.1} />
+      </mesh>
+      {/* papéis espalhados */}
+      {[[0.3, -0.2, 0.4], [0.55, 0.15, -0.2], [-0.4, 0.25, 0.9]].map(([x, z, rotation], index) => (
+        <mesh key={index} position={[cx + x, 0.785, z + z]} rotation={[0, rotation, 0]} castShadow>
+          <boxGeometry args={[0.28, 0.005, 0.2]} />
+          <meshStandardMaterial color="#f2f4f7" roughness={0.9} metalness={0} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Máquina de café do hall. */
+export function CoffeeStation({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.8, 1.0, 0.6]} />
+        <meshStandardMaterial color="#3a4353" roughness={0.6} metalness={0.15} />
+      </mesh>
+      <mesh position={[0, 1.06, 0]} castShadow>
+        <boxGeometry args={[0.72, 0.12, 0.55]} />
+        <meshStandardMaterial color="#232a35" roughness={0.5} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, 1.13, 0]}>
+        <boxGeometry args={[0.5, 0.03, 0.4]} />
+        <meshStandardMaterial color="#ffbe6e" emissive="#ffbe6e" emissiveIntensity={0.8} toneMapped={false} />
       </mesh>
     </group>
   );

@@ -3,7 +3,7 @@ import { ROOMS } from "@/world/rooms/rooms";
 import { PALETTE } from "@/config/constants";
 import type { RoomDefinition } from "@/types/hq";
 import { Bookshelf, Chair, Desk, MeetingTable, Monitor, Plant, ScreenBoard, Whiteboard } from "@/world/furniture/Furniture";
-import { Couch, Crates, DeskClutter, Rug, WallArt } from "@/world/furniture/Decor";
+import { CoffeeStation, Couch, Crates, DeskClutter, Rug, WallArt } from "@/world/furniture/Decor";
 
 interface RoomFurnitureProps {
   room: RoomDefinition;
@@ -105,6 +105,7 @@ function Specialty({ room }: RoomFurnitureProps) {
 function Hall() {
   return (
     <group name="furniture-hall">
+      <CoffeeStation position={[3.1, 0, 0]} />
       <Plant position={[-2.6, 0, -1.4]} />
       <Plant position={[2.6, 0, 1.4]} />
       <Plant position={[-2.6, 0, 1.8]} />

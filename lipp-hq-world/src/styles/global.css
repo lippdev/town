@@ -397,3 +397,32 @@ button.sidebar-row:hover {
 .hud-bottom .camera-hint {
   position: static;
 }
+
+/* ---------- Boot e erros ---------- */
+
+.boot-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+  background: var(--hq-bg);
+}
+
+.boot-error strong { font-size: 16px; }
+.boot-error p { color: var(--hq-text-dim); max-width: 460px; line-height: 1.5; margin: 0; }
+
+.boot-error button {
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--hq-text);
+  font: inherit;
+  padding: 8px 18px;
+  border-radius: 9px;
+  cursor: pointer;
+  margin-top: 8px;
+}

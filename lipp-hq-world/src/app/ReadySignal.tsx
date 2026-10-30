@@ -19,6 +19,7 @@ export function ReadySignal() {
       frame += 1;
       if (frame >= 3) {
         window.__HQ_WORLD_READY__ = true;
+        window.dispatchEvent(new Event("hq-world-ready"));
         return;
       }
       raf = requestAnimationFrame(tick);

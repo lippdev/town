@@ -1,6 +1,101 @@
 import { useMemo } from "react";
 import { PALETTE } from "@/config/constants";
 import { sharedMaterial } from "@/world/materials";
+import { CanvasTexture, LinearFilter, SRGBColorSpace } from "three";
+
+/** Textura procedural para quadros: caixas, setas e post-its. */
+function boardTexture(kind: "flow" | "kanban" | "art", accent: string): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 256;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas 2D indisponível.");
+
+  context.fillStyle = "#f4f6f9";
+  context.fillRect(0, 0, 512, 256);
+
+  if (kind === "flow") {
+    context.fillStyle = "#dce6f5";
+    context.strokeStyle = "#8fa8cc";
+    for (let column = 0; column < 3; column += 1) {
+      context.fillRect(30 + column * 160, 30, 110, 196);
+      context.strokeRect(30 + column * 160, 30, 110, 196);
+    }
+    context.fillStyle = accent;
+    for (let column = 0; column < 3; column += 1) {
+      const cards = column === 0 ? 3 : column === 1 ? 2 : 1;
+      for (let card = 0; card < cards; card += 1) {
+        context.fillRect(44 + column * 160, 48 + card * 62, 82, 34);
+      }
+    }
+    context.strokeStyle = "#e0885a";
+    context.lineWidth = 5;
+    for (let column = 0; column < 2; column += 1) {
+      context.beginPath();
+      context.moveTo(142 + column * 160, 128);
+      context.lineTo(170 + column * 160, 128);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(170 + column * 160, 128);
+      context.lineTo(160 + column * 160, 118);
+      context.lineTo(160 + column * 160, 138);
+      context.closePath();
+      context.fillStyle = "#e0885a";
+      context.fill();
+    }
+  } else if (kind === "kanban") {
+    context.fillStyle = "#f0e7d2";
+    context.fillRect(0, 0, 512, 256);
+    context.fillStyle = accent;
+    const positions = [
+      [40, 40], [130, 40], [70, 110], [200, 110], [330, 40],
+      [270, 40], [400, 110], [120, 180], [300, 180], [430, 180],
+    ];
+    for (const [x, y] of positions) {
+      context.save();
+      context.translate(x, y);
+      context.rotate(((x % 7) - 3) * 0.05);
+      context.fillRect(0, 0, 56, 40);
+      context.restore();
+    }
+  } else {
+    context.fillStyle = "#e8ecf2";
+    context.fillRect(0, 0, 512, 256);
+    context.strokeStyle = accent;
+    context.lineWidth = 6;
+    context.beginPath();
+    context.moveTo(60, 190);
+    context.lineTo(160, 90);
+    context.lineTo(250, 150);
+    context.lineTo(340, 60);
+    context.lineTo(450, 130);
+    context.stroke();
+    context.fillStyle = accent;
+    for (const [x, y] of [[160, 90], [250, 150], [340, 60]]) {
+      context.beginPath();
+      context.arc(x, y, 9, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  return texture;
+}
+
+export function flowBoardTexture(accent = "#f97316") {
+  return boardTexture("flow", accent);
+}
+
+export function kanbanTexture(accent = "#f59e0b") {
+  return boardTexture("kanban", accent);
+}
+
+export function chartTexture(accent = "#22c55e") {
+  return boardTexture("art", accent);
+}
 
 export interface FurnitureProps {
   position: [number, number, number];
