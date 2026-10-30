@@ -1,11 +1,11 @@
-import { OrbitControls } from "@react-three/drei";
-import { CAMERA, PALETTE } from "@/config/constants";
+import { PALETTE } from "@/config/constants";
 import { QaBridge } from "@/app/QaBridge";
 import { SceneLighting } from "@/world/lighting/SceneLighting";
 import { BaseSlab } from "@/world/scene/BaseSlab";
 import { FloorPlates } from "@/world/rooms/FloorPlates";
 import { RoomSigns } from "@/world/rooms/RoomSigns";
 import { DynamicWalls } from "@/world/walls/DynamicWalls";
+import { CameraRig } from "@/world/camera/CameraRig";
 
 /**
  * Cena raiz do Lipp HQ World: laje, pisos, paredes dinâmicas e letreiros.
@@ -21,16 +21,7 @@ export function HQScene() {
       <FloorPlates />
       <DynamicWalls />
       <RoomSigns />
-      <OrbitControls
-        makeDefault
-        enableDamping
-        dampingFactor={CAMERA.dampingFactor}
-        target={[CAMERA.target[0], CAMERA.target[1], CAMERA.target[2]]}
-        minDistance={CAMERA.minDistance}
-        maxDistance={CAMERA.maxDistance}
-        minPolarAngle={CAMERA.minPolarAngle}
-        maxPolarAngle={CAMERA.maxPolarAngle}
-      />
+      <CameraRig />
       <QaBridge />
     </>
   );

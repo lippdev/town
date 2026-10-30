@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import type { ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
 
+export interface CameraView {
+  azimuthDeg: number;
+  elevationDeg: number;
+  distance: number;
+  target: [number, number, number];
+}
+
 export interface CameraCommand {
   kind: "focus" | "reset";
   roomId?: string;
@@ -15,6 +22,7 @@ interface HQState {
   selectedAgentId: string | null;
   events: HQEvent[];
   cameraCommand: CameraCommand | null;
+  cameraView: CameraView | null;
   setWallMode: (mode: WallMode) => void;
   selectRoom: (roomId: string | null) => void;
   selectAgent: (agentId: string | null) => void;
@@ -36,6 +44,7 @@ export const useHQStore = create<HQState>((set) => ({
   selectedAgentId: null,
   events: [],
   cameraCommand: null,
+  cameraView: null,
 
   setWallMode: (wallMode) => set({ wallMode }),
   selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null }),

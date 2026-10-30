@@ -37,12 +37,23 @@ export interface HqQaApi {
   getSignPositions: () => Array<{ id: string; position: Vector3Tuple }>;
   countWalls: () => number;
   getFraming: () => HqQaFraming;
+  controlsInfo: () => {
+    mouseButtons: { LEFT: number; MIDDLE: number; RIGHT: number };
+    enableRotate: boolean;
+    enablePan: boolean;
+    enableDamping: boolean;
+    dampingFactor: number;
+    enabled: boolean;
+    azimuth: number;
+  } | null;
 }
 
 declare global {
   interface Window {
     /** Ponte usada pelo harness de QA visual para posicionar a câmera e ler o estado. */
     __HQ_QA__?: HqQaApi;
+    /** Instância dos OrbitControls, para diagnóstico de controles no QA. */
+    __HQ_CONTROLS__?: unknown;
   }
 }
 
@@ -94,8 +105,11 @@ export function QaBridge() {
         }
         return summarize(camera.position, targetVector);
       },
-      getView: () =>
-        summarize(camera.position, controls ? controls.target : new Vector3(0, 0, 0)),
+      getView: () => {
+        const stored = useHQStore.getState().cameraView;
+        if (stored) return stored;
+        return summarize(camera.position, controls ? controls.target : new Vector3(0, 0, 0));
+      },
       setWallMode: (mode) => setWallMode(mode),
       getCutawayWalls: () => [...wallRuntime.cutaway].sort(),
       getSignPositions: () => {
@@ -122,6 +136,29 @@ export function QaBridge() {
           if (object.name === "wall-group") count += 1;
         });
         return count;
+      },
+      controlsInfo: () => {
+        const instance = window.__HQ_CONTROLS__ as
+          | {
+              mouseButtons: { LEFT: number; MIDDLE: number; RIGHT: number };
+              enableRotate: boolean;
+              enablePan: boolean;
+              enableDamping: boolean;
+              dampingFactor: number;
+              enabled: boolean;
+              getAzimuthalAngle: () => number;
+            }
+          | undefined;
+        if (!instance?.getAzimuthalAngle) return null;
+        return {
+          mouseButtons: instance.mouseButtons,
+          enableRotate: instance.enableRotate,
+          enablePan: instance.enablePan,
+          enableDamping: instance.enableDamping,
+          dampingFactor: instance.dampingFactor,
+          enabled: instance.enabled,
+          azimuth: Number(instance.getAzimuthalAngle().toFixed(3)),
+        };
       },
       getFraming: () => {
         const corners: Vector3[] = [];
@@ -152,6 +189,7 @@ export function QaBridge() {
     };
 
     window.__HQ_QA__ = api;
+    window.__HQ_CONTROLS__ = controls ?? null;
     return () => {
       delete window.__HQ_QA__;
     };
