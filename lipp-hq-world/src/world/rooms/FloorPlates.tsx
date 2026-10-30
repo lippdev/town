@@ -1,6 +1,7 @@
 import { PALETTE } from "@/config/constants";
 import { ROOMS } from "@/world/rooms/rooms";
 import { CORRIDOR_FLOORS } from "@/world/walls/walls";
+import { registerPickable } from "@/world/scene/Picking";
 
 interface RectProps {
   minX: number;
@@ -13,16 +14,19 @@ interface RectProps {
   opacity?: number;
 }
 
-function FloorRect({ minX, maxX, minZ, maxZ, y, color, roughness = 0.94, opacity }: RectProps) {
+function FloorRect({ minX, maxX, minZ, maxZ, y, color, roughness = 0.94, opacity, roomId, }: RectProps & { roomId?: string }) {
   const width = maxX - minX;
   const depth = maxZ - minZ;
   const transparent = opacity !== undefined;
-
   return (
     <mesh
+      ref={(node) => {
+        if (node && roomId) registerPickable(node);
+      }}
       position={[(minX + maxX) / 2, y, (minZ + maxZ) / 2]}
       rotation={[-Math.PI / 2, 0, 0]}
       receiveShadow
+      userData={roomId ? { roomId } : undefined}
     >
       <planeGeometry args={[width, depth]} />
       <meshStandardMaterial
@@ -79,6 +83,7 @@ export function FloorPlates() {
               maxZ={bounds.maxZ}
               y={0.006}
               color={base}
+              roomId={room.id}
             />
             <FloorRect
               minX={bounds.minX + inset}

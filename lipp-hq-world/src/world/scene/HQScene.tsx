@@ -6,6 +6,7 @@ import { FloorPlates } from "@/world/rooms/FloorPlates";
 import { RoomSigns } from "@/world/rooms/RoomSigns";
 import { DynamicWalls } from "@/world/walls/DynamicWalls";
 import { CameraRig } from "@/world/camera/CameraRig";
+import { Picking } from "@/world/scene/Picking";
 
 /**
  * Cena raiz do Lipp HQ World: laje, pisos, paredes dinâmicas e letreiros.
@@ -22,6 +23,7 @@ export function HQScene() {
       <DynamicWalls />
       <RoomSigns />
       <CameraRig />
+      <Picking />
       <QaBridge />
     </>
   );

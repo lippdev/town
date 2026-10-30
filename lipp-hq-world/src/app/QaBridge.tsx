@@ -3,6 +3,7 @@ import { useThree } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { BASE_SLAB, WALL_HEIGHT } from "@/config/constants";
 import { useHQStore } from "@/state/useHQStore";
+import { ROOMS_BY_ID } from "@/world/rooms/rooms";
 import { wallRuntime } from "@/world/walls/wallRuntime";
 import type { Vector3Tuple, WallMode } from "@/types/hq";
 
@@ -36,7 +37,7 @@ export interface HqQaApi {
   getCutawayWalls: () => string[];
   getSignPositions: () => Array<{ id: string; position: Vector3Tuple }>;
   countWalls: () => number;
-  getFraming: () => HqQaFraming;
+  getFraming: (roomId?: string) => HqQaFraming;
   controlsInfo: () => {
     mouseButtons: { LEFT: number; MIDDLE: number; RIGHT: number };
     enableRotate: boolean;
@@ -46,6 +47,10 @@ export interface HqQaApi {
     enabled: boolean;
     azimuth: number;
   } | null;
+  select: (roomId: string) => void;
+  focus: (roomId: string) => void;
+  reset: () => void;
+  getSelection: () => { roomId: string | null; agentId: string | null };
 }
 
 declare global {
@@ -160,11 +165,30 @@ export function QaBridge() {
           azimuth: Number(instance.getAzimuthalAngle().toFixed(3)),
         };
       },
-      getFraming: () => {
+      select: (roomId) => useHQStore.getState().selectRoom(roomId),
+      focus: (roomId) => useHQStore.getState().focusRoom(roomId),
+      reset: () => useHQStore.getState().resetCamera(),
+      getSelection: () => {
+        const state = useHQStore.getState();
+        return { roomId: state.selectedRoomId, agentId: state.selectedAgentId };
+      },
+      getFraming: (roomId) => {
+        let x0: number = BASE_SLAB.minX;
+        let x1: number = BASE_SLAB.maxX;
+        let z0: number = BASE_SLAB.minZ;
+        let z1: number = BASE_SLAB.maxZ;
+        if (roomId) {
+          const room = ROOMS_BY_ID[roomId];
+          if (!room) throw new Error(`Sala desconhecida: ${roomId}`);
+          x0 = room.bounds.minX;
+          x1 = room.bounds.maxX;
+          z0 = room.bounds.minZ;
+          z1 = room.bounds.maxZ;
+        }
         const corners: Vector3[] = [];
-        for (const x of [BASE_SLAB.minX, BASE_SLAB.maxX]) {
+        for (const x of [x0, x1]) {
           for (const y of [-BASE_SLAB.thickness, WALL_HEIGHT]) {
-            for (const z of [BASE_SLAB.minZ, BASE_SLAB.maxZ]) {
+            for (const z of [z0, z1]) {
               corners.push(new Vector3(x, y, z).project(camera));
             }
           }

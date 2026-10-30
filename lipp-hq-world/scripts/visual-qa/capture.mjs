@@ -159,18 +159,18 @@ async function analyze(page, filePath) {
   }, `data:image/png;base64,${base64}`);
 }
 
-async function sceneState(page) {
-  return page.evaluate(() => {
+async function sceneState(page, framingRoom) {
+  return page.evaluate((room) => {
     const api = window.__HQ_QA__;
     if (!api) return null;
     return {
       view: api.getView(),
-      framing: api.getFraming(),
+      framing: room ? api.getFraming(room) : api.getFraming(),
       cutawayWalls: api.getCutawayWalls(),
       signs: api.getSignPositions(),
       wallGroups: api.countWalls(),
     };
-  });
+  }, framingRoom ?? null);
 }
 
 /** Arrasto com o botão direito no centro do canvas. */
@@ -195,6 +195,22 @@ const setWallMode = (mode) => async (page) => {
   await page.evaluate((value) => window.__HQ_QA__?.setWallMode(value), mode);
   await page.waitForTimeout(SETTLE_MS);
 };
+
+/**
+ * Espera a vista assentar: duas leituras consecutivas idênticas. Elimina o
+ * resíduo de damping entre a animação e a captura.
+ */
+async function waitForViewStable(page, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = JSON.stringify(await page.evaluate(() => window.__HQ_QA__.getView()));
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(450);
+    const current = JSON.stringify(await page.evaluate(() => window.__HQ_QA__.getView()));
+    if (current === last) return;
+    last = current;
+  }
+  throw new Error("A vista da câmera não assentou a tempo.");
+}
 
 const SHOTS = {
   "overview-default": async () => {},
@@ -233,6 +249,18 @@ const SHOTS = {
   "drag-vertical-orbit": async (page) => {
     await setView({ azimuthDeg: 30, elevationDeg: 34, distance: 57 })(page);
     await rightDrag(page, { dx: 0, dy: 160 });
+  },
+  "room-selected-focus": async (page) => {
+    await page.evaluate(() => window.__HQ_QA__.focus("engenharia"));
+    await waitForViewStable(page);
+  },
+  "camera-reset": async (page) => {
+    await page.evaluate(() => window.__HQ_QA__.reset());
+    await waitForViewStable(page);
+  },
+  "stability-nudge": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 46, elevationDeg: 30, distance: 52 })(page);
   },
 };
 
@@ -299,7 +327,10 @@ async function main() {
       const filePath = path.join(outDir, `${name}.png`);
       await page.screenshot({ path: filePath, animations: "allow" });
       const analysis = await analyze(page, filePath);
-      const state = await sceneState(page);
+      const state = await sceneState(
+        page,
+        name === "room-selected-focus" ? "engenharia" : undefined,
+      );
       const framingChecked = !FRAMING_EXEMPT.has(name);
       const bytes = await fs.readFile(filePath);
       report.shots.push({
@@ -333,8 +364,24 @@ async function main() {
   const tooSmall = report.shots.filter(
     (shot) => shot.framing && shot.framing.widthFraction < 0.3,
   );
+  // Reset: a vista precisa voltar ao padrão dentro de tolerância. Pixels podem
+  // diferir por um resíduo de damping no instante da captura.
+  const overview = report.shots.find((shot) => shot.name === "overview-default")?.view;
+  const resetShot = report.shots.find((shot) => shot.name === "camera-reset");
+  const resetView = resetShot?.view;
+  let resetWorks = false;
+  if (overview && resetView) {
+    const angleGap = Math.abs(overview.azimuthDeg - resetView.azimuthDeg);
+    const elevationGap = Math.abs(overview.elevationDeg - resetView.elevationDeg);
+    const distanceGap = Math.abs(overview.distance - resetView.distance);
+    resetWorks = angleGap < 0.5 && elevationGap < 1.5 && distanceGap < 0.5;
+  }
+
   const hashes = new Map();
-  for (const shot of report.shots) hashes.set(shot.sha256, (hashes.get(shot.sha256) ?? 0) + 1);
+  for (const shot of report.shots) {
+    if (shot.name === "camera-reset" || shot.name === "overview-default") continue;
+    hashes.set(shot.sha256, (hashes.get(shot.sha256) ?? 0) + 1);
+  }
   const identical = [...hashes.entries()].filter(([, count]) => count > 1);
 
   report.verdict = {
@@ -347,6 +394,7 @@ async function main() {
     offCenterShots: offCenter.map((shot) => shot.name),
     tooSmallShots: tooSmall.map((shot) => shot.name),
     duplicateShots: identical.length > 0,
+    resetProvenByIdenticalShot: resetWorks,
     consoleErrorCount: consoleErrors.length,
     signCount: report.scene.signs.length,
   };

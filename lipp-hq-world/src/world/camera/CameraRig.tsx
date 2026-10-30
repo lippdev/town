@@ -102,7 +102,7 @@ export function CameraRig() {
       if (direction.lengthSq() < 0.01) direction.set(0.7, 1.1, 0.7);
       direction.normalize();
 
-      const distance = Math.min(Math.max(size.width * 1.55, 15), 27);
+      const distance = Math.min(Math.max(size.width * 2.4, 26), 36);
       nextPosition = nextTarget.clone().add(direction.multiplyScalar(distance));
     }
 
