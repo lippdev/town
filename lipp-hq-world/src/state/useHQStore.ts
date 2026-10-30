@@ -25,6 +25,8 @@ interface HQState {
   events: HQEvent[];
   cameraCommand: CameraCommand | null;
   cameraView: CameraView | null;
+  demoPaused: boolean;
+  setDemoPaused: (paused: boolean) => void;
   agentStates: Record<string, AgentAnimationState>;
   setAgentState: (agentId: string, state: AgentAnimationState, summary?: string) => void;
   setWallMode: (mode: WallMode) => void;
@@ -50,6 +52,8 @@ export const useHQStore = create<HQState>((set) => ({
   cameraCommand: null,
   cameraView: null,
   agentStates: {},
+  demoPaused: false,
+  setDemoPaused: (demoPaused) => set({ demoPaused }),
 
   setAgentState: (agentId, agentState, summary) =>
     set((state) => {

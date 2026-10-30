@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
 import { useHQStore } from "@/state/useHQStore";
@@ -31,12 +31,44 @@ interface AgentRuntime {
 
 const runtimes = new Map<string, AgentRuntime>();
 
+/** Cria ou devolve o runtime do agente. Seguro em qualquer ordem de montagem. */
+function getRuntime(definition: (typeof AGENTS)[number]): AgentRuntime {
+  let runtime = runtimes.get(definition.id);
+  if (!runtime) {
+    runtime = {
+      definition,
+      figure: null,
+      state: "idle",
+      source: "demo",
+      path: [],
+      pathIndex: 0,
+      walkPhase: 0,
+      heading: Math.PI,
+      walkTimer: 0,
+      nextIdleWalkAt: 6 + Math.random() * 8,
+    };
+    runtimes.set(definition.id, runtime);
+  }
+  return runtime;
+}
+
 /** Comando demo: manda o agente caminhar até o hall e voltar ao trabalho. */
 export function demoWalkToHall(agentId: string) {
   const runtime = runtimes.get(agentId);
   if (!runtime) return;
   const hall = hallSpot([...runtimes.keys()].indexOf(agentId));
   walkTo(runtime, hall, "idle");
+}
+
+/** Posição e estado atuais do personagem, para as esperas do harness. */
+export function getAgentRuntimeInfo(agentId: string): { x: number; z: number; state: string } | null {
+  const runtime = runtimes.get(agentId);
+  if (!runtime?.figure?.group) return null;
+  return {
+    x: runtime.figure.group.position.x,
+    z: runtime.figure.group.position.z,
+    state: runtime.state,
+  };
 }
 
 /** Ponto de trabalho: à frente da mesa, na cadeira. */
@@ -87,24 +119,6 @@ export function Agents() {
   const frames = useRef<Map<string, AgentFigureHandle>>(new Map());
   const agents = AGENTS;
   const indexRef = useRef(0);
-
-  useEffect(() => {
-    for (const agent of agents) {
-      runtimes.set(agent.id, {
-        definition: agent,
-        figure: null,
-        state: "idle",
-        source: "demo",
-        path: [],
-        pathIndex: 0,
-        walkPhase: 0,
-        heading: Math.PI,
-        walkTimer: 0,
-        nextIdleWalkAt: 6 + Math.random() * 8,
-      });
-    }
-    return () => runtimes.clear();
-  }, []);
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.12);
@@ -221,8 +235,7 @@ export function Agents() {
               // refs de filhos chegam antes do grupo pai: só registre com grupo pronto
               if (!handle.group) return;
               frames.current.set(agent.id, handle);
-              const runtime = runtimes.get(agent.id);
-              if (runtime) runtime.figure = handle;
+              getRuntime(agent).figure = handle;
               handle.group.position.set(spot.x, 0, spot.z);
               registerPickable(handle.group);
             }}

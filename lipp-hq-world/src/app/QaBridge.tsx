@@ -5,7 +5,7 @@ import { BASE_SLAB, WALL_HEIGHT } from "@/config/constants";
 import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID } from "@/world/rooms/rooms";
 import { wallRuntime } from "@/world/walls/wallRuntime";
-import { demoWalkToHall } from "@/world/characters/Agents";
+import { demoWalkToHall, getAgentRuntimeInfo } from "@/world/characters/Agents";
 import type { Vector3Tuple, WallMode } from "@/types/hq";
 
 export interface HqQaView {
@@ -50,6 +50,8 @@ export interface HqQaApi {
   } | null;
   select: (roomId: string) => void;
   demoCommand: (agentId: string, state: "working" | "meeting" | "walking" | "idle") => void;
+  setDemoPaused: (paused: boolean) => void;
+  getAgentPose: (agentId: string) => { x: number; z: number; state: string } | null;
   getAgentScreenPoint: (agentId: string) => { x: number; y: number } | null;
   focus: (roomId: string, options?: { instant?: boolean }) => void;
   reset: (options?: { instant?: boolean }) => void;
@@ -169,6 +171,8 @@ export function QaBridge() {
         };
       },
       select: (roomId) => useHQStore.getState().selectRoom(roomId),
+      getAgentPose: (agentId) => getAgentRuntimeInfo(agentId),
+      setDemoPaused: (paused) => useHQStore.getState().setDemoPaused(paused),
       demoCommand: (agentId, state) => {
         if (state === "walking") {
           demoWalkToHall(agentId);

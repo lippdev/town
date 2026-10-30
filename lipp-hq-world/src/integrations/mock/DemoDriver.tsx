@@ -50,8 +50,14 @@ export function DemoDriver() {
 
     const tick = () => {
       const now = performance.now();
-      elapsed += (now - last) / 1000;
+      const step = (now - last) / 1000;
       last = now;
+
+      if (useHQStore.getState().demoPaused) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      elapsed += step;
 
       if (elapsed >= CYCLE_LENGTH) {
         elapsed = 0;

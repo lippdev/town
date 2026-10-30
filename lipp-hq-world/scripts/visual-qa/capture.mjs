@@ -219,6 +219,20 @@ async function waitForViewNear(
   throw new Error(`A vista não chegou ao valor esperado: ${JSON.stringify(expected)}`);
 }
 
+/** Espera o agente chegar a um ponto (distância máxima) ou mudar de estado. */
+async function waitForAgentNear(page, agentId, target, maxDistance, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const pose = await page.evaluate((id) => window.__HQ_QA__.getAgentPose(id), agentId);
+    if (pose) {
+      const distance = Math.hypot(pose.x - target.x, pose.z - target.z);
+      if (distance <= maxDistance) return;
+    }
+    await page.waitForTimeout(600);
+  }
+  throw new Error(`Agente ${agentId} não chegou perto do alvo a tempo.`);
+}
+
 const SHOTS = {
   "overview-default": async () => {},
   "camera-north": setView({ azimuthDeg: 180, elevationDeg: 34, distance: 57 }),
@@ -272,19 +286,23 @@ const SHOTS = {
   "agents-walking": async (page) => {
     await setWallMode("auto")(page);
     await setView({ azimuthDeg: 45, elevationDeg: 38, distance: 57 })(page);
+    await page.evaluate(() => window.__HQ_QA__.setDemoPaused(true));
+    const scoutStart = await page.evaluate(() => window.__HQ_QA__.getAgentPose("scout"));
     await page.evaluate(() => {
       window.__HQ_QA__.demoCommand("scout", "walking");
       window.__HQ_QA__.demoCommand("ink", "walking");
     });
-    await page.waitForTimeout(1600);
+    if (!scoutStart) throw new Error("Pose inicial do Scout indisponível.");
+    await waitForAgentNear(page, "scout", { x: scoutStart.x, z: scoutStart.z }, 2.4, 60000);
+    await page.evaluate(() => window.__HQ_QA__.setDemoPaused(false));
   },
   "agents-meeting": async (page) => {
-    await page.evaluate(() => {
-      window.__HQ_QA__.demoCommand("forge", "meeting");
-    });
+    await page.evaluate(() => window.__HQ_QA__.setDemoPaused(true));
+    await page.evaluate(() => window.__HQ_QA__.demoCommand("forge", "meeting"));
+    await waitForAgentNear(page, "forge", { x: 11.4, z: 8.7 }, 2.0, 60000);
     await page.evaluate(() => window.__HQ_QA__.focus("reunioes", { instant: true }));
-    await waitForViewNear(page, { azimuthDeg: 33, elevationDeg: 26, distance: 26 }, { toleranceDeg: 360 });
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.__HQ_QA__.setDemoPaused(false));
   },
 };
 
