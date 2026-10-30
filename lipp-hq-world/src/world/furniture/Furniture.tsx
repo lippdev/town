@@ -75,7 +75,13 @@ export function Monitor({ position, rotation = 0, accent = PALETTE.screenGlow }:
       </mesh>
       <mesh position={[0, 0.44, 0.028]}>
         <planeGeometry args={[0.84, 0.45]} />
-        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.85} roughness={0.35} />
+        <meshStandardMaterial
+          color={accent}
+          emissive={accent}
+          emissiveIntensity={0.55}
+          roughness={0.35}
+          toneMapped={false}
+        />
       </mesh>
     </group>
   );
@@ -182,7 +188,7 @@ export function ScreenBoard({ position, rotation = 0, accent = PALETTE.screenGlo
       </mesh>
       <mesh position={[0, 1.5, 0.048]}>
         <planeGeometry args={[2.7, 1.42]} />
-        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.55} roughness={0.4} />
+        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.45} roughness={0.4} toneMapped={false} />
       </mesh>
       <mesh position={[0, 0.36, 0]} castShadow>
         <boxGeometry args={[0.1, 0.72, 0.1]} />
