@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-10-30T02:06:49.320Z",
+  "url": "http://127.0.0.1:4173",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "chrome": "/usr/local/bin/google-chrome",
+  "webgl": {
+    "supported": true,
+    "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  },
+  "shots": [
+    {
+      "name": "overview-default",
+      "file": "qa/screenshots/overview-default.png",
+      "sha256": "a0021c87401fda3e",
+      "mean": 54.64,
+      "stdDev": 69,
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "drag-right-rotate",
+      "file": "qa/screenshots/drag-right-rotate.png",
+      "sha256": "ec6d60dead99bed6",
+      "mean": 53.83,
+      "stdDev": 68.66,
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "drag-vertical-orbit",
+      "file": "qa/screenshots/drag-vertical-orbit.png",
+      "sha256": "ad4f737c59f8beb8",
+      "mean": 52.75,
+      "stdDev": 68.09,
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "consoleErrors": [],
+  "verdict": {
+    "ok": true,
+    "blankShots": [],
+    "duplicateShots": false,
+    "consoleErrorCount": 0
+  }
+}
