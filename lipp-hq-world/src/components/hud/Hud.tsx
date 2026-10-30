@@ -272,8 +272,24 @@ function CameraHint() {
 
 /** Interface HTML da aplicação, sobre o canvas 3D. */
 export function Hud() {
-  const bootstrapped = useHQStore((state) => state.events.length >= 0);
-  void bootstrapped;
+  const wallMode = useHQStore((state) => state.wallMode);
+  const setWallMode = useHQStore((state) => state.setWallMode);
+  const resetCamera = useHQStore((state) => state.resetCamera);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if (event.key === "r" || event.key === "R") {
+        useHQStore.getState().resetCamera();
+      } else if (event.key === "w" || event.key === "W") {
+        const modes = ["auto", "low", "full"] as const;
+        const next = modes[(modes.indexOf(wallMode) + 1) % modes.length];
+        setWallMode(next);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [wallMode, setWallMode, resetCamera]);
 
   return (
     <div className="hud-layer">

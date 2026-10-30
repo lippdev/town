@@ -22,6 +22,8 @@ interface HQState {
   connectionStatus: ConnectionStatus;
   selectedRoomId: string | null;
   selectedAgentId: string | null;
+  hoveredRoomId: string | null;
+  setHoveredRoom: (roomId: string | null) => void;
   events: HQEvent[];
   cameraCommand: CameraCommand | null;
   cameraView: CameraView | null;
@@ -48,6 +50,8 @@ export const useHQStore = create<HQState>((set) => ({
   connectionStatus: "offline",
   selectedRoomId: null,
   selectedAgentId: null,
+  hoveredRoomId: null,
+  setHoveredRoom: (hoveredRoomId) => set({ hoveredRoomId }),
   events: [],
   cameraCommand: null,
   cameraView: null,

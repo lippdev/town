@@ -366,6 +366,21 @@ async function main() {
     globalThis.__initialView = await page.evaluate(() => window.__HQ_QA__.getView());
     report.initialView = globalThis.__initialView;
 
+    // FPS medido de verdade: conta frames por 3 segundos.
+    report.fps = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          let frames = 0;
+          const start = performance.now();
+          const tick = () => {
+            frames += 1;
+            if (performance.now() - start < 3000) requestAnimationFrame(tick);
+            else resolve(Number((frames / 3).toFixed(1)));
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+
     report.webgl = await page.evaluate(() => {
       const canvas = document.querySelector("canvas");
       const gl = canvas?.getContext("webgl2") ?? canvas?.getContext("webgl");

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { PALETTE } from "@/config/constants";
+import { sharedMaterial } from "@/world/materials";
 
 export interface FurnitureProps {
   position: [number, number, number];
@@ -17,19 +18,19 @@ export function Desk({ position, rotation = 0 }: FurnitureProps) {
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.4, 0.06, 1.1]} />
-        <meshStandardMaterial color={PALETTE.desk} roughness={0.55} metalness={0.05} />
+        <primitive object={sharedMaterial(PALETTE.desk, 0.55, 0.05)} attach="material" />
       </mesh>
       {([-1.05, 1.05]).map((x) =>
         ([-0.42, 0.42]).map((z) => (
           <mesh key={`${x}-${z}`} position={[x, 0.37, z]} castShadow>
             <boxGeometry args={[0.09, 0.74, 0.09]} />
-            <meshStandardMaterial color={PALETTE.deskDark} roughness={0.6} metalness={0.08} />
+            <primitive object={sharedMaterial(PALETTE.deskDark, 0.6, 0.08)} attach="material" />
           </mesh>
         )),
       )}
       <mesh position={[0, 0.4, 0.32]} castShadow>
         <boxGeometry args={[2.1, 0.56, 0.03]} />
-        <meshStandardMaterial color={PALETTE.deskDark} roughness={0.7} metalness={0.05} />
+        <primitive object={sharedMaterial(PALETTE.deskDark, 0.7, 0.05)} attach="material" />
       </mesh>
     </group>
   );
@@ -40,19 +41,19 @@ export function Chair({ position, rotation = 0 }: FurnitureProps) {
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.46, 0]} castShadow>
         <boxGeometry args={[0.52, 0.07, 0.5]} />
-        <meshStandardMaterial color={PALETTE.chair} roughness={0.75} metalness={0.1} />
+        <primitive object={sharedMaterial(PALETTE.chair, 0.75, 0.1)} attach="material" />
       </mesh>
       <mesh position={[0, 0.72, -0.22]} castShadow>
         <boxGeometry args={[0.5, 0.52, 0.06]} />
-        <meshStandardMaterial color={PALETTE.chair} roughness={0.75} metalness={0.1} />
+        <primitive object={sharedMaterial(PALETTE.chair, 0.75, 0.1)} attach="material" />
       </mesh>
       <mesh position={[0, 0.23, 0]} castShadow>
         <cylinderGeometry args={[0.05, 0.05, 0.44, 8]} />
-        <meshStandardMaterial color={PALETTE.metal} roughness={0.4} metalness={0.5} />
+        <primitive object={sharedMaterial(PALETTE.metal, 0.4, 0.5)} attach="material" />
       </mesh>
       <mesh position={[0, 0.03, 0]} castShadow>
         <cylinderGeometry args={[0.26, 0.26, 0.05, 12]} />
-        <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.45} />
+        <primitive object={sharedMaterial(PALETTE.metal, 0.45, 0.45)} attach="material" />
       </mesh>
     </group>
   );
@@ -63,15 +64,15 @@ export function Monitor({ position, rotation = 0, accent = PALETTE.screenGlow }:
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.04, 0]} castShadow>
         <boxGeometry args={[0.34, 0.03, 0.2]} />
-        <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.4} />
+        <primitive object={sharedMaterial(PALETTE.metal, 0.45, 0.4)} attach="material" />
       </mesh>
       <mesh position={[0, 0.18, 0]} castShadow>
         <boxGeometry args={[0.06, 0.26, 0.05]} />
-        <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.4} />
+        <primitive object={sharedMaterial(PALETTE.metal, 0.45, 0.4)} attach="material" />
       </mesh>
       <mesh position={[0, 0.44, 0]} castShadow>
         <boxGeometry args={[0.92, 0.52, 0.045]} />
-        <meshStandardMaterial color="#20242c" roughness={0.5} metalness={0.2} />
+        <primitive object={sharedMaterial("#20242c", 0.5, 0.2)} attach="material" />
       </mesh>
       <mesh position={[0, 0.44, 0.028]}>
         <planeGeometry args={[0.84, 0.45]} />
@@ -101,7 +102,7 @@ export function Plant({ position }: FurnitureProps) {
     <group position={position}>
       <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.22, 0.17, 0.4, 10]} />
-        <meshStandardMaterial color="#7a5c48" roughness={0.8} metalness={0.02} />
+        <primitive object={sharedMaterial("#7a5c48", 0.8, 0.02)} attach="material" />
       </mesh>
       {foliage.map((ball, index) => (
         <mesh key={index} position={[0, 0.55 + ball.y, 0]} castShadow>
@@ -165,7 +166,7 @@ export function Whiteboard({ position, rotation = 0, accent = "#ffffff" }: Furni
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 1.35, 0]} castShadow>
         <boxGeometry args={[2.2, 1.3, 0.06]} />
-        <meshStandardMaterial color={PALETTE.paper} roughness={0.6} metalness={0.02} />
+        <primitive object={sharedMaterial(PALETTE.paper, 0.6, 0.02)} attach="material" />
       </mesh>
       <mesh position={[0, 1.35, 0.036]}>
         <planeGeometry args={[2.0, 1.12]} />
@@ -184,7 +185,7 @@ export function ScreenBoard({ position, rotation = 0, accent = PALETTE.screenGlo
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 1.5, 0]} castShadow>
         <boxGeometry args={[2.9, 1.6, 0.08]} />
-        <meshStandardMaterial color="#141a24" roughness={0.55} metalness={0.15} />
+        <primitive object={sharedMaterial("#141a24", 0.55, 0.15)} attach="material" />
       </mesh>
       <mesh position={[0, 1.5, 0.048]}>
         <planeGeometry args={[2.7, 1.42]} />
@@ -208,7 +209,7 @@ export function MeetingTable({ position, rotation = 0 }: FurnitureProps) {
       {([-1.5, 0, 1.5]).map((x) => (
         <mesh key={x} position={[x, 0.37, 0]} castShadow>
           <boxGeometry args={[0.12, 0.72, 1.2]} />
-          <meshStandardMaterial color={PALETTE.deskDark} roughness={0.65} metalness={0.05} />
+          <primitive object={sharedMaterial(PALETTE.deskDark, 0.65, 0.05)} attach="material" />
         </mesh>
       ))}
     </group>

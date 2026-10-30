@@ -138,7 +138,7 @@ export function Agents() {
         runtime.source = dataSource;
       }
 
-      const { group, hips, leftLeg, rightLeg, leftArm, rightArm, torso, head } = figure;
+      const { group, hips, leftLeg, rightLeg, leftArm, rightArm, torso, head, ring } = figure;
       if (!group || !hips) continue;
 
       // ---- locomoção ----
@@ -170,6 +170,16 @@ export function Agents() {
       }
 
       group.rotation.y = runtime.heading;
+
+      // ---- pulso do anel de seleção ----
+      if (ring) {
+        const isSelected = useHQStore.getState().selectedAgentId === agentId;
+        ring.visible = isSelected;
+        if (isSelected) {
+          const pulse = 1 + Math.sin(indexRef.current * 3.1) * 0.07;
+          ring.scale.set(pulse, pulse, 1);
+        }
+      }
 
       // ---- poses e micro-animações ----
       const sitting = runtime.state === "working" || runtime.state === "blocked";

@@ -1,4 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import type { Group } from "three";
 import { PALETTE } from "@/config/constants";
 import type { RoomDefinition } from "@/types/hq";
 import { doorInward, doorPoint, roomSize } from "@/world/rooms/rooms";
@@ -60,6 +62,18 @@ export function RoomSign({ room }: RoomSignProps) {
 
   const plateWidth = 2.6;
   const plateHeight = 0.86;
+  const scaler = useRef<Group>(null);
+
+  // Rótulos legíveis em qualquer distância: a placa cresce quando a câmera
+  // se afasta, com limite para não virar outdoor.
+  useFrame(({ camera }) => {
+    const node = scaler.current;
+    if (!node) return;
+    const distance = camera.position.distanceTo(node.getWorldPosition(node.position.clone().set(0, 0, 0)));
+    const target = Math.min(Math.max(distance / 54, 1), 2.3);
+    node.scale.x += (target - node.scale.x) * 0.08;
+    node.scale.y = node.scale.x;
+  });
 
   return (
     <group
@@ -67,6 +81,7 @@ export function RoomSign({ room }: RoomSignProps) {
       position={placement.position}
       rotation={[0, placement.rotationY, 0]}
     >
+      <group ref={scaler}>
       <mesh position={[0, 0.78, 0]} castShadow>
         <cylinderGeometry args={[0.055, 0.07, 1.56, 10]} />
         <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.35} />
@@ -102,6 +117,7 @@ export function RoomSign({ room }: RoomSignProps) {
           <planeGeometry args={[plateWidth, plateHeight]} />
           <meshBasicMaterial map={texture} toneMapped={false} />
         </mesh>
+      </group>
       </group>
     </group>
   );

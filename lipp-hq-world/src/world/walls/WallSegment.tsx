@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Group } from "three";
 import { PLINTH_HEIGHT, PALETTE, WALL_HEIGHT } from "@/config/constants";
+import { sharedMaterial } from "@/world/materials";
 import type { WallDefinition } from "@/types/hq";
 
 interface SolidPiece {
@@ -62,7 +63,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
         return (
           <mesh key={`${wall.id}-plinth-${index}`} position={plinth.position} receiveShadow>
             <boxGeometry args={plinth.geometry} />
-            <meshStandardMaterial color={PALETTE.wallPlinth} roughness={0.82} metalness={0.03} />
+            <primitive object={sharedMaterial(PALETTE.wallPlinth, 0.82, 0.03)} attach="material" />
           </mesh>
         );
       })}
@@ -78,7 +79,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
           return (
             <mesh key={`${wall.id}-panel-${index}`} position={panel.position} receiveShadow>
               <boxGeometry args={panel.geometry} />
-              <meshStandardMaterial color={PALETTE.wall} roughness={0.86} metalness={0.02} />
+              <primitive object={sharedMaterial(PALETTE.wall, 0.86, 0.02)} attach="material" />
             </mesh>
           );
         })}
@@ -89,7 +90,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
           return (
             <mesh key={`${wall.id}-lintel-${index}`} position={lintel.position} receiveShadow>
               <boxGeometry args={lintel.geometry} />
-              <meshStandardMaterial color={PALETTE.wall} roughness={0.86} metalness={0.02} />
+              <primitive object={sharedMaterial(PALETTE.wall, 0.86, 0.02)} attach="material" />
             </mesh>
           );
         })}
@@ -100,7 +101,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
         return (
           <mesh key={`${wall.id}-frame-${index}`} position={frame.position}>
             <boxGeometry args={frame.geometry} />
-            <meshStandardMaterial color={PALETTE.wallTrim} roughness={0.62} metalness={0.12} />
+            <primitive object={sharedMaterial(PALETTE.wallTrim, 0.62, 0.12)} attach="material" />
           </mesh>
         );
       })}

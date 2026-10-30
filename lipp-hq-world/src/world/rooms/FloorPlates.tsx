@@ -1,4 +1,5 @@
 import { PALETTE } from "@/config/constants";
+import { useHQStore } from "@/state/useHQStore";
 import { ROOMS } from "@/world/rooms/rooms";
 import { CORRIDOR_FLOORS } from "@/world/walls/walls";
 import { registerPickable } from "@/world/scene/Picking";
@@ -47,6 +48,9 @@ function FloorRect({ minX, maxX, minZ, maxZ, y, color, roughness = 0.94, opacity
  * interna com a cor do departamento.
  */
 export function FloorPlates() {
+  const hoveredRoomId = useHQStore((state) => state.hoveredRoomId);
+  const selectedRoomId = useHQStore((state) => state.selectedRoomId);
+
   return (
     <group name="floors">
       {CORRIDOR_FLOORS.map((rect) => (
@@ -65,6 +69,7 @@ export function FloorPlates() {
       {ROOMS.map((room, index) => {
         const { bounds } = room;
         const isDepartment = room.kind === "department";
+        const highlighted = room.id === hoveredRoomId || room.id === selectedRoomId;
         const base = isDepartment
           ? index % 2 === 0
             ? PALETTE.floorWood
@@ -92,8 +97,19 @@ export function FloorPlates() {
               maxZ={bounds.maxZ - inset}
               y={0.012}
               color={room.color}
-              opacity={isDepartment ? 0.16 : 0.08}
+              opacity={highlighted ? (isDepartment ? 0.42 : 0.3) : isDepartment ? 0.16 : 0.08}
             />
+            {highlighted && (
+              <FloorRect
+                minX={bounds.minX + 0.35}
+                maxX={bounds.maxX - 0.35}
+                minZ={bounds.minZ + 0.35}
+                maxZ={bounds.maxZ - 0.35}
+                y={0.02}
+                color="#ffffff"
+                opacity={room.id === selectedRoomId ? 0.16 : 0.09}
+              />
+            )}
           </group>
         );
       })}

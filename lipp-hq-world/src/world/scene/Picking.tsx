@@ -107,13 +107,48 @@ export function Picking() {
       useHQStore.getState().resetCamera();
     };
 
+    let lastHover = 0;
+    let lastHoverX = 0;
+    let lastHoverY = 0;
+
+    const onPointerMove = (event: PointerEvent) => {
+      const now = performance.now();
+      if (now - lastHover < 90) return;
+      if (event.clientX === lastHoverX && event.clientY === lastHoverY) return;
+      lastHover = now;
+      lastHoverX = event.clientX;
+      lastHoverY = event.clientY;
+
+      const rect = canvas.getBoundingClientRect();
+      pointer.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(collectPickables(), true);
+      let hovered: string | null = null;
+      for (const hit of hits) {
+        const info = pickInfo(hit.object);
+        if (info.agentId) break;
+        if (info.roomId) {
+          hovered = info.roomId;
+          break;
+        }
+      }
+      useHQStore.getState().setHoveredRoom(hovered);
+    };
+
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointerup", onPointerUp);
     canvas.addEventListener("dblclick", onDoubleClick);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerleave", () => useHQStore.getState().setHoveredRoom(null));
     return () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("dblclick", onDoubleClick);
+      canvas.removeEventListener("pointermove", onPointerMove);
     };
   }, [camera, gl]);
 
