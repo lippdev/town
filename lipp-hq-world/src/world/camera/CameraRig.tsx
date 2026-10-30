@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { MOUSE, Vector3 } from "three";
 import { CAMERA } from "@/config/constants";
 import { useHQStore } from "@/state/useHQStore";
+import { useReducedMotion } from "@/app/useReducedMotion";
 import { ROOMS_BY_ID, roomCenter, roomSize } from "@/world/rooms/rooms";
 
 export interface RigView {
@@ -66,6 +67,7 @@ export function CameraRig() {
       })
     | null;
   const cameraCommand = useHQStore((state) => state.cameraCommand);
+  const reducedMotion = useReducedMotion();
   const animation = useRef<CameraAnimation | null>(null);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export function CameraRig() {
       nextPosition = nextTarget.clone().add(direction.multiplyScalar(distance));
     }
 
-    if (cameraCommand.instant) {
+    if (cameraCommand.instant || reducedMotion) {
       camera.position.copy(nextPosition);
       controls.target.copy(nextTarget);
       // descarrega todo resíduo de damping de manobras anteriores, sincronamente
@@ -139,11 +141,14 @@ export function CameraRig() {
     if (progress >= 1) animation.current = null;
   });
 
+  // movimento reduzido: sem amortecimento — a câmera obedece na hora
+  const damping = reducedMotion ? 1 : CAMERA.dampingFactor;
+
   return (
     <OrbitControls
       makeDefault
       enableDamping
-      dampingFactor={CAMERA.dampingFactor}
+      dampingFactor={damping}
       enableRotate
       enableZoom
       minDistance={CAMERA.minDistance}
