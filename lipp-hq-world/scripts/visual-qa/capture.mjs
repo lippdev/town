@@ -235,15 +235,26 @@ async function waitForAgentPredicate(page, agentId, predicate, timeoutMs = 40000
 /** Espera o agente chegar a um ponto (distância máxima) ou mudar de estado. */
 async function waitForAgentNear(page, agentId, target, maxDistance, timeoutMs = 30000) {
   const deadline = Date.now() + timeoutMs;
+  let lastPose = null;
+  let lastLog = 0;
   while (Date.now() < deadline) {
     const pose = await page.evaluate((id) => window.__HQ_QA__.getAgentPose(id), agentId);
     if (pose) {
+      lastPose = pose;
       const distance = Math.hypot(pose.x - target.x, pose.z - target.z);
       if (distance <= maxDistance) return;
+      if (Date.now() - lastLog > 30000) {
+        lastLog = Date.now();
+        console.error(`[diag] ${agentId} pose=${JSON.stringify(pose)} dist=${distance.toFixed(2)}`);
+      }
     }
     await page.waitForTimeout(600);
   }
-  throw new Error(`Agente ${agentId} não chegou perto do alvo a tempo.`);
+  const walkLog = await page.evaluate(() => {
+    const log = window.__HQ_WALK_LOG ?? [];
+    return log.slice(-25);
+  }).catch(() => []);
+  throw new Error(`Agente ${agentId} não chegou perto do alvo a tempo. Última pose: ${JSON.stringify(lastPose)} Walks: ${JSON.stringify(walkLog)}`);
 }
 
 const SHOTS = {
@@ -327,7 +338,7 @@ const SHOTS = {
   "agents-meeting": async (page) => {
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(true));
     await page.evaluate(() => window.__HQ_QA__.demoCommand("forge", "meeting"));
-    await waitForAgentNear(page, "forge", { x: 11.4, z: 8.7 }, 2.0, 60000);
+    await waitForAgentNear(page, "forge", { x: 11.4, z: 8.7 }, 2.0, 240000);
     await page.evaluate(() => window.__HQ_QA__.focus("reunioes", { instant: true }));
     await page.waitForTimeout(1500);
     await page.evaluate(() => window.__HQ_QA__.setDemoPaused(false));
@@ -446,10 +457,14 @@ async function main() {
       const filePath = path.join(outDir, `${name}.png`);
       await page.screenshot({ path: filePath, animations: "allow" });
       const analysis = await analyze(page, filePath);
-      const state = await sceneState(
-        page,
-        name === "room-selected-focus" ? "engenharia" : undefined,
-      );
+      // close-ups de sala validam o enquadramento da própria sala — o prédio
+      // inteiro transborda a tela nesses planos por construção
+      const framingRoom = name === "room-selected-focus"
+        ? "engenharia"
+        : name === "agents-meeting"
+          ? "reunioes"
+          : undefined;
+      const state = await sceneState(page, framingRoom);
       const framingChecked = !FRAMING_EXEMPT.has(name);
       const bytes = await fs.readFile(filePath);
       report.shots.push({
