@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
 import { useHQStore } from "@/state/useHQStore";
+import { useReducedMotion } from "@/app/useReducedMotion";
 import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
@@ -128,6 +129,9 @@ export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const dataSource = useHQStore((state) => state.dataSource);
   const agents = AGENTS;
+  const reducedMotion = useReducedMotion();
+  const reducedRef = useRef(reducedMotion);
+  reducedRef.current = reducedMotion;
   const indexRef = useRef(0);
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
@@ -187,13 +191,15 @@ export function Agents() {
 
       group.rotation.y = runtime.heading;
 
-      // ---- pulso do anel de seleção ----
+      // ---- pulso do anel de seleção (desligado com movimento reduzido) ----
       if (ring) {
         const isSelected = useHQStore.getState().selectedAgentId === agentId;
         ring.visible = isSelected;
-        if (isSelected) {
+        if (isSelected && !reducedRef.current) {
           const pulse = 1 + Math.sin(indexRef.current * 3.1) * 0.07;
           ring.scale.set(pulse, pulse, 1);
+        } else if (isSelected) {
+          ring.scale.set(1, 1, 1);
         }
       }
 
