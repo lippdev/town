@@ -31,6 +31,14 @@ interface AgentRuntime {
 
 const runtimes = new Map<string, AgentRuntime>();
 
+/** Comando demo: manda o agente caminhar até o hall e voltar ao trabalho. */
+export function demoWalkToHall(agentId: string) {
+  const runtime = runtimes.get(agentId);
+  if (!runtime) return;
+  const hall = hallSpot([...runtimes.keys()].indexOf(agentId));
+  walkTo(runtime, hall, "idle");
+}
+
 /** Ponto de trabalho: à frente da mesa, na cadeira. */
 function deskSpot(agentId: string): NavPoint {
   const agent = AGENTS_BY_ID[agentId];

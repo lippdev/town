@@ -1,4 +1,5 @@
 import { PALETTE } from "@/config/constants";
+import { ROOMS, roomCenter, roomSize } from "@/world/rooms/rooms";
 
 /**
  * Iluminação base do diorama: ambiente neutro, preenchimento hemisférico e uma
@@ -27,6 +28,35 @@ export function SceneLighting() {
         shadow-camera-bottom={-26}
       />
       <directionalLight position={[-22, 16, -18]} intensity={0.42} color="#8fb6e8" />
+      {ROOMS.map((room) => {
+        const center = roomCenter(room);
+        const size = roomSize(room);
+        return (
+          <group key={room.id} position={[center[0], 0, center[2]]}>
+            <pointLight
+              position={[0, 2.55, 0]}
+              intensity={size.width * 2.6}
+              distance={size.width * 1.5}
+              decay={1.8}
+              color="#ffd9a3"
+            />
+            <mesh position={[0, 2.68, 0]}>
+              <cylinderGeometry args={[0.34, 0.42, 0.16, 14]} />
+              <meshStandardMaterial
+                color="#ffe2b8"
+                emissive="#ffbe6e"
+                emissiveIntensity={1.6}
+                roughness={0.5}
+                toneMapped={false}
+              />
+            </mesh>
+            <mesh position={[0, 2.78, 0]}>
+              <cylinderGeometry args={[0.04, 0.04, 0.12, 8]} />
+              <meshStandardMaterial color={PALETTE.metal} roughness={0.5} metalness={0.3} />
+            </mesh>
+          </group>
+        );
+      })}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.62, 0]} receiveShadow>
         <planeGeometry args={[220, 220]} />
         <meshStandardMaterial color={PALETTE.backgroundDeep} roughness={0.95} metalness={0} />

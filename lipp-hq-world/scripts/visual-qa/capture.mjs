@@ -269,6 +269,23 @@ const SHOTS = {
     await setWallMode("auto")(page);
     await setView({ azimuthDeg: 46, elevationDeg: 30, distance: 52 })(page);
   },
+  "agents-walking": async (page) => {
+    await setWallMode("auto")(page);
+    await setView({ azimuthDeg: 45, elevationDeg: 38, distance: 57 })(page);
+    await page.evaluate(() => {
+      window.__HQ_QA__.demoCommand("scout", "walking");
+      window.__HQ_QA__.demoCommand("ink", "walking");
+    });
+    await page.waitForTimeout(1600);
+  },
+  "agents-meeting": async (page) => {
+    await page.evaluate(() => {
+      window.__HQ_QA__.demoCommand("forge", "meeting");
+    });
+    await page.evaluate(() => window.__HQ_QA__.focus("reunioes", { instant: true }));
+    await waitForViewNear(page, { azimuthDeg: 33, elevationDeg: 26, distance: 26 }, { toleranceDeg: 360 });
+    await page.waitForTimeout(1200);
+  },
 };
 
 async function main() {

@@ -34,6 +34,7 @@ export function createLabelTexture(options: LabelTextureOptions): CanvasTexture 
   if (!context) throw new Error("Canvas 2D indisponível para gerar o letreiro.");
 
   context.fillStyle = background;
+  context.globalAlpha = 0.96;
   context.beginPath();
   context.roundRect(0, 0, width, height, 22);
   context.fill();
@@ -50,13 +51,13 @@ export function createLabelTexture(options: LabelTextureOptions): CanvasTexture 
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = color;
-  const nameSize = subtitle ? 68 : 78;
+  const nameSize = subtitle ? 84 : 100;
   context.font = `700 ${nameSize}px "Segoe UI", "Inter", system-ui, sans-serif`;
   context.fillText(text, width / 2, subtitle ? height / 2 - 20 : height / 2 - 6);
 
   if (subtitle) {
     context.fillStyle = accent;
-    context.font = `600 34px "Segoe UI", "Inter", system-ui, sans-serif`;
+    context.font = `600 42px "Segoe UI", "Inter", system-ui, sans-serif`;
     context.fillText(subtitle.toUpperCase(), width / 2, height / 2 + 40);
   }
 

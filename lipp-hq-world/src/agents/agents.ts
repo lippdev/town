@@ -4,6 +4,7 @@ import type { AgentDefinition } from "@/types/hq";
 export const AGENTS: AgentDefinition[] = [
   {
     id: "argos",
+    hairColor: "#2c333d",
     name: "Argos",
     role: "Direção geral",
     responsibility: "Supervisão da operação e da infraestrutura.",
@@ -13,6 +14,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "forge",
+    hairColor: "#7a4a2c",
     name: "Forge",
     role: "Coordenação operacional",
     responsibility: "Coordena o fluxo de Open Source e consolida o briefing executivo.",
@@ -22,6 +24,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "pulse",
+    hairColor: "#1d2430",
     name: "Pulse",
     role: "GitHub Intelligence",
     responsibility: "Commits, pull requests, CI e releases.",
@@ -31,6 +34,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "echo",
+    hairColor: "#d76a9a",
     name: "Echo",
     role: "Comunidade",
     responsibility: "Feedback e audiência.",
@@ -40,6 +44,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "scout",
+    hairColor: "#3f6b3a",
     name: "Scout",
     role: "Pesquisa",
     responsibility: "Discovery, oportunidades e riscos.",
@@ -49,6 +54,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "atlas",
+    hairColor: "#8a6a2c",
     name: "Atlas",
     role: "Product Operations",
     responsibility: "Backlog, PRDs e documentação de produto.",
@@ -58,6 +64,7 @@ export const AGENTS: AgentDefinition[] = [
   },
   {
     id: "ink",
+    hairColor: "#5a3a5e",
     name: "Ink",
     role: "Conteúdo",
     responsibility: "Editorial e comunicação.",

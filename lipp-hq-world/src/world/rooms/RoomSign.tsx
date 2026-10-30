@@ -58,8 +58,8 @@ export function RoomSign({ room }: RoomSignProps) {
     };
   }, [door, room]);
 
-  const plateWidth = 2.15;
-  const plateHeight = 0.71;
+  const plateWidth = 2.6;
+  const plateHeight = 0.86;
 
   return (
     <group

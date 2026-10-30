@@ -76,6 +76,7 @@ export type AgentAnimationState =
 export interface AgentDefinition {
   id: string;
   name: string;
+  hairColor?: string;
   role: string;
   responsibility: string;
   roomId: string;

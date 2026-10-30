@@ -3,6 +3,7 @@ import { ROOMS } from "@/world/rooms/rooms";
 import { PALETTE } from "@/config/constants";
 import type { RoomDefinition } from "@/types/hq";
 import { Bookshelf, Chair, Desk, MeetingTable, Monitor, Plant, ScreenBoard, Whiteboard } from "@/world/furniture/Furniture";
+import { Couch, Crates, DeskClutter, Rug, WallArt } from "@/world/furniture/Decor";
 
 interface RoomFurnitureProps {
   room: RoomDefinition;
@@ -34,6 +35,9 @@ function DepartmentRoom({ room }: RoomFurnitureProps) {
       )}
       <Plant position={[bounds.minX + 1.0, 0, bounds.minZ + 1.0]} />
       <Plant position={[bounds.maxX - 1.0, 0, bounds.maxZ - 1.2]} />
+      <Rug room={room} />
+      <WallArt room={room} />
+      <DeskClutter room={room} />
     </group>
   );
 }
@@ -62,11 +66,10 @@ function Specialty({ room }: RoomFurnitureProps) {
       );
     case "echo":
       return (
-        <ScreenBoard
-          position={[bounds.maxX - 1.1, 0, cz]}
-          rotation={-Math.PI / 2}
-          accent="#d8b4fe"
-        />
+        <group>
+          <ScreenBoard position={[bounds.maxX - 1.1, 0, cz]} rotation={-Math.PI / 2} accent="#d8b4fe" />
+          <Couch position={[bounds.minX + 1.35, 0, cz + 0.6]} rotation={Math.PI / 2} />
+        </group>
       );
     case "scout":
       return <Bookshelf position={[bounds.minX + 0.9, 0, cz]} rotation={Math.PI / 2} />;
@@ -88,11 +91,10 @@ function Specialty({ room }: RoomFurnitureProps) {
       );
     case "argos":
       return (
-        <ScreenBoard
-          position={[cx, 0, bounds.maxZ - 0.85]}
-          rotation={0}
-          accent="#93c5fd"
-        />
+        <group>
+          <ScreenBoard position={[cx, 0, bounds.maxZ - 0.85]} rotation={0} accent="#93c5fd" />
+          <Crates room={room} />
+        </group>
       );
     default:
       return null;
@@ -119,6 +121,7 @@ function MeetingRoom({ room }: RoomFurnitureProps) {
 
   return (
     <group name="furniture-reunioes">
+      <Rug room={room} />
       <MeetingTable position={[cx, 0, cz]} />
       {([-1.15, 0, 1.15]).map((offset) => (
         <Chair key={`n-${offset}`} position={[cx + offset, 0, cz - 1.25]} rotation={0} />

@@ -132,7 +132,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
             </mesh>
             <mesh position={[0, 0.24, 0]} castShadow>
               <sphereGeometry args={[0.205, 16, 12, 0, Math.PI * 2, 0, Math.PI / 1.9]} />
-              <meshStandardMaterial color={PALETTE.chair} roughness={0.8} metalness={0.05} />
+              <meshStandardMaterial color={agent.hairColor ?? PALETTE.chair} roughness={0.8} metalness={0.05} />
             </mesh>
           </group>
         </group>
