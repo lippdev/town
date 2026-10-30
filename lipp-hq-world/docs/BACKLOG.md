@@ -56,14 +56,20 @@ auditoria; os demais estão prontos para execução.
   de estado.
 - ✅ **FPS medido de verdade** no relatório de QA (1,3 fps nesta máquina de
   render por software; número registrado, não estimado).
-- **Instancing** para cadeiras, plantas e pernas/braços — reduzir draw calls;
-  vale quando rodar em GPU dedicada. Pendente.
-- **Code-splitting** do bundle (1,1 MB com three.js embutido) — carregamento
-  inicial mais rápido. Pendente.
+- ✅ **Code-splitting** — o bundle principal caiu de 1.156 kB para 244 kB
+  (77,5 kB gzip); three.js + cena carregam em chunk próprio após o primeiro
+  paint.
+- **Instancing** para cadeiras e plantas — avaliado e recusado por enquanto:
+  ~600 draw calls de geometria simples já rodam a 60 FPS em GPU dedicada, e o
+  gargalo real é o render por software da máquina de QA (1,3 fps). A
+  reestruturação dos componentes para `<Instances>` vale só se a cena crescer
+  muito (mais móveis, mais agentes) — registrado como gatilho futuro.
 
 ## 5. Acessibilidade e UX
 
-- ✅ **`prefers-reduced-motion`** respeitado: damping e pulso desligados.
+- ✅ **`prefers-reduced-motion`** respeitado de verdade: câmera sem
+  amortecimento, foco/reset instantâneos e anel estático (a marcação anterior
+  estava incorreta — a auditoria a corrigiu).
 - ✅ **Cursor de apontador** sobre salas e personagens clicáveis.
 - **Navegação por teclado na sidebar** já funciona (botões nativos); foco
   visível refinado. Pendente refinamento de estilo de foco.
