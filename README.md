@@ -1,18 +1,29 @@
-# Lipp HQ
+# Lipp HQ World
 
-Dashboard da operação Lipp: um escritório isométrico onde cada ambiente representa uma
-área (Comando, Produto, Pesquisa, Engenharia, Conteúdo, Comunidade, Operações e Reuniões)
-e cada agente tem nome, sala e atividade em tempo real.
+Escritório virtual 3D da Lipp HQ: os sete agentes do OpenMausBot (Argos, Forge,
+Pulse, Echo, Scout, Atlas e Ink) representados como personagens num diorama
+corporativo navegável.
 
-A referência visual do produto está em [`docs/ref/lipp-hq.png`](docs/ref/lipp-hq.png).
+A aplicação está em [`lipp-hq-world/`](lipp-hq-world/), com instrução completa
+de execução no [README dela](lipp-hq-world/README.md). Resumo:
 
-## Status
+```bash
+cd lipp-hq-world
+pnpm install
+pnpm dev        # http://127.0.0.1:5173
+```
 
-Repositório recém-criado. A spec do produto está em definição; o escopo funcional,
-a stack e a arquitetura são registrados aqui conforme forem fechados.
+## Documentação
+
+| Documento | Conteúdo |
+| - | - |
+| [lipp-hq-world/docs/ARCHITECTURE.md](lipp-hq-world/docs/ARCHITECTURE.md) | arquitetura e decisões |
+| [lipp-hq-world/docs/BACKLOG.md](lipp-hq-world/docs/BACKLOG.md) | auditoria geral e melhorias |
+| [lipp-hq-world/docs/PROGRESS.md](lipp-hq-world/docs/PROGRESS.md) | estado atual |
+| [lipp-hq-world/docs/INTEGRATION.md](lipp-hq-world/docs/INTEGRATION.md) | contratos do OpenMausBot |
+| [AGENTS.md](AGENTS.md) | regras para agentes neste repositório |
 
 ## Fluxo de trabalho
 
-Todo avanço é entregue em commit + pull request. Nada de trabalho solto no sandbox:
-cada ponto concluído vira um commit com mensagem clara, e cada entrega vira uma PR
-para `main`.
+Todo avanço é entregue em commit + pull request para `main`, com gate visual
+GO/NO-GO por stage — relatórios em `lipp-hq-world/qa/reviews/`.
