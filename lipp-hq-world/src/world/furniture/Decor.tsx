@@ -79,9 +79,9 @@ export function DeskClutter({ room }: DecorProps) {
         <boxGeometry args={[0.5, 0.02, 0.18]} />
         <meshStandardMaterial color="#2c333f" roughness={0.6} metalness={0.1} />
       </mesh>
-      {/* papéis espalhados */}
-      {[[0.3, -0.2, 0.4], [0.55, 0.15, -0.2], [-0.4, 0.25, 0.9]].map(([x, z, rotation], index) => (
-        <mesh key={index} position={[cx + x, 0.785, z + z]} rotation={[0, rotation, 0]} castShadow>
+      {/* papéis espalhados sobre a mesa */}
+      {([[0.3, 0.2, 0.4], [0.55, -0.12, -0.2], [-0.42, 0.25, 0.9]] as const).map(([x, paperZ, rotation], index) => (
+        <mesh key={index} position={[cx + x, 0.785, z + paperZ]} rotation={[0, rotation, 0]} castShadow>
           <boxGeometry args={[0.28, 0.005, 0.2]} />
           <meshStandardMaterial color="#f2f4f7" roughness={0.9} metalness={0} />
         </mesh>
