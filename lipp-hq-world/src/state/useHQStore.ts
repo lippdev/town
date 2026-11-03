@@ -63,6 +63,11 @@ interface HQState {
   /** Bot selecionado no painel sai da frota, não da lista fixa. */
   selectedBotId: string | null;
   selectBot: (botId: string | null) => void;
+  /** Sessão do bot escolhido aberta no chat da gaveta. */
+  openSessionId: string | null;
+  /** Abre a gaveta do bot direto na conversa de uma sessão. */
+  openBotSession: (botId: string, sessionId: string) => void;
+  closeSession: () => void;
   /** Força uma leitura imediata do gateway (botão "tentar de novo"). */
   gatewayRefresh: (() => void) | null;
   setGatewayRefresh: (refresh: (() => void) | null) => void;
@@ -173,9 +178,10 @@ export const useHQStore = create<HQState>((set) => ({
     }),
 
   setWallMode: (wallMode) => set({ wallMode }),
-  selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null, selectedBotId: null }),
+  selectRoom: (selectedRoomId) =>
+    set({ selectedRoomId, selectedAgentId: null, selectedBotId: null, openSessionId: null }),
   selectAgent: (selectedAgentId) => set({ selectedAgentId }),
-  clearSelection: () => set({ selectedRoomId: null, selectedAgentId: null, selectedBotId: null }),
+  clearSelection: () => set({ selectedRoomId: null, selectedAgentId: null, selectedBotId: null, openSessionId: null }),
   focusRoom: (roomId, options) =>
     set({
       selectedRoomId: roomId,
@@ -199,7 +205,15 @@ export const useHQStore = create<HQState>((set) => ({
       return { fleet, fleetHistory: pushSample(state.fleetHistory, sampleFromBots(fleet.bots, fleet.fetchedAt)) };
     }),
   selectedBotId: null,
-  selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
+  selectBot: (selectedBotId) =>
+    set((state) => ({
+      selectedBotId,
+      selectedAgentId: selectedBotId,
+      openSessionId: selectedBotId === state.selectedBotId ? state.openSessionId : null,
+    })),
+  openSessionId: null,
+  openBotSession: (botId, openSessionId) => set({ selectedBotId: botId, selectedAgentId: botId, openSessionId }),
+  closeSession: () => set({ openSessionId: null }),
   viewInsetRight: 0,
   setViewInsetRight: (viewInsetRight) => set({ viewInsetRight }),
   gatewayRefresh: null,

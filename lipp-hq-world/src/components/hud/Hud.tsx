@@ -650,7 +650,7 @@ function RoutineList() {
  */
 function SessionList() {
   const fleet = useHQStore((state) => state.fleet);
-  const selectBot = useHQStore((state) => state.selectBot);
+  const openBotSession = useHQStore((state) => state.openBotSession);
   const bots = fleet?.bots ?? [];
   const colors = useMemo(
     () => Object.fromEntries(sceneAgentsFromFleet(fleet).map((agent) => [agent.id, agent.color])),
@@ -674,8 +674,8 @@ function SessionList() {
           key={`${row.botId}-${row.session.id}`}
           type="button"
           className="sidebar-row session-row"
-          onClick={() => selectBot(row.botId)}
-          title={row.session.preview ?? row.session.title ?? "Sessão"}
+          onClick={() => openBotSession(row.botId, row.session.id)}
+          title={row.session.preview ?? row.session.title ?? "Abrir conversa"}
         >
           <span className="agent-dot" style={{ background: row.botColor }} aria-hidden />
           <span className="session-bot">{row.botName}</span>

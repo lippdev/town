@@ -10,6 +10,7 @@ import { routineHealth, routineStatusText } from "@/components/hud/routines";
 import { sessionTitle, sourceLabel } from "@/components/hud/sessions";
 import { drawerSubject } from "@/components/hud/selection";
 import { CharacterEditor } from "@/components/hud/CharacterEditor";
+import { SessionChat } from "@/components/hud/SessionChat";
 
 type DrawerTab = "resumo" | "sessoes" | "personagem";
 
@@ -89,7 +90,12 @@ function CloseButton({ onClose }: { onClose: () => void }) {
 function BotContent({ bot, onClose }: { bot: BotSnapshot; onClose: () => void }) {
   const [tab, setTab] = useState<DrawerTab>("resumo");
   const fleet = useHQStore((state) => state.fleet);
+  const openSessionId = useHQStore((state) => state.openSessionId);
+  const openBotSession = useHQStore((state) => state.openBotSession);
+  const closeSession = useHQStore((state) => state.closeSession);
   const sessions = bot.sessions ?? [];
+  const openSession = openSessionId ? sessions.find((session) => session.id === openSessionId) : undefined;
+  const openChat = (sessionId: string) => openBotSession(bot.id, sessionId);
   const base = sceneAgentsFromFleet(fleet).find((agent) => agent.id === bot.id) ?? { color: "#2563eb" };
 
   const tabs: Array<{ id: DrawerTab; label: string; count?: number }> = [
@@ -121,7 +127,10 @@ function BotContent({ bot, onClose }: { bot: BotSnapshot; onClose: () => void })
               role="tab"
               aria-selected={tab === entry.id}
               className={tab === entry.id ? "drawer-tab active" : "drawer-tab"}
-              onClick={() => setTab(entry.id)}
+              onClick={() => {
+                setTab(entry.id);
+                closeSession();
+              }}
             >
               {entry.label}
               {entry.count !== undefined && entry.count > 0 && <span className="drawer-tab-count">{entry.count}</span>}
@@ -130,23 +139,35 @@ function BotContent({ bot, onClose }: { bot: BotSnapshot; onClose: () => void })
         </nav>
       </header>
 
-      <div className="drawer-body" role="tabpanel">
-        {tab === "resumo" && (
-          <BotSummary bot={bot} onAllSessions={() => setTab("sessoes")} />
-        )}
-        {tab === "sessoes" &&
-          (sessions.length === 0 ? (
-            <p className="panel-sessions-empty">Nenhuma sessão reportada para este bot.</p>
-          ) : (
-            <SessionItems sessions={sessions} total={bot.sessionCount} />
-          ))}
-        {tab === "personagem" && <CharacterEditor agentId={bot.id} base={base} />}
-      </div>
+      {openSession ? (
+        <SessionChat botId={bot.id} botName={bot.name} session={openSession} onBack={closeSession} />
+      ) : (
+        <div className="drawer-body" role="tabpanel">
+          {tab === "resumo" && (
+            <BotSummary bot={bot} onAllSessions={() => setTab("sessoes")} onOpen={openChat} />
+          )}
+          {tab === "sessoes" &&
+            (sessions.length === 0 ? (
+              <p className="panel-sessions-empty">Nenhuma sessão reportada para este bot.</p>
+            ) : (
+              <SessionItems sessions={sessions} total={bot.sessionCount} onOpen={openChat} />
+            ))}
+          {tab === "personagem" && <CharacterEditor agentId={bot.id} base={base} />}
+        </div>
+      )}
     </>
   );
 }
 
-function BotSummary({ bot, onAllSessions }: { bot: BotSnapshot; onAllSessions: () => void }) {
+function BotSummary({
+  bot,
+  onAllSessions,
+  onOpen,
+}: {
+  bot: BotSnapshot;
+  onAllSessions: () => void;
+  onOpen: (sessionId: string) => void;
+}) {
   const fleet = useHQStore((state) => state.fleet);
   const notice = gatewayNotice(fleet);
   const sessions = bot.sessions ?? [];
@@ -202,6 +223,7 @@ function BotSummary({ bot, onAllSessions }: { bot: BotSnapshot; onAllSessions: (
         <SessionItems
           sessions={sessions.slice(0, SUMMARY_SESSIONS)}
           total={bot.sessionCount}
+          onOpen={onOpen}
           footer={
             sessions.length > SUMMARY_SESSIONS || bot.sessionCount > SUMMARY_SESSIONS ? (
               <button type="button" className="drawer-more" onClick={onAllSessions}>
@@ -228,10 +250,12 @@ function SessionItems({
   sessions,
   total,
   footer,
+  onOpen,
 }: {
   sessions: SessionSnapshot[];
   total: number;
   footer?: ReactNode;
+  onOpen: (sessionId: string) => void;
 }) {
   return (
     <div className="panel-sessions">
@@ -240,17 +264,24 @@ function SessionItems({
       </div>
       <ul>
         {sessions.map((session) => (
-          <li key={session.id} className={session.active ? "session-item active" : "session-item"}>
-            <span className="session-line">
-              <span className="session-name" title={sessionTitle(session)}>
-                {sessionTitle(session)}
+          <li key={session.id}>
+            <button
+              type="button"
+              className={session.active ? "session-item active" : "session-item"}
+              onClick={() => onOpen(session.id)}
+              title={`Abrir conversa: ${sessionTitle(session)}`}
+            >
+              <span className="session-line">
+                <span className="session-name">
+                  {sessionTitle(session)}
+                </span>
+                <span className="session-source">{sourceLabel(session.source)}</span>
               </span>
-              <span className="session-source">{sourceLabel(session.source)}</span>
-            </span>
-            <span className="session-meta">
-              {session.active && <span className="session-live">ativa</span>}
-              {relativeTime(session.lastActiveAt)} · {session.messageCount ?? 0} msg
-            </span>
+              <span className="session-meta">
+                {session.active && <span className="session-live">ativa</span>}
+                {relativeTime(session.lastActiveAt)} · {session.messageCount ?? 0} msg
+              </span>
+            </button>
           </li>
         ))}
       </ul>
