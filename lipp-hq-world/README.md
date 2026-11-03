@@ -145,15 +145,16 @@ tela mostrava.
 
 ## Documentação
 
-| Documento                                        | Conteúdo                                                 |
-| ------------------------------------------------ | -------------------------------------------------------- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)     | decisões, planta, módulos, sistema de paredes            |
-| [docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) | backlog por stage                                        |
-| [docs/PROGRESS.md](docs/PROGRESS.md)             | estado atual da implementação                            |
-| [docs/HERMES.md](docs/HERMES.md)                 | contrato verificado do gateway Hermes, proxy e briefings |
-| [docs/INTEGRATION.md](docs/INTEGRATION.md)       | contrato do OpenMausBot (fonte alternativa)              |
-| [docs/ASSETS.md](docs/ASSETS.md)                 | avaliação de assets e decisão procedural                 |
-| [docs/VISUAL_QA.md](docs/VISUAL_QA.md)           | harness, rubrica e gates                                 |
+| Documento                                          | Conteúdo                                                 |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)       | decisões, planta, módulos, sistema de paredes            |
+| [docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md)   | backlog por stage                                        |
+| [docs/PROGRESS.md](docs/PROGRESS.md)               | estado atual da implementação                            |
+| [docs/HERMES.md](docs/HERMES.md)                   | contrato verificado do gateway Hermes, proxy e briefings |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md)         | contrato do OpenMausBot (fonte alternativa)              |
+| [docs/ASSETS.md](docs/ASSETS.md)                   | avaliação de assets e decisão procedural                 |
+| [docs/VISUAL_QA.md](docs/VISUAL_QA.md)             | harness, rubrica e gates                                 |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | sintoma → causa → o que fazer quando algo não aparece    |
 
 ## Estado
 
