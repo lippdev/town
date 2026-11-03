@@ -267,6 +267,9 @@ button.sidebar-row:hover {
 
 .hud-bottom {
   position: absolute;
+  /* acima dos rótulos flutuantes do canvas (drei Html vai até z 10): sem isso
+     o rótulo do personagem cobre os botões do painel */
+  z-index: 20;
   left: 16px;
   right: 16px;
   bottom: 16px;
@@ -427,17 +430,116 @@ button.sidebar-row:hover {
   margin-top: 8px;
 }
 
-/* ---- Biblioteca de personagens (painel do agente) ---- */
-.appearance-picker {
+/* ---- Editor de personagem (painel do agente) ---- */
+.character-editor {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--hq-panel-border);
 }
 
-.appearance-head {
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.editor-actions .chip {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.look-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 9px;
+  border: 1px solid var(--hq-panel-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.look-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+}
+
+.look-label {
+  width: 58px;
+  flex: 0 0 58px;
+  font-size: 11px;
+  color: #93a3ba;
+}
+
+.look-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.swatch:hover {
+  transform: scale(1.12);
+}
+
+.swatch.active {
+  box-shadow: 0 0 0 2px #7dd3fc;
+  border-color: #7dd3fc;
+}
+
+/* a primeira cor da camisa é a identidade do agente: um traço a marca */
+.swatch.identity {
+  position: relative;
+}
+
+.swatch.identity::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 3px;
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.look-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.look-chips .chip {
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.look-range {
+  flex: 1;
+  min-width: 0;
+  accent-color: #7dd3fc;
+}
+
+.look-value {
+  width: 38px;
+  font-size: 11px;
+  color: #93a3ba;
+  text-align: right;
+}
+
+.appearance-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-bottom: 7px;
   font-weight: 600;
   color: #b8c4d8;
