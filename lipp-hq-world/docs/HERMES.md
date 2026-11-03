@@ -73,6 +73,17 @@ fingir recência.
 
 A origem usada pelo fixture segue `KNOWN_SOURCES`
 (`hermes_cli/session_lost_and_found.py`): `cli`, `telegram`, `dashboard`, `cron`.
+## Abrir no dashboard
+
+O painel do bot tem o link "Abrir no dashboard do Hermes", que aponta para
+`<HERMES_DASHBOARD_URL>/?profile=<nome do bot>` — `profile` é o parâmetro que o
+próprio dashboard lê para abrir escopado naquele profile
+(`apps/desktop/src/app/gateway/hooks/use-gateway-boot-webapp-profile`). Abre em
+aba nova com `rel="noopener noreferrer"`.
+
+Sem `HERMES_DASHBOARD_URL` ou fora do modo ao vivo, o link não aparece: ausente
+é melhor que quebrado.
+
 ## Diagnóstico na tela
 
 A aba **Integrações** mostra o resultado da última leitura de cada endpoint, com

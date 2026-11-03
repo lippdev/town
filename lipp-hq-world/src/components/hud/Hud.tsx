@@ -5,6 +5,7 @@ import {
   Cable,
   Camera,
   Clock,
+  ExternalLink,
   MessageSquareText,
   MonitorUp,
   Users,
@@ -875,6 +876,28 @@ function CharacterEditor({ agentId, base }: { agentId: string; base: { color: st
   );
 }
 
+/**
+ * Link para o dashboard do Hermes com o escopo do perfil daquele bot.
+ *
+ * `?profile=` é o parâmetro que o próprio dashboard lê para abrir no perfil
+ * certo (apps/desktop …/use-gateway-boot-webapp-profile). Sem URL de dashboard
+ * configurada, não existe link — melhor ausente que quebrado.
+ */
+function DashboardLink({ botId }: { botId: string }) {
+  const status = useGatewayStatus();
+  const dataSource = useHQStore((state) => state.dataSource);
+  if (dataSource !== "live" || !status?.dashboardUrl) return null;
+
+  const base = status.dashboardUrl.replace(/\/+$/, "");
+  const href = `${base}/?profile=${encodeURIComponent(botId)}`;
+  return (
+    <a className="panel-link" href={href} target="_blank" rel="noreferrer noopener">
+      <ExternalLink size={12} aria-hidden />
+      Abrir no dashboard do Hermes
+    </a>
+  );
+}
+
 function BotPanel({ bot }: { bot: BotSnapshot }) {
   const clearSelection = useHQStore((state) => state.clearSelection);
   const fleet = useHQStore((state) => state.fleet);
@@ -945,6 +968,7 @@ function BotPanel({ bot }: { bot: BotSnapshot }) {
         </p>
       )}
       {notice && !fleet?.stale && <p className="panel-warn">{notice}</p>}
+      <DashboardLink botId={bot.id} />
       <CharacterEditor
         agentId={bot.id}
         base={sceneAgentsFromFleet(fleet).find((sceneAgent) => sceneAgent.id === bot.id) ?? { color: "#2563eb" }}

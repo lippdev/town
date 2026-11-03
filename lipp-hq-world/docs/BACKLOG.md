@@ -67,8 +67,9 @@ auditoria; os demais estão prontos para execução.
 - ✅ **Máquina de café no hall** — ponto de encontro.
 - ✅ **Rótulo flutuante no personagem em hover** — nome sobre a cabeça.
 - ✅ **Botão "Replay demo"** no HUD (§16 pede botão de desenvolvimento).
-- **Botão "abrir no OpenMausBot"** no painel do agente — depende de Live com
-  URL válida; pendente de integração real.
+- ✅ **Botão "abrir no dashboard"** no painel do agente — leva ao dashboard do
+  Hermes já escopado no profile daquele bot (`?profile=`). O item antigo falava
+  em OpenMausBot e ficou obsoleto com a troca de fonte.
 
 ## 4. Performance (métricas honestas)
 
