@@ -146,11 +146,46 @@ O teste roda **antes** de salvar, na ordem do Desktop:
 Com OAuth (`auth_required: true`) a conexão é recusada com o motivo: o Lipp
 HQ conecta só por session token.
 
+### Hermes local num clique
+
+Ao abrir a aba, o app procura o `hermes dashboard` nesta máquina, no
+`HERMES_DASHBOARD_URL` (se for loopback) e na porta 9119. A ideia vem do
+Claw3D, que preenche URL e token a partir da instalação local
+(`readOpenclawGatewayDefaults`). O token sai de onde o Hermes Desktop o lê:
+o dashboard em loopback sem gate injeta `window.__HERMES_SESSION_TOKEN__` na
+própria página (`web_server_dashboard.py`; leitura em
+`apps/desktop/electron/dashboard-token.ts`).
+
+| Achou                     | A tela mostra                                            |
+| ------------------------- | -------------------------------------------------------- |
+| dashboard com token na página | link, versão, perfis e **Usar Hermes local**          |
+| dashboard sem token (gate)    | o motivo e "usar este link" para colar o token        |
+| nada escutando                | `hermes dashboard --no-open` com copiar e "procurar de novo" |
+
+```text
+GET  /api/hq/connection/local   → detecção (nunca devolve o token)
+POST /api/hq/connection/local   → detecta, lê o token servido e salva
+```
+
+**Renovação do token.** Sem `HERMES_DASHBOARD_SESSION_TOKEN`, o dashboard
+sorteia um token novo a cada partida. Uma conexão feita pela detecção fica
+marcada `tokenSource: "served"`. Quando o dashboard recusa, o proxy relê o
+token da página e repete a leitura, sem pedir nada ao usuário. Token colado
+à mão (`"typed"`) nunca é trocado sozinho. O token servido só é lido em
+loopback, nunca de um host remoto.
+
+**Causa e ação.** Como o `classifyGatewayFailure` do claw3doctor, cada falha
+(nas linhas do diagnóstico e ao conectar) mostra a causa provável e o que
+fazer: nada escutando → subir o dashboard; token recusado → reconectar ou
+fixar o token; sem resposta a tempo → rede/Tailscale; OAuth → usar token.
+
 ### De onde vem o session token
 
 Sem `HERMES_DASHBOARD_SESSION_TOKEN`, o dashboard sorteia um token novo a
-cada partida (`web_server_session_token.py`), então a conexão cai quando ele
-reinicia. Para um token estável, suba o dashboard com o token fixo:
+cada partida (`web_server_session_token.py`). A conexão feita por "Usar
+Hermes local" se renova sozinha; um token colado à mão deixa de valer quando
+o dashboard reinicia. Para um token estável (útil em acesso remoto), suba o
+dashboard com o token fixo:
 
 ```bash
 HERMES_DASHBOARD_SESSION_TOKEN="$(openssl rand -hex 24)" hermes dashboard --no-open
