@@ -2,6 +2,12 @@ import { create } from "zustand";
 import type { FleetSnapshot } from "@/integrations/hq/types";
 import { pushSample, sampleFromBots, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import type { AgentAnimationState, ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
+import {
+  ACCESSORIES,
+  HAIR_STYLES,
+  randomLookFor,
+  type CharacterOverride,
+} from "@/world/characters/appearance";
 
 export interface CameraView {
   azimuthDeg: number;
@@ -45,8 +51,12 @@ interface HQState {
   setDataSource: (source: DataSource) => void;
   /** Remove eventos de simulação ao entrar ao vivo — nunca misturar os dois no feed. */
   dropDemoEvents: () => void;
-  agentPresets: Record<string, string>;
-  setAgentPreset: (agentId: string, presetId: string | null) => void;
+  /** Aparência personalizada por agente: peças sobrepostas ao preset padrão. */
+  agentLooks: Record<string, CharacterOverride>;
+  chooseAgentPreset: (agentId: string, presetId: string | null) => void;
+  updateAgentLook: (agentId: string, patch: CharacterOverride) => void;
+  randomizeAgentLook: (agentId: string) => void;
+  resetAgentLook: (agentId: string) => void;
   /** Última frota lida do Hermes (null em Demo ou antes do primeiro poll). */
   fleet: FleetSnapshot | null;
   setFleet: (fleet: FleetSnapshot | null) => void;
@@ -63,25 +73,64 @@ interface HQState {
 
 const MAX_EVENTS = 60;
 
-/** Persistência local da aparência escolhida por agente (UX local, V0). */
-const PRESET_STORAGE_KEY = "lipp-hq-world:agent-presets:v1";
+/**
+ * Persistência local da aparência por agente (UX local, V0).
+ * v2 guarda peças soltas; o v1 guardava só o id do preset e é migrado na
+ * primeira leitura para ninguém perder o personagem já escolhido.
+ */
+const LOOK_STORAGE_KEY = "lipp-hq-world:agent-looks:v2";
+const LEGACY_PRESET_KEY = "lipp-hq-world:agent-presets:v1";
 
-function loadAgentPresets(): Record<string, string> {
+function sanitizeLook(raw: unknown): CharacterOverride | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const value = raw as Record<string, unknown>;
+  const look: CharacterOverride = {};
+  if (typeof value.presetId === "string") look.presetId = value.presetId;
+  if (typeof value.skin === "string") look.skin = value.skin;
+  if (typeof value.hair === "string") look.hair = value.hair;
+  if (typeof value.shirt === "string") look.shirt = value.shirt;
+  if (typeof value.pants === "string") look.pants = value.pants;
+  if (typeof value.shoes === "string") look.shoes = value.shoes;
+  if (typeof value.hairStyle === "string" && HAIR_STYLES.some((style) => style.id === value.hairStyle)) {
+    look.hairStyle = value.hairStyle as CharacterOverride["hairStyle"];
+  }
+  if (typeof value.accessory === "string" && ACCESSORIES.some((item) => item.id === value.accessory)) {
+    look.accessory = value.accessory as CharacterOverride["accessory"];
+  }
+  if (typeof value.height === "number") look.height = value.height;
+  return look;
+}
+
+function loadAgentLooks(): Record<string, CharacterOverride> {
   try {
-    const raw = window.localStorage.getItem(PRESET_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== "object" || parsed === null) return {};
-    const entries = Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === "string");
-    return Object.fromEntries(entries);
+    const raw = window.localStorage.getItem(LOOK_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (typeof parsed !== "object" || parsed === null) return {};
+      const looks: Record<string, CharacterOverride> = {};
+      for (const [agentId, value] of Object.entries(parsed as Record<string, unknown>)) {
+        const look = sanitizeLook(value);
+        if (look) looks[agentId] = look;
+      }
+      return looks;
+    }
+    const legacy = window.localStorage.getItem(LEGACY_PRESET_KEY);
+    if (!legacy) return {};
+    const parsedLegacy = JSON.parse(legacy) as unknown;
+    if (typeof parsedLegacy !== "object" || parsedLegacy === null) return {};
+    return Object.fromEntries(
+      Object.entries(parsedLegacy as Record<string, unknown>)
+        .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        .map(([agentId, presetId]) => [agentId, { presetId }]),
+    );
   } catch {
     return {};
   }
 }
 
-function saveAgentPresets(presets: Record<string, string>): void {
+function saveAgentLooks(looks: Record<string, CharacterOverride>): void {
   try {
-    window.localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+    window.localStorage.setItem(LOOK_STORAGE_KEY, JSON.stringify(looks));
   } catch {
     // sem localStorage (modo privado etc.): a escolha vale só para a sessão
   }
@@ -156,13 +205,32 @@ export const useHQStore = create<HQState>((set) => ({
   selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
   gatewayRefresh: null,
   setGatewayRefresh: (gatewayRefresh) => set({ gatewayRefresh }),
-  agentPresets: loadAgentPresets(),
-  setAgentPreset: (agentId, presetId) =>
+  agentLooks: loadAgentLooks(),
+  chooseAgentPreset: (agentId, presetId) =>
     set((state) => {
-      const next = { ...state.agentPresets };
+      const next = { ...state.agentLooks };
       if (presetId === null) delete next[agentId];
-      else next[agentId] = presetId;
-      saveAgentPresets(next);
-      return { agentPresets: next };
+      else next[agentId] = { presetId };
+      saveAgentLooks(next);
+      return { agentLooks: next };
+    }),
+  updateAgentLook: (agentId, patch) =>
+    set((state) => {
+      const next = { ...state.agentLooks, [agentId]: { ...state.agentLooks[agentId], ...patch } };
+      saveAgentLooks(next);
+      return { agentLooks: next };
+    }),
+  randomizeAgentLook: (agentId) =>
+    set((state) => {
+      const next = { ...state.agentLooks, [agentId]: randomLookFor(agentId, Date.now()) };
+      saveAgentLooks(next);
+      return { agentLooks: next };
+    }),
+  resetAgentLook: (agentId) =>
+    set((state) => {
+      const next = { ...state.agentLooks };
+      delete next[agentId];
+      saveAgentLooks(next);
+      return { agentLooks: next };
     }),
 }));

@@ -49,6 +49,22 @@ fictício. Sem as três evidências de briefing, o bot não vai para a reunião.
 | Cena | `src/world/*` | personagens, assentos de reunião, navegação A* |
 | Interface | `src/components/hud/*` | roster com busca/filtros, painel, resumo, sparkline |
 
+## Aparência dos personagens
+
+`src/world/characters/appearance.ts` define a aparência em **peças**: pele, cabelo
+(cor e estilo), acessório, calça, sapato, altura e, opcionalmente, a camisa. Os 14
+presets são só pontos de partida — o painel do agente edita cada peça e o
+`useHQStore` guarda o ajuste por agente em `lipp-hq-world:agent-looks:v2`
+(com migração do v1, que guardava só o id do preset).
+
+`resolveLook(agente, ajuste)` resolve em três camadas: fábrica ← preset ← ajuste
+do usuário. Valor inválido em qualquer camada cai na anterior, e a altura é presa
+a 0,94–1,06 — nada quebra a cena por causa de um ajuste antigo no localStorage.
+
+A camisa **não** tem cor própria por padrão: ela continua sendo a cor de
+identidade do agente, que é como o bot é reconhecido na cena. Trocar a cor é uma
+escolha explícita no editor, e "Restaurar" devolve o visual de fábrica.
+
 ## Eixos e escala
 
 Uma unidade do Three.js representa aproximadamente um metro. O piso fica no plano
