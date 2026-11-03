@@ -27,6 +27,15 @@ export interface HqQaFraming {
 }
 
 export interface HqQaApi {
+  /** Estado da iluminação: sombras ligadas, quem projeta e o ambiente PBR. */
+  lightingInfo: () => {
+    shadowsEnabled: boolean;
+    shadowType: number;
+    toneMapping: number;
+    hasEnvironment: boolean;
+    shadowLights: number;
+    shadowCasters: number;
+  };
   setView: (options: {
     azimuthDeg?: number;
     elevationDeg?: number;
@@ -94,6 +103,7 @@ function summarize(cameraPosition: Vector3, target: Vector3): HqQaView {
 export function QaBridge() {
   const camera = useThree((state) => state.camera);
   const scene = useThree((state) => state.scene);
+  const gl = useThree((state) => state.gl);
   const controls = useThree((state) => state.controls) as ControlsLike | null;
   const setWallMode = useHQStore((state) => state.setWallMode);
 
@@ -141,6 +151,22 @@ export function QaBridge() {
           }
         });
         return found.sort((a, b) => a.id.localeCompare(b.id));
+      },
+      lightingInfo: () => {
+        let shadowLights = 0;
+        let shadowCasters = 0;
+        scene.traverse((object) => {
+          if ((object as { isLight?: boolean }).isLight && object.castShadow) shadowLights += 1;
+          else if ((object as { isMesh?: boolean }).isMesh && object.castShadow) shadowCasters += 1;
+        });
+        return {
+          shadowsEnabled: gl.shadowMap.enabled,
+          shadowType: gl.shadowMap.type,
+          toneMapping: gl.toneMapping,
+          hasEnvironment: scene.environment !== null,
+          shadowLights,
+          shadowCasters,
+        };
       },
       countWalls: () => {
         let count = 0;
@@ -263,7 +289,7 @@ export function QaBridge() {
     return () => {
       delete window.__HQ_QA__;
     };
-  }, [camera, controls, scene, setWallMode]);
+  }, [camera, controls, gl, scene, setWallMode]);
 
   return null;
 }
