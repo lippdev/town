@@ -11,13 +11,16 @@
  *   node scripts/hermes/contract-check.mjs
  *   node scripts/hermes/contract-check.mjs --dashboard http://127.0.0.1:8000 \
  *        --api http://127.0.0.1:8642 --token <HERMES_DASHBOARD_TOKEN> --api-key <HERMES_API_KEY>
+ *   node scripts/hermes/contract-check.mjs --self-test   # sobe o fixture, confere e derruba
  *
  * Saída legível + `qa/hermes-contract.json` com a amostra crua (sem credencial).
  * Exit code 0 = tudo que o app precisa está presente; 1 = falta campo essencial.
  */
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { freePort, waitForUrl } from "../visual-qa/ports.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "qa/hermes-contract.json");
@@ -28,11 +31,12 @@ const flag = (name, fallback) => {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
 
-const API = flag(
+const SELF_TEST = args.includes("--self-test");
+let API = flag(
   "--api",
   process.env.HERMES_API_URL ?? "http://127.0.0.1:8642",
 ).replace(/\/+$/, "");
-const DASHBOARD = flag(
+let DASHBOARD = flag(
   "--dashboard",
   process.env.HERMES_DASHBOARD_URL ?? "http://127.0.0.1:8000",
 ).replace(/\/+$/, "");
@@ -126,7 +130,42 @@ function sampleKeys(rows, limit = 4) {
   return [...keys].sort().slice(0, limit).join(", ");
 }
 
+/**
+ * Teste do próprio script: sobe o fixture em portas livres, confere o contrato
+ * e derruba. A CI usa isto para garantir que o script continua válido quando o
+ * fixture muda de formato.
+ */
+async function startFixture() {
+  const apiPort = await freePort();
+  const dashboardPort = await freePort();
+  const fixture = spawn(
+    "node",
+    [
+      "scripts/hermes/fixture-gateway.mjs",
+      "--api-port",
+      String(apiPort),
+      "--dashboard-port",
+      String(dashboardPort),
+    ],
+    { cwd: path.resolve(import.meta.dirname, "../.."), stdio: "ignore" },
+  );
+
+  API = `http://127.0.0.1:${apiPort}`;
+  DASHBOARD = `http://127.0.0.1:${dashboardPort}`;
+  await waitForUrl(`${DASHBOARD}/api/profiles`, 30000, "fixture do Hermes");
+  return fixture;
+}
+
 async function main() {
+  const fixture = SELF_TEST ? await startFixture() : null;
+  try {
+    await runChecks();
+  } finally {
+    fixture?.kill("SIGTERM");
+  }
+}
+
+async function runChecks() {
   const apiHeaders = API_KEY ? { authorization: `Bearer ${API_KEY}` } : {};
   const dashboardHeaders = TOKEN ? { authorization: `Bearer ${TOKEN}` } : {};
 
