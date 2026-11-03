@@ -112,6 +112,13 @@ function walkTo(runtime: AgentRuntime, target: NavPoint, then: AgentAnimationSta
   if (!figure) return;
   const position = figure.group.position;
   const path = findPath(position.x, position.z, target.x, target.z);
+  // destino igual ao ponto atual (ou inalcançável): nunca entre em "walking"
+  // com caminho vazio — era o congelamento que travava a bateria
+  if (path.length === 0) {
+    setState(runtime, then);
+    runtime.pendingState = undefined;
+    return;
+  }
   runtime.path = path;
   runtime.pathIndex = 0;
   runtime.pendingState = then;
@@ -270,10 +277,17 @@ export function Agents() {
             appearance={appearance}
             selected={selectedAgentId === agent.id}
             figureRef={(handle) => {
-              // refs de filhos chegam antes do grupo pai: só registre com grupo pronto
+              // refs de filhos chegam antes do grupo pai: só registre com grupo pronto.
+              // A posição inicial vale só no primeiro registro — re-renders (hover,
+              // aparência, seleção) re-disparam o ref e não podem teletransportar
+              // o personagem de volta à mesa no meio de uma caminhada.
               if (!handle.group) return;
-              getRuntime(agent).figure = handle;
-              handle.group.position.set(spot.x, 0, spot.z);
+              const runtime = getRuntime(agent);
+              const firstRegistration = runtime.figure === null;
+              runtime.figure = handle;
+              if (firstRegistration) {
+                handle.group.position.set(spot.x, 0, spot.z);
+              }
               registerPickable(handle.group);
             }}
             onHoverChange={(hovered) => setHoveredAgentId(hovered ? agent.id : null)}
