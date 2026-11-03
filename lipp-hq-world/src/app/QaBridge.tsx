@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { Box3, Vector3, type Object3D } from "three";
 import { BASE_SLAB, WALL_HEIGHT } from "@/config/constants";
 import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID } from "@/world/rooms/rooms";
@@ -47,6 +47,8 @@ export interface HqQaApi {
   getCutawayWalls: () => string[];
   getSignPositions: () => Array<{ id: string; position: Vector3Tuple }>;
   countWalls: () => number;
+  /** Personagens GLB na cena: tamanho e posição no mundo, para provar que aparecem. */
+  characterModels: () => Array<{ agentId: string; size: Vector3Tuple; min: Vector3Tuple; meshes: number }>;
   getFraming: (roomId?: string) => HqQaFraming;
   controlsInfo: () => {
     mouseButtons: { LEFT: number; MIDDLE: number; RIGHT: number };
@@ -60,7 +62,9 @@ export interface HqQaApi {
   select: (roomId: string) => void;
   demoCommand: (agentId: string, state: "working" | "meeting" | "walking" | "idle") => void;
   setDemoPaused: (paused: boolean) => void;
-  getAgentPose: (agentId: string) => { x: number; z: number; state: string; hipsY: number } | null;
+  getAgentPose: (
+    agentId: string,
+  ) => { x: number; z: number; state: string; hipsY: number; model: boolean; pose: string | null } | null;
   getAgentScreenPoint: (agentId: string) => { x: number; y: number } | null;
   focus: (roomId: string, options?: { instant?: boolean }) => void;
   reset: (options?: { instant?: boolean }) => void;
@@ -167,6 +171,31 @@ export function QaBridge() {
           shadowLights,
           shadowCasters,
         };
+      },
+      characterModels: () => {
+        const found: Array<{ agentId: string; size: Vector3Tuple; min: Vector3Tuple; meshes: number }> = [];
+        const round = (value: Vector3): Vector3Tuple => [
+          Number(value.x.toFixed(2)),
+          Number(value.y.toFixed(2)),
+          Number(value.z.toFixed(2)),
+        ];
+        scene.traverse((object) => {
+          if (object.name !== "character-model") return;
+          let owner: Object3D | null = object;
+          while (owner && !owner.userData?.agentId) owner = owner.parent;
+          const box = new Box3().setFromObject(object);
+          let meshes = 0;
+          object.traverse((node) => {
+            if ((node as { isMesh?: boolean }).isMesh) meshes += 1;
+          });
+          found.push({
+            agentId: String(owner?.userData?.agentId ?? "?"),
+            size: round(box.getSize(new Vector3())),
+            min: round(box.min),
+            meshes,
+          });
+        });
+        return found;
       },
       countWalls: () => {
         let count = 0;
