@@ -1,13 +1,42 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { ArrowLeft, RefreshCw, Wrench } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowLeft, RefreshCw, SendHorizontal, Wrench } from "lucide-react";
 import type { SessionSnapshot } from "@/integrations/hq/types";
 import type { ChatMessage } from "@/integrations/hermes/chatMessages";
 import { useSessionMessages } from "@/integrations/hermes/useSessionMessages";
+import { MAX_CHAT_CHARS, sendSessionMessage } from "@/integrations/hermes/sendMessage";
+import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
 import { sessionTitle, sourceLabel } from "@/components/hud/sessions";
 import { relativeTime } from "@/components/hud/fleetView";
 
 /** Distância do fim (px) em que a conversa ainda acompanha mensagens novas. */
 const STICK_TO_BOTTOM_PX = 80;
+/** Folga de relógio entre esta máquina e o Hermes ao casar a mensagem enviada. */
+const ECHO_SLACK_MS = 15_000;
+/** Quanto a cópia local de uma mensagem entregue espera pela releitura. */
+const SENT_LINGER_MS = 10_000;
+
+/** Mensagem enviada daqui que o Hermes ainda não devolveu na releitura. */
+interface Outgoing {
+  id: string;
+  text: string;
+  at: number;
+  state: "sending" | "sent" | "failed";
+  error?: string;
+  action?: string;
+}
+
+/**
+ * Some da lista local quando a releitura já traz a mesma mensagem do usuário
+ * — o Hermes grava no começo do turno, então isso acontece antes da resposta.
+ */
+export function echoed(outgoing: Pick<Outgoing, "text" | "at">, messages: ChatMessage[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "user" &&
+      message.text.trim() === outgoing.text.trim() &&
+      (message.at === undefined || message.at >= outgoing.at - ECHO_SLACK_MS),
+  );
+}
 
 function clock(at: number | undefined): string {
   if (!at) return "";
@@ -64,18 +93,59 @@ export function SessionChat({
   onBack: () => void;
 }) {
   const { messages, loading, error, action, refresh } = useSessionMessages(botId, session.id);
+  const status = useGatewayStatus();
+  const [draft, setDraft] = useState("");
+  const [outgoing, setOutgoing] = useState<Outgoing[]>([]);
   const scroller = useRef<HTMLDivElement | null>(null);
   const atBottom = useRef(true);
   const lastId = messages.length ? messages[messages.length - 1].id : null;
+  const visibleOutgoing = outgoing.filter((entry) => entry.state === "failed" || !echoed(entry, messages));
+  const thinking = outgoing.some((entry) => entry.state === "sending");
 
   useLayoutEffect(() => {
     const node = scroller.current;
     if (node && atBottom.current) node.scrollTop = node.scrollHeight;
-  }, [lastId, messages.length]);
+  }, [lastId, messages.length, visibleOutgoing.length, thinking]);
 
   useEffect(() => {
     atBottom.current = true;
+    setOutgoing([]);
   }, [session.id]);
+
+  // depois que a releitura trouxe a mensagem e o turno acabou, a cópia local sai
+  useEffect(() => {
+    setOutgoing((list) => {
+      const kept = list.filter((entry) => entry.state !== "sent" || !echoed(entry, messages));
+      return kept.length === list.length ? list : kept;
+    });
+  }, [messages]);
+
+  const deliver = async (entry: Outgoing) => {
+    atBottom.current = true;
+    setOutgoing((list) => [...list.filter((item) => item.id !== entry.id), { ...entry, state: "sending" }]);
+    const result = await sendSessionMessage(botId, session.id, entry.text);
+    setOutgoing((list) =>
+      list.map((item) =>
+        item.id !== entry.id
+          ? item
+          : result.ok
+            ? { ...item, state: "sent" }
+            : { ...item, state: "failed", error: result.error, action: result.action },
+      ),
+    );
+    refresh();
+    // se o Hermes gravar a mensagem com outro texto, a cópia local não fica para sempre
+    if (result.ok) {
+      window.setTimeout(() => setOutgoing((list) => list.filter((item) => item.id !== entry.id)), SENT_LINGER_MS);
+    }
+  };
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text || text.length > MAX_CHAT_CHARS) return;
+    setDraft("");
+    void deliver({ id: `out-${Date.now()}`, text, at: Date.now(), state: "sending" });
+  };
 
   return (
     <section className="chat" aria-label={`Conversa: ${sessionTitle(session)}`}>
@@ -110,12 +180,81 @@ export function SessionChat({
         {messages.map((message) => (
           <Bubble key={message.id} message={message} botName={botName} />
         ))}
+        {visibleOutgoing.map((entry) => (
+          <div key={entry.id} className={`chat-msg chat-user ${entry.state === "failed" ? "failed" : "pending"}`}>
+            <span className="chat-author">
+              Você <time dateTime={new Date(entry.at).toISOString()}>{clock(entry.at)}</time>
+            </span>
+            <p className="chat-text">{entry.text}</p>
+            {entry.state === "failed" ? (
+              <span className="chat-failed">
+                Não enviada: {entry.error}
+                {entry.action && <em> {entry.action}</em>}
+                <span className="chat-failed-actions">
+                  <button type="button" onClick={() => void deliver(entry)}>
+                    tentar de novo
+                  </button>
+                  <button type="button" onClick={() => setOutgoing((list) => list.filter((item) => item.id !== entry.id))}>
+                    descartar
+                  </button>
+                </span>
+              </span>
+            ) : (
+              <span className="chat-status">{entry.state === "sending" ? "enviando…" : "entregue"}</span>
+            )}
+          </div>
+        ))}
+        {thinking && (
+          <div className="chat-msg chat-bot chat-thinking" aria-label={`${botName} está respondendo`}>
+            <span className="chat-author">{botName}</span>
+            <p className="chat-text">
+              <span className="chat-dots" aria-hidden>
+                <i />
+                <i />
+                <i />
+              </span>
+            </p>
+          </div>
+        )}
       </div>
 
       {error && (
         <p className="panel-warn chat-error">
           {error}
           {action && <em> {action}</em>}
+        </p>
+      )}
+
+      {status?.canSend ? (
+        <form
+          className="chat-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <textarea
+            className="chat-input"
+            rows={2}
+            placeholder={`Mensagem para ${botName}…`}
+            value={draft}
+            maxLength={MAX_CHAT_CHARS}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            aria-label={`Mensagem para ${botName}`}
+          />
+          <button type="submit" className="chat-send" disabled={!draft.trim()} aria-label="Enviar (Enter)" title="Enviar (Enter)">
+            <SendHorizontal size={16} aria-hidden />
+          </button>
+        </form>
+      ) : (
+        <p className="chat-readonly">
+          Só leitura. Para conversar com {botName}, habilite o envio em <strong>Integrações → API do Hermes</strong>.
         </p>
       )}
     </section>
