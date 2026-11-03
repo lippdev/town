@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T15:02:02.517Z",
+  "generatedAt": "2026-10-30T14:53:46.184Z",
   "url": "http://127.0.0.1:4173",
   "viewport": {
     "width": 1440,
@@ -13,36 +13,44 @@
   },
   "shots": [
     {
-      "name": "appearance-picker",
-      "file": "qa/screenshots/appearance-picker.png",
-      "sha256": "093daffa96466aa1",
-      "mean": 136.4,
-      "stdDev": 75.85,
+      "name": "room-selected-focus",
+      "file": "qa/screenshots/room-selected-focus.png",
+      "sha256": "d2b9e0f2ee1868f4",
+      "mean": 100.85,
+      "stdDev": 84.06,
       "width": 1440,
       "height": 900,
       "view": {
-        "azimuthDeg": 45,
-        "elevationDeg": 34,
-        "distance": 14,
+        "azimuthDeg": 43.38,
+        "elevationDeg": 29.23,
+        "distance": 26,
         "target": [
-          -11.4,
-          0,
+          -11.399999999999999,
+          0.9,
           -8.7
         ]
       },
-      "framing": null,
-      "framingBypassed": true,
+      "framing": {
+        "minX": 0.2862,
+        "minY": 0.2804,
+        "maxX": 0.723,
+        "maxY": 0.7857,
+        "centerX": 0.5046,
+        "centerY": 0.5331,
+        "widthFraction": 0.4368,
+        "heightFraction": 0.5053
+      },
+      "framingBypassed": false,
       "cutawayWalls": [
         "comando-south",
         "comunidade-south",
-        "comunidade-west",
         "conteudo-east",
-        "conteudo-north",
         "engenharia-east",
         "engenharia-south",
-        "operacoes-north",
+        "hall-south",
         "pesquisa-east",
-        "produto-west",
+        "pesquisa-south",
+        "produto-south",
         "reunioes-west"
       ],
       "signCount": 9
@@ -138,14 +146,13 @@
     "cutawayWalls": [
       "comando-south",
       "comunidade-south",
-      "comunidade-west",
       "conteudo-east",
-      "conteudo-north",
       "engenharia-east",
       "engenharia-south",
-      "operacoes-north",
+      "hall-south",
       "pesquisa-east",
-      "produto-west",
+      "pesquisa-south",
+      "produto-south",
       "reunioes-west"
     ],
     "wallGroups": 44
