@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fleetCounts, gatewayNotice, relativeTime } from "@/components/hud/fleetView";
 import {
   ACTIVE_SESSION_WINDOW_MS,
   WORKING_WINDOW_MS,
@@ -109,5 +110,41 @@ describe("mapeamento frota Hermes", () => {
     expect(gatewayStateOf(false, false)).toBe("offline");
     expect(gatewayStateOf(true, false)).toBe("degraded");
     expect(gatewayStateOf(true, true)).toBe("online");
+  });
+});
+
+describe("helpers de visão da frota", () => {
+  it("relativeTime cobre agora, minutos, horas e dias", () => {
+    const now = 1_000_000_000_000;
+    expect(relativeTime(now - 10_000, now)).toBe("agora");
+    expect(relativeTime(now - 5 * 60_000, now)).toBe("5 min");
+    expect(relativeTime(now - 3 * 3_600_000, now)).toBe("3 h");
+    expect(relativeTime(now - 2 * 86_400_000, now)).toBe("2 d");
+    expect(relativeTime(undefined, now)).toBe("sem sinal");
+  });
+
+  it("gatewayNotice distingue offline, dashboard fora e degradado", () => {
+    const base = { source: "hermes" as const, fetchedAt: 0, bots: [] };
+    expect(gatewayNotice(null)).toContain("Lendo");
+    expect(
+      gatewayNotice({ ...base, health: { api: "offline", dashboard: "offline", detail: "ECONNREFUSED" } }),
+    ).toContain("ECONNREFUSED");
+    expect(gatewayNotice({ ...base, health: { api: "online", dashboard: "offline" } })).toContain("Dashboard");
+    expect(gatewayNotice({ ...base, health: { api: "online", dashboard: "degraded" } })).toContain("parcial");
+    expect(gatewayNotice({ ...base, health: { api: "online", dashboard: "online" } })).toBeNull();
+  });
+
+  it("fleetCounts soma estados e totais reais", () => {
+    const counts = fleetCounts({
+      source: "hermes",
+      fetchedAt: 0,
+      health: { api: "online", dashboard: "online" },
+      bots: [
+        { id: "a", name: "A", state: "working", sessionCount: 2, activeSessions: 1, routineCount: 1 },
+        { id: "b", name: "B", state: "waiting", sessionCount: 3, activeSessions: 1, routineCount: 0 },
+        { id: "c", name: "C", state: "idle", sessionCount: 1, activeSessions: 0, routineCount: 2 },
+      ],
+    });
+    expect(counts).toEqual({ total: 3, working: 1, waiting: 1, idle: 1, sessions: 6, routines: 3 });
   });
 });

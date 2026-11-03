@@ -1,8 +1,11 @@
 # Lipp HQ World
 
-Escritório virtual 3D da Lipp HQ: um diorama corporativo navegável onde os sete
-agentes do OpenMausBot (Argos, Forge, Pulse, Echo, Scout, Atlas e Ink) aparecem
-trabalhando nos seus departamentos.
+Escritório virtual 3D da Lipp HQ: um diorama corporativo navegável que é, acima
+de tudo, a **visão dos bots do Hermes** — cada bot da frota aparece trabalhando
+no seu departamento, com estado, sessões e rotinas lidos do gateway.
+
+O foco do produto é o Hermes. Em Demo (sem gateway), a cena usa os sete agentes
+da Lipp HQ como frota simulada, sempre rotulada como simulação.
 
 A cena é Three.js real, renderizada em WebGL — nada aqui é imagem de fundo, CSS
 3D ou vídeo. A referência visual está em
@@ -23,6 +26,38 @@ pnpm dev
 ```
 
 Abre em `http://127.0.0.1:5173`.
+
+### Ligar no Hermes
+
+O app lê o Hermes por um proxy de leitura same-origin (`/api/hq`), que roda no
+dev e no preview do Vite. Aponte para a sua instância:
+
+```bash
+# padrões: API em 8642, dashboard em 8000
+HERMES_API_URL=http://127.0.0.1:8642 \
+HERMES_DASHBOARD_URL=http://127.0.0.1:8000 \
+pnpm dev
+```
+
+Com autenticação:
+
+```bash
+HERMES_API_KEY=...            # vira Authorization: Bearer no API server
+HERMES_DASHBOARD_TOKEN=...    # vira Authorization: Bearer no dashboard
+```
+
+A chave fica **no proxy**, nunca no navegador. Sem Hermes respondendo, o app
+declara "Hermes fora do ar" e cai em Demo — não inventa frota.
+
+Contrato completo, endpoints e limites em [docs/HERMES.md](docs/HERMES.md).
+
+Sem uma instalação do Hermes à mão, o fixture local responde os mesmos
+endpoints com os mesmos formatos:
+
+```bash
+node scripts/hermes/fixture-gateway.mjs   # 8642 + 8000 (fixture, não é o Hermes)
+pnpm dev
+```
 
 Build de produção:
 

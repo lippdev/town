@@ -1,4 +1,12 @@
-# Integração com o OpenMausBot
+# Integrações
+
+> **Fonte primária: Hermes.** A visão dos bots vem de `hermes dashboard` +
+> `hermes gateway`, via proxy de leitura. Contrato verificado, endpoints e
+> limites em [HERMES.md](HERMES.md). O adaptador do OpenMausBot continua no
+> repositório como fonte alternativa (abaixo), mantido para quando o Lipp HQ
+> roda sobre o OpenMausBot.
+
+## OpenMausBot
 
 O Lipp HQ World é uma camada de visualização **somente de leitura**. Ele não inicia
 tarefas, não altera agentes, não muda permissões e não executa comandos.

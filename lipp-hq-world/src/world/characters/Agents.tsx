@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
 import { useHQStore } from "@/state/useHQStore";
+import { demoSceneAgents, sceneAgentsFromFleet, type SceneAgent } from "@/world/characters/sceneAgents";
 import { useReducedMotion } from "@/app/useReducedMotion";
 import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
@@ -27,7 +27,7 @@ const IDLE_BREATH = 1.7;
 
 /** Estado interno mutável por agente, fora do React. */
 interface AgentRuntime {
-  definition: (typeof AGENTS)[number];
+  definition: SceneAgent;
   figure: AgentFigureHandle | null;
   state: AgentAnimationState;
   source: VirtualAgent["statusSource"];
@@ -44,7 +44,7 @@ interface AgentRuntime {
 const runtimes = new Map<string, AgentRuntime>();
 
 /** Cria ou devolve o runtime do agente. Seguro em qualquer ordem de montagem. */
-function getRuntime(definition: (typeof AGENTS)[number]): AgentRuntime {
+function getRuntime(definition: SceneAgent): AgentRuntime {
   let runtime = runtimes.get(definition.id);
   if (!runtime) {
     runtime = {
@@ -83,10 +83,9 @@ export function getAgentRuntimeInfo(agentId: string): { x: number; z: number; st
   };
 }
 
-/** Ponto de trabalho: à frente da mesa, na cadeira. */
-function deskSpot(agentId: string): NavPoint {
-  const agent = AGENTS_BY_ID[agentId];
-  const room = ROOMS_BY_ID[agent.roomId];
+/** Ponto de trabalho: à frente da mesa, na cadeira do posto do agente. */
+function deskSpot(agent: SceneAgent): NavPoint {
+  const room = ROOMS_BY_ID[agent.roomId] ?? ROOMS_BY_ID.hall;
   const center = roomCenter(room);
   return { x: center[0], z: room.bounds.minZ + 2.35 };
 }
@@ -137,7 +136,11 @@ export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const dataSource = useHQStore((state) => state.dataSource);
   const agentPresets = useHQStore((state) => state.agentPresets);
-  const agents = AGENTS;
+  const fleet = useHQStore((state) => state.fleet);
+  const agents = useMemo(() => {
+    const live = sceneAgentsFromFleet(fleet);
+    return live.length > 0 ? live : demoSceneAgents();
+  }, [fleet]);
   const reducedMotion = useReducedMotion();
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
@@ -267,9 +270,10 @@ export function Agents() {
   return (
     <group name="agents">
       {agents.map((agent) => {
-        const spot = deskSpot(agent.id);
+        const spot = deskSpot(agent);
         const showLabel = hoveredAgentId === agent.id || selectedAgentId === agent.id;
-        const appearance = resolveAppearance(agent, agentPresets[agent.id] ?? null);
+        const presetId = agentPresets[agent.id] ?? agent.presetId ?? null;
+        const appearance = resolveAppearance(agent, presetId);
         return (
           <AgentFigure
             key={agent.id}

@@ -1,0 +1,29 @@
+{
+  "shots": [],
+  "errors": [],
+  "checks": {
+    "chip": "Hermes · conectadov0.1.07 bots",
+    "chipSaysHermesOnline": true,
+    "botCount": 7,
+    "botsWithRealState": 7,
+    "summary": [
+      "3trabalhando",
+      "4aguardando",
+      "0ociosos",
+      "18sessões",
+      "6rotinas"
+    ],
+    "panel": {
+      "name": "Pulse",
+      "stats": [
+        "Sessões3 (1 ativa)",
+        "Rotinas1",
+        "Modelohermes-4.1-mini",
+        "Próxima rotinaagora"
+      ],
+      "activity": "Triagem de pull requests"
+    },
+    "demoEventsAfterLive": 0
+  },
+  "ok": true
+}

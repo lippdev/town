@@ -130,7 +130,24 @@ export class HermesAdapter implements HQSource {
   /** Emite eventos apenas para transições reais observadas entre dois polls. */
   private emitTransitions(next: FleetSnapshot): void {
     const previous = this.previous;
-    if (!previous) return;
+    if (!previous) {
+      // Primeira leitura: semeia o feed com a atividade real que cada bot já
+      // reporta agora. É dado do Hermes, não evento inventado.
+      const timestamp = Date.now();
+      for (const bot of next.bots) {
+        if (!bot.activity) continue;
+        this.eventSeq += 1;
+        this.options.onEvent({
+          id: `hermes-${bot.id}-${timestamp}-${this.eventSeq}`,
+          timestamp,
+          agentId: bot.id,
+          source: "live",
+          type: bot.state === "working" ? "agent.working" : "agent.idle",
+          summary: `${bot.name}: ${bot.activity}`,
+        });
+      }
+      return;
+    }
     const before = new Map(previous.bots.map((bot) => [bot.id, bot]));
     const timestamp = Date.now();
 
