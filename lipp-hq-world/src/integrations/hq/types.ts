@@ -100,6 +100,9 @@ export interface EndpointDiagnostic {
   latencyMs?: number;
   /** Caminho realmente lido, quando difere do padrão (conexão salva: /api/status). */
   path?: string;
+  /** Causa provável da falha e o que fazer, classificadas no proxy. */
+  cause?: string;
+  action?: string;
 }
 
 export type EndpointId = "api" | "profiles" | "sessions" | "jobs";
