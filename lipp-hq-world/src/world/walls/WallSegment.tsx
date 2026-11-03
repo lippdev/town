@@ -61,7 +61,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
       {pieces.map((piece, index) => {
         const plinth = box(piece.length, PLINTH_HEIGHT, piece.center, PLINTH_HEIGHT / 2);
         return (
-          <mesh key={`${wall.id}-plinth-${index}`} position={plinth.position} receiveShadow>
+          <mesh key={`${wall.id}-plinth-${index}`} position={plinth.position} castShadow receiveShadow>
             <boxGeometry args={plinth.geometry} />
             <primitive object={sharedMaterial(PALETTE.wallPlinth, 0.82, 0.03)} attach="material" />
           </mesh>
@@ -77,7 +77,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
             PLINTH_HEIGHT + panelHeight / 2,
           );
           return (
-            <mesh key={`${wall.id}-panel-${index}`} position={panel.position} receiveShadow>
+            <mesh key={`${wall.id}-panel-${index}`} position={panel.position} castShadow receiveShadow>
               <boxGeometry args={panel.geometry} />
               <primitive object={sharedMaterial(PALETTE.wall, 0.86, 0.02)} attach="material" />
             </mesh>
@@ -88,7 +88,7 @@ export function WallSegment({ wall, registerPanel }: WallSegmentProps) {
           const lintelHeight = WALL_HEIGHT - 2.1;
           const lintel = box(door.width, lintelHeight, door.center, 2.1 + lintelHeight / 2);
           return (
-            <mesh key={`${wall.id}-lintel-${index}`} position={lintel.position} receiveShadow>
+            <mesh key={`${wall.id}-lintel-${index}`} position={lintel.position} castShadow receiveShadow>
               <boxGeometry args={lintel.geometry} />
               <primitive object={sharedMaterial(PALETTE.wall, 0.86, 0.02)} attach="material" />
             </mesh>

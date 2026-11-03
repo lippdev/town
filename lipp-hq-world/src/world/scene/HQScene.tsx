@@ -18,8 +18,7 @@ import { Picking } from "@/world/scene/Picking";
 export function HQScene() {
   return (
     <>
-      <color attach="background" args={[PALETTE.background]} />
-      <fog attach="fog" args={[PALETTE.background, 62, 168]} />
+      <fog attach="fog" args={[PALETTE.backgroundDeep, 70, 170]} />
       <SceneLighting />
       <BaseSlab />
       <FloorPlates />
