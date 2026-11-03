@@ -52,6 +52,9 @@ interface HQState {
   /** Bot selecionado no painel sai da frota, não da lista fixa. */
   selectedBotId: string | null;
   selectBot: (botId: string | null) => void;
+  /** Força uma leitura imediata do gateway (botão "tentar de novo"). */
+  gatewayRefresh: (() => void) | null;
+  setGatewayRefresh: (refresh: (() => void) | null) => void;
 }
 
 const MAX_EVENTS = 60;
@@ -139,6 +142,8 @@ export const useHQStore = create<HQState>((set) => ({
   setFleet: (fleet) => set({ fleet }),
   selectedBotId: null,
   selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
+  gatewayRefresh: null,
+  setGatewayRefresh: (gatewayRefresh) => set({ gatewayRefresh }),
   agentPresets: loadAgentPresets(),
   setAgentPreset: (agentId, presetId) =>
     set((state) => {

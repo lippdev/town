@@ -51,6 +51,13 @@ export interface FleetSnapshot {
   health: GatewayHealth;
   bots: BotSnapshot[];
   fetchedAt: number;
+  /**
+   * True quando esta frota é a última leitura boa mantida durante uma falha
+   * seguida de polls. A UI mostra a idade do dado em vez de fingir frescor.
+   */
+  stale?: boolean;
+  /** Erro da tentativa mais recente, quando houve. */
+  errorDetail?: string;
 }
 
 /** Fonte de frota: implementações vivem em integrations/<fonte>. */

@@ -13,6 +13,7 @@ import { botStatesFromFleet } from "@/integrations/hermes/fleetToStates";
  */
 export function HermesConnection() {
   const setFleet = useHQStore((state) => state.setFleet);
+  const setGatewayRefresh = useHQStore((state) => state.setGatewayRefresh);
 
   useEffect(() => {
     const adapter = new HermesAdapter({
@@ -48,12 +49,14 @@ export function HermesConnection() {
       },
     });
 
+    setGatewayRefresh(() => adapter.refresh());
     adapter.start();
     return () => {
       adapter.dispose();
+      setGatewayRefresh(null);
       setFleet(null);
     };
-  }, [setFleet]);
+  }, [setFleet, setGatewayRefresh]);
 
   return null;
 }
