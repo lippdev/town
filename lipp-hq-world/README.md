@@ -66,6 +66,17 @@ pnpm build
 pnpm preview   # http://127.0.0.1:4173
 ```
 
+## O que a tela mostra
+
+- **Bots** — a frota real, com busca, filtros por estado e navegação por teclado.
+- **Briefing** — quem está na sala de reuniões agora (briefing diário/semanal/mensal
+  detectado de sessão de rotina real) e a agenda de briefing de cada bot.
+- **Rotinas** — a agenda por bot, vinda de `hermes cron`.
+- **Resumo** — trabalhando / aguardando / ociosos / sessões / rotinas, com
+  sparkline do histórico real dos últimos minutos.
+- **Painel do bot** — atividade em curso (título da sessão), sessões, rotinas,
+  modelo e a biblioteca de personagens.
+
 ## Controles
 
 - **Botão direito + arrastar** gira a câmera em volta do escritório.
@@ -99,14 +110,24 @@ finge que está ao vivo.
 ```bash
 pnpm typecheck   # TypeScript estrito
 pnpm lint        # ESLint
+pnpm test        # Vitest (51 testes: frota, briefings, resiliência, busca, histórico)
 pnpm build       # build de produção
-node scripts/visual-qa/capture.mjs --serve
+
+# QA visual em Chromium real
+node scripts/visual-qa/hermes-capture.mjs     # frota via gateway
+node scripts/visual-qa/hermes-resilience.mjs  # gateway caindo e voltando
+node scripts/visual-qa/meeting-capture.mjs    # sala de reunião com briefing
+node scripts/visual-qa/capture.mjs --serve    # 24 capturas da cena
 ```
 
 A captura visual abre o Chromium real, espera o primeiro frame, posiciona a
 câmera por uma ponte de QA determinística (incluindo arrastos reais com o botão
 direito) e reprova captura chapada, enquadramento fora do centro, capturas
 idênticas e erro de console. O resultado fica em `qa/screenshots/manifest.json`.
+
+**Tudo isso roda em CI** (`.github/workflows/qa.yml`, job `visual`) em todo PR.
+Não é ritual manual: lint, tipos e build passaram por três bugs reais que só a
+tela mostrava.
 
 ## Documentação
 
@@ -115,7 +136,8 @@ idênticas e erro de console. O resultado fica em `qa/screenshots/manifest.json`
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | decisões, planta, módulos, sistema de paredes |
 | [docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) | backlog por stage |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | estado atual da implementação |
-| [docs/INTEGRATION.md](docs/INTEGRATION.md) | contratos verificados do OpenMausBot e proxy de leitura |
+| [docs/HERMES.md](docs/HERMES.md) | contrato verificado do gateway Hermes, proxy e briefings |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | contrato do OpenMausBot (fonte alternativa) |
 | [docs/ASSETS.md](docs/ASSETS.md) | avaliação de assets e decisão procedural |
 | [docs/VISUAL_QA.md](docs/VISUAL_QA.md) | harness, rubrica e gates |
 

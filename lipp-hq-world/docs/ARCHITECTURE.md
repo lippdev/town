@@ -1,8 +1,12 @@
 # Arquitetura — Lipp HQ World
 
 Aplicação web independente que representa a operação da Lipp HQ como um escritório
-3D interativo. Ela **lê** o estado do OpenMausBot; não executa, altera nem substitui
-o trabalho dos agentes.
+3D interativo. A fonte primária é o **Hermes**: a frota de bots vem do gateway
+(dashboard + API server) e cada bot é um personagem no seu posto. Ela **lê**; não
+executa, altera nem substitui o trabalho dos agentes.
+
+O adaptador do OpenMausBot permanece no repositório como fonte alternativa
+(`src/integrations/openmausbot`), atrás do mesmo contrato `HQSource`.
 
 ## Decisões estruturais
 
@@ -22,8 +26,28 @@ duplicada sobreposta e cada segmento tem uma única normal externa.
 **Geometria derivada de dados.** `src/world/rooms/rooms.ts` é a planta. Piso, paredes,
 portas, placas e âncoras de mobiliário saem dessa estrutura declarativa.
 
-**Estado de simulação fora do Three.js.** Nenhum componente 3D conhece formatos da
-API do OpenMausBot. O adaptador normaliza tudo em `HQEvent` antes de chegar à cena.
+**Estado de simulação fora do Three.js.** Nenhum componente 3D conhece formato de
+API. Os adaptadores normalizam tudo em `HQEvent` + `BotSnapshot` antes de chegar à
+cena; trocar de fonte não muda nada acima do contrato.
+
+**Credencial nunca no navegador.** O proxy same-origin (`/api/hq`, no dev e no
+preview do Vite) guarda `HERMES_API_KEY` e `HERMES_DASHBOARD_TOKEN` e só faz GET.
+Detalhes do contrato em [HERMES.md](HERMES.md).
+
+**Dado ausente não vira dado inventado.** Frota vazia com gateway fora é
+*desconhecido*: o app mantém a última leitura boa e a rotula como atrasada
+(`stale`), com a idade real. Bot sem sessão aparece sem atividade, nunca com texto
+fictício. Sem as três evidências de briefing, o bot não vai para a reunião.
+
+## Camadas
+
+| Camada | Onde | Responsabilidade |
+| --- | --- | --- |
+| Transporte | `server/hermesProxy.ts` | GET no Hermes, credencial, estados por endpoint |
+| Normalização | `src/integrations/hermes/*` | frota, briefings, resiliência, histórico — funções puras |
+| Estado | `src/state/useHQStore.ts` | frota, histórico, seleção, eventos |
+| Cena | `src/world/*` | personagens, assentos de reunião, navegação A* |
+| Interface | `src/components/hud/*` | roster com busca/filtros, painel, resumo, sparkline |
 
 ## Eixos e escala
 

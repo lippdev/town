@@ -1,4 +1,21 @@
-# Backlog de melhorias — check geral de 2026-10-30
+# Backlog de melhorias
+
+## 0. Fechado em 2026-11-03 (rodada Hermes)
+
+- ✅ **Visão dos bots do Hermes via gateway** — frota, sessões e rotinas lidas do
+  dashboard + API server, com proxy de leitura e contrato verificado no repo do
+  Hermes ([HERMES.md](HERMES.md)).
+- ✅ **Sala de reunião dirigida por briefing** — briefing diário/semanal/mensal
+  leva os bots à mesa, com três evidências exigidas e quadro na parede.
+- ✅ **Leitura resiliente** — backoff, pausa com aba oculta, frota mantida e
+  marcada como atrasada em vez de zerar.
+- ✅ **Busca, filtros e teclado na frota** — com foco visível (fecha o item de
+  acessibilidade que estava aqui).
+- ✅ **Histórico real em sparkline** — tendência dos últimos minutos no resumo.
+- ✅ **QA visual na CI** — job `visual` roda os três harnesses do Hermes e as 24
+  capturas da cena em todo PR.
+
+## Check geral de 2026-10-30
 
 Auditoria completa após o MVP: conformidade com a spec, código, integração,
 performance e QA. Itens marcados com ✅ foram resolvidos no mesmo dia da
@@ -46,7 +63,7 @@ auditoria; os demais estão prontos para execução.
 - ✅ **Papéis na mesa** — folhas espalhadas em cada estação.
 - ✅ **Máquina de café no hall** — ponto de encontro.
 - ✅ **Rótulo flutuante no personagem em hover** — nome sobre a cabeça.
-- **Botão "Replay demo"** no HUD (§16 pede botão de desenvolvimento) — pendente.
+- ✅ **Botão "Replay demo"** no HUD (§16 pede botão de desenvolvimento).
 - **Botão "abrir no OpenMausBot"** no painel do agente — depende de Live com
   URL válida; pendente de integração real.
 
@@ -71,8 +88,8 @@ auditoria; os demais estão prontos para execução.
   amortecimento, foco/reset instantâneos e anel estático (a marcação anterior
   estava incorreta — a auditoria a corrigiu).
 - ✅ **Cursor de apontador** sobre salas e personagens clicáveis.
-- **Navegação por teclado na sidebar** já funciona (botões nativos); foco
-  visível refinado. Pendente refinamento de estilo de foco.
+- ✅ **Navegação por teclado na sidebar** — setas movem a seleção na frota e
+  abrem o painel do bot; foco visível estilizado.
 
 ## 6. Ideias futuras (não priorizadas)
 
@@ -140,8 +157,6 @@ dele — mas todo GrokBot sem API conhecida cai no mesmo lugar.
 
 ### Ponto de extensão que já existe (nada a fazer agora)
 
-O `LiveConnection.tsx` constrói o adaptador com três callbacks
-(`onEvent`/`onState`/`onStatus`) — trocar a fonte é trocar a classe
-construída ali. Quando o segundo adaptador for de verdade, a interface
-`HQSource` nasce ali em uma PR própria; extrair antes disso seria abstração
-sem consumidor.
+A interface `HQSource` existe (`src/integrations/hq/types.ts`) e o Hermes a
+implementa; o adaptador do OpenMausBot continua no repositório como fonte
+alternativa, pronto para ser ligado ao mesmo contrato quando fizer sentido.
