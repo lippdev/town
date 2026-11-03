@@ -5,75 +5,78 @@ import { CanvasTexture, LinearFilter, SRGBColorSpace } from "three";
 
 /** Textura procedural para quadros: caixas, setas e post-its. */
 function boardTexture(kind: "flow" | "kanban" | "art", accent: string): CanvasTexture {
+  const W = 1024;
+  const H = 512;
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 256;
+  canvas.width = W;
+  canvas.height = H;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas 2D indisponível.");
 
   context.fillStyle = "#f4f6f9";
-  context.fillRect(0, 0, 512, 256);
+  context.fillRect(0, 0, W, H);
 
   if (kind === "flow") {
     context.fillStyle = "#dce6f5";
     context.strokeStyle = "#8fa8cc";
+    context.lineWidth = 3;
     for (let column = 0; column < 3; column += 1) {
-      context.fillRect(30 + column * 160, 30, 110, 196);
-      context.strokeRect(30 + column * 160, 30, 110, 196);
+      context.fillRect(60 + column * 320, 60, 220, 392);
+      context.strokeRect(60 + column * 320, 60, 220, 392);
     }
     context.fillStyle = accent;
     for (let column = 0; column < 3; column += 1) {
       const cards = column === 0 ? 3 : column === 1 ? 2 : 1;
       for (let card = 0; card < cards; card += 1) {
-        context.fillRect(44 + column * 160, 48 + card * 62, 82, 34);
+        context.fillRect(88 + column * 320, 96 + card * 124, 164, 68);
       }
     }
     context.strokeStyle = "#e0885a";
-    context.lineWidth = 5;
+    context.lineWidth = 10;
     for (let column = 0; column < 2; column += 1) {
       context.beginPath();
-      context.moveTo(142 + column * 160, 128);
-      context.lineTo(170 + column * 160, 128);
+      context.moveTo(284 + column * 320, 256);
+      context.lineTo(340 + column * 320, 256);
       context.stroke();
       context.beginPath();
-      context.moveTo(170 + column * 160, 128);
-      context.lineTo(160 + column * 160, 118);
-      context.lineTo(160 + column * 160, 138);
+      context.moveTo(340 + column * 320, 256);
+      context.lineTo(320 + column * 320, 236);
+      context.lineTo(320 + column * 320, 276);
       context.closePath();
       context.fillStyle = "#e0885a";
       context.fill();
     }
   } else if (kind === "kanban") {
     context.fillStyle = "#f0e7d2";
-    context.fillRect(0, 0, 512, 256);
+    context.fillRect(0, 0, W, H);
     context.fillStyle = accent;
     const positions = [
-      [40, 40], [130, 40], [70, 110], [200, 110], [330, 40],
-      [270, 40], [400, 110], [120, 180], [300, 180], [430, 180],
+      [80, 80], [260, 80], [140, 220], [400, 220], [660, 80],
+      [540, 80], [800, 220], [240, 360], [600, 360], [860, 360],
     ];
     for (const [x, y] of positions) {
       context.save();
       context.translate(x, y);
       context.rotate(((x % 7) - 3) * 0.05);
-      context.fillRect(0, 0, 56, 40);
+      context.fillRect(0, 0, 112, 80);
       context.restore();
     }
   } else {
     context.fillStyle = "#e8ecf2";
-    context.fillRect(0, 0, 512, 256);
+    context.fillRect(0, 0, W, H);
     context.strokeStyle = accent;
-    context.lineWidth = 6;
+    context.lineWidth = 12;
     context.beginPath();
-    context.moveTo(60, 190);
-    context.lineTo(160, 90);
-    context.lineTo(250, 150);
-    context.lineTo(340, 60);
-    context.lineTo(450, 130);
+    context.moveTo(120, 380);
+    context.lineTo(320, 180);
+    context.lineTo(500, 300);
+    context.lineTo(680, 120);
+    context.lineTo(900, 260);
     context.stroke();
     context.fillStyle = accent;
-    for (const [x, y] of [[160, 90], [250, 150], [340, 60]]) {
+    for (const [x, y] of [[320, 180], [500, 300], [680, 120]]) {
       context.beginPath();
-      context.arc(x, y, 9, 0, Math.PI * 2);
+      context.arc(x, y, 18, 0, Math.PI * 2);
       context.fill();
     }
   }
@@ -82,6 +85,7 @@ function boardTexture(kind: "flow" | "kanban" | "art", accent: string): CanvasTe
   texture.colorSpace = SRGBColorSpace;
   texture.minFilter = LinearFilter;
   texture.magFilter = LinearFilter;
+  texture.anisotropy = 4;
   return texture;
 }
 
