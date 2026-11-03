@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo, type ReactNode } from "react";
 import type { Group, Object3D } from "three";
 import { PALETTE } from "@/config/constants";
 import type { AgentDefinition } from "@/types/hq";
@@ -19,6 +19,8 @@ interface AgentFigureProps {
   agent: AgentDefinition;
   selected: boolean;
   figureRef: (handle: AgentFigureHandle) => void;
+  onHoverChange?: (hovered: boolean) => void;
+  children?: ReactNode;
 }
 
 const SKIN = "#e8b98a";
@@ -29,7 +31,7 @@ const PANTS = "#2f3742";
  * A pose de trabalho abaixa o quadril e dobra as pernas na cadeira.
  */
 export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
-  function AgentFigure({ agent, selected, figureRef }) {
+  function AgentFigure({ agent, selected, figureRef, onHoverChange, children }) {
     const parts = useMemo<AgentFigureHandle>(
       () => ({
         group: null as unknown as Group,
@@ -58,7 +60,17 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
         ref={assign("group")}
         name={`agent-${agent.id}`}
         userData={{ agentId: agent.id }}
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          onHoverChange?.(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          onHoverChange?.(false);
+          document.body.style.cursor = "";
+        }}
       >
+        {children}
         <mesh
           ref={assign("ring")}
           position={[0, 0.02, 0]}

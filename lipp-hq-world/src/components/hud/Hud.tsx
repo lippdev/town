@@ -8,6 +8,7 @@ import {
   MonitorUp,
   Radio,
   RotateCcw,
+  Play,
   SlidersHorizontal,
   Users,
   BrickWall,
@@ -123,6 +124,21 @@ function AgentRow({ agentId }: { agentId: string }) {
   );
 }
 
+function ReplayDemoButton() {
+  const dataSource = useHQStore((state) => state.dataSource);
+  if (dataSource !== "demo") return null;
+
+  return (
+    <button
+      type="button"
+      className="chip"
+      onClick={() => useHQStore.setState({ demoRestart: Date.now() })}
+    >
+      <Play size={12} /> Replay demo
+    </button>
+  );
+}
+
 function TopBar() {
   const connectionStatus = useHQStore((state) => state.connectionStatus);
   const dataSource = useHQStore((state) => state.dataSource);
@@ -170,6 +186,7 @@ function TopBar() {
       <button type="button" className="chip" onClick={() => resetCamera()}>
         <RotateCcw size={12} /> Reset
       </button>
+      <ReplayDemoButton />
     </div>
   );
 }
