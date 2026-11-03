@@ -26,3 +26,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Conexão local com o Hermes (link + session token) — nunca commitar
+.hq-connection.json

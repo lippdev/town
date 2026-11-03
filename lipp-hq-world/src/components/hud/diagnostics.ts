@@ -22,10 +22,17 @@ const ENDPOINTS: Array<{ id: EndpointId; label: string; path: string }> = [
 ];
 
 export function endpointRows(fleet: FleetSnapshot | null): EndpointRow[] {
-  return ENDPOINTS.map((endpoint) => ({
-    ...endpoint,
-    diagnostic: fleet?.endpoints?.[endpoint.id],
-  }));
+  return ENDPOINTS.map((endpoint) => {
+    const diagnostic = fleet?.endpoints?.[endpoint.id];
+    // conexão salva (link + token) lê a saúde no /api/status do dashboard
+    const viaStatus = endpoint.id === "api" && diagnostic?.path === "/api/status";
+    return {
+      ...endpoint,
+      label: viaStatus ? "Status" : endpoint.label,
+      path: diagnostic?.path ?? endpoint.path,
+      diagnostic,
+    };
+  });
 }
 
 export type DiagnosticsSeverity = "ok" | "partial" | "down" | "unknown";
