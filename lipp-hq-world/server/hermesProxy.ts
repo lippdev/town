@@ -1,11 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  API_ENABLE_HINT,
+  DEFAULT_API_URL,
+  apiProfilePrefix,
   classifyFailure,
   clearConnection,
   discoverLocalDashboard,
   isLoopbackAddress,
   loadSavedConnection,
   normalizeDashboardUrl,
+  probeApi,
   probeConnection,
   readServedToken,
   saveConnection,
@@ -16,13 +20,17 @@ import {
 } from "./hermesConnection";
 
 /**
- * Proxy de leitura same-origin para o Hermes.
+ * Proxy same-origin para o Hermes.
  *
  * O navegador nunca lê credencial do Hermes: o proxy guarda a chave do
- * serviço de API (`HERMES_API_KEY`) e o session token do dashboard — o que foi
+ * serviço de API (`API_SERVER_KEY`) e o session token do dashboard — o que foi
  * salvo pela aba Integrações (link + token, como no Hermes Desktop) ou, sem
- * conexão salva, `HERMES_DASHBOARD_TOKEN`. Ele só faz GET nos endpoints
- * documentados em docs/HERMES.md — nenhuma escrita chega ao Hermes por aqui.
+ * conexão salva, as variáveis de ambiente.
+ *
+ * Leitura é só GET nos endpoints documentados em docs/HERMES.md. A única
+ * escrita que chega ao Hermes é a mensagem que você manda a um bot pelo chat
+ * (`POST /api/sessions/{id}/chat` no API server), sempre por ação explícita
+ * na página e com a mesma trava de origem da conexão.
  */
 
 export interface HermesProxyConfig {
@@ -55,11 +63,12 @@ export function readHermesConfig(
   if (saved) {
     // conexão do Desktop: um link só, o dashboard. A saúde vem do /api/status
     // dele, não do API server em :8642, que fica de fora nesse modo.
+    // a API (envio de mensagens) é opcional e tem credencial própria
     return {
       source: "saved",
-      apiUrl: "",
+      apiUrl: saved.api?.url ?? "",
       dashboardUrl: saved.url,
-      apiKey: "",
+      apiKey: saved.api?.key ?? "",
       dashboardToken: saved.token,
       timeoutMs,
     };
@@ -257,9 +266,18 @@ export async function hermesProxyMiddleware(
     await handleLocalConnect(request, response);
     return;
   }
+  if (path === API_CONNECTION_PATH && (request.method === "POST" || request.method === "DELETE")) {
+    await handleApiConnectionWrite(request, response);
+    return;
+  }
+  const chatRoute = path.match(CHAT_ROUTE);
+  if (chatRoute && request.method === "POST") {
+    await handleSessionChat(request, chatRoute[1], url, response);
+    return;
+  }
 
   if (request.method !== "GET") {
-    sendJson(response, 405, { error: "O proxy do Hermes é somente leitura." });
+    sendJson(response, 405, { error: "Fora o chat e a conexão, o proxy do Hermes só lê." });
     return;
   }
 
@@ -383,6 +401,9 @@ export function statusPayload(config: HermesProxyConfig) {
     apiUrl: config.apiUrl || undefined,
     dashboardUrl: config.dashboardUrl,
     hasApiKey: Boolean(config.apiKey),
+    apiKeyPreview: tokenPreview(config.apiKey),
+    /** Envio de mensagens habilitado: API server com chave configurada. */
+    canSend: Boolean(config.apiUrl && config.apiKey),
     hasDashboardToken: Boolean(config.dashboardToken),
     tokenPreview: tokenPreview(config.dashboardToken),
     tokenSource: config.source === "saved" ? (loadSavedConnection()?.tokenSource ?? "typed") : undefined,
@@ -409,13 +430,13 @@ export function isSameOriginWrite(headers: IncomingMessage["headers"]): boolean 
   return contentType.startsWith("application/json");
 }
 
-async function readBody(request: IncomingMessage): Promise<string> {
+async function readBody(request: IncomingMessage, limit = MAX_BODY_BYTES): Promise<string> {
   let size = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.length;
-    if (size > MAX_BODY_BYTES) throw new Error("corpo grande demais");
+    if (size > limit) throw new Error("corpo grande demais");
     chunks.push(buffer);
   }
   return Buffer.concat(chunks).toString("utf8");
@@ -463,7 +484,7 @@ async function handleConnectionWrite(request: IncomingMessage, response: ServerR
     return;
   }
 
-  saveConnection({ url, token, savedAt: Date.now(), tokenSource: "typed" });
+  saveConnection({ url, token, savedAt: Date.now(), tokenSource: "typed", ...keptApi(previous) });
   sendJson(response, 200, { ok: true, probe, status: statusPayload(readHermesConfig()) });
 }
 
@@ -486,6 +507,177 @@ async function handleLocalConnect(request: IncomingMessage, response: ServerResp
     });
     return;
   }
-  saveConnection({ url: discovery.url, token, savedAt: Date.now(), tokenSource: "served" });
+  saveConnection({
+    url: discovery.url,
+    token,
+    savedAt: Date.now(),
+    tokenSource: "served",
+    ...keptApi(loadSavedConnection()),
+  });
   sendJson(response, 200, { ok: true, discovery, status: statusPayload(readHermesConfig()) });
+}
+
+const API_CONNECTION_PATH = `${HQ_PREFIX}/connection/api`;
+const CHAT_ROUTE = /^\/api\/hq\/hermes\/sessions\/([^/]+)\/chat$/;
+/** Tamanho máximo de uma mensagem digitada no chat. */
+export const MAX_CHAT_CHARS = 8000;
+/** Um turno do agente é síncrono e pode levar minutos (ferramentas, buscas). */
+const CHAT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** A API já salva continua valendo quando o dashboard é reconectado. */
+function keptApi(previous: SavedConnection | null): Pick<SavedConnection, "api"> {
+  return previous?.api ? { api: previous.api } : {};
+}
+
+/** Salva (ou remove) URL + chave do API server, testando antes. */
+async function handleApiConnectionWrite(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  if (!isSameOriginWrite(request.headers)) {
+    sendJson(response, 403, { error: "Conexão só pode ser alterada pela página do Lipp HQ." });
+    return;
+  }
+  const saved = loadSavedConnection();
+  if (!saved) {
+    sendJson(response, 409, { ok: false, error: "Conecte o dashboard antes de habilitar o envio." });
+    return;
+  }
+  if (request.method === "DELETE") {
+    const { api: _api, ...rest } = saved;
+    void _api;
+    saveConnection(rest);
+    sendJson(response, 200, { ok: true, status: statusPayload(readHermesConfig()) });
+    return;
+  }
+
+  let input: { url?: unknown; key?: unknown };
+  try {
+    input = JSON.parse(await readBody(request)) as typeof input;
+  } catch {
+    sendJson(response, 400, { ok: false, error: "Corpo inválido: envie { url, key } em JSON." });
+    return;
+  }
+  let url: string;
+  try {
+    url = normalizeDashboardUrl(typeof input.url === "string" && input.url.trim() ? input.url : DEFAULT_API_URL);
+  } catch (error) {
+    sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  // campo vazio reaproveita a chave já salva para a mesma URL
+  const typed = typeof input.key === "string" ? input.key.trim() : "";
+  const key = typed || (saved.api?.url === url ? saved.api.key : "");
+  const probe = await probeApi(url, key, readHermesConfig().timeoutMs);
+  if (!probe.ok) {
+    sendJson(response, 422, { ok: false, error: probe.error, action: probe.action, probe });
+    return;
+  }
+  saveConnection({ ...saved, api: { url, key } });
+  sendJson(response, 200, { ok: true, probe, status: statusPayload(readHermesConfig()) });
+}
+
+/** Erro do API server em português, com o que fazer. */
+function describeChatFailure(status: number, detail: string, profile: string): { error: string; action?: string } {
+  if (status === 401 || status === 403) {
+    return { error: `a API recusou a chave (HTTP ${status})`, action: "Salve a API_SERVER_KEY de novo na aba Integrações." };
+  }
+  if (status === 404 && /profile/i.test(detail)) {
+    return {
+      error: `a API conectada não serve o perfil "${profile}"`,
+      action: "Sem multiplexação, cada perfil sobe a própria API: use a porta (API_SERVER_PORT) do .env desse perfil.",
+    };
+  }
+  if (status === 404) return { error: "o Hermes não achou essa sessão" };
+  if (status === 429 || status === 503) {
+    return { error: "o bot está ocupado com outros turnos", action: "Tente de novo em instantes." };
+  }
+  const trimmed = detail.trim().slice(0, 200);
+  return { error: trimmed ? `HTTP ${status}: ${trimmed}` : `HTTP ${status}` };
+}
+
+/**
+ * Manda uma mensagem a um bot numa sessão existente e espera a resposta.
+ *
+ * É o mesmo caminho do `hermes peer dm`: `POST /api/sessions/{id}/chat` no
+ * API server, com o prefixo do perfil. O Hermes grava a mensagem no começo do
+ * turno, então a conversa aberta já a mostra na próxima releitura, antes da
+ * resposta chegar.
+ */
+async function handleSessionChat(
+  request: IncomingMessage,
+  rawId: string,
+  url: string,
+  response: ServerResponse,
+): Promise<void> {
+  if (!isSameOriginWrite(request.headers)) {
+    sendJson(response, 403, { error: "Mensagens só podem ser enviadas pela página do Lipp HQ." });
+    return;
+  }
+  const sessionId = decodeURIComponent(rawId);
+  const profile = new URLSearchParams(url.split("?")[1] ?? "").get("profile") ?? "default";
+  if (!SESSION_ID.test(sessionId) || !PROFILE_NAME.test(profile)) {
+    sendJson(response, 400, { error: "Sessão ou perfil inválido." });
+    return;
+  }
+  const config = readHermesConfig();
+  if (!config.apiUrl || !config.apiKey) {
+    sendJson(response, 409, {
+      error: "Envio desligado: falta a API do Hermes.",
+      action: `Na aba Integrações, informe a URL e a API_SERVER_KEY da API. ${API_ENABLE_HINT}`,
+    });
+    return;
+  }
+
+  let message: string;
+  try {
+    const input = JSON.parse(await readBody(request, MAX_CHAT_CHARS * 4 + 256)) as { message?: unknown };
+    message = typeof input.message === "string" ? input.message.trim() : "";
+  } catch {
+    sendJson(response, 400, { error: "Corpo inválido: envie { message } em JSON." });
+    return;
+  }
+  if (!message) {
+    sendJson(response, 400, { error: "Mensagem vazia." });
+    return;
+  }
+  if (message.length > MAX_CHAT_CHARS) {
+    sendJson(response, 413, { error: `Mensagem longa demais (máximo ${MAX_CHAT_CHARS} caracteres).` });
+    return;
+  }
+
+  const target = `${config.apiUrl}${apiProfilePrefix(profile)}/api/sessions/${encodeURIComponent(sessionId)}/chat`;
+  const startedAt = Date.now();
+  try {
+    const upstream = await fetch(target, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({ message }),
+      signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    });
+    const text = await upstream.text().catch(() => "");
+    if (!upstream.ok) {
+      sendJson(response, upstream.status === 404 ? 404 : 502, describeChatFailure(upstream.status, text, profile));
+      return;
+    }
+    let body: { status?: string; message?: { content?: unknown } } = {};
+    try {
+      body = JSON.parse(text) as typeof body;
+    } catch {
+      // resposta sem JSON: o turno rodou, a conversa relida mostra o resultado
+    }
+    sendJson(response, 200, {
+      ok: true,
+      status: body.status,
+      reply: typeof body.message?.content === "string" ? body.message.content : null,
+      ms: Date.now() - startedAt,
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    sendJson(response, 504, {
+      error: timedOut ? "o bot não respondeu em 5 min" : `a API do Hermes não respondeu (${error instanceof Error ? error.message : String(error)})`,
+      action: timedOut ? "A resposta pode chegar depois: a conversa continua sendo relida." : API_ENABLE_HINT,
+    });
+  }
 }
