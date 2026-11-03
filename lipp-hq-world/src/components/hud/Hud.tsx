@@ -45,14 +45,7 @@ import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/compo
 import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
-
-interface GatewayStatusPayload {
-  configured?: boolean;
-  apiUrl?: string;
-  dashboardUrl?: string;
-  hasApiKey?: boolean;
-  hasDashboardToken?: boolean;
-}
+import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
 
 const SEVERITY_LABEL: Record<DiagnosticsSeverity, string> = {
   ok: "tudo respondendo",
@@ -72,24 +65,9 @@ function GatewayDiagnostics() {
   const fleet = useHQStore((state) => state.fleet);
   const dataSource = useHQStore((state) => state.dataSource);
   const refresh = useHQStore((state) => state.gatewayRefresh);
-  const [config, setConfig] = useState<GatewayStatusPayload | null>(null);
+  const config = useGatewayStatus();
   const rows = endpointRows(fleet);
   const summary = diagnosticsSummary(fleet);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/hq/status")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload: GatewayStatusPayload | null) => {
-        if (!cancelled) setConfig(payload);
-      })
-      .catch(() => {
-        if (!cancelled) setConfig(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return (
     <div className="sidebar-list gateway-diagnostics">

@@ -23,30 +23,6 @@
       ],
       "activity": "Briefing diário"
     },
-<<<<<<< HEAD
-    "diagnostics": {
-      "rows": 4,
-      "allOk": true,
-      "paths": [
-        "/health",
-        "/api/profiles",
-        "/api/profiles/sessions",
-        "/api/cron/jobs"
-      ],
-      "latencies": [
-        "4 ms",
-        "4 ms",
-        "4 ms",
-        "5 ms"
-      ],
-      "summary": "tudo respondendo4 de 4 endpoints",
-      "config": [
-        "ModoHermes (ao vivo)",
-        "APIhttp://127.0.0.1:43107",
-        "Dashboardhttp://127.0.0.1:42943",
-        "Credenciaissem chave · sem token",
-        "Última leituraagora"
-=======
     "sessions": {
       "rows": 21,
       "note": "10 ativas de 21 sessões · janela de 5 min do Hermes",
@@ -70,7 +46,30 @@
         "terminalTriagem de pull requestsagora · 15 msg",
         "telegramAnalisar falhas de CI16 min · 16 msg",
         "dashboardResumir releases do dia31 min · 17 msg"
->>>>>>> origin/main
+      ]
+    },
+    "diagnostics": {
+      "rows": 4,
+      "allOk": true,
+      "paths": [
+        "/health",
+        "/api/profiles",
+        "/api/profiles/sessions",
+        "/api/cron/jobs"
+      ],
+      "latencies": [
+        "4 ms",
+        "3 ms",
+        "3 ms",
+        "3 ms"
+      ],
+      "summary": "tudo respondendo4 de 4 endpoints",
+      "config": [
+        "ModoHermes (ao vivo)",
+        "APIhttp://127.0.0.1:37063",
+        "Dashboardhttp://127.0.0.1:45907",
+        "Credenciaissem chave · sem token",
+        "Última leituraagora"
       ]
     },
     "demoEventsAfterLive": 0

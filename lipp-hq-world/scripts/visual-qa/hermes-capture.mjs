@@ -140,6 +140,11 @@ async function main() {
       null,
       { timeout: 20000 },
     );
+    await page.waitForFunction(
+      () => Array.from(document.querySelectorAll(".gateway-config dd")).every((node) => (node.textContent ?? "").trim() !== "—"),
+      null,
+      { timeout: 20000 },
+    );
     report.checks.diagnostics = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll(".gateway-row"));
       const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
