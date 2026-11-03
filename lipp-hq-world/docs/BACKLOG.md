@@ -95,6 +95,14 @@ auditoria; os demais estão prontos para execução.
 - ✅ **Navegação por teclado na sidebar** — setas movem a seleção na frota e
   abrem o painel do bot; foco visível estilizado.
 
+## 6a. Descartado com evidência
+
+- **"Precisa de você" no HUD** — sinal de bot esperando decisão humana não existe
+  no gateway: o CLI sabe (`cli_status_bar_mixin.py` lê modais de aprovação,
+  clarify, sudo e secret) e o kanban marca tarefas com `needs_input`, mas nenhuma
+  rota do dashboard serve kanban. Derivar de `waiting` seria inventar semântica
+  que o Hermes não reporta. Reabrir se o dashboard publicar o estado de atenção.
+
 ## 6. Ideias futuras (não priorizadas)
 
 - Ciclo dia/noite com luz quente à noite.
@@ -123,7 +131,7 @@ O que existe de verdade no repo:
   ("Use WebSocket for remote events", `route-team.ts`). Não é SSE como no
   OpenMausBot; o adaptador precisa de cliente WS com reconexão própria.
 - **Fase ≠ atividade.** `AgentPhase` é `idle | starting | ready | restarting
-  | blocked | stopped` — estado do runtime do CLI, não "trabalhando na
+| blocked | stopped` — estado do runtime do CLI, não "trabalhando na
   tarefa X". Derivar working/waiting exige interpretar presença
   (`GET /v1/team/presence`) + fila/conversa. No OpenMausBot o campo
   `activity` já vem pronto; no OpenBot é inferência nossa.

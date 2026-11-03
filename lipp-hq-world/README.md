@@ -107,17 +107,21 @@ A aplicação abre em **Demo**: um cenário determinístico rotulado como simula
 inicia a rotina, Pulse e Echo coletam, Scout investiga, Atlas atualiza, Ink
 elabora, Forge consolida e tudo encerra.
 
-O modo **Live** lê o estado real do OpenMausBot através de um proxy de leitura
-same-origin, com o token fora do navegador. Ele é só de leitura: nenhum comando
-vai para o servidor dos agentes. Para ativar:
+O modo **Live** lê a frota do **Hermes** (dashboard + API server) por um proxy de
+leitura same-origin, com a credencial fora do navegador. Ele é só de leitura:
+GET nos quatro endpoints documentados e nenhum comando enviado ao Hermes.
 
-1. Configure o proxy de leitura (contratos e regras em
-   [docs/INTEGRATION.md](docs/INTEGRATION.md)) e defina `VITE_HQ_PROXY` com a
-   base dele (ex.: `/hq`).
-2. Rode `pnpm build` e sirva o `dist/` na mesma origem do proxy.
+1. Suba o Hermes (dashboard em 8000, API server em 8642) e aponte o app:
+   `HERMES_API_URL`, `HERMES_DASHBOARD_URL`, `HERMES_API_KEY` e
+   `HERMES_DASHBOARD_TOKEN` (contrato em [docs/HERMES.md](docs/HERMES.md)).
+2. Rode `pnpm dev` (ou `pnpm build && pnpm preview`) — o proxy só existe no dev e
+   no preview do Vite; um `dist/` servido por outra coisa cai em Demo.
+3. Antes de confiar na tela, rode `pnpm contract:check` e veja a aba
+   **Integrações**.
 
-Sem proxy configurado, a aplicação fica em Demo e diz isso na interface — nunca
-finge que está ao vivo.
+Sem gateway respondendo, a aplicação fica em Demo e diz isso na interface — nunca
+finge que está ao vivo. O adaptador do OpenMausBot continua no código como fonte
+alternativa (`docs/INTEGRATION.md`), mas o `Live` do app é Hermes.
 
 ## Verificações
 
@@ -162,6 +166,7 @@ tela mostrava.
 
 ## Estado
 
-Em desenvolvimento por stages, com gate visual GO/NO-GO por etapa. O estado real
-está em [docs/PROGRESS.md](docs/PROGRESS.md) — relatórios de revisão em
-`qa/reviews/`.
+V0 entregue: visão 100% Hermes da frota, somente leitura, com QA visual em CI.
+O detalhe do que está pronto, do que é limite conhecido e do que depende de
+validação com uma instância real está em
+[docs/PROGRESS.md](docs/PROGRESS.md).
