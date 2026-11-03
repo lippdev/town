@@ -15,13 +15,13 @@ pnpm dev        # http://127.0.0.1:5173
 
 ## Documentação
 
-| Documento | Conteúdo |
-| - | - |
-| [lipp-hq-world/docs/ARCHITECTURE.md](lipp-hq-world/docs/ARCHITECTURE.md) | arquitetura e decisões |
-| [lipp-hq-world/docs/BACKLOG.md](lipp-hq-world/docs/BACKLOG.md) | auditoria geral e melhorias |
-| [lipp-hq-world/docs/PROGRESS.md](lipp-hq-world/docs/PROGRESS.md) | estado atual |
-| [lipp-hq-world/docs/INTEGRATION.md](lipp-hq-world/docs/INTEGRATION.md) | contratos do OpenMausBot |
-| [AGENTS.md](AGENTS.md) | regras para agentes neste repositório |
+| Documento                                                                | Conteúdo                              |
+| ------------------------------------------------------------------------ | ------------------------------------- |
+| [lipp-hq-world/docs/ARCHITECTURE.md](lipp-hq-world/docs/ARCHITECTURE.md) | arquitetura e decisões                |
+| [lipp-hq-world/docs/BACKLOG.md](lipp-hq-world/docs/BACKLOG.md)           | auditoria geral e melhorias           |
+| [lipp-hq-world/docs/PROGRESS.md](lipp-hq-world/docs/PROGRESS.md)         | estado atual                          |
+| [lipp-hq-world/docs/INTEGRATION.md](lipp-hq-world/docs/INTEGRATION.md)   | contratos do OpenMausBot              |
+| [AGENTS.md](AGENTS.md)                                                   | regras para agentes neste repositório |
 
 ## Fluxo de trabalho
 
