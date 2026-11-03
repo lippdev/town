@@ -1,14 +1,20 @@
 import type { FleetSnapshot, HQSource } from "@/integrations/hq/types";
 import { botsFromHermes, type HermesCronJob, type HermesProfile, type HermesSessionRow } from "@/integrations/hermes/botsFromHermes";
+import { nextDelayMs, snapshotOnFailure } from "@/integrations/hermes/resilience";
 import type { HQEvent } from "@/types/hq";
 
 /**
  * Fonte de frota do Hermes (somente leitura), via proxy same-origin `/api/hq`.
  *
- * O adaptador só lê: snapshot HTTP a cada ciclo. Nenhuma escrita, nenhum
- * comando. Eventos do feed são derivados de mudanças reais de atividade
- * (título de sessão, estado do bot, rotina agendada) — nada é inventado, e
- * quando não há mudança nenhum evento é emitido.
+ * Comportamento de rede, para um app que fica aberto o dia inteiro:
+ * - backoff exponencial com teto quando o gateway falha (sem martelar);
+ * - a última leitura boa é mantida e marcada como atrasada em vez de a tela
+ *   piscar para vazio;
+ * - polling pausa com a aba oculta e volta na hora ao reaparecer;
+ * - requisição em voo é cancelada no dispose.
+ *
+ * Nada é inventado: eventos só existem quando um bot muda de estado ou de
+ * atividade de fato.
  */
 
 export interface HermesAdapterOptions {
@@ -45,9 +51,12 @@ export class HermesAdapter implements HQSource {
   private readonly options: HermesAdapterOptions;
   private timer: number | null = null;
   private disposed = false;
-  private inFlight = false;
+  private inFlight: AbortController | null = null;
   private previous: FleetSnapshot | null = null;
+  private lastGood: FleetSnapshot | null = null;
+  private failures = 0;
   private eventSeq = 0;
+  private paused = false;
 
   constructor(options: HermesAdapterOptions) {
     this.options = options;
@@ -57,30 +66,67 @@ export class HermesAdapter implements HQSource {
 
   start(): void {
     if (this.disposed) return;
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.onVisibility);
+      this.paused = document.visibilityState === "hidden";
+    }
+    if (!this.paused) void this.poll();
+  }
+
+  /** Força uma leitura agora (botão "tentar de novo"). */
+  refresh(): void {
+    if (this.disposed) return;
+    this.failures = 0;
+    this.clearTimer();
     void this.poll();
   }
 
   dispose(): void {
     this.disposed = true;
+    this.clearTimer();
+    this.inFlight?.abort();
+    this.inFlight = null;
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.onVisibility);
+    }
+  }
+
+  private readonly onVisibility = () => {
+    if (this.disposed) return;
+    const hidden = document.visibilityState === "hidden";
+    this.paused = hidden;
+    if (hidden) {
+      this.clearTimer();
+      return;
+    }
+    // voltou a aparecer: atualiza imediatamente, sem esperar o ciclo
+    this.clearTimer();
+    void this.poll();
+  };
+
+  private clearTimer(): void {
     if (this.timer !== null) {
       window.clearTimeout(this.timer);
       this.timer = null;
     }
   }
 
-  private schedule(): void {
-    if (this.disposed) return;
+  private schedule(delayMs: number): void {
+    if (this.disposed || this.paused) return;
+    this.clearTimer();
     this.timer = window.setTimeout(() => {
       void this.poll();
-    }, this.pollMs);
+    }, delayMs);
   }
 
   private async poll(): Promise<void> {
     if (this.disposed || this.inFlight) return;
-    this.inFlight = true;
+    const controller = new AbortController();
+    this.inFlight = controller;
+
     try {
       const response = await fetch(`${this.baseUrl}/hermes/snapshot`, {
-        signal: AbortSignal.timeout(8000),
+        signal: controller.signal,
         headers: { accept: "application/json" },
       });
       if (!response.ok) throw new Error(`proxy HTTP ${response.status}`);
@@ -108,22 +154,32 @@ export class HermesAdapter implements HQSource {
         }),
       };
 
+      // Frota vazia com o gateway fora não significa "não há bots": significa
+      // que não sabemos. Mantém a última leitura boa, marcada como atrasada.
+      const unknownFleet = snapshot.bots.length === 0 && snapshot.health.dashboard === "offline";
+      if (unknownFleet && this.lastGood && this.lastGood.bots.length > 0) {
+        this.failures += 1;
+        const message = snapshot.health.detail ?? "dashboard do Hermes fora do ar";
+        this.options.onError?.(message);
+        this.options.onSnapshot(snapshotOnFailure(this.lastGood, message, Date.now()));
+        return;
+      }
+
       this.emitTransitions(snapshot);
       this.previous = snapshot;
+      this.lastGood = snapshot;
+      this.failures = 0;
       if (!this.disposed) this.options.onSnapshot(snapshot);
     } catch (error) {
+      if (this.disposed || controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : String(error);
+      this.failures += 1;
       this.options.onError?.(message);
-      const offline: FleetSnapshot = {
-        source: "hermes",
-        fetchedAt: Date.now(),
-        health: { api: "offline", dashboard: "offline", detail: message },
-        bots: [],
-      };
-      if (!this.disposed) this.options.onSnapshot(offline);
+      const stale = snapshotOnFailure(this.lastGood, message, Date.now());
+      if (!this.disposed) this.options.onSnapshot(stale);
     } finally {
-      this.inFlight = false;
-      this.schedule();
+      if (this.inFlight === controller) this.inFlight = null;
+      this.schedule(nextDelayMs(this.failures, this.pollMs));
     }
   }
 
@@ -148,6 +204,7 @@ export class HermesAdapter implements HQSource {
       }
       return;
     }
+
     const before = new Map(previous.bots.map((bot) => [bot.id, bot]));
     const timestamp = Date.now();
 

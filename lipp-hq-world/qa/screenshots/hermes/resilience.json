@@ -1,0 +1,12 @@
+{
+  "checks": {
+    "botsBefore": 7,
+    "staleBadge": "atrasado 4s",
+    "botsWhileStale": 7,
+    "panelWarn": "Leitura atrasada: os dados têm 12 s (fetch failed).",
+    "staleBadgeAfterRecovery": 0,
+    "botsAfterRecovery": 7
+  },
+  "errors": [],
+  "ok": true
+}

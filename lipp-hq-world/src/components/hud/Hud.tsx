@@ -19,7 +19,9 @@ import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
 import {
   GATEWAY_LABEL,
+  ageLabel,
   fleetCounts,
+  freshnessBadge,
   gatewayNotice,
   relativeTime,
   stateLabel,
@@ -122,13 +124,39 @@ function BotRoster() {
     }
     return (
       <div className="sidebar-note sidebar-note-warn">
-        <TriangleAlert size={12} /> {notice ?? "Nenhum bot reportado pelo Hermes."}
+        <TriangleAlert size={12} />
+        <span>
+          {notice ?? "Nenhum bot reportado pelo Hermes."}
+          <button
+            type="button"
+            className="note-retry"
+            onClick={() => useHQStore.getState().gatewayRefresh?.()}
+          >
+            tentar de novo
+          </button>
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="sidebar-list">
+    <>
+      {fleet.stale && (
+        <div className="sidebar-note sidebar-note-warn">
+          <TriangleAlert size={12} />
+          <span>
+            Leitura atrasada há {ageLabel(fleet.fetchedAt)}.
+            <button
+              type="button"
+              className="note-retry"
+              onClick={() => useHQStore.getState().gatewayRefresh?.()}
+            >
+              tentar de novo
+            </button>
+          </span>
+        </div>
+      )}
+      <div className="sidebar-list">
       {fleet.bots.map((bot) => {
         const roomId = AGENTS_BY_ID[bot.id]?.roomId;
         return (
@@ -148,7 +176,8 @@ function BotRoster() {
           </button>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -223,6 +252,7 @@ function GatewayChip() {
       ? "offline"
       : "degraded";
   const counts = fleetCounts(fleet);
+  const badge = freshnessBadge(fleet);
 
   return (
     <div className={`connection connection-${overall}`} title={gatewayNotice(fleet) ?? "Hermes via gateway"}>
@@ -230,6 +260,7 @@ function GatewayChip() {
       Hermes · {GATEWAY_LABEL[overall]}
       {health?.version ? <span className="connection-version">v{health.version.replace(/^fixture-/, "")}</span> : null}
       {counts.total > 0 ? <span className="connection-count">{counts.total} bots</span> : null}
+      {badge && badge.tone === "stale" ? <span className="connection-stale">{badge.label}</span> : null}
     </div>
   );
 }
@@ -390,7 +421,13 @@ function BotPanel({ bot }: { bot: BotSnapshot }) {
         </div>
       </dl>
       {bot.description && <p className="panel-resp">{bot.description}</p>}
-      {notice && <p className="panel-warn">{notice}</p>}
+      {fleet?.stale && (
+        <p className="panel-warn">
+          Leitura atrasada: os dados têm {ageLabel(fleet.fetchedAt)}
+          {fleet.errorDetail ? ` (${fleet.errorDetail})` : ""}.
+        </p>
+      )}
+      {notice && !fleet?.stale && <p className="panel-warn">{notice}</p>}
       <AppearancePicker agentId={bot.id} />
     </div>
   );

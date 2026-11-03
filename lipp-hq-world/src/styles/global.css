@@ -645,3 +645,26 @@ button.sidebar-row.active {
 
 .fleet-stat-working strong { color: #4ade80; }
 .fleet-stat-waiting strong { color: #facc15; }
+
+.note-retry {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.connection-stale {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde68a;
+  font-size: 10px;
+  font-weight: 700;
+}
