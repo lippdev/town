@@ -22,6 +22,8 @@ interface EndpointResult<T> {
   status: number;
   data?: T;
   error?: string;
+  /** Tempo até a resposta (ou até a falha), para o diagnóstico na UI. */
+  ms: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -42,6 +44,7 @@ async function getJson<T>(
   headers: Record<string, string>,
   timeoutMs: number,
 ): Promise<EndpointResult<T>> {
+  const startedAt = Date.now();
   try {
     const response = await fetch(url, {
       headers: { accept: "application/json", ...headers },
@@ -49,11 +52,21 @@ async function getJson<T>(
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      return { reachable: true, status: response.status, error: describeHttpError(response.status, detail) };
+      return {
+        reachable: true,
+        status: response.status,
+        error: describeHttpError(response.status, detail),
+        ms: Date.now() - startedAt,
+      };
     }
-    return { reachable: true, status: response.status, data: (await response.json()) as T };
+    return { reachable: true, status: response.status, data: (await response.json()) as T, ms: Date.now() - startedAt };
   } catch (error) {
-    return { reachable: false, status: 0, error: error instanceof Error ? error.message : String(error) };
+    return {
+      reachable: false,
+      status: 0,
+      error: error instanceof Error ? error.message : String(error),
+      ms: Date.now() - startedAt,
+    };
   }
 }
 
@@ -108,10 +121,10 @@ export async function fetchHermesSnapshot(config: HermesProxyConfig) {
     sessions: sessions.data?.sessions ?? [],
     jobs: jobs.data?.jobs ?? [],
     blocks: {
-      api: { ok: !health.error, status: health.status, error: health.error },
-      profiles: { ok: !profiles.error, status: profiles.status, error: profiles.error },
-      sessions: { ok: !sessions.error, status: sessions.status, error: sessions.error },
-      jobs: { ok: !jobs.error, status: jobs.status, error: jobs.error },
+      api: { ok: !health.error, status: health.status, error: health.error, ms: health.ms },
+      profiles: { ok: !profiles.error, status: profiles.status, error: profiles.error, ms: profiles.ms },
+      sessions: { ok: !sessions.error, status: sessions.status, error: sessions.error, ms: sessions.ms },
+      jobs: { ok: !jobs.error, status: jobs.status, error: jobs.error, ms: jobs.ms },
     },
   };
 }

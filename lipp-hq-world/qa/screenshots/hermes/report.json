@@ -48,6 +48,30 @@
         "dashboardResumir releases do dia31 min · 17 msg"
       ]
     },
+    "diagnostics": {
+      "rows": 4,
+      "allOk": true,
+      "paths": [
+        "/health",
+        "/api/profiles",
+        "/api/profiles/sessions",
+        "/api/cron/jobs"
+      ],
+      "latencies": [
+        "4 ms",
+        "3 ms",
+        "3 ms",
+        "4 ms"
+      ],
+      "summary": "tudo respondendo4 de 4 endpoints",
+      "config": [
+        "ModoHermes (ao vivo)",
+        "APIhttp://127.0.0.1:33979",
+        "Dashboardhttp://127.0.0.1:33063",
+        "Credenciaissem chave · sem token",
+        "Última leituraagora"
+      ]
+    },
     "routines": {
       "rows": 6,
       "groups": 6,

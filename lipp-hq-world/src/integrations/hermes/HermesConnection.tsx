@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { primeGatewayStatus } from "@/integrations/hermes/gatewayStatus";
 import { useHQStore } from "@/state/useHQStore";
 import { HermesAdapter } from "@/integrations/hermes/HermesAdapter";
 import { botStatesFromFleet } from "@/integrations/hermes/fleetToStates";
@@ -16,6 +17,9 @@ export function HermesConnection() {
   const setGatewayRefresh = useHQStore((state) => state.setGatewayRefresh);
 
   useEffect(() => {
+    // a configuração do gateway é lida uma vez no boot: a aba de diagnóstico
+    // não pode abrir em branco enquanto a requisição acontece.
+    primeGatewayStatus();
     const adapter = new HermesAdapter({
       onSnapshot: (snapshot) => {
         const store = useHQStore.getState();

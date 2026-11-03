@@ -37,9 +37,23 @@ interface ProxyPayload {
   profiles?: HermesProfile[];
   sessions?: HermesSessionRow[];
   jobs?: HermesCronJob[];
-  blocks?: Record<string, { ok: boolean; error?: string }>;
+  blocks?: Record<string, { ok: boolean; status?: number; error?: string; ms?: number }>;
   fetchedAt?: number;
   error?: string;
+}
+
+/** Converte os `blocks` do proxy no diagnóstico tipado que o HUD mostra. */
+function endpointDiagnostics(
+  blocks: ProxyPayload["blocks"],
+): FleetSnapshot["endpoints"] {
+  if (!blocks) return undefined;
+  const diagnostics: NonNullable<FleetSnapshot["endpoints"]> = {};
+  for (const id of ["api", "profiles", "sessions", "jobs"] as const) {
+    const block = blocks[id];
+    if (!block) continue;
+    diagnostics[id] = { ok: block.ok, status: block.status, error: block.error, latencyMs: block.ms };
+  }
+  return diagnostics;
 }
 
 export class HermesAdapter implements HQSource {
@@ -152,6 +166,7 @@ export class HermesAdapter implements HQSource {
           sessions: payload.sessions ?? [],
           jobs: payload.jobs ?? [],
         }),
+        endpoints: endpointDiagnostics(payload.blocks),
       };
 
       // Frota vazia com o gateway fora não significa "não há bots": significa

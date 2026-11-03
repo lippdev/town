@@ -73,6 +73,26 @@ fingir recência.
 
 A origem usada pelo fixture segue `KNOWN_SOURCES`
 (`hermes_cli/session_lost_and_found.py`): `cli`, `telegram`, `dashboard`, `cron`.
+## Diagnóstico na tela
+
+A aba **Integrações** mostra o resultado da última leitura de cada endpoint, com
+latência medida no proxy (`getJson` cronometra a chamada, inclusive a falha):
+
+| Linha | Endpoint | Fonte |
+| --- | --- | --- |
+| API server | `/health` | `HERMES_API_URL` |
+| Dashboard | `/api/profiles` | `HERMES_DASHBOARD_URL` |
+| Sessões | `/api/profiles/sessions` | idem |
+| Rotinas | `/api/cron/jobs` | idem |
+
+O bloco `blocks` do snapshot (já existia, era descartado) carrega `ok`, `status`,
+`error` e `ms` por endpoint; o HUD resume em "tudo respondendo", "respondendo em
+parte", "sem resposta" ou "ainda sem leitura", lista o erro **cru** do Hermes e
+mostra modo, URLs, se há chave/token (nunca o valor) e o botão "testar agora",
+que usa o mesmo caminho do `gatewayRefresh`.
+
+É a primeira tela a abrir quando um bot não aparece: ela diz qual dos quatro
+endpoints falhou, se foi HTTP 401 (token ausente) ou falta de resposta.
 
 ## Derivação de estado (sem inventar nada)
 

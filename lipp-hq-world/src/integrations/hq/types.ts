@@ -92,6 +92,16 @@ export interface BotSnapshot {
   sessions?: SessionSnapshot[];
 }
 
+/** Resultado da última leitura de cada endpoint do gateway. */
+export interface EndpointDiagnostic {
+  ok: boolean;
+  status?: number;
+  error?: string;
+  latencyMs?: number;
+}
+
+export type EndpointId = "api" | "profiles" | "sessions" | "jobs";
+
 export interface FleetSnapshot {
   source: SourceId;
   health: GatewayHealth;
@@ -104,6 +114,8 @@ export interface FleetSnapshot {
   stale?: boolean;
   /** Erro da tentativa mais recente, quando houve. */
   errorDetail?: string;
+  /** Diagnóstico por endpoint da última leitura (o que respondeu e em quanto). */
+  endpoints?: Partial<Record<EndpointId, EndpointDiagnostic>>;
 }
 
 /** Fonte de frota: implementações vivem em integrations/<fonte>. */

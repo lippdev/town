@@ -45,6 +45,91 @@ import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/compo
 import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "@/components/hud/routines";
 import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
+import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
+import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
+
+const SEVERITY_LABEL: Record<DiagnosticsSeverity, string> = {
+  ok: "tudo respondendo",
+  partial: "respondendo em parte",
+  down: "sem resposta",
+  unknown: "ainda sem leitura",
+};
+
+/**
+ * Diagnóstico do gateway: é a tela que responde "por que não tem bot aqui?".
+ *
+ * Mostra cada endpoint com o caminho real (`/api/profiles`), status, latência e
+ * o erro cru do Hermes — sem chave nenhuma: só diz se a credencial está
+ * configurada, nunca o valor.
+ */
+function GatewayDiagnostics() {
+  const fleet = useHQStore((state) => state.fleet);
+  const dataSource = useHQStore((state) => state.dataSource);
+  const refresh = useHQStore((state) => state.gatewayRefresh);
+  const config = useGatewayStatus();
+  const rows = endpointRows(fleet);
+  const summary = diagnosticsSummary(fleet);
+
+  return (
+    <div className="sidebar-list gateway-diagnostics">
+      <div className={`gateway-summary gateway-${summary.severity}`}>
+        <strong>{SEVERITY_LABEL[summary.severity]}</strong>
+        <span>
+          {summary.okCount} de {summary.total} endpoints
+        </span>
+      </div>
+
+      {rows.map((row) => {
+        const diagnostic = row.diagnostic;
+        const status = latencyText(diagnostic);
+        const ok = diagnostic?.ok === true;
+        return (
+          <div key={row.id} className={`gateway-row ${ok ? "ok" : diagnostic ? "fail" : "idle"}`}>
+            <span className="gateway-dot" aria-hidden />
+            <span className="gateway-label">
+              {row.label}
+              <code>{row.path}</code>
+            </span>
+            <span className="gateway-latency">{status}</span>
+            {diagnostic?.error && <span className="gateway-error">{diagnostic.error}</span>}
+          </div>
+        );
+      })}
+
+      <dl className="gateway-config">
+        <div>
+          <dt>Modo</dt>
+          <dd>{dataSource === "live" ? "Hermes (ao vivo)" : "Demo"}</dd>
+        </div>
+        <div>
+          <dt>API</dt>
+          <dd>{config?.apiUrl ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Dashboard</dt>
+          <dd>{config?.dashboardUrl ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Credenciais</dt>
+          <dd>
+            {config ? `${config.hasApiKey ? "chave ok" : "sem chave"} · ${config.hasDashboardToken ? "token ok" : "sem token"}` : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt>Última leitura</dt>
+          <dd>{fleet ? relativeTime(fleet.fetchedAt) : "—"}</dd>
+        </div>
+      </dl>
+
+      <button type="button" className="gateway-retry" onClick={() => refresh?.()} disabled={!refresh}>
+        Testar agora
+      </button>
+      <div className="sidebar-note">
+        Somente leitura: o app faz GET nos endpoints documentados e nunca envia comando ao Hermes.
+      </div>
+    </div>
+  );
+}
 
 /** Ponto da sala em coordenadas de tela para o painel flutuante. */
 
@@ -97,11 +182,7 @@ function Sidebar() {
             : "Nenhuma frota lida ainda: o gateway ainda não respondeu."}
         </div>
       )}
-      {section === "integracoes" && (
-        <div className="sidebar-note">
-          Hermes em modo somente leitura via gateway. Nenhum comando é enviado: o app observa, não comanda.
-        </div>
-      )}
+      {section === "integracoes" && <GatewayDiagnostics />}
     </aside>
   );
 }

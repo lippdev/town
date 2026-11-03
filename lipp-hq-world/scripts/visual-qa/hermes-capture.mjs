@@ -129,6 +129,35 @@ async function main() {
       };
     });
     await page.screenshot({ path: path.join(OUT, "bot-panel-sessions.png") });
+    // ---- diagnóstico do gateway: cada endpoint, com latência real ----
+    await page.locator(".sidebar-item", { hasText: "Integrações" }).click();
+    await page.waitForSelector(".gateway-row", { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const latency = document.querySelectorAll(".gateway-latency");
+        return latency.length > 0 && !Array.from(latency).some((node) => (node.textContent ?? "").includes("não lido"));
+      },
+      null,
+      { timeout: 20000 },
+    );
+    await page.waitForFunction(
+      () => Array.from(document.querySelectorAll(".gateway-config dd")).every((node) => (node.textContent ?? "").trim() !== "—"),
+      null,
+      { timeout: 20000 },
+    );
+    report.checks.diagnostics = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(".gateway-row"));
+      const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
+      return {
+        rows: rows.length,
+        allOk: rows.every((row) => row.classList.contains("ok")),
+        paths: rows.map((row) => textOf(row.querySelector("code"))),
+        latencies: rows.map((row) => textOf(row.querySelector(".gateway-latency"))),
+        summary: textOf(document.querySelector(".gateway-summary")),
+        config: Array.from(document.querySelectorAll(".gateway-config div")).map((row) => (row.textContent ?? "").trim()),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "gateway-diagnostics.png") });
     await page.locator(".sidebar-item", { hasText: "Bots" }).click();
     // ---- rotinas: agenda com status real, inclusive falha ----
     await page.locator(".sidebar-item", { hasText: "Rotinas" }).click();
@@ -196,7 +225,11 @@ async function main() {
     report.checks.routines?.failed > 0 &&
     (report.checks.routines?.note ?? "").includes("rotinas") &&
     report.checks.routines?.ranBefore > 0 &&
-    (report.checks.panelRoutineWarning ?? "").includes("Rotina");
+    (report.checks.panelRoutineWarning ?? "").includes("Rotina") &&
+    report.checks.diagnostics?.rows === 4 &&
+    report.checks.diagnostics?.allOk === true &&
+    report.checks.diagnostics.latencies.every((value) => /ms|s$/.test(value ?? "")) &&
+    (report.checks.diagnostics.summary ?? "").includes("4 de 4");
 
   await fs.writeFile(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
