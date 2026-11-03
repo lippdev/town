@@ -29,6 +29,8 @@ GET /health                          (API server)  → { status, platform, versi
 GET /api/profiles                    (dashboard)   → { profiles: [...] }
 GET /api/profiles/sessions?limit=200 (dashboard)   → { sessions: [...], profile_totals }
 GET /api/cron/jobs                   (dashboard)   → { jobs: [...] }
+GET /api/sessions/{id}/messages?profile=<bot>&limit=200&inline_images=false
+                                     (dashboard)   → { session_id, messages: [...] }
 ```
 
 Formato de `profiles[]` (`_profile_to_dict`, `web_routers/profiles.py:84`):
@@ -71,6 +73,23 @@ mostra a origem crua traduzida só onde muda de sentido (`cron` → rotina,
 `cli` → terminal); o resto aparece como veio (`telegram`, `dashboard`). Clicar
 leva ao painel do bot dono. Sessão sem `last_active` vai para o fim em vez de
 fingir recência.
+
+### Conversa de uma sessão
+
+Clicar numa sessão (na gaveta do bot ou na aba Sessões da barra lateral) abre
+a conversa dentro da gaveta. As mensagens vêm de
+`GET /api/sessions/{id}/messages` do dashboard (`web_routers/sessions.py`),
+sempre com `?profile=` do bot — o Hermes só acha a sessão no store daquele
+perfil. A leitura se repete a cada 4 s enquanto a conversa está aberta e a aba
+do navegador está visível.
+
+O que aparece segue a projeção de exibição do próprio Hermes
+(`_project_for_display`): `display_content` substitui o conteúdo físico e
+`display_kind: "hidden"` (andaime de recuperação, avisos internos) some.
+Chamadas de ferramenta viram uma pílula com o nome; o resultado (`role=tool`)
+fica recolhido e cortado em 280 caracteres. O proxy só repassa campos de
+exibição: argumentos de ferramenta e imagens inline (`inline_images=false`)
+não chegam ao navegador.
 
 A origem usada pelo fixture segue `KNOWN_SOURCES`
 (`hermes_cli/session_lost_and_found.py`): `cli`, `telegram`, `dashboard`, `cron`.
@@ -239,7 +258,13 @@ ssh -L 5173:127.0.0.1:5173 usuario@maquina-do-lipp-hq
 ```text
 GET /api/hq/status            → configuração ativa e origem (sem segredos)
 GET /api/hq/hermes/snapshot   → { health, profiles, sessions, jobs, blocks }
+GET /api/hq/hermes/sessions/{id}/messages?profile=<bot>
+                              → { sessionId, profile, messages }
 ```
+
+O id da sessão e o perfil são validados antes de sair do proxy (nada que
+mude o caminho, como `../`), e a leitura usa a mesma renovação do token
+servido que o snapshot.
 
 Variáveis lidas **pelo proxy** (nunca pelo navegador):
 
