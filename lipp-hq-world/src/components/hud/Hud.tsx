@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bot,
   Boxes,
@@ -27,6 +27,7 @@ import {
   stateLabel,
 } from "@/components/hud/fleetView";
 import type { BotSnapshot } from "@/integrations/hq/types";
+import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/components/hud/fleetFilter";
 
 /** Ponto da sala em coordenadas de tela para o painel flutuante. */
 
@@ -94,6 +95,24 @@ function BotRoster() {
   const selectBot = useHQStore((state) => state.selectBot);
   const focusRoom = useHQStore((state) => state.focusRoom);
   const notice = gatewayNotice(fleet);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<StateFilter>("todos");
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const bots = fleet?.bots ?? [];
+  const shown = visibleBots(bots, query, filter);
+
+  const moveSelection = (delta: number) => {
+    if (shown.length === 0) return;
+    const current = shown.findIndex((bot) => bot.id === selectedBotId);
+    const target = shown[nextIndex(current, delta, shown.length)];
+    if (!target) return;
+    const roomId = AGENTS_BY_ID[target.id]?.roomId;
+    if (roomId) focusRoom(roomId);
+    selectBot(target.id);
+    const node = listRef.current?.querySelector<HTMLElement>(`[data-bot-id="${target.id}"]`);
+    node?.scrollIntoView({ block: "nearest" });
+  };
 
   if (!fleet || fleet.bots.length === 0) {
     if (dataSource === "demo") {
@@ -158,32 +177,67 @@ function BotRoster() {
           </span>
         </div>
       )}
-      <div className="sidebar-list">
-      {fleet.bots.map((bot) => {
-        const roomId = AGENTS_BY_ID[bot.id]?.roomId;
-        return (
-          <button
-            key={bot.id}
-            type="button"
-            className={selectedBotId === bot.id ? "sidebar-row agent-row active" : "sidebar-row agent-row"}
-            onClick={() => {
-              if (roomId) focusRoom(roomId);
-              selectBot(bot.id);
-            }}
-            title={bot.activity ?? bot.title ?? bot.id}
-          >
-            <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />
-            <span className="agent-name">{bot.name}</span>
-            <span className="agent-state">{stateLabel(bot.state)}</span>
-          </button>
-        );
-      })}
+      <div className="roster-tools">
+        <input
+          className="roster-search"
+          type="search"
+          value={query}
+          placeholder="Buscar bot, título ou modelo"
+          aria-label="Buscar na frota"
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveSelection(1);
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveSelection(-1);
+            } else if (event.key === "Escape") {
+              setQuery("");
+            }
+          }}
+        />
+        <div className="roster-filters" role="group" aria-label="Filtrar por estado">
+          {STATE_FILTERS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className={filter === entry.id ? "chip active" : "chip"}
+              aria-pressed={filter === entry.id}
+              onClick={() => setFilter(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="sidebar-list" ref={listRef}>
+        {shown.length === 0 && <div className="sidebar-note">Nenhum bot com esse filtro.</div>}
+        {shown.map((bot) => {
+          const roomId = AGENTS_BY_ID[bot.id]?.roomId;
+          return (
+            <button
+              key={bot.id}
+              data-bot-id={bot.id}
+              type="button"
+              className={selectedBotId === bot.id ? "sidebar-row agent-row active" : "sidebar-row agent-row"}
+              onClick={() => {
+                if (roomId) focusRoom(roomId);
+                selectBot(bot.id);
+              }}
+              title={bot.activity ?? bot.title ?? bot.id}
+            >
+              <span className={`bot-state-dot bot-state-${bot.briefing ? "working" : bot.state}`} aria-hidden />
+              <span className="agent-name">{bot.name}</span>
+              <span className="agent-state">{bot.briefing ? "em briefing" : stateLabel(bot.state)}</span>
+            </button>
+          );
+        })}
       </div>
     </>
   );
 }
 
-/** Briefing em andamento: quem está na sala, de que tipo e desde quando. */
 function BriefingPanel() {
   const fleet = useHQStore((state) => state.fleet);
   const focusRoom = useHQStore((state) => state.focusRoom);

@@ -677,3 +677,43 @@ button.sidebar-row.active {
   text-transform: uppercase;
   color: var(--hq-text-dim);
 }
+
+/* ---- Busca e filtros da frota ---- */
+.roster-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+
+.roster-search {
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(9, 15, 26, 0.85);
+  color: var(--hq-text);
+  font-size: 11px;
+  outline: none;
+}
+
+.roster-search:focus-visible {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.28);
+}
+
+.roster-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.roster-filters .chip {
+  font-size: 10px;
+  padding: 2px 7px;
+}
+
+button.sidebar-row:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: -2px;
+}
