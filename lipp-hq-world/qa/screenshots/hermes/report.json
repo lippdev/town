@@ -7,21 +7,21 @@
     "botCount": 7,
     "botsWithRealState": 7,
     "summary": [
-      "3trabalhando",
-      "4aguardando",
+      "1trabalhando",
+      "3aguardando",
       "0ociosos",
-      "18sessões",
+      "21sessões",
       "6rotinas"
     ],
     "panel": {
-      "name": "Pulse",
+      "name": "Argos",
       "stats": [
-        "Sessões3 (1 ativa)",
+        "Sessões4 (2 ativas)",
         "Rotinas1",
-        "Modelohermes-4.1-mini",
+        "Modelohermes-4.1",
         "Próxima rotinaagora"
       ],
-      "activity": "Triagem de pull requests"
+      "activity": "Briefing diário"
     },
     "demoEventsAfterLive": 0
   },
