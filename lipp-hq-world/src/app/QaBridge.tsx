@@ -51,7 +51,7 @@ export interface HqQaApi {
   select: (roomId: string) => void;
   demoCommand: (agentId: string, state: "working" | "meeting" | "walking" | "idle") => void;
   setDemoPaused: (paused: boolean) => void;
-  getAgentPose: (agentId: string) => { x: number; z: number; state: string } | null;
+  getAgentPose: (agentId: string) => { x: number; z: number; state: string; hipsY: number } | null;
   getAgentScreenPoint: (agentId: string) => { x: number; y: number } | null;
   focus: (roomId: string, options?: { instant?: boolean }) => void;
   reset: (options?: { instant?: boolean }) => void;

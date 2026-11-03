@@ -83,12 +83,43 @@ function buildSessions(nowSeconds) {
       });
     }
   }
+  // Um briefing diário acontecendo agora: sessões de cron, iniciadas há poucos
+  // minutos, para os bots que participam. Isso é o que a cena usa para levar
+  // eles até a sala de reuniões.
+  for (const name of ["argos", "forge", "atlas"]) {
+    index += 1;
+    sessions.push({
+      id: `sess_briefing_${name}`,
+      profile: name,
+      title: "Briefing diário",
+      preview: "Briefing diário da operação — cada bot traz o resumo do seu time.",
+      source: "cron",
+      model: "hermes-4.1",
+      started_at: nowSeconds - 240,
+      last_active: nowSeconds - 20,
+      ended_at: null,
+      message_count: 6,
+      tool_call_count: 2,
+      input_tokens: 900,
+      output_tokens: 240,
+      estimated_cost_usd: 0.003,
+      archived: false,
+      hidden: false,
+      pinned: false,
+    });
+  }
+
   return sessions;
 }
 
 const JOBS = BOTS.filter((bot) => bot.name !== "echo").map((bot, position) => ({
   id: `job_${bot.name}`,
-  name: `Rotina de ${bot.display_name}`,
+  name:
+    position % 3 === 0
+      ? "Briefing diário"
+      : position % 3 === 1
+        ? "Briefing semanal"
+        : `Rotina de ${bot.display_name}`,
   profile: bot.name,
   enabled: true,
   paused: false,

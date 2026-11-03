@@ -1,0 +1,34 @@
+{
+  "checks": {
+    "briefingRows": [
+      "Argoshá 4 min",
+      "Atlashá 4 min",
+      "Forgehá 4 min"
+    ],
+    "finalPoses": {
+      "argos": {
+        "x": 10.559846962673902,
+        "z": 5.8204591119782965,
+        "state": "walking",
+        "hipsY": 0
+      },
+      "forge": {
+        "x": 12.55,
+        "z": 7.35,
+        "state": "meeting",
+        "hipsY": -0.245
+      },
+      "atlas": {
+        "x": 11.55,
+        "z": 7.35,
+        "state": "meeting",
+        "hipsY": -0.34
+      }
+    },
+    "startedOutsideMeetingRoom": 2,
+    "arrivedInMeetingRoom": true,
+    "boardPresent": true
+  },
+  "errors": [],
+  "ok": true
+}

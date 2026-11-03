@@ -99,6 +99,23 @@ pnpm dev                                  # app em 5173 lendo o fixture
 Contra um Hermes real nada muda no app: `hermes dashboard` e
 `hermes gateway` já respondem nesses endereços.
 
+## Sala de reuniões e briefings
+
+Quando um bot está fazendo o **briefing** (diário, semanal ou mensal), ele vai
+para a sala de reuniões e senta numa cadeira — o mesmo assento entre polls.
+
+A detecção (`src/integrations/hermes/briefings.ts`) exige três evidências do
+Hermes, todas verificáveis na sessão mais recente do bot:
+
+1. `source: "cron"` — a sessão foi disparada por rotina;
+2. atividade nos últimos 20 minutos;
+3. título (ou nome da rotina do bot) classificando o tipo:
+   `diário|daily`, `semanal|weekly`, `mensal|monthly`, ou `briefing|resumo|standup`.
+
+Sem as três, o bot fica no posto — nada de reunião inventada. O quadro na parede
+da sala mostra o tipo e quem está lá, e volta ao estado neutro quando o briefing
+acaba.
+
 ## Limites honestos
 
 - **Somente leitura.** Não iniciamos turnos, não pausamos rotinas, não

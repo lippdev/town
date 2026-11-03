@@ -39,6 +39,10 @@ interface AgentRuntime {
   walkTimer: number;
   nextIdleWalkAt: number;
   pendingState?: AgentAnimationState;
+  pendingHeading?: number;
+  seatHeading?: number;
+  /** Posição deste bot entre os participantes do briefing (assento fixo). */
+  meetingSlot: number;
 }
 
 const runtimes = new Map<string, AgentRuntime>();
@@ -58,6 +62,7 @@ function getRuntime(definition: SceneAgent): AgentRuntime {
       heading: Math.PI,
       walkTimer: 0,
       nextIdleWalkAt: 6 + Math.random() * 8,
+      meetingSlot: 0,
     };
     runtimes.set(definition.id, runtime);
   }
@@ -73,13 +78,17 @@ export function demoWalkToHall(agentId: string) {
 }
 
 /** Posição e estado atuais do personagem, para as esperas do harness. */
-export function getAgentRuntimeInfo(agentId: string): { x: number; z: number; state: string } | null {
+export function getAgentRuntimeInfo(
+  agentId: string,
+): { x: number; z: number; state: string; hipsY: number } | null {
   const runtime = runtimes.get(agentId);
   if (!runtime?.figure?.group) return null;
   return {
     x: runtime.figure.group.position.x,
     z: runtime.figure.group.position.z,
     state: runtime.state,
+    // altura do quadril: prova de que a pose sentada foi aplicada (-0.34)
+    hipsY: Number(runtime.figure.hips?.position.y.toFixed(3) ?? 0),
   };
 }
 
@@ -90,11 +99,43 @@ function deskSpot(agent: SceneAgent): NavPoint {
   return { x: center[0], z: room.bounds.minZ + 2.35 };
 }
 
-function meetingSpot(): NavPoint {
+/**
+ * Assentos da mesa de reunião, na ordem das cadeiras: três de um lado, três do
+ * outro. Um briefing com mais de seis bots usa os lugares em pé encostados na
+ * parede — ninguém fica em cima da mesa.
+ */
+const MEETING_SEATS: Array<{ x: number; z: number; heading: number }> = (() => {
   const room = ROOMS_BY_ID.reunioes;
   const center = roomCenter(room);
-  // cadeira ao norte da mesa, não o centro dela
-  return { x: center[0], z: center[2] - 1.25 };
+  const seats: Array<{ x: number; z: number; heading: number }> = [];
+  for (const offset of [-1.15, 0, 1.15]) {
+    // lado norte: olha para o sul (mesa e tela adiante)
+    seats.push({ x: center[0] + offset, z: center[2] - 1.25, heading: Math.PI });
+  }
+  for (const offset of [-1.15, 0, 1.15]) {
+    seats.push({ x: center[0] + offset, z: center[2] + 1.25, heading: 0 });
+  }
+  return seats;
+})();
+
+/** Posições em pé para quem chega além dos seis assentos. */
+const MEETING_STANDING: Array<{ x: number; z: number; heading: number }> = (() => {
+  const room = ROOMS_BY_ID.reunioes;
+  const center = roomCenter(room);
+  return [
+    { x: room.bounds.minX + 1.1, z: center[2] - 0.4, heading: Math.PI / 2 },
+    { x: room.bounds.minX + 1.1, z: center[2] + 0.6, heading: Math.PI / 2 },
+    { x: room.bounds.maxX - 1.1, z: center[2] - 0.4, heading: -Math.PI / 2 },
+    { x: room.bounds.maxX - 1.1, z: center[2] + 0.6, heading: -Math.PI / 2 },
+  ];
+})();
+
+/** Assento do agente no briefing: escolhido pelo índice na lista de participantes. */
+function meetingSeat(index: number): { x: number; z: number; heading: number } {
+  const seats = MEETING_SEATS;
+  if (index < seats.length) return seats[index];
+  const standing = MEETING_STANDING;
+  return standing[(index - seats.length) % standing.length];
 }
 
 function hallSpot(index: number): NavPoint {
@@ -106,7 +147,7 @@ function setState(runtime: AgentRuntime, state: AgentAnimationState, summary?: s
   runtime.summary = summary;
 }
 
-function walkTo(runtime: AgentRuntime, target: NavPoint, then: AgentAnimationState) {
+function walkTo(runtime: AgentRuntime, target: NavPoint, then: AgentAnimationState, faceHeading?: number) {
   const figure = runtime.figure;
   if (!figure) return;
   const position = figure.group.position;
@@ -121,6 +162,7 @@ function walkTo(runtime: AgentRuntime, target: NavPoint, then: AgentAnimationSta
   runtime.path = path;
   runtime.pathIndex = 0;
   runtime.pendingState = then;
+  runtime.pendingHeading = faceHeading;
   setState(runtime, "walking");
 }
 
@@ -147,6 +189,18 @@ export function Agents() {
   const indexRef = useRef(0);
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
+  // assento de briefing por ordem estável de id: quem entra na reunião mantém
+  // o mesmo lugar entre polls
+  const meetingSlots = useMemo(() => {
+    const slots = new Map<string, number>();
+    agents
+      .filter((agent) => (agent.live ? agent.liveState === "meeting" : false))
+      .map((agent) => agent.id)
+      .sort()
+      .forEach((agentId, index) => slots.set(agentId, index));
+    return slots;
+  }, [agents]);
+
   useFrame((_, rawDelta) => {
     // animação de pose usa delta travado; locomoção usa o delta real, senão o
     // personagem anda em câmera lenta em renders lentos
@@ -157,13 +211,15 @@ export function Agents() {
     for (const [agentId, runtime] of runtimes) {
       const figure = runtime.figure;
       if (!figure) continue;
+      runtime.meetingSlot = meetingSlots.get(agentId) ?? runtime.meetingSlot;
 
       // alimenta o estado a partir da fonte de dados
       const state = useHQStore.getState().agentStates[agentId];
       if (state && state !== runtime.state && runtime.state !== "walking") {
         if (state === "meeting") {
-          // navega até a mesa e só então assume a pose de reunião
-          walkTo(runtime, meetingSpot(), "meeting");
+          // briefing: cada participante vai ao seu assento na sala de reuniões
+          const seat = meetingSeat(runtime.meetingSlot);
+          walkTo(runtime, { x: seat.x, z: seat.z }, "meeting", seat.heading);
         } else {
           runtime.state = state;
           runtime.source = dataSource;
@@ -184,6 +240,11 @@ export function Agents() {
             runtime.pathIndex += 1;
             if (runtime.pathIndex >= runtime.path.length) {
               runtime.path = [];
+              if (runtime.pendingHeading !== undefined) {
+                runtime.heading = runtime.pendingHeading;
+                runtime.seatHeading = runtime.pendingHeading;
+                runtime.pendingHeading = undefined;
+              }
               setState(runtime, runtime.pendingState ?? "idle");
               runtime.pendingState = undefined;
             }
@@ -216,7 +277,8 @@ export function Agents() {
       }
 
       // ---- poses e micro-animações ----
-      const sitting = runtime.state === "working" || runtime.state === "blocked";
+      // em reunião o bot senta na cadeira do assento, como quem trabalha
+      const sitting = runtime.state === "working" || runtime.state === "blocked" || runtime.state === "meeting";
       const sittingTargetY = sitting ? -0.34 : 0;
       hips.position.y += (sittingTargetY - hips.position.y) * Math.min(1, delta * 6);
 
@@ -226,10 +288,10 @@ export function Agents() {
         if (leftArm) leftArm.rotation.x += (-0.95 - leftArm.rotation.x) * Math.min(1, delta * 5);
         if (rightArm) rightArm.rotation.x += (-0.95 - rightArm.rotation.x) * Math.min(1, delta * 5);
         if (torso) {
-          const typing = Math.sin(indexRef.current * 9.5) * 0.014;
-          torso.position.z = typing;
+          // na reunião não há teclado: tronco quieto e cabeça erguida para a mesa
+          torso.position.z = runtime.state === "meeting" ? 0 : Math.sin(indexRef.current * 9.5) * 0.014;
         }
-        if (head) head.rotation.x = 0.16;
+        if (head) head.rotation.x = runtime.state === "meeting" ? 0.04 : 0.16;
       } else if (runtime.state === "walking") {
         const swing = Math.sin(runtime.walkPhase);
         if (leftLeg) leftLeg.rotation.x = swing * 0.62;
@@ -248,9 +310,10 @@ export function Agents() {
         if (torso) torso.position.z = 0;
 
         if (runtime.state === "meeting") {
-          // orientação para a mesa; a posição chegou por navegação, nunca por
-          // interpolação direta (personagem não atravessa parede)
-          runtime.heading += (0 - runtime.heading) * Math.min(1, delta * 2);
+          // a orientação vem do assento (definida ao chegar); sem assento, encara
+          // a mesa. Posição sempre por navegação — personagem não atravessa parede
+          const target = runtime.seatHeading ?? 0;
+          runtime.heading += (target - runtime.heading) * Math.min(1, delta * 2);
         }
       }
 

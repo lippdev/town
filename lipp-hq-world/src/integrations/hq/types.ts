@@ -44,6 +44,10 @@ export interface BotSnapshot {
   nextRoutineAt?: number;
   isDefault?: boolean;
   gatewayRunning?: boolean;
+  /** Briefing em andamento (diário/semanal/mensal), detectado de sessão cron real. */
+  briefing?: { kind: "diario" | "semanal" | "mensal" | "briefing"; title: string; since?: number };
+  /** Rotinas do bot, para o HUD mostrar a agenda real (vazio quando não há). */
+  routines?: Array<{ id: string; name: string; schedule?: string; nextAt?: number }>;
 }
 
 export interface FleetSnapshot {
