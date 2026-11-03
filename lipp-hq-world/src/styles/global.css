@@ -668,3 +668,12 @@ button.sidebar-row.active {
   font-size: 10px;
   font-weight: 700;
 }
+
+.sidebar-subhead {
+  margin: 8px 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hq-text-dim);
+}

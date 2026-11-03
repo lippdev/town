@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Activity,
   Bot,
   Boxes,
   Cable,
   Camera,
   Clock,
   MonitorUp,
+  Users,
   Play,
   Radio,
   RotateCcw,
@@ -37,11 +37,12 @@ function Sidebar() {
   const bots = fleet?.bots ?? [];
   const counts = fleetCounts(fleet);
 
+  const briefings = bots.filter((bot) => bot.briefing).length;
   const items = [
     { id: "bots", label: "Bots", icon: Bot, badge: bots.length || null },
-    { id: "escritorio", label: "Escritório", icon: Boxes, badge: null },
-    { id: "atividades", label: "Atividades", icon: Activity, badge: null },
+    { id: "briefing", label: "Briefing", icon: Users, badge: briefings || null },
     { id: "rotinas", label: "Rotinas", icon: Clock, badge: counts.routines || null },
+    { id: "escritorio", label: "Escritório", icon: Boxes, badge: null },
     { id: "integracoes", label: "Integrações", icon: Cable, badge: null },
   ];
 
@@ -67,6 +68,7 @@ function Sidebar() {
         ))}
       </nav>
       {section === "bots" && <BotRoster />}
+      {section === "briefing" && <BriefingPanel />}
       {section === "rotinas" && <RoutineList />}
       {section === "escritorio" && (
         <div className="sidebar-note">
@@ -177,6 +179,57 @@ function BotRoster() {
         );
       })}
       </div>
+    </>
+  );
+}
+
+/** Briefing em andamento: quem está na sala, de que tipo e desde quando. */
+function BriefingPanel() {
+  const fleet = useHQStore((state) => state.fleet);
+  const focusRoom = useHQStore((state) => state.focusRoom);
+  const inMeeting = (fleet?.bots ?? []).filter((bot) => bot.briefing);
+  const scheduled = (fleet?.bots ?? []).flatMap((bot) =>
+    (bot.routines ?? [])
+      .filter((routine) => /briefing|resumo|di[áa]ri|semanal|mensal/i.test(routine.name))
+      .map((routine) => ({ bot: bot.name, routine })),
+  );
+
+  return (
+    <>
+      {inMeeting.length === 0 ? (
+        <div className="sidebar-note">
+          Nenhum briefing acontecendo agora. Quando um bot roda um briefing de rotina, ele vai para a sala de reuniões.
+        </div>
+      ) : (
+        <div className="sidebar-list">
+          {inMeeting.map((bot) => (
+            <button
+              key={bot.id}
+              type="button"
+              className="sidebar-row agent-row"
+              onClick={() => focusRoom("reunioes")}
+            >
+              <span className="bot-state-dot bot-state-working" aria-hidden />
+              <span className="agent-name">{bot.name}</span>
+              <span className="agent-state">há {bot.briefing?.since ? Math.max(0, Math.round((Date.now() - bot.briefing.since) / 60000)) : 0} min</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {scheduled.length > 0 && (
+        <div className="sidebar-list">
+          <div className="sidebar-subhead">Agenda de briefing</div>
+          {scheduled.map(({ bot, routine }) => (
+            <div key={`${bot}-${routine.id}`} className="sidebar-row">
+              <Clock size={12} />
+              <span className="agent-name">{routine.name}</span>
+              <span className="agent-state">
+                {bot} · {routine.nextAt ? relativeTime(routine.nextAt) : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
