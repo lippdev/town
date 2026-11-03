@@ -770,6 +770,10 @@ function CharacterEditor({ agentId, base }: { agentId: string; base: { color: st
   const identityColor = base.color;
   const look = resolveLook(base, override);
   const presetId = override?.presetId ?? null;
+  // Preset só fica marcado enquanto o look é exatamente ele: depois de mexer
+  // numa peça o personagem não é mais aquele preset, e marcar a miniatura
+  // diria o contrário do que a cena mostra.
+  const customized = Object.keys(override ?? {}).some((key) => key !== "presetId");
 
   return (
     <section className="character-editor" aria-label="Editor de personagem">
@@ -800,10 +804,10 @@ function CharacterEditor({ agentId, base }: { agentId: string; base: { color: st
             key={preset.id}
             type="button"
             role="option"
-            aria-selected={presetId === preset.id && !override?.skin && !override?.hair}
+            aria-selected={presetId === preset.id && !customized}
             aria-label={preset.label}
-            title={preset.label}
-            className={presetId === preset.id ? "preset-card active" : "preset-card"}
+            title={customized && presetId === preset.id ? `${preset.label} (com ajustes)` : preset.label}
+            className={presetId === preset.id && !customized ? "preset-card active" : "preset-card"}
             onClick={() => chooseAgentPreset(agentId, preset.id)}
           >
             <span className="preset-hair" style={{ background: preset.hair }} aria-hidden />
