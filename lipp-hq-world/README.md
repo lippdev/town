@@ -49,6 +49,20 @@ HERMES_DASHBOARD_TOKEN=...    # vira Authorization: Bearer no dashboard
 A chave fica **no proxy**, nunca no navegador. Sem Hermes respondendo, o app
 declara "Hermes fora do ar" e cai em Demo — não inventa frota.
 
+**Antes de confiar na tela, confira o contrato da sua instância.** O script
+abaixo bate nos quatro endpoints, mostra status e latência de cada um, lista os
+campos que vieram e diz o que o app não conseguiu ler:
+
+```bash
+pnpm contract:check                                  # usa as env vars
+pnpm contract:check --dashboard http://127.0.0.1:8000 --token ...
+```
+
+Ele grava `qa/hermes-contract.json` com a amostra crua (sem credencial) e sai
+com código 1 quando falta campo essencial — é o primeiro comando a rodar quando
+algo não aparece na tela. A aba **Integrações** do app mostra o mesmo diagnóstico
+ao vivo.
+
 Contrato completo, endpoints e limites em [docs/HERMES.md](docs/HERMES.md).
 
 Sem uma instalação do Hermes à mão, o fixture local responde os mesmos
@@ -131,15 +145,15 @@ tela mostrava.
 
 ## Documentação
 
-| Documento | Conteúdo |
-| - | - |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | decisões, planta, módulos, sistema de paredes |
-| [docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) | backlog por stage |
-| [docs/PROGRESS.md](docs/PROGRESS.md) | estado atual da implementação |
-| [docs/HERMES.md](docs/HERMES.md) | contrato verificado do gateway Hermes, proxy e briefings |
-| [docs/INTEGRATION.md](docs/INTEGRATION.md) | contrato do OpenMausBot (fonte alternativa) |
-| [docs/ASSETS.md](docs/ASSETS.md) | avaliação de assets e decisão procedural |
-| [docs/VISUAL_QA.md](docs/VISUAL_QA.md) | harness, rubrica e gates |
+| Documento                                        | Conteúdo                                                 |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)     | decisões, planta, módulos, sistema de paredes            |
+| [docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md) | backlog por stage                                        |
+| [docs/PROGRESS.md](docs/PROGRESS.md)             | estado atual da implementação                            |
+| [docs/HERMES.md](docs/HERMES.md)                 | contrato verificado do gateway Hermes, proxy e briefings |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md)       | contrato do OpenMausBot (fonte alternativa)              |
+| [docs/ASSETS.md](docs/ASSETS.md)                 | avaliação de assets e decisão procedural                 |
+| [docs/VISUAL_QA.md](docs/VISUAL_QA.md)           | harness, rubrica e gates                                 |
 
 ## Estado
 
