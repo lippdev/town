@@ -104,8 +104,8 @@ Regras do proxy:
 4. Somente os sete agentes da Lipp HQ passam pelo filtro.
 5. Nenhum método de escrita é aceito, mesmo que o upstream permita.
 
-Se o proxy não estiver configurado, a aplicação sobe em modo **Demo** e diz isso na
-interface. Ela nunca finge estar em Live.
+Se o proxy não estiver configurado ou o Hermes não responder, a cena fica vazia e a
+interface diz o motivo. Não há modo simulado: nenhum bot aparece sem ter sido lido.
 
 ## Mapeamento para a cena
 
@@ -126,9 +126,3 @@ Regras de honestidade aplicadas em código:
 - Turno terminado não é tarefa concluída.
 - Ausência de eventos não é ausência de trabalho: o estado fica `unknown` até o
   próximo snapshot.
-
-## Modo Demo
-
-`src/integrations/mock` gera uma sequência determinística usando **o mesmo contrato**
-`HQEvent`. Todo evento Demo carrega `source: "demo"`, e a interface marca o modo em
-texto. Uma simulação nunca é apresentada como evento real.
