@@ -181,23 +181,41 @@ function block(result: EndpointResult<unknown>, path?: string) {
 }
 
 /**
- * Snapshot com renovação do token servido: o dashboard local sorteia token
- * novo a cada partida, então um 401 com token lido da página dispara uma
- * releitura e uma nova tentativa — o usuário não precisa reconectar.
+ * Relê o token servido pela página do dashboard local, que sorteia token novo
+ * a cada partida. Só vale para conexão "served": token colado à mão nunca é
+ * trocado sozinho. True quando há token novo salvo.
+ */
+async function refreshServedToken(config: HermesProxyConfig): Promise<boolean> {
+  const saved = config.source === "saved" ? loadSavedConnection() : null;
+  if (!saved || saved.tokenSource !== "served") return false;
+  const fresh = await readServedToken(saved.url, config.timeoutMs);
+  if (!fresh || fresh === saved.token) return false;
+  saveConnection({ ...saved, token: fresh, savedAt: Date.now() });
+  return true;
+}
+
+const rejected = (status: number) => status === 401 || status === 403;
+
+/**
+ * Snapshot com renovação do token servido: um 401 dispara a releitura do
+ * token e uma nova tentativa — o usuário não precisa reconectar.
  */
 async function snapshotWithServedRefresh() {
   const config = readHermesConfig();
   const snapshot = await fetchHermesSnapshot(config);
-  const saved = config.source === "saved" ? loadSavedConnection() : null;
-  const rejected = [snapshot.blocks.profiles.status, snapshot.blocks.sessions.status].some(
-    (status) => status === 401 || status === 403,
-  );
-  if (!saved || saved.tokenSource !== "served" || !rejected) return snapshot;
-
-  const fresh = await readServedToken(saved.url, config.timeoutMs);
-  if (!fresh || fresh === saved.token) return snapshot;
-  saveConnection({ ...saved, token: fresh, savedAt: Date.now() });
+  const refused = [snapshot.blocks.profiles.status, snapshot.blocks.sessions.status].some(rejected);
+  if (!refused || !(await refreshServedToken(config))) return snapshot;
   return fetchHermesSnapshot(readHermesConfig());
+}
+
+/** Uma leitura do dashboard com a mesma renovação do token servido. */
+async function dashboardRead<T>(pathAndQuery: string): Promise<EndpointResult<T>> {
+  const read = (config: HermesProxyConfig) =>
+    getJson<T>(`${config.dashboardUrl}${pathAndQuery}`, sessionHeaders(config.dashboardToken), config.timeoutMs);
+  const config = readHermesConfig();
+  const first = await read(config);
+  if (!rejected(first.status) || !(await refreshServedToken(config))) return first;
+  return read(readHermesConfig());
 }
 
 const HQ_PREFIX = "/api/hq";
@@ -255,6 +273,12 @@ export async function hermesProxyMiddleware(
       return;
     }
 
+    const messagesRoute = path.match(MESSAGES_ROUTE);
+    if (messagesRoute) {
+      await handleSessionMessages(messagesRoute[1], url, response);
+      return;
+    }
+
     if (path === `${HQ_PREFIX}/status`) {
       sendJson(response, 200, statusPayload(readHermesConfig()));
       return;
@@ -281,6 +305,67 @@ export async function hermesProxyMiddleware(
 }
 
 const CONNECTION_PATH = `${HQ_PREFIX}/connection`;
+const MESSAGES_ROUTE = /^\/api\/hq\/hermes\/sessions\/([^/]+)\/messages$/;
+/** Ids como o Hermes gera (`20260103_…`, `sess_…`): nada que mude o caminho. */
+const SESSION_ID = /^[\w.:-]{1,160}$/;
+const PROFILE_NAME = /^[\w.-]{1,64}$/;
+/** Quantas mensagens o chat lê de uma vez: a página mais recente. */
+const MESSAGE_PAGE = 200;
+
+interface HermesMessageRow {
+  id?: number | string;
+  role?: string;
+  content?: unknown;
+  display_content?: unknown;
+  display_kind?: string;
+  timestamp?: number | string;
+  tool_name?: string;
+  tool_calls?: Array<{ function?: { name?: string } }>;
+}
+
+/**
+ * Mensagens de uma sessão, lidas do dashboard com o perfil do bot.
+ *
+ * Só campos de exibição saem daqui: argumentos de ferramenta e imagens
+ * inline (pedidas como `[image]`) ficam no Hermes.
+ */
+async function handleSessionMessages(rawId: string, url: string, response: ServerResponse): Promise<void> {
+  const sessionId = decodeURIComponent(rawId);
+  const profile = new URLSearchParams(url.split("?")[1] ?? "").get("profile") ?? "default";
+  if (!SESSION_ID.test(sessionId) || !PROFILE_NAME.test(profile)) {
+    sendJson(response, 400, { error: "Sessão ou perfil inválido." });
+    return;
+  }
+  const query = new URLSearchParams({ profile, limit: String(MESSAGE_PAGE), inline_images: "false" });
+  const result = await dashboardRead<{ session_id?: string; messages?: HermesMessageRow[] }>(
+    `/api/sessions/${encodeURIComponent(sessionId)}/messages?${query}`,
+  );
+  if (result.error) {
+    const cause = classifyFailure(result.error);
+    const status = result.status === 404 ? 404 : 502;
+    sendJson(response, status, {
+      error: result.status === 404 ? "O Hermes não achou essa sessão neste perfil." : result.error,
+      ...(cause ? { cause: cause.label, action: cause.action } : {}),
+    });
+    return;
+  }
+  const messages = (result.data?.messages ?? []).map((row) => ({
+    id: row.id,
+    role: row.role,
+    content: row.content,
+    display_content: row.display_content,
+    display_kind: row.display_kind,
+    timestamp: row.timestamp,
+    tool_name: row.tool_name,
+    tool_calls: row.tool_calls?.map((call) => ({ name: call.function?.name })),
+  }));
+  sendJson(response, 200, {
+    sessionId: result.data?.session_id ?? sessionId,
+    profile,
+    fetchedAt: Date.now(),
+    messages,
+  });
+}
 const MAX_BODY_BYTES = 8 * 1024;
 
 function sendJson(response: ServerResponse, status: number, payload: unknown): void {
