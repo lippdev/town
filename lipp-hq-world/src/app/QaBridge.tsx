@@ -56,6 +56,8 @@ export interface HqQaApi {
   focus: (roomId: string, options?: { instant?: boolean }) => void;
   reset: (options?: { instant?: boolean }) => void;
   getSelection: () => { roomId: string | null; agentId: string | null };
+  /** Cores realmente aplicadas nas malhas do personagem e escala do corpo. */
+  getAgentLook: (agentId: string) => { meshes: number; colors: string[]; scale: number } | null;
 }
 
 declare global {
@@ -180,6 +182,18 @@ export function QaBridge() {
           return;
         }
         useHQStore.getState().setAgentState(agentId, state, `Simulação: estado ${state}.`);
+      },
+      getAgentLook: (agentId) => {
+        const group = scene.getObjectByName(`agent-${agentId}`);
+        if (!group) return null;
+        const colors: string[] = [];
+        group.traverse((object) => {
+          const mesh = object as unknown as { isMesh?: boolean; material?: { color?: { getHexString: () => string } } };
+          if (!mesh.isMesh || !mesh.material?.color) return;
+          colors.push(mesh.material.color.getHexString());
+        });
+        const body = group.getObjectByName("body");
+        return { meshes: colors.length, colors, scale: Number((body?.scale.x ?? 1).toFixed(3)) };
       },
       getAgentScreenPoint: (agentId) => {
         let found: { x: number; y: number } | null = null;

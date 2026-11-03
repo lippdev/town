@@ -1,4 +1,4 @@
-import type { BotSnapshot, GatewayHealth, GatewayState } from "@/integrations/hq/types";
+import type { BotSnapshot, GatewayHealth, GatewayState, SessionSnapshot } from "@/integrations/hq/types";
 import { detectBriefing } from "@/integrations/hermes/briefings";
 
 /**
@@ -76,6 +76,12 @@ export const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
 /** Um bot é "trabalhando" quando escreveu nos últimos 90 s (regra do Bot Mode). */
 export const WORKING_WINDOW_MS = 90 * 1000;
 
+/**
+ * Quantas sessões recentes cada bot carrega para o painel. O total continua em
+ * `sessionCount`; isto é só a janela que a UI mostra.
+ */
+export const SESSION_PREVIEW_LIMIT = 6;
+
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -117,6 +123,27 @@ function scheduleText(job: HermesCronJob): string | undefined {
 
 function normalizeName(value: string | undefined | null): string {
   return (value ?? "").trim();
+}
+
+/** Sessão do Hermes no contrato da cena, com a janela de atividade do Hermes. */
+function toSessionSnapshot(session: HermesSessionRow, now: number, fallbackId: string): SessionSnapshot {
+  const lastActiveAt = secondsToMs(session.last_active) ?? secondsToMs(session.started_at);
+  const endedAt = secondsToMs(session.ended_at);
+  const cost = asNumber(session.actual_cost_usd) ?? asNumber(session.estimated_cost_usd);
+  return {
+    id: normalizeName(session.id) || fallbackId,
+    title: normalizeName(session.title ?? undefined) || undefined,
+    preview: normalizeName(session.preview ?? undefined) || undefined,
+    source: normalizeName(session.source ?? undefined) || undefined,
+    model: normalizeName(session.model ?? undefined) || undefined,
+    startedAt: secondsToMs(session.started_at),
+    lastActiveAt,
+    endedAt,
+    messageCount: asNumber(session.message_count),
+    toolCallCount: asNumber(session.tool_call_count),
+    costUsd: cost,
+    active: endedAt === undefined && lastActiveAt !== undefined && now - lastActiveAt < ACTIVE_SESSION_WINDOW_MS,
+  };
 }
 
 function latestSession(sessions: HermesSessionRow[]): HermesSessionRow | undefined {
@@ -208,6 +235,11 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
       return min === undefined ? next : Math.min(min, next);
     }, undefined);
 
+    const recentSessions = [...sessions]
+      .sort((a, b) => (secondsToMs(b.last_active) ?? secondsToMs(b.started_at) ?? 0) - (secondsToMs(a.last_active) ?? secondsToMs(a.started_at) ?? 0))
+      .slice(0, SESSION_PREVIEW_LIMIT)
+      .map((session, position) => toSessionSnapshot(session, now, `${id}-session-${position}`));
+
     const model = normalizeName(profile.model ?? latest?.model ?? undefined);
     const jobNames = jobs.map((job) => normalizeName(job.name)).filter(Boolean);
     const briefing = detectBriefing(latest, jobNames, now) ?? undefined;
@@ -241,6 +273,7 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
       nextRoutineAt,
       briefing,
       routines,
+      sessions: recentSessions,
       isDefault: profile.is_default === true,
       gatewayRunning: profile.gateway_running === true,
     });

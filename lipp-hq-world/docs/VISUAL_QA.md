@@ -23,6 +23,23 @@ pnpm build
 node scripts/visual-qa/capture.mjs --serve
 ```
 
+## Harnesses por assunto
+
+Todos sobem o próprio fixture/preview em portas livres e reprovam com exit code
+diferente de zero:
+
+| Harness | O que prova |
+| --- | --- |
+| `hermes-capture.mjs` | frota lida do gateway, resumo, painel, feed sem simulação |
+| `hermes-resilience.mjs` | gateway caindo: selo de atraso, frota preservada, recuperação |
+| `meeting-capture.mjs` | bots do briefing chegando na sala e sentando |
+| `character-editor.mjs` | peça editada muda as malhas 3D, grava e sobrevive ao reload |
+| `capture.mjs` | bateria de 24 capturas da cena em Demo |
+
+O harness do editor lê as cores **realmente aplicadas nas malhas** do grupo
+`agent-<id>` via `window.__HQ_QA__.getAgentLook`, não o estado do formulário: se a
+peça não chegasse ao Three.js, a prova falha.
+
 ## Revisão por visão
 
 A rota do modelo principal (DeepSeek V4.1 Flash) não aceita imagem como entrada.

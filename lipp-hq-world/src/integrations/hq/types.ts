@@ -21,6 +21,28 @@ export interface GatewayHealth {
 }
 
 /**
+ * Uma sessão real do Hermes, como o dashboard a reporta. Serve para mostrar de
+ * onde veio a conversa (cli, telegram, cron…) e o que ela movimentou — nada é
+ * inferido além da janela de atividade que o próprio Hermes define.
+ */
+export interface SessionSnapshot {
+  id: string;
+  title?: string;
+  preview?: string;
+  /** Origem como o Hermes grava (`source`): cli, telegram, cron, subagent… */
+  source?: string;
+  model?: string;
+  startedAt?: number;
+  lastActiveAt?: number;
+  endedAt?: number;
+  messageCount?: number;
+  toolCallCount?: number;
+  costUsd?: number;
+  /** Aberta e vista nos últimos 5 min (heurística do Hermes, `is_active`). */
+  active: boolean;
+}
+
+/**
  * Uma rotina (cron job) do Hermes: quando roda, quando rodou e como terminou.
  * `lastStatus` é o valor cru do Hermes (`ok`, `error`, `delivery_failed`,
  * `cancelled`…); a UI traduz sem inventar estado.
@@ -66,6 +88,8 @@ export interface BotSnapshot {
   briefing?: { kind: "diario" | "semanal" | "mensal" | "briefing"; title: string; since?: number };
   /** Rotinas do bot, para o HUD mostrar a agenda real (vazio quando não há). */
   routines?: RoutineSnapshot[];
+  /** Sessões mais recentes do bot (limitadas); `sessionCount` é o total real. */
+  sessions?: SessionSnapshot[];
 }
 
 export interface FleetSnapshot {
