@@ -1,0 +1,60 @@
+name: QA visual
+
+# A cena e o HUD só provam algo num navegador de verdade: três bugs reais
+# (figuras paradas, teletransporte por re-render, crash de hooks) passaram por
+# lint, tipos e build sem aparecer. Este job roda os harnesses em Chromium com
+# WebGL (SwiftShader) e publica as capturas como artefato.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: lipp-hq-world
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: lipp-hq-world/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # Cada harness sobe o que precisa (fixture do Hermes + preview) e falha
+      # com exit code != 0 quando a tela não corresponde ao esperado.
+      - name: Frota do Hermes (gateway vivo)
+        run: node scripts/visual-qa/hermes-capture.mjs
+
+      - name: Frota do Hermes (gateway caindo e voltando)
+        run: node scripts/visual-qa/hermes-resilience.mjs
+
+      - name: Sala de reunião com briefing
+        run: node scripts/visual-qa/meeting-capture.mjs
+
+      - name: Cena em Demo (24 capturas)
+        run: |
+          pnpm preview --port 4173 --strictPort &
+          for i in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://127.0.0.1:4173/; then break; fi
+            sleep 2
+          done
+          node scripts/visual-qa/capture.mjs --url http://127.0.0.1:4173
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-screenshots
+          path: lipp-hq-world/qa/screenshots
+          retention-days: 7

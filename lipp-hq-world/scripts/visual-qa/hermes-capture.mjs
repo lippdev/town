@@ -17,7 +17,7 @@ import { chromium } from "playwright";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "qa/screenshots/hermes");
-const CHROME = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
+const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const PREVIEW_PORT = 4178;
 
 function run(command, args, options = {}) {
