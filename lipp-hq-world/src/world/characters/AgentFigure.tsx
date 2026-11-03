@@ -1,6 +1,7 @@
 import { forwardRef, useMemo, type ReactNode } from "react";
 import type { Group, Object3D } from "three";
 import { PALETTE } from "@/config/constants";
+import { sharedCapsule, sharedCylinder, sharedSphere } from "@/world/materials";
 import type { AgentDefinition } from "@/types/hq";
 
 export interface AgentFigureHandle {
@@ -25,10 +26,14 @@ interface AgentFigureProps {
 
 const SKIN = "#e8b98a";
 const PANTS = "#2f3742";
+const SHOES = "#1e242e";
+const EYES = "#242a33";
 
 /**
- * Figura low-poly do agente, com pivôs de quadril/ombros para as animações.
- * A pose de trabalho abaixa o quadril e dobra as pernas na cadeira.
+ * Figura low-poly do agente em estilo de jogo moderno: membros em cápsula,
+ * torso afunilado, rosto com olhos e cabelo em duas camadas (topo + nuca).
+ * Mantém os pivôs de quadril/ombros que as animações usam — a pose de
+ * trabalho abaixa o quadril e dobra as pernas na cadeira.
  */
 export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
   function AgentFigure({ agent, selected, figureRef, onHoverChange, children }) {
@@ -54,6 +59,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
     };
 
     const shirt = agent.color;
+    const hair = agent.hairColor ?? PALETTE.chair;
 
     return (
       <group
@@ -82,69 +88,69 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
         </mesh>
 
         <group ref={assign("hips")}>
-          <group
-            ref={assign("leftLeg")}
-            position={[-0.11, 0.68, 0]}
-          >
-            <mesh position={[0, -0.32, 0]} castShadow>
-              <boxGeometry args={[0.15, 0.64, 0.17]} />
+          <group ref={assign("leftLeg")} position={[-0.11, 0.68, 0]}>
+            <mesh position={[0, -0.3, 0]} castShadow geometry={sharedCapsule(0.075, 0.46)}>
               <meshStandardMaterial color={PANTS} roughness={0.8} metalness={0.03} />
             </mesh>
-            <mesh position={[0, -0.66, 0.04]} castShadow>
-              <boxGeometry args={[0.16, 0.09, 0.26]} />
-              <meshStandardMaterial color="#1e242e" roughness={0.7} metalness={0.05} />
+            <mesh position={[0, -0.65, 0.05]} castShadow>
+              <boxGeometry args={[0.16, 0.09, 0.27]} />
+              <meshStandardMaterial color={SHOES} roughness={0.7} metalness={0.05} />
             </mesh>
           </group>
 
-          <group
-            ref={assign("rightLeg")}
-            position={[0.11, 0.68, 0]}
-          >
-            <mesh position={[0, -0.32, 0]} castShadow>
-              <boxGeometry args={[0.15, 0.64, 0.17]} />
+          <group ref={assign("rightLeg")} position={[0.11, 0.68, 0]}>
+            <mesh position={[0, -0.3, 0]} castShadow geometry={sharedCapsule(0.075, 0.46)}>
               <meshStandardMaterial color={PANTS} roughness={0.8} metalness={0.03} />
             </mesh>
-            <mesh position={[0, -0.66, 0.04]} castShadow>
-              <boxGeometry args={[0.16, 0.09, 0.26]} />
-              <meshStandardMaterial color="#1e242e" roughness={0.7} metalness={0.05} />
+            <mesh position={[0, -0.65, 0.05]} castShadow>
+              <boxGeometry args={[0.16, 0.09, 0.27]} />
+              <meshStandardMaterial color={SHOES} roughness={0.7} metalness={0.05} />
             </mesh>
           </group>
 
-          <mesh ref={assign("torso")} position={[0, 0.98, 0]} castShadow>
-            <boxGeometry args={[0.46, 0.62, 0.28]} />
+          <mesh ref={assign("torso")} position={[0, 0.98, 0]} castShadow geometry={sharedCylinder(0.2, 0.27, 0.64, 14)}>
             <meshStandardMaterial color={shirt} roughness={0.72} metalness={0.05} />
           </mesh>
 
-          <group ref={assign("leftArm")} position={[-0.29, 1.24, 0]}>
-            <mesh position={[0, -0.26, 0]} castShadow>
-              <boxGeometry args={[0.11, 0.52, 0.13]} />
+          <group ref={assign("leftArm")} position={[-0.28, 1.24, 0]}>
+            <mesh position={[0, 0, 0]} castShadow geometry={sharedSphere(0.09, 12, 10)}>
               <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
             </mesh>
-            <mesh position={[0, -0.56, 0]} castShadow>
-              <boxGeometry args={[0.1, 0.12, 0.12]} />
+            <mesh position={[0, -0.26, 0]} castShadow geometry={sharedCapsule(0.06, 0.4)}>
+              <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
+            </mesh>
+            <mesh position={[0, -0.54, 0]} castShadow geometry={sharedSphere(0.075, 12, 10)}>
               <meshStandardMaterial color={SKIN} roughness={0.65} metalness={0} />
             </mesh>
           </group>
 
-          <group ref={assign("rightArm")} position={[0.29, 1.24, 0]}>
-            <mesh position={[0, -0.26, 0]} castShadow>
-              <boxGeometry args={[0.11, 0.52, 0.13]} />
+          <group ref={assign("rightArm")} position={[0.28, 1.24, 0]}>
+            <mesh position={[0, 0, 0]} castShadow geometry={sharedSphere(0.09, 12, 10)}>
               <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
             </mesh>
-            <mesh position={[0, -0.56, 0]} castShadow>
-              <boxGeometry args={[0.1, 0.12, 0.12]} />
+            <mesh position={[0, -0.26, 0]} castShadow geometry={sharedCapsule(0.06, 0.4)}>
+              <meshStandardMaterial color={shirt} roughness={0.75} metalness={0.04} />
+            </mesh>
+            <mesh position={[0, -0.54, 0]} castShadow geometry={sharedSphere(0.075, 12, 10)}>
               <meshStandardMaterial color={SKIN} roughness={0.65} metalness={0} />
             </mesh>
           </group>
 
           <group ref={assign("head")} position={[0, 1.42, 0]}>
-            <mesh position={[0, 0.14, 0]} castShadow>
-              <sphereGeometry args={[0.2, 16, 14]} />
+            <mesh position={[0, 0.15, 0]} castShadow geometry={sharedSphere(0.22, 18, 14)}>
               <meshStandardMaterial color={SKIN} roughness={0.6} metalness={0} />
             </mesh>
-            <mesh position={[0, 0.24, 0]} castShadow>
-              <sphereGeometry args={[0.205, 16, 12, 0, Math.PI * 2, 0, Math.PI / 1.9]} />
-              <meshStandardMaterial color={agent.hairColor ?? PALETTE.chair} roughness={0.8} metalness={0.05} />
+            <mesh position={[-0.085, 0.15, 0.185]} geometry={sharedSphere(0.028, 8, 8)}>
+              <meshStandardMaterial color={EYES} roughness={0.35} metalness={0} />
+            </mesh>
+            <mesh position={[0.085, 0.15, 0.185]} geometry={sharedSphere(0.028, 8, 8)}>
+              <meshStandardMaterial color={EYES} roughness={0.35} metalness={0} />
+            </mesh>
+            <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.225, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
+              <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+            </mesh>
+            <mesh position={[0, 0.16, -0.09]} castShadow geometry={sharedSphere(0.17, 14, 10)}>
+              <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
             </mesh>
           </group>
         </group>
