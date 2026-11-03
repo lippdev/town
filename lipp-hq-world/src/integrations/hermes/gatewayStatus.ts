@@ -10,10 +10,14 @@ import { useEffect, useState } from "react";
  */
 export interface GatewayStatus {
   configured?: boolean;
+  /** "saved": link + token salvos na aba Integrações; "env": variáveis do servidor. */
+  source?: "saved" | "env";
   apiUrl?: string;
   dashboardUrl?: string;
   hasApiKey?: boolean;
   hasDashboardToken?: boolean;
+  /** Últimos caracteres do token (`...abc123`), nunca o valor. */
+  tokenPreview?: string | null;
 }
 
 let cached: GatewayStatus | null = null;
@@ -33,6 +37,63 @@ export function primeGatewayStatus(): void {
     .then((response) => (response.ok ? (response.json() as Promise<GatewayStatus>) : null))
     .then((payload) => publish(payload ?? null))
     .catch(() => publish(null));
+}
+
+/** Relê a configuração depois de conectar ou desconectar. */
+export function refreshGatewayStatus(): Promise<void> {
+  started = true;
+  return fetch("/api/hq/status")
+    .then((response) => (response.ok ? (response.json() as Promise<GatewayStatus>) : null))
+    .then((payload) => publish(payload ?? null))
+    .catch(() => publish(null));
+}
+
+export interface ConnectResult {
+  ok: boolean;
+  error?: string;
+  version?: string;
+  profileCount?: number;
+}
+
+/**
+ * Manda link + token ao proxy deste app (nunca direto ao Hermes). O proxy
+ * testa o par e só salva se o dashboard aceitar; o token não volta.
+ */
+export async function connectHermes(url: string, token: string): Promise<ConnectResult> {
+  try {
+    const response = await fetch("/api/hq/connection", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, token }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      probe?: { version?: string; profileCount?: number };
+      status?: GatewayStatus;
+    };
+    if (payload.status) publish(payload.status);
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error ?? `HTTP ${response.status}` };
+    }
+    return { ok: true, version: payload.probe?.version, profileCount: payload.probe?.profileCount };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function disconnectHermes(): Promise<ConnectResult> {
+  try {
+    const response = await fetch("/api/hq/connection", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string; status?: GatewayStatus };
+    if (payload.status) publish(payload.status);
+    return response.ok ? { ok: true } : { ok: false, error: payload.error ?? `HTTP ${response.status}` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export function useGatewayStatus(): GatewayStatus | null {
