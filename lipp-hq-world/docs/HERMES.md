@@ -195,9 +195,11 @@ HERMES_DASHBOARD_SESSION_TOKEN=file:$HOME/.hermes/dashboard.token hermes dashboa
 
 ### Onde fica salvo
 
-O proxy grava link + token em `.hq-connection.json` (diretório do app, ou
-`HQ_CONNECTION_FILE`), com permissão `0600`, e o arquivo está no
-`.gitignore`. A página manda o token uma vez e nunca o lê de volta: o status
+O proxy grava link + token em `~/.lipp-hq/connection.json` (pasta `0700`,
+arquivo `0600`), fora do repositório, como o Claw3D guarda as configurações
+do Studio em `~/.openclaw/claw3d/`. `HQ_CONNECTION_FILE` troca o caminho. O
+`.hq-connection.json` da primeira versão, no diretório do app, ainda é lido
+e some no primeiro salvamento ou ao desconectar. A página manda o token uma vez e nunca o lê de volta: o status
 mostra só a prévia `...abc123`, como o Desktop. Com conexão salva:
 
 - o dashboard é lido no link salvo, com o token salvo;
@@ -217,6 +219,18 @@ As duas rotas só aceitam JSON da mesma origem (`Origin` igual ao `Host`,
 `Sec-Fetch-Site: same-origin` quando presente). Assim, outro site aberto no
 navegador não consegue trocar a conexão. Essa escrita fica neste servidor: o
 Hermes continua recebendo só GET.
+
+### Só esta máquina
+
+O proxy lê o Hermes com o token salvo. Por isso todo `/api/hq` só atende
+clientes de loopback (IPv4, IPv6 ou IPv4 mapeado) e responde 403 para o
+resto, mesmo com o Vite aberto em `--host 0.0.0.0`. É o mesmo cuidado do
+`network-policy.js` do Claw3D, que recusa expor o Studio na rede sem token de
+acesso. Para ver o Lipp HQ de outra máquina, use um túnel:
+
+```bash
+ssh -L 5173:127.0.0.1:5173 usuario@maquina-do-lipp-hq
+```
 
 ## Proxy de leitura (credencial fora do navegador)
 
