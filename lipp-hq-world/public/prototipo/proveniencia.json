@@ -173,23 +173,95 @@
       "url": "https://raw.githubusercontent.com/bearlikelion/godot-xr-gamejam/main/Assets/Models/Church/Crowd/Quatertnius/Casual_Male.fbx",
       "bytes": 1612396,
       "sha256": "d3c2ada76aede1be3b37f084de952fc8686668a5627c03fa854b45070f583997"
+    },
+    {
+      "asset": "floor_tiles_04",
+      "file": "floor_tiles_04_diff_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/floor_tiles_04/floor_tiles_04_diff_1k.jpg",
+      "bytes": 315465,
+      "sha256": "064fafb57de6f00d3d8f3b643a6a342c681a53949120b67608d31a54eceac88e"
+    },
+    {
+      "asset": "floor_tiles_04",
+      "file": "floor_tiles_04_nor_gl_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/floor_tiles_04/floor_tiles_04_nor_gl_1k.jpg",
+      "bytes": 155276,
+      "sha256": "983fbdca6e45fef2a1941b172029080c6ba233be8505bfb73ff49d0c3e628a1e"
+    },
+    {
+      "asset": "floor_tiles_04",
+      "file": "floor_tiles_04_arm_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/floor_tiles_04/floor_tiles_04_arm_1k.jpg",
+      "bytes": 50020,
+      "sha256": "cb26508eb16e9307ddc6baea957d22595efd4f02ec1a20c91759ecbbaf47c668"
+    },
+    {
+      "asset": "fabric_pattern_07",
+      "file": "fabric_pattern_07_diff_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_pattern_07/fabric_pattern_07_col_1_1k.jpg",
+      "bytes": 788593,
+      "sha256": "aeb7a1487b77aec55e39de662def4d371f5c7c617f62d1f291d7f9932ffebdc9"
+    },
+    {
+      "asset": "fabric_pattern_07",
+      "file": "fabric_pattern_07_nor_gl_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_pattern_07/fabric_pattern_07_nor_gl_1k.jpg",
+      "bytes": 828071,
+      "sha256": "f6955bbdead9f023f2357f6f8808ed49627d10882cd2a3cb6b5a5ace155abc45"
+    },
+    {
+      "asset": "fabric_pattern_07",
+      "file": "fabric_pattern_07_arm_1k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/fabric_pattern_07/fabric_pattern_07_arm_1k.jpg",
+      "bytes": 227059,
+      "sha256": "57520f1383a41ea9d69a3f9c1d2a2b0cdc6ba85c579935c44a1281845ec11030"
     }
   ],
   "outputs": [
     {
-      "file": "pulse.glb",
-      "bytes": 303236,
-      "sha256": "caf73ab17d47b848856a4fd3bb741c35fe880d66203be6a011248458cbabf3ed"
+      "file": "fabric_pattern_07_arm_1k.jpg",
+      "bytes": 227059,
+      "sha256": "57520f1383a41ea9d69a3f9c1d2a2b0cdc6ba85c579935c44a1281845ec11030"
     },
     {
-      "file": "sofa.glb",
-      "bytes": 296620,
-      "sha256": "445bd3625f36d0a8bdc81016e863f2722c158740229c15b22e92eaa7c712a9ad"
+      "file": "fabric_pattern_07_diff_1k.jpg",
+      "bytes": 788593,
+      "sha256": "aeb7a1487b77aec55e39de662def4d371f5c7c617f62d1f291d7f9932ffebdc9"
+    },
+    {
+      "file": "fabric_pattern_07_nor_gl_1k.jpg",
+      "bytes": 828071,
+      "sha256": "f6955bbdead9f023f2357f6f8808ed49627d10882cd2a3cb6b5a5ace155abc45"
+    },
+    {
+      "file": "floor_tiles_04_arm_1k.jpg",
+      "bytes": 50020,
+      "sha256": "cb26508eb16e9307ddc6baea957d22595efd4f02ec1a20c91759ecbbaf47c668"
+    },
+    {
+      "file": "floor_tiles_04_diff_1k.jpg",
+      "bytes": 315465,
+      "sha256": "064fafb57de6f00d3d8f3b643a6a342c681a53949120b67608d31a54eceac88e"
+    },
+    {
+      "file": "floor_tiles_04_nor_gl_1k.jpg",
+      "bytes": 155276,
+      "sha256": "983fbdca6e45fef2a1941b172029080c6ba233be8505bfb73ff49d0c3e628a1e"
+    },
+    {
+      "file": "luminaria.glb",
+      "bytes": 502116,
+      "sha256": "0cb763588e009295c8a853323e97d127243d96b8d56c8e63a44a4a5caa9a9170"
     },
     {
       "file": "planta.glb",
       "bytes": 888380,
       "sha256": "629ccc78d61e931527ce534bd13cce0a26603591d75ba072311bc1d00d9d1d3e"
+    },
+    {
+      "file": "pulse.glb",
+      "bytes": 148048,
+      "sha256": "9312180dcd6e92bd9fc207e74a6eaf1e682a1a71e8089a8a0cb4c8314ba59c1c"
     },
     {
       "file": "wood_floor_arm_1k.jpg",
@@ -202,29 +274,13 @@
       "sha256": "2a1c07687b6dbb214c4b9213739c6d92d425f1f0fc8ab3ac157f105d78240789"
     },
     {
-      "file": "luminaria.glb",
-      "bytes": 502116,
-      "sha256": "0cb763588e009295c8a853323e97d127243d96b8d56c8e63a44a4a5caa9a9170"
-    },
-    {
-      "file": "stone_floor_nor_gl_1k.jpg",
-      "bytes": 1045705,
-      "sha256": "17fab45a81634808342b809f3eba29d30c474ea7627ea32d629ec6b3d86bbcaf"
-    },
-    {
-      "file": "stone_floor_arm_1k.jpg",
-      "bytes": 600846,
-      "sha256": "3c7be79ede269c85e5eb6d5572ee505eb75a87eca24160fca9c691da0e5f4b2d"
-    },
-    {
-      "file": "stone_floor_diff_1k.jpg",
-      "bytes": 911345,
-      "sha256": "e97eb20c1b7379a0326074991bdd3cb6a15a0af399bb6798a7f814051e0937e7"
-    },
-    {
       "file": "wood_floor_nor_gl_1k.jpg",
       "bytes": 423303,
       "sha256": "452247f0d0d1b7fc7f8324ff3b6ed60bcc6de1405f4284eeb8d9bce90d4939c2"
     }
+  ],
+  "discardedAssets": [
+    "sofa_03 (estilo vitoriano destoava)",
+    "stone_floor (pedra irregular destoava do corredor)"
   ]
 }
