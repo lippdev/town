@@ -953,3 +953,62 @@ button.sidebar-row:focus-visible {
   color: var(--hq-text-dim);
   white-space: nowrap;
 }
+
+/* conexão link + session token (aba Integrações) */
+.connection-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(9, 15, 26, 0.55);
+  font-size: 11px;
+}
+
+.connection-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--hq-text);
+}
+
+.connection-form label span {
+  opacity: 0.7;
+  font-size: 10px;
+}
+
+.connection-form input {
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(9, 15, 26, 0.85);
+  color: var(--hq-text);
+  font-size: 11px;
+  outline: none;
+}
+
+.connection-form input:focus-visible {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.28);
+}
+
+.connection-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connection-actions .note-retry {
+  margin-top: 0;
+}
+
+.connection-message.ok {
+  color: #86efac;
+}
+
+.connection-message.fail {
+  color: #fca5a5;
+}

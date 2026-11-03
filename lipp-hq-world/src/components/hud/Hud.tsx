@@ -46,7 +46,12 @@ import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fl
 import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "@/components/hud/routines";
 import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
-import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
+import {
+  connectHermes,
+  disconnectHermes,
+  useGatewayStatus,
+  type GatewayStatus,
+} from "@/integrations/hermes/gatewayStatus";
 
 const SEVERITY_LABEL: Record<DiagnosticsSeverity, string> = {
   ok: "tudo respondendo",
@@ -72,6 +77,8 @@ function GatewayDiagnostics() {
 
   return (
     <div className="sidebar-list gateway-diagnostics">
+      <ConnectionForm config={config} onConnected={() => refresh?.()} />
+
       <div className={`gateway-summary gateway-${summary.severity}`}>
         <strong>{SEVERITY_LABEL[summary.severity]}</strong>
         <span>
@@ -110,9 +117,17 @@ function GatewayDiagnostics() {
           <dd>{config?.dashboardUrl ?? "—"}</dd>
         </div>
         <div>
+          <dt>Origem</dt>
+          <dd>{config ? (config.source === "saved" ? "link salvo nesta máquina" : "variáveis de ambiente") : "—"}</dd>
+        </div>
+        <div>
           <dt>Credenciais</dt>
           <dd>
-            {config ? `${config.hasApiKey ? "chave ok" : "sem chave"} · ${config.hasDashboardToken ? "token ok" : "sem token"}` : "—"}
+            {config
+              ? config.source === "saved"
+                ? `session token ${config.tokenPreview ?? "vazio"}`
+                : `${config.hasApiKey ? "chave ok" : "sem chave"} · ${config.hasDashboardToken ? "token ok" : "sem token"}`
+              : "—"}
           </dd>
         </div>
         <div>
@@ -128,6 +143,96 @@ function GatewayDiagnostics() {
         Somente leitura: o app faz GET nos endpoints documentados e nunca envia comando ao Hermes.
       </div>
     </div>
+  );
+}
+
+/**
+ * Conectar ao Hermes como o Hermes Desktop faz: link do dashboard + session
+ * token. O par vai ao proxy deste app, que testa e salva; o token nunca volta
+ * para a página, só a prévia `...abc123`.
+ */
+function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null; onConnected: () => void }) {
+  const saved = config?.source === "saved";
+  const [url, setUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "fail"; text: string } | null>(null);
+
+  // com conexão salva, o campo de link abre preenchido com ela
+  useEffect(() => {
+    if (saved && config?.dashboardUrl) setUrl((current) => current || config.dashboardUrl || "");
+  }, [saved, config?.dashboardUrl]);
+
+  const connect = async () => {
+    setBusy(true);
+    setMessage(null);
+    const result = await connectHermes(url, token);
+    setBusy(false);
+    if (!result.ok) {
+      setMessage({ tone: "fail", text: result.error ?? "não foi possível conectar" });
+      return;
+    }
+    setToken("");
+    const version = result.version ? ` · Hermes ${result.version}` : "";
+    setMessage({ tone: "ok", text: `Conectado: ${result.profileCount ?? 0} perfis${version}` });
+    onConnected();
+  };
+
+  const disconnect = async () => {
+    setBusy(true);
+    const result = await disconnectHermes();
+    setBusy(false);
+    setUrl("");
+    setToken("");
+    setMessage(result.ok ? { tone: "ok", text: "Desconectado." } : { tone: "fail", text: result.error ?? "falhou" });
+    onConnected();
+  };
+
+  return (
+    <form
+      className="connection-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void connect();
+      }}
+    >
+      <strong>Conectar ao Hermes</strong>
+      <label>
+        <span>Link do dashboard</span>
+        <input
+          type="text"
+          inputMode="url"
+          autoComplete="url"
+          placeholder="http://127.0.0.1:9119"
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          disabled={busy}
+          required
+        />
+      </label>
+      <label>
+        <span>Session token</span>
+        <input
+          type="password"
+          autoComplete="off"
+          placeholder={saved && config?.tokenPreview ? `token salvo ${config.tokenPreview}` : "cole o session token"}
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <div className="connection-actions">
+        <button type="submit" className="gateway-retry" disabled={busy || !url.trim()}>
+          {busy ? "Testando…" : saved ? "Reconectar" : "Conectar"}
+        </button>
+        {saved && (
+          <button type="button" className="note-retry" onClick={() => void disconnect()} disabled={busy}>
+            desconectar
+          </button>
+        )}
+      </div>
+      {message && <span className={`connection-message ${message.tone}`}>{message.text}</span>}
+    </form>
   );
 }
 
