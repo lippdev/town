@@ -2,7 +2,8 @@
 
 O Lipp HQ World é a **visão dos bots do Hermes sobre o escritório**. Ele lê o
 Hermes via gateway e nunca escreve, comanda ou aprova nada: nenhum POST, PATCH
-ou DELETE sai do navegador em direção ao Hermes.
+ou DELETE chega ao Hermes. O único POST/DELETE do app é o da própria conexão
+(link + token), que fica no proxy local.
 
 Contrato verificado no repositório `NousResearch/hermes-agent` (clone em
 `~/.capy/work/hermes-agent`, commit de 2026-11-02), com os arquivos citados
@@ -120,12 +121,74 @@ endpoints falhou, se foi HTTP 401 (token ausente) ou falta de resposta.
 - Sem dashboard, os bots são nomeados a partir das sessões em vez de a frota
   desaparecer.
 
+## Conectar com link + session token (como o Hermes Desktop)
+
+A aba **Integrações** tem o mesmo par de campos do Hermes Desktop no modo
+"token" de gateway remoto (`apps/desktop/electron/connection-config.ts` e
+`src/components/remote-setup/fields.tsx`):
+
+1. **Link do dashboard.** Aceita sem esquema (`100.64.0.1:9119`,
+   `homelab.lan:9119`) e vira `http://`. Só http e https passam. O padrão do
+   `hermes dashboard` é a porta **9119** (`hermes_cli/main_dashboard.py`).
+2. **Session token.** Vai no header `X-Hermes-Session-Token`, o mesmo do
+   Desktop. O dashboard também aceita `Authorization: Bearer`
+   (`web_server._has_valid_session_token`), mas o header dedicado não colide
+   com proxies que já usam `Authorization`. Um token colado no próprio link
+   (`?token=` ou `#token=`) também vale.
+
+O teste roda **antes** de salvar, na ordem do Desktop:
+
+| Passo | Endpoint                   | O que prova                                                         |
+| ----- | -------------------------- | ------------------------------------------------------------------- |
+| 1     | `GET /api/status` (público) | é um dashboard do Hermes; `auth_required: true` indica OAuth         |
+| 2     | `GET /api/profiles` + token | o token vale (o status é público, então não prova nada sobre o token) |
+
+Com OAuth (`auth_required: true`) a conexão é recusada com o motivo: o Lipp
+HQ conecta só por session token.
+
+### De onde vem o session token
+
+Sem `HERMES_DASHBOARD_SESSION_TOKEN`, o dashboard sorteia um token novo a
+cada partida (`web_server_session_token.py`), então a conexão cai quando ele
+reinicia. Para um token estável, suba o dashboard com o token fixo:
+
+```bash
+HERMES_DASHBOARD_SESSION_TOKEN="$(openssl rand -hex 24)" hermes dashboard --no-open
+# ou, sem pôr o segredo no ambiente:
+HERMES_DASHBOARD_SESSION_TOKEN=file:$HOME/.hermes/dashboard.token hermes dashboard --no-open
+```
+
+### Onde fica salvo
+
+O proxy grava link + token em `.hq-connection.json` (diretório do app, ou
+`HQ_CONNECTION_FILE`), com permissão `0600`, e o arquivo está no
+`.gitignore`. A página manda o token uma vez e nunca o lê de volta: o status
+mostra só a prévia `...abc123`, como o Desktop. Com conexão salva:
+
+- o dashboard é lido no link salvo, com o token salvo;
+- a saúde e a versão vêm do `/api/status` do dashboard, e o API server
+  (`:8642`) fica fora. O diagnóstico mostra a linha "Status `/api/status`";
+- as variáveis `HERMES_DASHBOARD_URL` e `HERMES_DASHBOARD_TOKEN` só valem
+  quando não há conexão salva.
+
+"Desconectar" apaga o arquivo e volta para as variáveis de ambiente.
+
+```text
+POST   /api/hq/connection   { url, token }  → testa e salva; 422 com o erro se falhar
+DELETE /api/hq/connection                   → apaga a conexão salva
+```
+
+As duas rotas só aceitam JSON da mesma origem (`Origin` igual ao `Host`,
+`Sec-Fetch-Site: same-origin` quando presente). Assim, outro site aberto no
+navegador não consegue trocar a conexão. Essa escrita fica neste servidor: o
+Hermes continua recebendo só GET.
+
 ## Proxy de leitura (credencial fora do navegador)
 
 `server/hermesProxy.ts` roda no dev e no preview do Vite e serve `/api/hq`:
 
 ```text
-GET /api/hq/status            → configuração ativa (sem segredos)
+GET /api/hq/status            → configuração ativa e origem (sem segredos)
 GET /api/hq/hermes/snapshot   → { health, profiles, sessions, jobs, blocks }
 ```
 
@@ -134,14 +197,15 @@ Variáveis lidas **pelo proxy** (nunca pelo navegador):
 | Variável                 | Padrão                  | Função                                     |
 | ------------------------ | ----------------------- | ------------------------------------------ |
 | `HERMES_API_URL`         | `http://127.0.0.1:8642` | API server                                 |
-| `HERMES_DASHBOARD_URL`   | `http://127.0.0.1:8000` | dashboard                                  |
+| `HERMES_DASHBOARD_URL`   | `http://127.0.0.1:8000` | dashboard (o real sobe em `:9119`)         |
 | `HERMES_API_KEY`         | —                       | vira `Authorization: Bearer` no API server |
-| `HERMES_DASHBOARD_TOKEN` | —                       | vira `Authorization: Bearer` no dashboard  |
+| `HERMES_DASHBOARD_TOKEN` | —                       | vira `X-Hermes-Session-Token` no dashboard |
 | `HERMES_TIMEOUT_MS`      | `5000`                  | timeout de cada leitura                    |
 
 Um serviço fora não derruba o outro: o snapshot traz um bloco de estado por
 endpoint (`blocks`) e a UI diz exatamente o que faltou. `401/403` do dashboard
-aparece como "dashboard exigiu autenticação: defina HERMES_DASHBOARD_TOKEN".
+aparece como "dashboard recusou o session token: conecte de novo na aba
+Integrações".
 
 ## Provando sem uma instalação real
 
@@ -154,8 +218,9 @@ node scripts/hermes/fixture-gateway.mjs   # 8642 + 8000
 pnpm dev                                  # app em 5173 lendo o fixture
 ```
 
-Contra um Hermes real nada muda no app: `hermes dashboard` e
-`hermes gateway` já respondem nesses endereços.
+Contra um Hermes real, o caminho mais curto é a aba Integrações com o link do
+`hermes dashboard` (porta 9119) e o session token. Para usar as variáveis de
+ambiente no lugar dela, aponte `HERMES_DASHBOARD_URL` para a 9119.
 
 ## Sala de reuniões e briefings
 
