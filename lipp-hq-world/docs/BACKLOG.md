@@ -14,6 +14,9 @@
 - ✅ **Histórico real em sparkline** — tendência dos últimos minutos no resumo.
 - ✅ **QA visual na CI** — job `visual` roda os três harnesses do Hermes e as 24
   capturas da cena em todo PR.
+- ✅ **Sessões com drill-down** — aba Sessões com origem (`cron`, `cli`,
+  `telegram`…), recência real e bloco de sessões no painel do bot; o número do
+  resumo deixou de ser um beco sem saída.
 
 ## Check geral de 2026-10-30
 
