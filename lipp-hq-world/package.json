@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "qa:capture": "node scripts/visual-qa/capture.mjs",
+    "qa:all": "node scripts/visual-qa/hermes-capture.mjs && node scripts/visual-qa/hermes-resilience.mjs && node scripts/visual-qa/meeting-capture.mjs && node scripts/visual-qa/character-editor.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
   },

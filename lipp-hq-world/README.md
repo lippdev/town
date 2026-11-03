@@ -124,14 +124,18 @@ finge que está ao vivo.
 ```bash
 pnpm typecheck   # TypeScript estrito
 pnpm lint        # ESLint
-pnpm test        # Vitest (51 testes: frota, briefings, resiliência, busca, histórico)
+pnpm test        # Vitest (79 testes: frota, sessões, rotinas, briefings, resiliência, aparência)
 pnpm build       # build de produção
 
-# QA visual em Chromium real
-node scripts/visual-qa/hermes-capture.mjs     # frota via gateway
+# QA visual em Chromium real (precisa do build acima)
+pnpm qa:all                                   # os quatro harnesses de uma vez
+node scripts/visual-qa/hermes-capture.mjs     # frota, sessões, rotinas, diagnóstico, link do dashboard
 node scripts/visual-qa/hermes-resilience.mjs  # gateway caindo e voltando
 node scripts/visual-qa/meeting-capture.mjs    # sala de reunião com briefing
+node scripts/visual-qa/character-editor.mjs   # editor de personagem chega ao Three.js e sobrevive ao reload
 node scripts/visual-qa/capture.mjs --serve    # 24 capturas da cena
+
+pnpm contract:check --self-test               # o script de contrato confere a si mesmo
 ```
 
 A captura visual abre o Chromium real, espera o primeiro frame, posiciona a
