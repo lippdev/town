@@ -66,6 +66,12 @@ interface HQState {
   /** Força uma leitura imediata do gateway (botão "tentar de novo"). */
   gatewayRefresh: (() => void) | null;
   setGatewayRefresh: (refresh: (() => void) | null) => void;
+  /**
+   * Pixels da direita do canvas cobertos pela gaveta do bot. A câmera desloca
+   * o centro da projeção por isso, para o foco cair na área que sobra visível.
+   */
+  viewInsetRight: number;
+  setViewInsetRight: (pixels: number) => void;
 }
 
 const MAX_EVENTS = 60;
@@ -194,6 +200,8 @@ export const useHQStore = create<HQState>((set) => ({
     }),
   selectedBotId: null,
   selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
+  viewInsetRight: 0,
+  setViewInsetRight: (viewInsetRight) => set({ viewInsetRight }),
   gatewayRefresh: null,
   setGatewayRefresh: (gatewayRefresh) => set({ gatewayRefresh }),
   agentLooks: loadAgentLooks(),

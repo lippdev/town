@@ -10,6 +10,7 @@ import { BriefingBoard } from "@/world/furniture/BriefingBoard";
 import { Agents } from "@/world/characters/Agents";
 import { DynamicWalls } from "@/world/walls/DynamicWalls";
 import { CameraRig } from "@/world/camera/CameraRig";
+import { ViewportInset } from "@/world/camera/ViewportInset";
 import { Picking } from "@/world/scene/Picking";
 
 /**
@@ -29,6 +30,7 @@ export function HQScene() {
       <Agents />
       <RoomSigns />
       <CameraRig />
+      <ViewportInset />
       <Picking />
       <QaBridge />
       <PostEffects />
