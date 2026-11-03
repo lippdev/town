@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { FleetSnapshot } from "@/integrations/hq/types";
 import type { AgentAnimationState, ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
 
 export interface CameraView {
@@ -41,8 +42,16 @@ interface HQState {
   pushEvent: (event: HQEvent) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setDataSource: (source: DataSource) => void;
+  /** Remove eventos de simulação ao entrar ao vivo — nunca misturar os dois no feed. */
+  dropDemoEvents: () => void;
   agentPresets: Record<string, string>;
   setAgentPreset: (agentId: string, presetId: string | null) => void;
+  /** Última frota lida do Hermes (null em Demo ou antes do primeiro poll). */
+  fleet: FleetSnapshot | null;
+  setFleet: (fleet: FleetSnapshot | null) => void;
+  /** Bot selecionado no painel sai da frota, não da lista fixa. */
+  selectedBotId: string | null;
+  selectBot: (botId: string | null) => void;
 }
 
 const MAX_EVENTS = 60;
@@ -121,6 +130,15 @@ export const useHQStore = create<HQState>((set) => ({
     set((state) => ({ events: [event, ...state.events].slice(0, MAX_EVENTS) })),
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
   setDataSource: (dataSource) => set({ dataSource }),
+  dropDemoEvents: () =>
+    set((state) => {
+      const kept = state.events.filter((event) => event.source !== "demo");
+      return kept.length === state.events.length ? {} : { events: kept };
+    }),
+  fleet: null,
+  setFleet: (fleet) => set({ fleet }),
+  selectedBotId: null,
+  selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
   agentPresets: loadAgentPresets(),
   setAgentPreset: (agentId, presetId) =>
     set((state) => {

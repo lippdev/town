@@ -1,58 +1,46 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpen,
+  Activity,
   Bot,
   Boxes,
   Cable,
   Camera,
+  Clock,
   MonitorUp,
+  Play,
   Radio,
   RotateCcw,
-  Play,
   SlidersHorizontal,
-  Users,
-  BrickWall,
+  TriangleAlert,
 } from "lucide-react";
-import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
-import { PROJECTS } from "@/agents/agents";
+import { AGENTS_BY_ID } from "@/agents/agents";
 import { CHARACTER_PRESETS } from "@/world/characters/appearance";
 import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
-
-const CONNECTION_LABEL = {
-  connecting: "conectando",
-  online: "ao vivo",
-  offline: "sem conexão",
-  error: "erro",
-} as const;
+import {
+  GATEWAY_LABEL,
+  fleetCounts,
+  gatewayNotice,
+  relativeTime,
+  stateLabel,
+} from "@/components/hud/fleetView";
+import type { BotSnapshot } from "@/integrations/hq/types";
 
 /** Ponto da sala em coordenadas de tela para o painel flutuante. */
-function useAgentSummary(agentId: string | null) {
-  const agentStates = useHQStore((state) => state.agentStates);
-  const events = useHQStore((state) => state.events);
-  if (!agentId) return null;
-  const agent = AGENTS_BY_ID[agentId];
-  if (!agent) return null;
-  const state = agentStates[agentId] ?? "idle";
-  const lastEvent = events.find((event) => event.agentId === agentId);
-  return {
-    agent,
-    state,
-    summary: lastEvent?.summary,
-    source: lastEvent?.source,
-    roomName: ROOMS_BY_ID[agent.roomId]?.name ?? "",
-  };
-}
 
 function Sidebar() {
-  const [section, setSection] = useState("escritorio");
+  const [section, setSection] = useState("bots");
+  const fleet = useHQStore((state) => state.fleet);
   const dataSource = useHQStore((state) => state.dataSource);
+  const bots = fleet?.bots ?? [];
+  const counts = fleetCounts(fleet);
+
   const items = [
-    { id: "escritorio", label: "Escritório", icon: Boxes },
-    { id: "agentes", label: "Agentes", icon: Users },
-    { id: "atividades", label: "Atividades", icon: BookOpen },
-    { id: "projetos", label: "Projetos", icon: Bot },
-    { id: "integracoes", label: "Integrações", icon: Cable },
+    { id: "bots", label: "Bots", icon: Bot, badge: bots.length || null },
+    { id: "escritorio", label: "Escritório", icon: Boxes, badge: null },
+    { id: "atividades", label: "Atividades", icon: Activity, badge: null },
+    { id: "rotinas", label: "Rotinas", icon: Clock, badge: counts.routines || null },
+    { id: "integracoes", label: "Integrações", icon: Cable, badge: null },
   ];
 
   return (
@@ -60,7 +48,7 @@ function Sidebar() {
       <div className="sidebar-brand">
         <span className="sidebar-dot" aria-hidden />
         <strong>Lipp HQ</strong>
-        <span className="sidebar-mode">{dataSource === "demo" ? "Demo" : "Live"}</span>
+        <span className="sidebar-mode">{dataSource === "demo" ? "Demo" : "Hermes"}</span>
       </div>
       <nav>
         {items.map((item) => (
@@ -72,58 +60,142 @@ function Sidebar() {
           >
             <item.icon size={15} />
             {item.label}
+            {item.badge !== null && <span className="sidebar-badge">{item.badge}</span>}
           </button>
         ))}
       </nav>
-      {section === "agentes" && (
-        <div className="sidebar-list">
-          {AGENTS.map((agent) => (
-            <AgentRow key={agent.id} agentId={agent.id} />
-          ))}
-        </div>
-      )}
-      {section === "projetos" && (
-        <div className="sidebar-list">
-          {PROJECTS.map((project) => (
-            <div key={project} className="sidebar-row">
-              <Boxes size={13} />
-              {project}
-            </div>
-          ))}
+      {section === "bots" && <BotRoster />}
+      {section === "rotinas" && <RoutineList />}
+      {section === "escritorio" && (
+        <div className="sidebar-note">
+          {bots.length > 0
+            ? `${counts.working} trabalhando · ${counts.waiting} aguardando · ${counts.idle} ociosos`
+            : "Nenhuma frota lida ainda: o gateway ainda não respondeu."}
         </div>
       )}
       {section === "integracoes" && (
         <div className="sidebar-note">
-          OpenMausBot em modo somente leitura. Nenhum comando é enviado ao
-          servidor dos agentes.
+          Hermes em modo somente leitura via gateway. Nenhum comando é enviado: o app observa, não comanda.
         </div>
       )}
     </aside>
   );
 }
 
-function AgentRow({ agentId }: { agentId: string }) {
+function BotRoster() {
+  const fleet = useHQStore((state) => state.fleet);
+  const dataSource = useHQStore((state) => state.dataSource);
   const agentStates = useHQStore((state) => state.agentStates);
-  const selectAgent = useHQStore((state) => state.selectAgent);
+  const selectedBotId = useHQStore((state) => state.selectedBotId);
+  const selectBot = useHQStore((state) => state.selectBot);
   const focusRoom = useHQStore((state) => state.focusRoom);
-  const agent = AGENTS_BY_ID[agentId];
-  const state = agentStates[agentId] ?? "idle";
+  const notice = gatewayNotice(fleet);
+
+  if (!fleet || fleet.bots.length === 0) {
+    if (dataSource === "demo") {
+      return (
+        <>
+          <div className="sidebar-note">
+            Modo Demo: frota simulada. Configure o gateway Hermes (<code>HERMES_DASHBOARD_URL</code>) para ver os bots reais.
+          </div>
+          <div className="sidebar-list">
+            {Object.entries(agentStates)
+              .filter(([agentId]) => AGENTS_BY_ID[agentId])
+              .map(([agentId, state]) => (
+                <button
+                  key={agentId}
+                  type="button"
+                  className={selectedBotId === agentId ? "sidebar-row agent-row active" : "sidebar-row agent-row"}
+                  onClick={() => {
+                    focusRoom(AGENTS_BY_ID[agentId].roomId);
+                    selectBot(agentId);
+                  }}
+                >
+                  <span className={`bot-state-dot bot-state-${state === "working" ? "working" : "idle"}`} aria-hidden />
+                  <span className="agent-name">{AGENTS_BY_ID[agentId].name}</span>
+                  <span className="agent-state">{stateLabel(state)}</span>
+                </button>
+              ))}
+          </div>
+        </>
+      );
+    }
+    return (
+      <div className="sidebar-note sidebar-note-warn">
+        <TriangleAlert size={12} /> {notice ?? "Nenhum bot reportado pelo Hermes."}
+      </div>
+    );
+  }
 
   return (
-    <button
-      type="button"
-      className="sidebar-row agent-row"
-      onClick={() => {
-        // foco da câmera limpa a seleção de agente (painel de sala), então a
-        // seleção vem depois: o clique na lista abre o painel DO AGENTE
-        focusRoom(agent.roomId);
-        selectAgent(agentId);
-      }}
-    >
-      <span className="agent-dot" style={{ background: agent.color }} aria-hidden />
-      <span className="agent-name">{agent.name}</span>
-      <span className="agent-state">{state}</span>
-    </button>
+    <div className="sidebar-list">
+      {fleet.bots.map((bot) => {
+        const roomId = AGENTS_BY_ID[bot.id]?.roomId;
+        return (
+          <button
+            key={bot.id}
+            type="button"
+            className={selectedBotId === bot.id ? "sidebar-row agent-row active" : "sidebar-row agent-row"}
+            onClick={() => {
+              if (roomId) focusRoom(roomId);
+              selectBot(bot.id);
+            }}
+            title={bot.activity ?? bot.title ?? bot.id}
+          >
+            <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />
+            <span className="agent-name">{bot.name}</span>
+            <span className="agent-state">{stateLabel(bot.state)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoutineList() {
+  const fleet = useHQStore((state) => state.fleet);
+  const bots = fleet?.bots.filter((bot) => bot.routineCount > 0) ?? [];
+
+  if (bots.length === 0) {
+    return <div className="sidebar-note">Nenhuma rotina agendada reportada pelo Hermes.</div>;
+  }
+
+  return (
+    <div className="sidebar-list">
+      {bots.map((bot) => (
+        <div key={bot.id} className="sidebar-row">
+          <Clock size={12} />
+          <span className="agent-name">{bot.name}</span>
+          <span className="agent-state">
+            {bot.routineCount} · {bot.nextRoutineAt ? relativeTime(bot.nextRoutineAt) : "sem agenda"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FleetSummary() {
+  const fleet = useHQStore((state) => state.fleet);
+  if (!fleet || fleet.bots.length === 0) return null;
+  const counts = fleetCounts(fleet);
+  const items = [
+    { key: "working", label: "trabalhando", value: counts.working },
+    { key: "waiting", label: "aguardando", value: counts.waiting },
+    { key: "idle", label: "ociosos", value: counts.idle },
+    { key: "sessions", label: "sessões", value: counts.sessions },
+    { key: "routines", label: "rotinas", value: counts.routines },
+  ];
+
+  return (
+    <div className="fleet-summary">
+      {items.map((item) => (
+        <div key={item.key} className={`fleet-stat fleet-stat-${item.key}`}>
+          <strong>{item.value}</strong>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -142,9 +214,27 @@ function ReplayDemoButton() {
   );
 }
 
+function GatewayChip() {
+  const fleet = useHQStore((state) => state.fleet);
+  const health = fleet?.health;
+  const overall = health?.api === "online" && health.dashboard === "online"
+    ? "online"
+    : health?.dashboard === "offline" && health.api === "offline"
+      ? "offline"
+      : "degraded";
+  const counts = fleetCounts(fleet);
+
+  return (
+    <div className={`connection connection-${overall}`} title={gatewayNotice(fleet) ?? "Hermes via gateway"}>
+      <Radio size={13} />
+      Hermes · {GATEWAY_LABEL[overall]}
+      {health?.version ? <span className="connection-version">v{health.version.replace(/^fixture-/, "")}</span> : null}
+      {counts.total > 0 ? <span className="connection-count">{counts.total} bots</span> : null}
+    </div>
+  );
+}
+
 function TopBar() {
-  const connectionStatus = useHQStore((state) => state.connectionStatus);
-  const dataSource = useHQStore((state) => state.dataSource);
   const wallMode = useHQStore((state) => state.wallMode);
   const setWallMode = useHQStore((state) => state.setWallMode);
   const resetCamera = useHQStore((state) => state.resetCamera);
@@ -155,26 +245,16 @@ function TopBar() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const clockLabel = clock.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dateLabel = clock.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  });
+  const clockLabel = clock.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = clock.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
   return (
     <div className="topbar">
-      <div className={`connection connection-${connectionStatus}`}>
-        <Radio size={13} />
-        {dataSource === "demo" ? "Simulação" : "Live"} · {CONNECTION_LABEL[connectionStatus]}
-      </div>
+      <GatewayChip />
       <div className="topbar-clock">
         {dateLabel} · {clockLabel}
       </div>
       <div className="wall-modes" role="group" aria-label="Modo das paredes">
-        <BrickWall size={13} />
         {(["auto", "low", "full"] as const).map((mode) => (
           <button
             key={mode}
@@ -210,15 +290,11 @@ function ActivityFeed() {
             return (
               <li key={event.id}>
                 <span className="feed-time">
-                  {new Date(event.timestamp).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date(event.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
-                {agent && (
-                  <span className="agent-dot" style={{ background: agent.color }} aria-hidden />
-                )}
+                {agent && <span className="agent-dot" style={{ background: agent.color }} aria-hidden />}
                 <span className="feed-summary">{event.summary ?? event.type}</span>
+                {event.source === "demo" && <span className="feed-demo">demo</span>}
               </li>
             );
           })}
@@ -230,10 +306,8 @@ function ActivityFeed() {
 }
 
 function AppearancePicker({ agentId }: { agentId: string }) {
-  const agent = AGENTS_BY_ID[agentId];
   const presetId = useHQStore((state) => state.agentPresets[agentId] ?? null);
   const setAgentPreset = useHQStore((state) => state.setAgentPreset);
-  if (!agent) return null;
 
   return (
     <div className="appearance-picker">
@@ -261,40 +335,119 @@ function AppearancePicker({ agentId }: { agentId: string }) {
           >
             <span className="preset-hair" style={{ background: preset.hair }} aria-hidden />
             <span className="preset-skin" style={{ background: preset.skin }} aria-hidden />
-            <span className="preset-body" style={{ background: agent.color }} aria-hidden />
-            <span className="preset-pants" style={{ background: preset.pants }} aria-hidden /></button>
+            <span className="preset-body" style={{ background: AGENTS_BY_ID[agentId]?.color ?? "#2563eb" }} aria-hidden />
+            <span className="preset-pants" style={{ background: preset.pants }} aria-hidden />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
+function BotPanel({ bot }: { bot: BotSnapshot }) {
+  const clearSelection = useHQStore((state) => state.clearSelection);
+  const fleet = useHQStore((state) => state.fleet);
+  const notice = gatewayNotice(fleet);
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />
+        <strong>{bot.name}</strong>
+        {bot.isDefault && <span className="panel-tag">default</span>}
+        <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
+          ×
+        </button>
+      </div>
+      {bot.title && <div className="panel-role">{bot.title}</div>}
+      <div className="panel-state">
+        Estado: <em>{stateLabel(bot.state)}</em> · {relativeTime(bot.lastActiveAt)}
+      </div>
+      {bot.activity ? (
+        <p className="panel-activity">{bot.activity}</p>
+      ) : (
+        <p className="panel-activity muted">Sem atividade recente reportada pelo Hermes.</p>
+      )}
+      <dl className="panel-stats">
+        <div>
+          <dt>Sessões</dt>
+          <dd>
+            {bot.sessionCount}
+            {bot.activeSessions > 0 ? ` (${bot.activeSessions} ativa${bot.activeSessions > 1 ? "s" : ""})` : ""}
+          </dd>
+        </div>
+        <div>
+          <dt>Rotinas</dt>
+          <dd>{bot.routineCount}</dd>
+        </div>
+        <div>
+          <dt>Modelo</dt>
+          <dd>{bot.model ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Próxima rotina</dt>
+          <dd>{bot.nextRoutineAt ? relativeTime(bot.nextRoutineAt) : "—"}</dd>
+        </div>
+      </dl>
+      {bot.description && <p className="panel-resp">{bot.description}</p>}
+      {notice && <p className="panel-warn">{notice}</p>}
+      <AppearancePicker agentId={bot.id} />
+    </div>
+  );
+}
+
+/**
+ * Painel de um agente em Demo: mesma estrutura do painel de bot, mas sem as
+ * métricas do Hermes (que não existem em simulação) e com o rótulo explícito.
+ */
+function DemoAgentPanel({ agentId }: { agentId: string }) {
+  const agent = AGENTS_BY_ID[agentId];
+  const state = useHQStore((store) => store.agentStates[agentId] ?? "idle");
+  const clearSelection = useHQStore((store) => store.clearSelection);
+  if (!agent) return null;
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className="agent-dot" style={{ background: agent.color }} aria-hidden />
+        <strong>{agent.name}</strong>
+        <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
+          ×
+        </button>
+      </div>
+      <div className="panel-role">
+        {agent.role} · {ROOMS_BY_ID[agent.roomId]?.name ?? "—"}
+      </div>
+      <div className="panel-state">
+        Estado: <em>{stateLabel(state)}</em> (simulação)
+      </div>
+      <p className="panel-resp">{agent.responsibility}</p>
+      <AppearancePicker agentId={agent.id} />
+    </div>
+  );
+}
+
 function AgentPanel() {
-  const selectedAgentId = useHQStore((state) => state.selectedAgentId);
+  const fleet = useHQStore((state) => state.fleet);
+  const selectedBotId = useHQStore((state) => state.selectedBotId);
   const selectedRoomId = useHQStore((state) => state.selectedRoomId);
   const clearSelection = useHQStore((state) => state.clearSelection);
-  const summary = useAgentSummary(selectedAgentId ?? null);
 
-  if (summary) {
-    return (
-      <div className="panel">
-        <div className="panel-head">
-          <span className="agent-dot" style={{ background: summary.agent.color }} aria-hidden />
-          <strong>{summary.agent.name}</strong>
-          <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
-            ×
-          </button>
-        </div>
-        <div className="panel-role">{summary.agent.role} · {summary.roomName}</div>
-        <div className="panel-state">
-          Estado: <em>{summary.state}</em>
-          {summary.source === "demo" ? " (simulação)" : ""}
-        </div>
-        {summary.summary && <p>{summary.summary}</p>}
-        <p className="panel-resp">{summary.agent.responsibility}</p>
-        <AppearancePicker agentId={summary.agent.id} />
-      </div>
-    );
+  // hooks sempre na mesma ordem: a busca é dado, não hook
+  const direct = selectedBotId ? fleet?.bots.find((candidate) => candidate.id === selectedBotId) : undefined;
+  const viaRoom =
+    !direct && selectedRoomId
+      ? fleet?.bots.find((candidate) => AGENTS_BY_ID[candidate.id]?.roomId === selectedRoomId)
+      : undefined;
+  const bot = direct ?? viaRoom;
+
+  if (bot) return <BotPanel bot={bot} />;
+
+  // Demo: o agente selecionado não vem de uma frota, vem da lista fixa.
+  // Um snapshot offline também é "sem frota" — bots vazios não são frota.
+  const hasFleet = Boolean(fleet && fleet.bots.length > 0);
+  if (!hasFleet && selectedBotId && AGENTS_BY_ID[selectedBotId]) {
+    return <DemoAgentPanel agentId={selectedBotId} />;
   }
 
   if (selectedRoomId) {
@@ -309,9 +462,7 @@ function AgentPanel() {
               ×
             </button>
           </div>
-          <div className="panel-role">
-            {room.kind === "department" ? "Departamento" : "Área comum"}
-          </div>
+          <div className="panel-role">{room.kind === "department" ? "Departamento" : "Área comum"}</div>
           <div className="panel-state">
             <SlidersHorizontal size={12} /> Duplo clique foca a sala
           </div>
@@ -356,6 +507,7 @@ export function Hud() {
     <div className="hud-layer">
       <Sidebar />
       <TopBar />
+      <FleetSummary />
       <div className="hud-bottom">
         <ActivityFeed />
         <AgentPanel />

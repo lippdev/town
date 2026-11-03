@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Hud } from "@/components/hud/Hud";
-import { LiveConnection } from "@/integrations/openmausbot/LiveConnection";
+import { HermesConnection } from "@/integrations/hermes/HermesConnection";
 
 // three.js + toda a cena carregam num chunk próprio, depois do primeiro paint
 // da casca (HUD, boot e estados de erro).
@@ -86,7 +86,7 @@ export function App() {
       </SceneBoundary>
       {!booted && <BootLabel text="Carregando Lipp HQ World…" />}
       <Hud />
-      <LiveConnection />
+      <HermesConnection />
     </div>
   );
 }

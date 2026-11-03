@@ -491,3 +491,157 @@ button.sidebar-row:hover {
 .preset-pants {
   flex: 0.9;
 }
+
+/* ---- Visão de frota Hermes ---- */
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(125, 211, 252, 0.16);
+  color: #bae6fd;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sidebar-note-warn {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.bot-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+.bot-state-working { background: #4ade80; box-shadow: 0 0 6px rgba(74, 222, 128, 0.8); }
+.bot-state-waiting { background: #facc15; }
+.bot-state-idle { background: #64748b; }
+.bot-state-offline { background: #ef4444; }
+.bot-state-blocked { background: #f97316; }
+
+.connection-version,
+.connection-count {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
+.panel-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(125, 211, 252, 0.16);
+  color: #bae6fd;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.panel-activity {
+  margin: 8px 0 0;
+  color: #dbe6f5;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.panel-activity.muted { color: var(--hq-text-dim); font-style: italic; }
+
+.panel-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 10px;
+  margin: 10px 0 0;
+}
+
+.panel-stats dt {
+  color: var(--hq-text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panel-stats dd {
+  margin: 1px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e6ecf5;
+}
+
+.panel-warn {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fecaca;
+  font-size: 11px;
+}
+
+.feed-demo {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fde68a;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+button.sidebar-row.active {
+  background: rgba(125, 211, 252, 0.12);
+  outline: 1px solid rgba(125, 211, 252, 0.35);
+}
+
+/* ---- Faixa de resumo da frota ---- */
+.fleet-summary {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--hq-panel);
+  border: 1px solid var(--hq-panel-border);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.fleet-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+
+.fleet-stat strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e6ecf5;
+}
+
+.fleet-stat span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hq-text-dim);
+}
+
+.fleet-stat-working strong { color: #4ade80; }
+.fleet-stat-waiting strong { color: #facc15; }

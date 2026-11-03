@@ -327,9 +327,10 @@ const SHOTS = {
   "appearance-picker": async (page) => {
     await setWallMode("auto")(page);
     await setView({ azimuthDeg: 40, elevationDeg: 32, distance: 26 })(page);
-    // escolhe um personagem pronto para o Pulse pela UI real (painel do agente)
-    await page.getByRole("button", { name: "Agentes" }).click();
-    await page.getByRole("button", { name: /Pulse/ }).click();
+    // escolhe um personagem pronto para o Pulse pela UI real: aba Bots →
+    // painel do bot → biblioteca de aparências
+    await page.getByRole("button", { name: /^Bots/ }).click();
+    await page.locator(".agent-row", { hasText: "Pulse" }).first().click();
     await page.getByRole("option", { name: "Nox" }).click();
     // aproxima a sala do Pulse para o novo visual ficar legível na captura
     await setView({ azimuthDeg: 45, elevationDeg: 34, distance: 11, target: [-11.4, 0, -8.7] })(page);
