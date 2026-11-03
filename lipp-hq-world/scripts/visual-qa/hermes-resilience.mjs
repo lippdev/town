@@ -23,7 +23,9 @@ async function waitFor(url, timeoutMs = 60000) {
   while (Date.now() < deadline) {
     try {
       if ((await fetch(url)).ok) return;
-    } catch {}
+    } catch {
+      // serviço ainda subindo
+    }
     await sleep(400);
   }
   throw new Error(`timeout esperando ${url}`);

@@ -1,4 +1,11 @@
-import { BoxGeometry, BufferGeometry, CapsuleGeometry, CylinderGeometry, MeshStandardMaterial, SphereGeometry } from "three";
+import {
+  BoxGeometry,
+  type BufferGeometry,
+  CapsuleGeometry,
+  CylinderGeometry,
+  MeshStandardMaterial,
+  SphereGeometry,
+} from "three";
 
 /**
  * Cache de materiais padrão por chave visual. Paredes, móveis e detalhes
