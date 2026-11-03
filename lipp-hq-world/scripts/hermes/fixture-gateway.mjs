@@ -15,7 +15,9 @@
  * as capturas do harness mostrem atividade real vinda do "gateway".
  *
  * Uso: node scripts/hermes/fixture-gateway.mjs [--api-port 8642] [--dashboard-port 8000]
- *      HERMES_FIXTURE_TOKEN=segredo node scripts/hermes/fixture-gateway.mjs   (exige Bearer)
+ *      HERMES_FIXTURE_TOKEN=segredo node scripts/hermes/fixture-gateway.mjs
+ *        (exige o session token, em X-Hermes-Session-Token ou Bearer, como o
+ *        dashboard real; /api/status continua público)
  */
 import http from "node:http";
 import process from "node:process";
@@ -141,7 +143,11 @@ const JOBS = BOTS.filter((bot) => bot.name !== "echo").map((bot, position) => {
 
 function authorized(request) {
   if (!TOKEN) return true;
-  return (request.headers.authorization ?? "") === `Bearer ${TOKEN}`;
+  // mesmas duas formas que o dashboard aceita (web_server._has_valid_session_token)
+  return (
+    (request.headers["x-hermes-session-token"] ?? "") === TOKEN ||
+    (request.headers.authorization ?? "") === `Bearer ${TOKEN}`
+  );
 }
 
 function send(response, status, payload) {
@@ -170,11 +176,22 @@ const apiServer = http.createServer((request, response) => {
 
 const dashboardServer = http.createServer((request, response) => {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${DASHBOARD_PORT}`);
-  if (!authorized(request)) {
-    send(response, 401, { detail: "dashboard auth required" });
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  // público no Hermes (dashboard_auth/public_paths.py): sonda de vida e modo de auth
+  if (url.pathname === "/api/status") {
+    send(response, 200, {
+      version: "fixture-0.1.0",
+      gateway_running: true,
+      gateway_state: "running",
+      auth_required: false,
+      uptime_seconds: nowSeconds - STARTED_AT,
+    });
     return;
   }
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (!authorized(request)) {
+    send(response, 401, { detail: "Unauthorized" });
+    return;
+  }
 
   if (url.pathname === "/api/profiles") {
     send(response, 200, { profiles: BOTS });
@@ -190,10 +207,6 @@ const dashboardServer = http.createServer((request, response) => {
     send(response, 200, { jobs: JOBS });
     return;
   }
-  if (url.pathname === "/api/status") {
-    send(response, 200, { gateway_state: "running", uptime_seconds: nowSeconds - STARTED_AT });
-    return;
-  }
   send(response, 404, { detail: `unknown route ${url.pathname}` });
 });
 
@@ -202,7 +215,7 @@ apiServer.listen(API_PORT, "127.0.0.1", () => {
 });
 dashboardServer.listen(DASHBOARD_PORT, "127.0.0.1", () => {
   console.log(`[fixture] Hermes dashboard em http://127.0.0.1:${DASHBOARD_PORT} (GET /api/profiles, /api/profiles/sessions, /api/cron/jobs)`);
-  if (TOKEN) console.log("[fixture] exigindo Authorization: Bearer <HERMES_FIXTURE_TOKEN>");
+  if (TOKEN) console.log("[fixture] exigindo session token (X-Hermes-Session-Token ou Bearer)");
 });
 
 const shutdown = () => {
