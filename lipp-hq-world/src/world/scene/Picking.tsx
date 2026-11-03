@@ -4,7 +4,6 @@ import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2 } from "three";
 import { useHQStore } from "@/state/useHQStore";
 
-import { AGENTS_BY_ID } from "@/agents/agents";
 
 const raycaster = new Raycaster();
 const pointer = new Vector2();
@@ -76,8 +75,9 @@ export function Picking() {
       const hits = raycaster.intersectObjects(collectPickables(), true);
       for (const hit of hits) {
         const info = pickInfo(hit.object);
-        if (info.agentId && AGENTS_BY_ID[info.agentId]) {
-          useHQStore.getState().selectAgent(info.agentId);
+        // todo personagem na cena é um bot da frota: abre a gaveta dele
+        if (info.agentId) {
+          useHQStore.getState().selectBot(info.agentId);
           return;
         }
         if (info.roomId) {

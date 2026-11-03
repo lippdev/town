@@ -167,9 +167,9 @@ export const useHQStore = create<HQState>((set) => ({
     }),
 
   setWallMode: (wallMode) => set({ wallMode }),
-  selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null }),
+  selectRoom: (selectedRoomId) => set({ selectedRoomId, selectedAgentId: null, selectedBotId: null }),
   selectAgent: (selectedAgentId) => set({ selectedAgentId }),
-  clearSelection: () => set({ selectedRoomId: null, selectedAgentId: null }),
+  clearSelection: () => set({ selectedRoomId: null, selectedAgentId: null, selectedBotId: null }),
   focusRoom: (roomId, options) =>
     set({
       selectedRoomId: roomId,
