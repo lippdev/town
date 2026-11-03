@@ -1,9 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  classifyFailure,
   clearConnection,
+  discoverLocalDashboard,
   loadSavedConnection,
   normalizeDashboardUrl,
   probeConnection,
+  readServedToken,
   saveConnection,
   sessionHeaders,
   tokenFromLink,
@@ -155,12 +158,45 @@ export async function fetchHermesSnapshot(config: HermesProxyConfig) {
     sessions: sessions.data?.sessions ?? [],
     jobs: jobs.data?.jobs ?? [],
     blocks: {
-      api: { ok: !health.error, status: health.status, error: health.error, ms: health.ms, path: healthPath },
-      profiles: { ok: !profiles.error, status: profiles.status, error: profiles.error, ms: profiles.ms },
-      sessions: { ok: !sessions.error, status: sessions.status, error: sessions.error, ms: sessions.ms },
-      jobs: { ok: !jobs.error, status: jobs.status, error: jobs.error, ms: jobs.ms },
+      api: block(health, healthPath),
+      profiles: block(profiles),
+      sessions: block(sessions),
+      jobs: block(jobs),
     },
   };
+}
+
+/** Estado de um endpoint para o diagnóstico, com causa provável e ação. */
+function block(result: EndpointResult<unknown>, path?: string) {
+  const cause = result.error ? classifyFailure(result.error) : null;
+  return {
+    ok: !result.error,
+    status: result.status,
+    error: result.error,
+    ms: result.ms,
+    ...(path ? { path } : {}),
+    ...(cause ? { cause: cause.label, action: cause.action } : {}),
+  };
+}
+
+/**
+ * Snapshot com renovação do token servido: o dashboard local sorteia token
+ * novo a cada partida, então um 401 com token lido da página dispara uma
+ * releitura e uma nova tentativa — o usuário não precisa reconectar.
+ */
+async function snapshotWithServedRefresh() {
+  const config = readHermesConfig();
+  const snapshot = await fetchHermesSnapshot(config);
+  const saved = config.source === "saved" ? loadSavedConnection() : null;
+  const rejected = [snapshot.blocks.profiles.status, snapshot.blocks.sessions.status].some(
+    (status) => status === 401 || status === 403,
+  );
+  if (!saved || saved.tokenSource !== "served" || !rejected) return snapshot;
+
+  const fresh = await readServedToken(saved.url, config.timeoutMs);
+  if (!fresh || fresh === saved.token) return snapshot;
+  saveConnection({ ...saved, token: fresh, savedAt: Date.now() });
+  return fetchHermesSnapshot(readHermesConfig());
 }
 
 const HQ_PREFIX = "/api/hq";
@@ -189,6 +225,10 @@ export async function hermesProxyMiddleware(
     await handleConnectionWrite(request, response);
     return;
   }
+  if (path === LOCAL_PATH && request.method === "POST") {
+    await handleLocalConnect(request, response);
+    return;
+  }
 
   if (request.method !== "GET") {
     sendJson(response, 405, { error: "O proxy do Hermes é somente leitura." });
@@ -197,7 +237,7 @@ export async function hermesProxyMiddleware(
 
   try {
     if (path === `${HQ_PREFIX}/hermes/snapshot`) {
-      const snapshot = await fetchHermesSnapshot(readHermesConfig());
+      const snapshot = await snapshotWithServedRefresh();
       response.statusCode = 200;
       response.setHeader("content-type", "application/json; charset=utf-8");
       response.setHeader("cache-control", "no-store");
@@ -207,6 +247,14 @@ export async function hermesProxyMiddleware(
 
     if (path === `${HQ_PREFIX}/status`) {
       sendJson(response, 200, statusPayload(readHermesConfig()));
+      return;
+    }
+
+    if (path === LOCAL_PATH) {
+      // detecção sem efeito colateral: o token servido fica no servidor
+      const { token: _token, ...discovery } = await discoverLocalDashboard();
+      void _token;
+      sendJson(response, 200, discovery);
       return;
     }
 
@@ -242,6 +290,7 @@ export function statusPayload(config: HermesProxyConfig) {
     hasApiKey: Boolean(config.apiKey),
     hasDashboardToken: Boolean(config.dashboardToken),
     tokenPreview: tokenPreview(config.dashboardToken),
+    tokenSource: config.source === "saved" ? (loadSavedConnection()?.tokenSource ?? "typed") : undefined,
   };
 }
 
@@ -314,10 +363,34 @@ async function handleConnectionWrite(request: IncomingMessage, response: ServerR
 
   const probe = await probeConnection(url, token, readHermesConfig().timeoutMs);
   if (!probe.ok) {
-    sendJson(response, 422, { ok: false, error: probe.error, probe });
+    const cause = classifyFailure(probe.error);
+    sendJson(response, 422, { ok: false, error: probe.error, action: cause?.action, probe });
     return;
   }
 
-  saveConnection({ url, token, savedAt: Date.now() });
+  saveConnection({ url, token, savedAt: Date.now(), tokenSource: "typed" });
   sendJson(response, 200, { ok: true, probe, status: statusPayload(readHermesConfig()) });
+}
+
+const LOCAL_PATH = `${HQ_PREFIX}/connection/local`;
+
+/** "Usar Hermes local": detecta, lê o token servido e salva, num clique. */
+async function handleLocalConnect(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  if (!isSameOriginWrite(request.headers)) {
+    sendJson(response, 403, { error: "Conexão só pode ser alterada pela página do Lipp HQ." });
+    return;
+  }
+  const { token, ...discovery } = await discoverLocalDashboard();
+  if (!discovery.found || !discovery.url || !token || discovery.error) {
+    const cause = classifyFailure(discovery.error);
+    sendJson(response, 422, {
+      ok: false,
+      error: discovery.error ?? "nenhum Hermes local encontrado",
+      action: discovery.hint ? `Suba o dashboard: ${discovery.hint}` : cause?.action,
+      discovery,
+    });
+    return;
+  }
+  saveConnection({ url: discovery.url, token, savedAt: Date.now(), tokenSource: "served" });
+  sendJson(response, 200, { ok: true, discovery, status: statusPayload(readHermesConfig()) });
 }
