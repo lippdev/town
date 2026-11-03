@@ -61,17 +61,31 @@
         "4 ms",
         "3 ms",
         "3 ms",
-        "3 ms"
+        "4 ms"
       ],
       "summary": "tudo respondendo4 de 4 endpoints",
       "config": [
         "ModoHermes (ao vivo)",
-        "APIhttp://127.0.0.1:37063",
-        "Dashboardhttp://127.0.0.1:45907",
+        "APIhttp://127.0.0.1:33979",
+        "Dashboardhttp://127.0.0.1:33063",
         "Credenciaissem chave · sem token",
         "Última leituraagora"
       ]
     },
+    "routines": {
+      "rows": 6,
+      "groups": 6,
+      "note": "6 rotinas · 3 com falha · 1 pausada",
+      "failed": 3,
+      "ranBefore": 6,
+      "first": {
+        "status": "falhou",
+        "name": "Briefing semanal",
+        "when": "pausada",
+        "meta": "30 18 * * 1 · rodou 1 h · 3 falhas seguidas"
+      }
+    },
+    "panelRoutineWarning": "Rotina Briefing semanal falhou 1 h: sessão encerrou sem resposta do modelo (timeout 600s)",
     "demoEventsAfterLive": 0
   },
   "ok": true

@@ -12,10 +12,10 @@ abaixo.
 
 O Hermes expõe duas superfícies HTTP, e cada uma serve uma parte da visão:
 
-| Serviço | Padrão | De onde vêm | Usamos para |
-| --- | --- | --- | --- |
-| API server (`hermes gateway`) | `http://127.0.0.1:8642` | `gateway/platforms/api_server.py` | saúde e versão do gateway |
-| Dashboard (`hermes dashboard`) | `http://127.0.0.1:8000` | `hermes_cli/web_routers/*.py` | a frota (bots), as sessões e as rotinas |
+| Serviço                        | Padrão                  | De onde vêm                       | Usamos para                             |
+| ------------------------------ | ----------------------- | --------------------------------- | --------------------------------------- |
+| API server (`hermes gateway`)  | `http://127.0.0.1:8642` | `gateway/platforms/api_server.py` | saúde e versão do gateway               |
+| Dashboard (`hermes dashboard`) | `http://127.0.0.1:8000` | `hermes_cli/web_routers/*.py`     | a frota (bots), as sessões e as rotinas |
 
 O gateway sozinho não expõe a frota: a projeção de sessão do API server
 (`_session_response`, `api_server.py:2440`) remove `profile_name` de propósito.
@@ -44,8 +44,17 @@ Cada linha de `sessions[]` vem **marcada com o `profile` dono**
 - `message_count`, `tool_call_count`, `input_tokens`, `output_tokens`
 - `estimated_cost_usd`, `model`
 
-Rotinas (`/api/cron/jobs`): `id`, `name`, `profile`, `enabled`, `paused`,
-`schedule`, `next_run` (segundos).
+Rotinas (`/api/cron/jobs`) — campos lidos de `cron/jobs.py`:
+
+- `id`, `name`, `profile`, `enabled`, `state` (`scheduled`/`paused`), `paused`
+- `schedule` (objeto) e `schedule_display` (texto pronto, ex.: `0 9 * * *`)
+- `next_run_at` e `last_run_at` — **ISO-8601** no Hermes atual
+- `last_status` (`ok`, `error`, `delivery_failed`, `delivery_queued`, `cancelled`),
+  `last_error`, `failure_streak`
+
+O app aceita ISO-8601, segundos epoch e milissegundos para esses carimbos
+(`cronTimestampMs`): versões antigas e o fixture usam segundos, o Hermes atual usa
+ISO, e ler só um dos formatos faria toda rotina real aparecer como "sem agenda".
 
 ### Sessões no HUD
 
@@ -111,13 +120,13 @@ GET /api/hq/hermes/snapshot   → { health, profiles, sessions, jobs, blocks }
 
 Variáveis lidas **pelo proxy** (nunca pelo navegador):
 
-| Variável | Padrão | Função |
-| --- | --- | --- |
-| `HERMES_API_URL` | `http://127.0.0.1:8642` | API server |
-| `HERMES_DASHBOARD_URL` | `http://127.0.0.1:8000` | dashboard |
-| `HERMES_API_KEY` | — | vira `Authorization: Bearer` no API server |
-| `HERMES_DASHBOARD_TOKEN` | — | vira `Authorization: Bearer` no dashboard |
-| `HERMES_TIMEOUT_MS` | `5000` | timeout de cada leitura |
+| Variável                 | Padrão                  | Função                                     |
+| ------------------------ | ----------------------- | ------------------------------------------ |
+| `HERMES_API_URL`         | `http://127.0.0.1:8642` | API server                                 |
+| `HERMES_DASHBOARD_URL`   | `http://127.0.0.1:8000` | dashboard                                  |
+| `HERMES_API_KEY`         | —                       | vira `Authorization: Bearer` no API server |
+| `HERMES_DASHBOARD_TOKEN` | —                       | vira `Authorization: Bearer` no dashboard  |
+| `HERMES_TIMEOUT_MS`      | `5000`                  | timeout de cada leitura                    |
 
 Um serviço fora não derruba o outro: o snapshot traz um bloco de estado por
 endpoint (`blocks`) e a UI diz exatamente o que faltou. `401/403` do dashboard
