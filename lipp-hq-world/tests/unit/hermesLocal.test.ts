@@ -1,9 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
+import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   classifyFailure,
@@ -14,7 +13,7 @@ import {
   localCandidates,
   saveConnection,
 } from "../../server/hermesConnection";
-import { hermesProxyMiddleware } from "../../server/hermesProxy";
+import { callProxy } from "../helpers/proxy";
 
 describe("token servido pela página do dashboard", () => {
   it("lê o formato JSON e o formato do SPA", () => {
@@ -119,29 +118,6 @@ describe("detecção do Hermes local", () => {
     expect(found.found).toBe(false);
   });
 });
-
-/** Chama o middleware do proxy como o Vite chamaria. */
-async function callProxy(method: string, url: string, headers: Record<string, string> = {}, body = "") {
-  const request = new PassThrough() as unknown as IncomingMessage;
-  Object.assign(request, { method, url, headers: { host: "127.0.0.1:5173", ...headers } });
-  let status = 0;
-  let payload = "";
-  const done = new Promise<void>((resolve) => {
-    const response = {
-      statusCode: 200,
-      setHeader: () => undefined,
-      end: (chunk?: string) => {
-        status = response.statusCode;
-        payload = chunk ?? "";
-        resolve();
-      },
-    } as unknown as ServerResponse;
-    void hermesProxyMiddleware(request, response, () => resolve());
-  });
-  (request as unknown as PassThrough).end(body);
-  await done;
-  return { status, json: payload ? (JSON.parse(payload) as Record<string, unknown>) : {} };
-}
 
 describe("conexão local pelo proxy", () => {
   const { server, state } = fakeDashboard();
