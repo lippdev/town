@@ -29,6 +29,17 @@ export interface SavedConnection {
    * usuário, nunca trocado sozinho.
    */
   tokenSource?: "typed" | "served";
+  /**
+   * API server do Hermes (`:8642`), só para enviar mensagens aos bots. É outro
+   * serviço, com outra credencial (`API_SERVER_KEY`): o session token do
+   * dashboard não serve para disparar turnos do agente.
+   */
+  api?: SavedApi;
+}
+
+export interface SavedApi {
+  url: string;
+  key: string;
 }
 
 export type AuthMode = "token" | "oauth";
@@ -127,11 +138,15 @@ function readConnectionFile(file: string): SavedConnection | null {
     if (!existsSync(file)) return null;
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SavedConnection>;
     if (typeof parsed.url !== "string" || typeof parsed.token !== "string" || !parsed.url) return null;
+    const api = parsed.api;
     return {
       url: parsed.url,
       token: parsed.token,
       savedAt: Number(parsed.savedAt) || 0,
       tokenSource: parsed.tokenSource === "served" ? "served" : "typed",
+      ...(api && typeof api.url === "string" && typeof api.key === "string" && api.url && api.key
+        ? { api: { url: api.url, key: api.key } }
+        : {}),
     };
   } catch {
     // arquivo corrompido não derruba o proxy: vale como "sem conexão salva"
@@ -234,6 +249,57 @@ export async function probeConnection(url: string, token: string, timeoutMs = 50
   }
   const list = (profiles.body as { profiles?: unknown[] } | undefined)?.profiles;
   return { ...base, ok: true, profileCount: Array.isArray(list) ? list.length : 0 };
+}
+
+/** Porta padrão do API server do Hermes (`API_SERVER_PORT`). */
+export const DEFAULT_API_URL = "http://127.0.0.1:8642";
+
+/** O que fazer quando a API do Hermes não está de pé. */
+export const API_ENABLE_HINT =
+  "Habilite a API no .env do perfil: API_SERVER_ENABLED=true e API_SERVER_KEY=$(openssl rand -hex 32), depois reinicie o gateway.";
+
+export interface ApiProbe {
+  ok: boolean;
+  url: string;
+  version?: string;
+  error?: string;
+  action?: string;
+}
+
+/**
+ * Testa URL + chave do API server antes de salvar. `/health` é público, então
+ * a prova da chave é `/health/detailed`, que exige Bearer.
+ */
+export async function probeApi(url: string, key: string, timeoutMs = 5000): Promise<ApiProbe> {
+  if (!key) return { ok: false, url, error: "informe a API_SERVER_KEY", action: API_ENABLE_HINT };
+  let result: Awaited<ReturnType<typeof getJson>>;
+  try {
+    result = await getJson(`${url}/health/detailed`, { authorization: `Bearer ${key}` }, timeoutMs);
+  } catch (error) {
+    const text = reason(error).replace("o dashboard", "a API do Hermes");
+    return { ok: false, url, error: text, action: API_ENABLE_HINT };
+  }
+  if (result.status === 401 || result.status === 403) {
+    return {
+      ok: false,
+      url,
+      error: `a API recusou a chave (HTTP ${result.status})`,
+      action: "Confira a API_SERVER_KEY no .env do perfil que serve essa porta.",
+    };
+  }
+  if (!result.ok) {
+    return { ok: false, url, error: `/health/detailed respondeu HTTP ${result.status}: isso é a API do Hermes?` };
+  }
+  const body = (result.body ?? {}) as { version?: unknown };
+  return { ok: true, url, version: typeof body.version === "string" ? body.version : undefined };
+}
+
+/**
+ * Prefixo do perfil no API server: o perfil padrão responde na raiz; os
+ * outros, em `/p/<perfil>/` (`api_server_profile_prefix.py`).
+ */
+export function apiProfilePrefix(profile: string): string {
+  return profile === "default" ? "" : `/p/${encodeURIComponent(profile)}`;
 }
 
 /** Porta padrão do `hermes dashboard` (`hermes_cli/main_dashboard.py`). */
