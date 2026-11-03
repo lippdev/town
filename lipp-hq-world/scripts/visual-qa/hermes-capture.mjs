@@ -14,34 +14,35 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
+import { freePort, waitForUrl } from "./ports.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "qa/screenshots/hermes");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
-const PREVIEW_PORT = 4178;
+const previewPort = await freePort();
+const apiPort = await freePort();
+const dashboardPort = await freePort();
 
 function run(command, args, options = {}) {
   return spawn(command, args, { cwd: ROOT, stdio: "ignore", ...options });
 }
 
-async function waitFor(url, timeoutMs = 60000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) return true;
-    } catch {
-      // ainda subindo
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  throw new Error(`Timeout esperando ${url}`);
-}
-
 async function main() {
   await fs.mkdir(OUT, { recursive: true });
-  const fixture = run("node", ["scripts/hermes/fixture-gateway.mjs"]);
-  const preview = run("pnpm", ["preview", "--port", String(PREVIEW_PORT), "--strictPort"]);
+  const fixture = run("node", [
+    "scripts/hermes/fixture-gateway.mjs",
+    "--api-port",
+    String(apiPort),
+    "--dashboard-port",
+    String(dashboardPort),
+  ]);
+  const preview = run("pnpm", ["preview", "--port", String(previewPort), "--strictPort"], {
+    env: {
+      ...process.env,
+      HERMES_API_URL: `http://127.0.0.1:${apiPort}`,
+      HERMES_DASHBOARD_URL: `http://127.0.0.1:${dashboardPort}`,
+    },
+  });
 
   const browser = await chromium.launch({
     executablePath: CHROME,
@@ -51,13 +52,13 @@ async function main() {
 
   const report = { shots: [], errors: [], checks: {} };
   try {
-    await waitFor(`http://127.0.0.1:${PREVIEW_PORT}/api/hq/hermes/snapshot`);
+    await waitForUrl(`http://127.0.0.1:${previewPort}/api/hq/hermes/snapshot`, 60000, "preview com proxy");
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on("console", (message) => {
       if (message.type() === "error") report.errors.push(message.text());
     });
 
-    await page.goto(`http://127.0.0.1:${PREVIEW_PORT}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`http://127.0.0.1:${previewPort}`, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__HQ_QA__, null, { timeout: 90000 });
     await page.waitForSelector(".agent-row", { timeout: 60000 });
     await page.waitForTimeout(4000);

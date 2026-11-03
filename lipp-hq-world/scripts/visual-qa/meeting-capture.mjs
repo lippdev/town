@@ -11,29 +11,27 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
+import { freePort, waitForUrl } from "./ports.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "qa/screenshots/hermes");
-const PORT = 4181;
+const previewPort = await freePort();
+const apiPort = await freePort();
+const dashboardPort = await freePort();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function waitFor(url, timeoutMs = 60000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      if ((await fetch(url)).ok) return;
-    } catch {
-      // ainda subindo
-    }
-    await sleep(400);
-  }
-  throw new Error(`timeout esperando ${url}`);
-}
 
 async function main() {
   await fs.mkdir(OUT, { recursive: true });
-  const fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs"], { cwd: ROOT, stdio: "ignore" });
-  const preview = spawn("pnpm", ["preview", "--port", String(PORT), "--strictPort"], { cwd: ROOT, stdio: "ignore" });
+  const fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs", "--api-port", String(apiPort), "--dashboard-port", String(dashboardPort)], { cwd: ROOT, stdio: "ignore" });
+  const preview = spawn("pnpm", ["preview", "--port", String(previewPort), "--strictPort"], {
+    cwd: ROOT,
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      HERMES_API_URL: `http://127.0.0.1:${apiPort}`,
+      HERMES_DASHBOARD_URL: `http://127.0.0.1:${dashboardPort}`,
+    },
+  });
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
     headless: true,
@@ -42,13 +40,13 @@ async function main() {
 
   const report = { checks: {}, errors: [] };
   try {
-    await waitFor(`http://127.0.0.1:${PORT}/api/hq/hermes/snapshot`);
+    await waitForUrl(`http://127.0.0.1:${previewPort}/api/hq/hermes/snapshot`, 60000, "preview com proxy");
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on("console", (message) => {
       if (message.type() === "error") report.errors.push(message.text());
     });
 
-    await page.goto(`http://127.0.0.1:${PORT}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`http://127.0.0.1:${previewPort}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".agent-row", { timeout: 90000 });
     await sleep(3000);
 
