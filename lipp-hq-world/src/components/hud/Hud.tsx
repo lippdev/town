@@ -44,6 +44,7 @@ import {
 import type { BotSnapshot } from "@/integrations/hq/types";
 import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/components/hud/fleetFilter";
 import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
+import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "@/components/hud/routines";
 import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
 import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
@@ -388,23 +389,61 @@ function BriefingPanel() {
   );
 }
 
+/**
+ * Agenda real das rotinas: quando roda, quando rodou e como terminou.
+ *
+ * O Hermes é a única fonte do status (`last_status`/`last_error`); a tela
+ * destaca falha e entrega falha porque é o que denuncia briefing quebrado.
+ */
 function RoutineList() {
   const fleet = useHQStore((state) => state.fleet);
-  const bots = fleet?.bots.filter((bot) => bot.routineCount > 0) ?? [];
+  const bots = fleet?.bots ?? [];
+  const colors = useMemo(
+    () => Object.fromEntries(sceneAgentsFromFleet(fleet).map((agent) => [agent.id, agent.color])),
+    [fleet],
+  );
+  const groups = routinesByBot(bots, colors);
+  const totals = routineTotals(bots);
 
-  if (bots.length === 0) {
+  if (groups.length === 0) {
     return <div className="sidebar-note">Nenhuma rotina agendada reportada pelo Hermes.</div>;
   }
 
   return (
-    <div className="sidebar-list">
-      {bots.map((bot) => (
-        <div key={bot.id} className="sidebar-row">
-          <Clock size={12} />
-          <span className="agent-name">{bot.name}</span>
-          <span className="agent-state">
-            {bot.routineCount} · {bot.nextRoutineAt ? relativeTime(bot.nextRoutineAt) : "sem agenda"}
-          </span>
+    <div className="sidebar-list routine-list">
+      <div className="sidebar-note">
+        {totals.total} {totals.total === 1 ? "rotina" : "rotinas"}
+        {totals.failed > 0 ? ` · ${totals.failed} com falha` : ""}
+        {totals.paused > 0 ? ` · ${totals.paused} ${totals.paused === 1 ? "pausada" : "pausadas"}` : ""}
+      </div>
+      {groups.map((group) => (
+        <div key={group.botId} className="routine-group">
+          <div className="routine-bot">
+            <span className="agent-dot" style={{ background: group.botColor }} aria-hidden />
+            <span className="agent-name">{group.botName}</span>
+            <span className="agent-state">{group.routines.length}</span>
+          </div>
+          {group.routines.map((routine) => {
+            const health = routineHealth(routine);
+            return (
+              <div key={`${group.botId}-${routine.id}`} className="routine-row" title={routine.lastError ?? routine.name}>
+                <span className={`routine-status routine-${health}`}>{routineStatusText(routine)}</span>
+                <span className="routine-name">{routine.name}</span>
+                <span className="routine-when">
+                  {routine.paused || routine.enabled === false
+                    ? "pausada"
+                    : routine.nextAt
+                      ? `em ${relativeTime(routine.nextAt)}`
+                      : "sem agenda"}
+                </span>
+                <span className="routine-meta">
+                  {routine.schedule ? `${routine.schedule} · ` : ""}
+                  {routine.lastAt ? `rodou ${relativeTime(routine.lastAt)}` : "nunca rodou"}
+                  {routine.failureStreak && routine.failureStreak > 1 ? ` · ${routine.failureStreak} falhas seguidas` : ""}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -905,6 +944,22 @@ function BotPanel({ bot }: { bot: BotSnapshot }) {
         </div>
       </dl>
       <BotSessions bot={bot} />
+      {(() => {
+        const failing = (bot.routines ?? []).filter((routine) => {
+          const health = routineHealth(routine);
+          return health === "failed" || health === "delivery";
+        });
+        if (failing.length === 0) return null;
+        const first = failing[0];
+        return (
+          <p className="panel-warn">
+            Rotina <strong>{first.name}</strong> {routineStatusText(first)}
+            {first.lastAt ? ` ${relativeTime(first.lastAt)}` : ""}
+            {first.lastError ? `: ${first.lastError}` : ""}
+            {failing.length > 1 ? ` (+${failing.length - 1} com problema)` : ""}
+          </p>
+        );
+      })()}
       {bot.description && <p className="panel-resp">{bot.description}</p>}
       {fleet?.stale && (
         <p className="panel-warn">

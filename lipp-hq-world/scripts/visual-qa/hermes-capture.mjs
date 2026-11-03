@@ -159,6 +159,42 @@ async function main() {
     });
     await page.screenshot({ path: path.join(OUT, "gateway-diagnostics.png") });
     await page.locator(".sidebar-item", { hasText: "Bots" }).click();
+    // ---- rotinas: agenda com status real, inclusive falha ----
+    await page.locator(".sidebar-item", { hasText: "Rotinas" }).click();
+    await page.waitForSelector(".routine-row", { timeout: 30000 });
+    report.checks.routines = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(".routine-row"));
+      const statusOf = (row) => row.querySelector(".routine-status")?.className ?? "";
+      const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
+      const first = rows[0];
+      return {
+        rows: rows.length,
+        groups: document.querySelectorAll(".routine-group").length,
+        note: textOf(document.querySelector(".sidebar .sidebar-note")),
+        failed: rows.filter((row) => /routine-(failed|delivery)/.test(statusOf(row))).length,
+        ranBefore: rows.filter((row) => (textOf(row.querySelector(".routine-meta")) ?? "").includes("rodou")).length,
+        first: first
+          ? {
+              status: textOf(first.querySelector(".routine-status")),
+              name: textOf(first.querySelector(".routine-name")),
+              when: textOf(first.querySelector(".routine-when")),
+              meta: textOf(first.querySelector(".routine-meta")),
+            }
+          : null,
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "routines.png") });
+
+    // selecionar o bot da rotina com falha mostra o aviso no painel
+    await page.locator(".sidebar-item", { hasText: "Bots" }).click();
+    await page.locator(".agent-row", { hasText: "Forge" }).first().click();
+    await page.waitForSelector(".panel", { timeout: 30000 });
+    report.checks.panelRoutineWarning = await page.evaluate(
+      () => document.querySelector(".panel .panel-warn")?.textContent ?? null,
+    );
+    await page.screenshot({ path: path.join(OUT, "bot-panel-routine.png") });
+    await page.locator(".panel-close").first().click();
+    await page.waitForTimeout(300);
 
     // ---- link para o dashboard do Hermes, com o perfil do bot ----
     await page.locator(".agent-row").first().click();
@@ -201,6 +237,11 @@ async function main() {
     (report.checks.sessions?.first?.title ?? "").length > 0 &&
     (report.checks.sessions?.note ?? "").includes("janela de 5 min") &&
     (report.checks.panelSessions?.items.length ?? 0) > 0 &&
+    report.checks.routines?.rows > 0 &&
+    report.checks.routines?.failed > 0 &&
+    (report.checks.routines?.note ?? "").includes("rotinas") &&
+    report.checks.routines?.ranBefore > 0 &&
+    (report.checks.panelRoutineWarning ?? "").includes("Rotina") &&
     report.checks.diagnostics?.rows === 4 &&
     report.checks.diagnostics?.allOk === true &&
     report.checks.diagnostics.latencies.every((value) => /ms|s$/.test(value ?? "")) &&
