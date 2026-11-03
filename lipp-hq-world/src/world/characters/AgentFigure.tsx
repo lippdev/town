@@ -2,7 +2,7 @@ import { forwardRef, useMemo, type ReactNode } from "react";
 import type { Group, Object3D } from "three";
 import { PALETTE } from "@/config/constants";
 import { sharedCapsule, sharedCylinder, sharedSphere } from "@/world/materials";
-import type { CharacterPreset } from "@/world/characters/appearance";
+import type { CharacterLook } from "@/world/characters/appearance";
 import type { AgentDefinition } from "@/types/hq";
 
 export interface AgentFigureHandle {
@@ -13,6 +13,8 @@ export interface AgentFigureHandle {
   leftArm: Group | null;
   rightArm: Group | null;
   torso: Object3D | null;
+  /** Corpo escalado pela altura escolhida; o anel de seleção fica fora. */
+  body: Object3D | null;
   head: Object3D | null;
   ring: Object3D | null;
 }
@@ -20,14 +22,15 @@ export interface AgentFigureHandle {
 interface AgentFigureProps {
   agent: AgentDefinition;
   selected: boolean;
-  /** Aparência resolvida (biblioteca de personagens); ausente = visual de fábrica. */
-  appearance?: CharacterPreset;
+  /** Aparência resolvida (peças editáveis); ausente = visual de fábrica. */
+  appearance?: CharacterLook;
   figureRef: (handle: AgentFigureHandle) => void;
   onHoverChange?: (hovered: boolean) => void;
   children?: ReactNode;
 }
 
 const EYES = "#242a33";
+
 
 /**
  * Figura low-poly do agente em estilo de jogo moderno: membros em cápsula,
@@ -47,6 +50,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
         rightArm: null,
         torso: null,
         head: null,
+        body: null,
         ring: null,
       }),
       [],
@@ -58,13 +62,15 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
       figureRef(parts);
     };
 
-    const shirt = agent.color;
+    const shirt = appearance?.shirt ?? agent.color;
     const skin = appearance?.skin ?? "#e8b98a";
     const hair = appearance?.hair ?? agent.hairColor ?? PALETTE.chair;
     const hairStyle = appearance?.hairStyle ?? "curto";
     const pants = appearance?.pants ?? "#2f3742";
     const shoes = appearance?.shoes ?? "#1e242e";
     const accessory = appearance?.accessory ?? "nenhum";
+    const height = appearance?.height ?? 1;
+    const agentAccent = agent.accent;
 
     return (
       <group
@@ -92,6 +98,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
           <meshBasicMaterial color={agent.accent} transparent opacity={0.9} />
         </mesh>
 
+        <group ref={assign("body")} name="body" scale={height}>
         <group ref={assign("hips")}>
           <group ref={assign("leftLeg")} position={[-0.11, 0.68, 0]}>
             <mesh position={[0, -0.3, 0]} castShadow geometry={sharedCapsule(0.075, 0.46)}>
@@ -151,11 +158,7 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
             <mesh position={[0.085, 0.15, 0.185]} geometry={sharedSphere(0.028, 8, 8)}>
               <meshStandardMaterial color={EYES} roughness={0.35} metalness={0} />
             </mesh>
-            {hairStyle === "raspado" ? (
-              <mesh position={[0, 0.21, -0.01]} castShadow geometry={sharedSphere(0.222, 18, 10, 0, Math.PI * 2, 0, Math.PI / 3.4)}>
-                <meshStandardMaterial color={hair} roughness={0.85} metalness={0.05} />
-              </mesh>
-            ) : (
+            {hairStyle === "curto" && (
               <>
                 <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.225, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
                   <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
@@ -166,9 +169,54 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
               </>
             )}
             {hairStyle === "coque" && (
-              <mesh position={[0, 0.42, -0.05]} castShadow geometry={sharedSphere(0.085, 12, 10)}>
-                <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+              <>
+                <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.225, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
+                  <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+                </mesh>
+                <mesh position={[0, 0.16, -0.09]} castShadow geometry={sharedSphere(0.17, 14, 10)}>
+                  <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+                </mesh>
+                <mesh position={[0, 0.42, -0.05]} castShadow geometry={sharedSphere(0.085, 12, 10)}>
+                  <meshStandardMaterial color={hair} roughness={0.8} metalness={0.05} />
+                </mesh>
+              </>
+            )}
+            {hairStyle === "longo" && (
+              <>
+                <mesh position={[0, 0.26, -0.01]} castShadow geometry={sharedSphere(0.228, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.1)}>
+                  <meshStandardMaterial color={hair} roughness={0.85} metalness={0.04} />
+                </mesh>
+                <mesh position={[0, -0.04, -0.13]} castShadow>
+                  <boxGeometry args={[0.34, 0.52, 0.12]} />
+                  <meshStandardMaterial color={hair} roughness={0.85} metalness={0.04} />
+                </mesh>
+                <mesh position={[-0.2, 0.06, 0.0]} castShadow>
+                  <boxGeometry args={[0.06, 0.36, 0.2]} />
+                  <meshStandardMaterial color={hair} roughness={0.85} metalness={0.04} />
+                </mesh>
+                <mesh position={[0.2, 0.06, 0.0]} castShadow>
+                  <boxGeometry args={[0.06, 0.36, 0.2]} />
+                  <meshStandardMaterial color={hair} roughness={0.85} metalness={0.04} />
+                </mesh>
+              </>
+            )}
+            {hairStyle === "raspado" && (
+              <mesh position={[0, 0.21, -0.01]} castShadow geometry={sharedSphere(0.222, 18, 10, 0, Math.PI * 2, 0, Math.PI / 3.4)}>
+                <meshStandardMaterial color={hair} roughness={0.95} metalness={0.02} />
               </mesh>
+            )}
+            {hairStyle === "moicano" && (
+              <>
+                <mesh position={[0, 0.21, -0.02]} castShadow geometry={sharedSphere(0.224, 18, 10, 0, Math.PI * 2, 0, Math.PI / 3.2)}>
+                  <meshStandardMaterial color={hair} roughness={0.95} metalness={0.02} />
+                </mesh>
+                {[0.24, 0.1, -0.04, -0.18].map((offset, index) => (
+                  <mesh key={offset} position={[0, 0.42 - index * 0.03, offset]} rotation={[index * 0.18, 0, 0]} castShadow>
+                    <boxGeometry args={[0.07, 0.16 + (index === 0 ? 0.06 : 0), 0.14]} />
+                    <meshStandardMaterial color={hair} roughness={0.7} metalness={0.08} />
+                  </mesh>
+                ))}
+              </>
             )}
             {accessory === "oculos" && (
               <group position={[0, 0.15, 0.2]}>
@@ -186,7 +234,34 @@ export const AgentFigure = forwardRef<AgentFigureHandle, AgentFigureProps>(
                 </mesh>
               </group>
             )}
+            {accessory === "bone" && (
+              <group position={[0, 0.33, 0]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.232, 0.238, 0.11, 18]} />
+                  <meshStandardMaterial color={agentAccent} roughness={0.75} metalness={0.05} />
+                </mesh>
+                <mesh position={[0, -0.045, 0.16]} castShadow>
+                  <boxGeometry args={[0.3, 0.026, 0.24]} />
+                  <meshStandardMaterial color={agentAccent} roughness={0.8} metalness={0.03} />
+                </mesh>
+              </group>
+            )}
+            {accessory === "fone" && (
+              <group position={[0, 0.15, 0]}>
+                <mesh rotation={[0, 0, 0]} castShadow>
+                  <torusGeometry args={[0.235, 0.017, 8, 20, Math.PI]} />
+                  <meshStandardMaterial color="#20262f" roughness={0.5} metalness={0.3} />
+                </mesh>
+                {[-1, 1].map((side) => (
+                  <mesh key={side} position={[side * 0.225, -0.02, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                    <cylinderGeometry args={[0.062, 0.062, 0.05, 14]} />
+                    <meshStandardMaterial color="#20262f" roughness={0.45} metalness={0.35} />
+                  </mesh>
+                ))}
+              </group>
+            )}
           </group>
+        </group>
         </group>
       </group>
     );

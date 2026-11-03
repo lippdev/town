@@ -1,0 +1,151 @@
+{
+  "shots": [],
+  "errors": [],
+  "checks": {
+    "bot": {
+      "name": "Argosem briefing",
+      "id": "argos"
+    },
+    "view": {
+      "azimuthDeg": 12,
+      "elevationDeg": 14.37,
+      "distance": 14,
+      "target": [
+        -4.95,
+        1,
+        8.35
+      ]
+    },
+    "before": {
+      "meshes": 17,
+      "colors": [
+        "93c5fd",
+        "24344d",
+        "11151c",
+        "24344d",
+        "11151c",
+        "2563eb",
+        "2563eb",
+        "2563eb",
+        "8d5a3b",
+        "2563eb",
+        "2563eb",
+        "8d5a3b",
+        "8d5a3b",
+        "242a33",
+        "242a33",
+        "15181d",
+        "15181d"
+      ],
+      "scale": 1.03
+    },
+    "identityShirt": "2563eb",
+    "startsWithIdentityShirt": true,
+    "after": {
+      "meshes": 23,
+      "colors": [
+        "93c5fd",
+        "2f3742",
+        "1e242e",
+        "2f3742",
+        "1e242e",
+        "22c55e",
+        "22c55e",
+        "22c55e",
+        "e8b98a",
+        "22c55e",
+        "22c55e",
+        "e8b98a",
+        "e8b98a",
+        "242a33",
+        "242a33",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "20262f",
+        "20262f",
+        "20262f"
+      ],
+      "scale": 1.06
+    },
+    "meshGrew": true,
+    "shirtApplied": true,
+    "hairApplied": true,
+    "oldShirtGone": true,
+    "heightApplied": true,
+    "storage": {
+      "argos": {
+        "hair": "#b4522e",
+        "hairStyle": "moicano",
+        "accessory": "fone",
+        "shirt": "#22c55e",
+        "height": 1.06
+      }
+    },
+    "storageHasEdits": true,
+    "reloaded": {
+      "meshes": 23,
+      "colors": [
+        "93c5fd",
+        "2f3742",
+        "1e242e",
+        "2f3742",
+        "1e242e",
+        "22c55e",
+        "22c55e",
+        "22c55e",
+        "e8b98a",
+        "22c55e",
+        "22c55e",
+        "e8b98a",
+        "e8b98a",
+        "242a33",
+        "242a33",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "b4522e",
+        "20262f",
+        "20262f",
+        "20262f"
+      ],
+      "scale": 1.06
+    },
+    "survivedReload": true,
+    "selectionsAfterReload": {
+      "shirt": "true",
+      "moicano": "true",
+      "fone": "true",
+      "height": "1.06"
+    },
+    "restored": {
+      "meshes": 17,
+      "colors": [
+        "93c5fd",
+        "24344d",
+        "11151c",
+        "24344d",
+        "11151c",
+        "2563eb",
+        "2563eb",
+        "2563eb",
+        "8d5a3b",
+        "2563eb",
+        "2563eb",
+        "8d5a3b",
+        "8d5a3b",
+        "242a33",
+        "242a33",
+        "15181d",
+        "15181d"
+      ],
+      "scale": 1.03
+    },
+    "restoreWorks": true,
+    "storageEmptyAfterRestore": true
+  },
+  "ok": true
+}

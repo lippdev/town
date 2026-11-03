@@ -23,6 +23,7 @@
       ],
       "activity": "Briefing diário"
     },
+<<<<<<< HEAD
     "diagnostics": {
       "rows": 4,
       "allOk": true,
@@ -45,6 +46,31 @@
         "Dashboardhttp://127.0.0.1:42943",
         "Credenciaissem chave · sem token",
         "Última leituraagora"
+=======
+    "sessions": {
+      "rows": 21,
+      "note": "10 ativas de 21 sessões · janela de 5 min do Hermes",
+      "first": {
+        "bot": "Pulse",
+        "source": "terminal",
+        "title": "Triagem de pull requests",
+        "time": "agora"
+      },
+      "sources": [
+        "dashboard",
+        "rotina",
+        "telegram",
+        "terminal"
+      ]
+    },
+    "panelSessions": {
+      "bot": "Pulse",
+      "head": "Sessões recentes 3",
+      "items": [
+        "terminalTriagem de pull requestsagora · 15 msg",
+        "telegramAnalisar falhas de CI16 min · 16 msg",
+        "dashboardResumir releases do dia31 min · 17 msg"
+>>>>>>> origin/main
       ]
     },
     "demoEventsAfterLive": 0

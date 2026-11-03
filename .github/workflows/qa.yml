@@ -43,6 +43,11 @@ jobs:
       - name: Sala de reunião com briefing
         run: node scripts/visual-qa/meeting-capture.mjs
 
+      # Edita o personagem (cabelo, acessório, camisa, altura) e exige que a
+      # cena 3D, o localStorage e o reload reflitam a escolha.
+      - name: Editor de personagem
+        run: node scripts/visual-qa/character-editor.mjs
+
       - name: Cena em Demo (24 capturas)
         run: |
           pnpm preview --port 4173 --strictPort &

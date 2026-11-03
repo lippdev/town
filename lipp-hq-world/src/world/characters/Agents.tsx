@@ -7,7 +7,7 @@ import { useReducedMotion } from "@/app/useReducedMotion";
 import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
-import { resolveAppearance } from "@/world/characters/appearance";
+import { resolveLook } from "@/world/characters/appearance";
 import { findPath, type NavPoint } from "@/world/navigation/navGrid";
 
 /** Hash determinístico por id — substitui Math.random no cenário demo. */
@@ -177,7 +177,7 @@ declare module "@/world/characters/Agents" {
 export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
   const dataSource = useHQStore((state) => state.dataSource);
-  const agentPresets = useHQStore((state) => state.agentPresets);
+  const agentLooks = useHQStore((state) => state.agentLooks);
   const fleet = useHQStore((state) => state.fleet);
   const agents = useMemo(() => {
     const live = sceneAgentsFromFleet(fleet);
@@ -335,8 +335,10 @@ export function Agents() {
       {agents.map((agent) => {
         const spot = deskSpot(agent);
         const showLabel = hoveredAgentId === agent.id || selectedAgentId === agent.id;
-        const presetId = agentPresets[agent.id] ?? agent.presetId ?? null;
-        const appearance = resolveAppearance(agent, presetId);
+        const appearance = resolveLook(
+          agent,
+          agentLooks[agent.id] ?? (agent.presetId ? { presetId: agent.presetId } : null),
+        );
         return (
           <AgentFigure
             key={agent.id}

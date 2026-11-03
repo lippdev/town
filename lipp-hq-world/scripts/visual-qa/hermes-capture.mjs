@@ -95,6 +95,40 @@ async function main() {
     });
     await page.screenshot({ path: path.join(OUT, "bot-panel.png") });
 
+    // ---- sessões: lista lateral e bloco no painel ----
+    await page.locator(".sidebar-item", { hasText: "Sessões" }).click();
+    await page.waitForSelector(".session-row", { timeout: 30000 });
+    report.checks.sessions = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(".session-row"));
+      const first = rows[0];
+      return {
+        rows: rows.length,
+        note: document.querySelector(".sidebar .sidebar-note")?.textContent ?? null,
+        first: first
+          ? {
+              bot: first.querySelector(".session-bot")?.textContent ?? null,
+              source: first.querySelector(".session-source")?.textContent ?? null,
+              title: first.querySelector(".session-title")?.textContent ?? null,
+              time: first.querySelector(".agent-state")?.textContent ?? null,
+            }
+          : null,
+        sources: Array.from(new Set(rows.map((row) => row.querySelector(".session-source")?.textContent ?? ""))).sort(),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "sessions.png") });
+
+    // clicar numa sessão abre o painel do bot dono dela
+    await page.locator(".session-row").first().click();
+    await page.waitForSelector(".panel-sessions", { timeout: 30000 });
+    report.checks.panelSessions = await page.evaluate(() => {
+      const panel = document.querySelector(".panel");
+      return {
+        bot: panel?.querySelector("strong")?.textContent ?? null,
+        head: panel?.querySelector(".panel-sessions-head")?.textContent ?? null,
+        items: Array.from(panel?.querySelectorAll(".panel-sessions li") ?? []).map((item) => (item.textContent ?? "").trim()),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "bot-panel-sessions.png") });
     // ---- diagnóstico do gateway: cada endpoint, com latência real ----
     await page.locator(".sidebar-item", { hasText: "Integrações" }).click();
     await page.waitForSelector(".gateway-row", { timeout: 30000 });
@@ -140,7 +174,16 @@ async function main() {
     report.checks.chipSaysHermesOnline === true &&
     report.checks.botCount > 0 &&
     report.checks.botsWithRealState === report.checks.botCount &&
-    report.checks.demoEventsAfterLive === 0;
+    report.checks.demoEventsAfterLive === 0 &&
+    report.checks.sessions?.rows > 0 &&
+    report.checks.sessions?.sources.length > 1 &&
+    (report.checks.sessions?.first?.title ?? "").length > 0 &&
+    (report.checks.sessions?.note ?? "").includes("janela de 5 min") &&
+    (report.checks.panelSessions?.items.length ?? 0) > 0 &&
+    report.checks.diagnostics?.rows === 4 &&
+    report.checks.diagnostics?.allOk === true &&
+    report.checks.diagnostics.latencies.every((value) => /ms|s$/.test(value ?? "")) &&
+    (report.checks.diagnostics.summary ?? "").includes("4 de 4");
 
   await fs.writeFile(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
