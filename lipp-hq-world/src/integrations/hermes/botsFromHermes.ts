@@ -46,11 +46,19 @@ export interface HermesSessionRow {
 export interface HermesCronJob {
   id?: string;
   name?: string;
-  schedule?: string | null;
+  /** `schedule_display` é o texto pronto do Hermes; `schedule` pode ser objeto. */
+  schedule?: string | Record<string, unknown> | null;
+  schedule_display?: string | null;
   profile?: string | null;
   enabled?: boolean | null;
+  state?: string | null;
+  /** Segundos (compat) ou ISO-8601, dependendo da versão do Hermes. */
   next_run?: number | null;
-  next_run_at?: number | null;
+  next_run_at?: number | string | null;
+  last_run_at?: number | string | null;
+  last_status?: string | null;
+  last_error?: string | null;
+  failure_streak?: number | null;
   paused?: boolean | null;
 }
 
@@ -75,6 +83,36 @@ function asNumber(value: unknown): number | undefined {
 function secondsToMs(value: number | null | undefined): number | undefined {
   const parsed = asNumber(value);
   return parsed === undefined ? undefined : parsed * 1000;
+}
+
+/**
+ * Carimbo de tempo do cron em ms. O Hermes grava `next_run_at`/`last_run_at` como
+ * ISO-8601, mas versões antigas e o fixture usam segundos epoch — aceitar os três
+ * formatos evita "sem agenda" quando o dado está lá.
+ */
+function cronTimestampMs(value: number | string | null | undefined): number | undefined {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return undefined;
+    return value > 1e11 ? value : value * 1000;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const parsed = Date.parse(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function scheduleText(job: HermesCronJob): string | undefined {
+  const display = normalizeName(job.schedule_display ?? undefined);
+  if (display) return display;
+  if (typeof job.schedule === "string") return normalizeName(job.schedule) || undefined;
+  if (job.schedule && typeof job.schedule === "object") {
+    const displayOfObject = normalizeName((job.schedule as { display?: string }).display);
+    return displayOfObject || undefined;
+  }
+  return undefined;
 }
 
 function normalizeName(value: string | undefined | null): string {
@@ -165,7 +203,7 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
 
     const nextRoutineAt = jobs.reduce<number | undefined>((min, job) => {
       if (job.enabled === false || job.paused === true) return min;
-      const next = secondsToMs(job.next_run) ?? secondsToMs(job.next_run_at);
+      const next = cronTimestampMs(job.next_run) ?? cronTimestampMs(job.next_run_at);
       if (next === undefined) return min;
       return min === undefined ? next : Math.min(min, next);
     }, undefined);
@@ -177,8 +215,14 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
     const routines = jobs.map((job, position) => ({
       id: normalizeName(job.id) || `${id}-routine-${position}`,
       name: normalizeName(job.name) || "Rotina",
-      schedule: normalizeName(job.schedule ?? undefined) || undefined,
-      nextAt: secondsToMs(job.next_run) ?? secondsToMs(job.next_run_at),
+      schedule: scheduleText(job),
+      nextAt: cronTimestampMs(job.next_run) ?? cronTimestampMs(job.next_run_at),
+      lastAt: cronTimestampMs(job.last_run_at),
+      lastStatus: normalizeName(job.last_status ?? undefined) || undefined,
+      lastError: normalizeName(job.last_error ?? undefined) || undefined,
+      failureStreak: asNumber(job.failure_streak),
+      paused: job.paused === true || normalizeName(job.state ?? undefined) === "paused",
+      enabled: job.enabled !== false,
     }));
 
     bots.push({
