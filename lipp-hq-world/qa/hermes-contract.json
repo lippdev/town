@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-11-03T15:43:55.619Z",
+  "endpoints": {
+    "health": {
+      "status": 200,
+      "ms": 44,
+      "ok": true
+    },
+    "profiles": {
+      "status": 200,
+      "ms": 9,
+      "ok": true,
+      "count": 7
+    },
+    "sessions": {
+      "status": 200,
+      "ms": 3,
+      "ok": true,
+      "count": 21
+    },
+    "jobs": {
+      "status": 200,
+      "ms": 2,
+      "ok": true,
+      "count": 6
+    }
+  },
+  "sampleKeys": {
+    "profiles": [
+      "bot_title",
+      "description",
+      "display_name",
+      "gateway_running",
+      "is_default",
+      "model",
+      "name",
+      "provider"
+    ],
+    "sessions": [
+      "archived",
+      "ended_at",
+      "estimated_cost_usd",
+      "hidden",
+      "id",
+      "input_tokens",
+      "last_active",
+      "message_count",
+      "model",
+      "output_tokens",
+      "pinned",
+      "preview",
+      "profile",
+      "source",
+      "started_at",
+      "title",
+      "tool_call_count"
+    ],
+    "jobs": [
+      "enabled",
+      "id",
+      "name",
+      "next_run",
+      "paused",
+      "profile",
+      "schedule"
+    ]
+  },
+  "checks": [
+    {
+      "name": "API responde /health",
+      "ok": true,
+      "detail": "status ok"
+    },
+    {
+      "name": "dashboard responde /api/profiles",
+      "ok": true,
+      "detail": "7 profiles"
+    },
+    {
+      "name": "profiles trazem os campos que o app lê",
+      "ok": true,
+      "detail": "campos: bot_title, description, display_name, gateway_running…"
+    },
+    {
+      "name": "dashboard responde /api/profiles/sessions",
+      "ok": true,
+      "detail": "21 sessões"
+    },
+    {
+      "name": "sessões vêm marcadas com o profile dono",
+      "ok": true,
+      "detail": "21 linhas"
+    },
+    {
+      "name": "sessões trazem os campos que o app lê",
+      "ok": true,
+      "detail": "campos: archived, ended_at, estimated_cost_usd, hidden…"
+    },
+    {
+      "name": "dashboard responde /api/cron/jobs",
+      "ok": true,
+      "detail": "6 rotinas"
+    },
+    {
+      "name": "rotinas trazem os campos que o app lê",
+      "ok": false,
+      "detail": "faltando: state, schedule_display, next_run_at, last_run_at, last_status"
+    },
+    {
+      "name": "next_run_at presente nas rotinas",
+      "ok": false,
+      "detail": "nenhuma rotina trouxe next_run_at: o app mostra 'sem agenda'"
+    }
+  ],
+  "ok": false
+}
