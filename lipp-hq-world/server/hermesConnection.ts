@@ -20,6 +20,12 @@ export interface SavedConnection {
   url: string;
   token: string;
   savedAt: number;
+  /**
+   * "served": token lido do HTML do dashboard local, que muda a cada partida
+   * dele; o proxy relê quando o dashboard recusar. "typed": colado pelo
+   * usuário, nunca trocado sozinho.
+   */
+  tokenSource?: "typed" | "served";
 }
 
 export type AuthMode = "token" | "oauth";
@@ -98,7 +104,12 @@ export function loadSavedConnection(file: string = connectionFilePath()): SavedC
     if (!existsSync(file)) return null;
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SavedConnection>;
     if (typeof parsed.url !== "string" || typeof parsed.token !== "string" || !parsed.url) return null;
-    return { url: parsed.url, token: parsed.token, savedAt: Number(parsed.savedAt) || 0 };
+    return {
+      url: parsed.url,
+      token: parsed.token,
+      savedAt: Number(parsed.savedAt) || 0,
+      tokenSource: parsed.tokenSource === "served" ? "served" : "typed",
+    };
   } catch {
     // arquivo corrompido não derruba o proxy: vale como "sem conexão salva"
     return null;
@@ -196,4 +207,156 @@ export async function probeConnection(url: string, token: string, timeoutMs = 50
   }
   const list = (profiles.body as { profiles?: unknown[] } | undefined)?.profiles;
   return { ...base, ok: true, profileCount: Array.isArray(list) ? list.length : 0 };
+}
+
+/** Porta padrão do `hermes dashboard` (`hermes_cli/main_dashboard.py`). */
+export const DEFAULT_LOCAL_DASHBOARD_URL = "http://127.0.0.1:9119";
+export const LOCAL_START_COMMAND = "hermes dashboard --no-open";
+
+export function isLoopbackUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    return host === "localhost" || host === "::1" || /^127\./.test(host);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Token que o dashboard local injeta na própria página
+ * (`window.__HERMES_SESSION_TOKEN__`, `web_server_dashboard.py`). É assim que
+ * o Hermes Desktop descobre o token do backend local
+ * (`apps/desktop/electron/dashboard-token.ts`). Com gate de auth, o Hermes
+ * omite o token e isto devolve null.
+ */
+export function extractServedToken(html: string): string | null {
+  const match = /window\.__HERMES_SESSION_TOKEN__\s*=\s*("(?:\\.|[^"\\])*")/.exec(String(html ?? ""));
+  if (!match) return null;
+  try {
+    const token = JSON.parse(match[1]) as unknown;
+    return typeof token === "string" && token ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Lê o token servido; só em loopback, nunca de um host remoto. */
+export async function readServedToken(url: string, timeoutMs = 3000): Promise<string | null> {
+  if (!isLoopbackUrl(url)) return null;
+  try {
+    const response = await fetch(`${url}/`, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) return null;
+    return extractServedToken(await response.text());
+  } catch {
+    return null;
+  }
+}
+
+/** Onde procurar o Hermes local: o endereço do ambiente (se for loopback) e a 9119. */
+export function localCandidates(env: NodeJS.ProcessEnv = process.env): string[] {
+  const candidates: string[] = [];
+  const fromEnv = env.HERMES_DASHBOARD_URL ? env.HERMES_DASHBOARD_URL.replace(/\/+$/, "") : "";
+  if (fromEnv && isLoopbackUrl(fromEnv)) candidates.push(fromEnv);
+  if (!candidates.includes(DEFAULT_LOCAL_DASHBOARD_URL)) candidates.push(DEFAULT_LOCAL_DASHBOARD_URL);
+  return candidates;
+}
+
+export interface LocalDiscovery {
+  found: boolean;
+  url?: string;
+  version?: string;
+  authMode?: AuthMode;
+  /** True quando o dashboard publicou o token na página (dá para conectar sem colar). */
+  tokenServed: boolean;
+  /** Só no servidor: a rota pública nunca devolve este campo. */
+  token?: string;
+  profileCount?: number;
+  error?: string;
+  /** O que fazer quando nada foi achado. */
+  hint?: string;
+  tried: string[];
+}
+
+/**
+ * Detecção do Hermes local, à moda do Claw3D (`readOpenclawGatewayDefaults`
+ * preenche URL e token a partir da instalação local) com o mecanismo do
+ * Desktop (token servido pela página do dashboard em loopback).
+ */
+export async function discoverLocalDashboard(
+  candidates: string[] = localCandidates(),
+  timeoutMs = 3000,
+): Promise<LocalDiscovery> {
+  let lastError: string | undefined;
+  for (const url of candidates) {
+    if (!isLoopbackUrl(url)) continue;
+    let status: Awaited<ReturnType<typeof getJson>>;
+    try {
+      status = await getJson(`${url}/api/status`, {}, timeoutMs);
+    } catch (error) {
+      lastError = reason(error);
+      continue;
+    }
+    if (!status.ok) {
+      lastError = `${url}/api/status respondeu HTTP ${status.status}`;
+      continue;
+    }
+    const authMode = authModeFromStatus(status.body);
+    const version = (status.body as { version?: unknown } | undefined)?.version;
+    const base = { found: true, url, authMode, version: typeof version === "string" ? version : undefined, tried: candidates };
+    if (authMode === "oauth") {
+      return { ...base, tokenServed: false, error: "este dashboard exige login OAuth" };
+    }
+    const token = await readServedToken(url, timeoutMs);
+    if (!token) {
+      return { ...base, tokenServed: false, error: "o dashboard não publica o token na página: cole o session token" };
+    }
+    const probe = await probeConnection(url, token, timeoutMs);
+    if (!probe.ok) return { ...base, tokenServed: true, error: probe.error };
+    return { ...base, tokenServed: true, token, profileCount: probe.profileCount };
+  }
+  return {
+    found: false,
+    tokenServed: false,
+    tried: candidates,
+    error: lastError,
+    hint: LOCAL_START_COMMAND,
+  };
+}
+
+export interface FailureClass {
+  code: "AUTH" | "LISTENER" | "TIMEOUT" | "OAUTH" | "NOT_HERMES" | "HOST";
+  label: string;
+  action: string;
+}
+
+/**
+ * Causa provável + o que fazer, como o `classifyGatewayFailure` do claw3doctor.
+ * Recebe o texto de erro que o proxy já produz; devolve null se não reconhecer.
+ */
+export function classifyFailure(message: string | undefined): FailureClass | null {
+  const text = String(message ?? "").toLowerCase();
+  if (!text) return null;
+  if (text.includes("oauth")) {
+    return { code: "OAUTH", label: "Login OAuth", action: "Use um dashboard sem gate OAuth ou com session token fixo." };
+  }
+  if (text.includes("401") || text.includes("403") || text.includes("recusou o session token")) {
+    return {
+      code: "AUTH",
+      label: "Token recusado",
+      action: "O dashboard reiniciou ou o token mudou. Conecte de novo ou fixe HERMES_DASHBOARD_SESSION_TOKEN.",
+    };
+  }
+  if (text.includes("recusada") || text.includes("econnrefused") || text.includes("fetch failed")) {
+    return { code: "LISTENER", label: "Nada escutando", action: `Suba o dashboard: ${LOCAL_START_COMMAND}` };
+  }
+  if (text.includes("tempo") || text.includes("timed out") || text.includes("timeout")) {
+    return { code: "TIMEOUT", label: "Sem resposta a tempo", action: "Confira se o host está acessível (rede, Tailscale, firewall)." };
+  }
+  if (text.includes("host não encontrado") || text.includes("enotfound")) {
+    return { code: "HOST", label: "Host desconhecido", action: "Confira o nome do host no link." };
+  }
+  if (text.includes("isso é o dashboard")) {
+    return { code: "NOT_HERMES", label: "Não é o dashboard", action: "O link aponta para outro serviço; o dashboard sobe na 9119." };
+  }
+  return null;
 }
