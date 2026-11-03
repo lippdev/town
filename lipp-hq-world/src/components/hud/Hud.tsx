@@ -5,29 +5,14 @@ import {
   Cable,
   Camera,
   Clock,
-  ExternalLink,
   MessageSquareText,
   MonitorUp,
   Users,
   Radio,
   RotateCcw,
-  SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react";
 import { AGENTS_BY_ID } from "@/agents/agents";
-import {
-  ACCESSORIES,
-  CHARACTER_PRESETS,
-  HAIR_COLORS,
-  HAIR_STYLES,
-  MAX_HEIGHT,
-  MIN_HEIGHT,
-  PANTS_COLORS,
-  SHIRT_COLORS,
-  SHOE_COLORS,
-  SKIN_TONES,
-  resolveLook,
-} from "@/world/characters/appearance";
 import { useHQStore } from "@/state/useHQStore";
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
 import { sceneAgentsFromFleet } from "@/world/characters/sceneAgents";
@@ -40,11 +25,12 @@ import {
   relativeTime,
   stateLabel,
 } from "@/components/hud/fleetView";
-import type { BotSnapshot } from "@/integrations/hq/types";
 import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/components/hud/fleetFilter";
 import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "@/components/hud/routines";
-import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
+import { activeSessionTotal, fleetSessions, sessionTitle, sourceLabel } from "@/components/hud/sessions";
+import { botRoomId } from "@/components/hud/selection";
+import { BotDrawer } from "@/components/hud/BotDrawer";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
 import {
   connectHermes,
@@ -443,7 +429,7 @@ function BotRoster() {
     const current = shown.findIndex((bot) => bot.id === selectedBotId);
     const target = shown[nextIndex(current, delta, shown.length)];
     if (!target) return;
-    const roomId = AGENTS_BY_ID[target.id]?.roomId;
+    const roomId = botRoomId(fleet, target.id);
     if (roomId) focusRoom(roomId);
     selectBot(target.id);
     const node = listRef.current?.querySelector<HTMLElement>(`[data-bot-id="${target.id}"]`);
@@ -522,7 +508,7 @@ function BotRoster() {
       <div className="sidebar-list" ref={listRef}>
         {shown.length === 0 && <div className="sidebar-note">Nenhum bot com esse filtro.</div>}
         {shown.map((bot) => {
-          const roomId = AGENTS_BY_ID[bot.id]?.roomId;
+          const roomId = botRoomId(fleet, bot.id);
           return (
             <button
               key={bot.id}
@@ -702,35 +688,6 @@ function SessionList() {
   );
 }
 
-function sessionTitle(session: FleetSession["session"]): string {
-  return session.title ?? session.preview ?? "sem título";
-}
-
-/** Sessões recentes de um bot, dentro do painel. */
-function BotSessions({ bot }: { bot: BotSnapshot }) {
-  const sessions = bot.sessions ?? [];
-  if (sessions.length === 0) {
-    return <p className="panel-sessions-empty">Nenhuma sessão reportada para este bot.</p>;
-  }
-  return (
-    <div className="panel-sessions">
-      <div className="panel-sessions-head">
-        Sessões recentes <span>{bot.sessionCount > sessions.length ? `${sessions.length} de ${bot.sessionCount}` : bot.sessionCount}</span>
-      </div>
-      <ul>
-        {sessions.map((session) => (
-          <li key={session.id} className={session.active ? "active" : undefined}>
-            <span className="session-source">{sourceLabel(session.source)}</span>
-            <span className="session-name">{sessionTitle(session)}</span>
-            <span className="session-meta">
-              {relativeTime(session.lastActiveAt)} · {session.messageCount ?? 0} msg
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 /** Janela real das amostras e a variação de quem está trabalhando. */
 function windowLabel(samples: FleetSample[]): string {
@@ -882,334 +839,6 @@ function ActivityFeed() {
   );
 }
 
-function Swatches({
-  label,
-  colors,
-  value,
-  onPick,
-}: {
-  label: string;
-  colors: readonly string[];
-  value: string;
-  onPick: (color: string) => void;
-}) {
-  return (
-    <div className="look-row">
-      <span className="look-label">{label}</span>
-      <div className="look-swatches" role="group" aria-label={label}>
-        {colors.map((color) => (
-          <button
-            key={color}
-            type="button"
-            className={value.toLowerCase() === color.toLowerCase() ? "swatch active" : "swatch"}
-            style={{ background: color }}
-            aria-label={`${label} ${color}`}
-            aria-pressed={value.toLowerCase() === color.toLowerCase()}
-            onClick={() => onPick(color)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Chips<T extends string>({
-  label,
-  options,
-  value,
-  onPick,
-}: {
-  label: string;
-  options: Array<{ id: T; label: string }>;
-  value: T;
-  onPick: (id: T) => void;
-}) {
-  return (
-    <div className="look-row">
-      <span className="look-label">{label}</span>
-      <div className="look-chips" role="group" aria-label={label}>
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={value === option.id ? "chip active" : "chip"}
-            aria-pressed={value === option.id}
-            onClick={() => onPick(option.id)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Editor de personagem por agente: presets são só ponto de partida e cada
- * peça pode ser trocada depois. A camisa começa na cor de identidade do
- * agente — sair dela é escolha explícita, para o bot não perder o rosto na cena.
- */
-function CharacterEditor({ agentId, base }: { agentId: string; base: { color: string; hairColor?: string } }) {
-  const [open, setOpen] = useState(false);
-  const override = useHQStore((state) => state.agentLooks[agentId]);
-  const chooseAgentPreset = useHQStore((state) => state.chooseAgentPreset);
-  const updateAgentLook = useHQStore((state) => state.updateAgentLook);
-  const randomizeAgentLook = useHQStore((state) => state.randomizeAgentLook);
-  const resetAgentLook = useHQStore((state) => state.resetAgentLook);
-
-  const identityColor = base.color;
-  const look = resolveLook(base, override);
-  const presetId = override?.presetId ?? null;
-  // Preset só fica marcado enquanto o look é exatamente ele: depois de mexer
-  // numa peça o personagem não é mais aquele preset, e marcar a miniatura
-  // diria o contrário do que a cena mostra.
-  const customized = Object.keys(override ?? {}).some((key) => key !== "presetId");
-
-  return (
-    <section className="character-editor" aria-label="Editor de personagem">
-      <div className="appearance-head">
-        <span>Personagem</span>
-        <div className="editor-actions">
-          <button type="button" className="chip" onClick={() => randomizeAgentLook(agentId)}>
-            Aleatório
-          </button>
-          <button type="button" className="chip" onClick={() => resetAgentLook(agentId)}>
-            Restaurar
-          </button>
-          <button
-            type="button"
-            className="chip"
-            aria-expanded={open}
-            aria-controls={`editor-${agentId}`}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? "Fechar" : "Editar"}
-          </button>
-        </div>
-      </div>
-
-      <div className="appearance-grid" role="listbox" aria-label="Personagens prontos">
-        {CHARACTER_PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            role="option"
-            aria-selected={presetId === preset.id && !customized}
-            aria-label={preset.label}
-            title={customized && presetId === preset.id ? `${preset.label} (com ajustes)` : preset.label}
-            className={presetId === preset.id && !customized ? "preset-card active" : "preset-card"}
-            onClick={() => chooseAgentPreset(agentId, preset.id)}
-          >
-            <span className="preset-hair" style={{ background: preset.hair }} aria-hidden />
-            <span className="preset-skin" style={{ background: preset.skin }} aria-hidden />
-            <span className="preset-body" style={{ background: override?.shirt ?? identityColor }} aria-hidden />
-            <span className="preset-pants" style={{ background: preset.pants }} aria-hidden />
-          </button>
-        ))}
-      </div>
-
-      {open && (
-        <div className="look-groups" id={`editor-${agentId}`}>
-          <Swatches label="Pele" colors={SKIN_TONES} value={look.skin} onPick={(skin) => updateAgentLook(agentId, { skin })} />
-          <Swatches label="Cabelo" colors={HAIR_COLORS} value={look.hair} onPick={(hair) => updateAgentLook(agentId, { hair })} />
-          <Chips
-            label="Estilo"
-            options={HAIR_STYLES}
-            value={look.hairStyle}
-            onPick={(hairStyle) => updateAgentLook(agentId, { hairStyle })}
-          />
-          <Chips
-            label="Acessório"
-            options={ACCESSORIES}
-            value={look.accessory}
-            onPick={(accessory) => updateAgentLook(agentId, { accessory })}
-          />
-          <Swatches label="Calça" colors={PANTS_COLORS} value={look.pants} onPick={(pants) => updateAgentLook(agentId, { pants })} />
-          <Swatches label="Sapato" colors={SHOE_COLORS} value={look.shoes} onPick={(shoes) => updateAgentLook(agentId, { shoes })} />
-          <div className="look-row">
-            <span className="look-label">Camisa</span>
-            <div className="look-swatches" role="group" aria-label="Camisa">
-              <button
-                type="button"
-                className={look.shirt === undefined ? "swatch identity active" : "swatch identity"}
-                style={{ background: identityColor }}
-                aria-label="Camisa na cor do agente"
-                aria-pressed={look.shirt === undefined}
-                onClick={() => updateAgentLook(agentId, { shirt: undefined })}
-              />
-              {SHIRT_COLORS.filter((color) => color.toLowerCase() !== identityColor.toLowerCase()).map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={look.shirt?.toLowerCase() === color.toLowerCase() ? "swatch active" : "swatch"}
-                  style={{ background: color }}
-                  aria-label={`Camisa ${color}`}
-                  aria-pressed={look.shirt?.toLowerCase() === color.toLowerCase()}
-                  onClick={() => updateAgentLook(agentId, { shirt: color })}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="look-row">
-            <span className="look-label">Altura</span>
-            <input
-              type="range"
-              className="look-range"
-              min={MIN_HEIGHT}
-              max={MAX_HEIGHT}
-              step={0.01}
-              value={look.height}
-              aria-label="Altura do personagem"
-              onChange={(event) => updateAgentLook(agentId, { height: Number(event.target.value) })}
-            />
-            <span className="look-value">{look.height.toFixed(2)}×</span>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-/**
- * Link para o dashboard do Hermes com o escopo do perfil daquele bot.
- *
- * `?profile=` é o parâmetro que o próprio dashboard lê para abrir no perfil
- * certo (apps/desktop …/use-gateway-boot-webapp-profile). Sem URL de dashboard
- * configurada, não existe link — melhor ausente que quebrado.
- */
-function DashboardLink({ botId }: { botId: string }) {
-  const status = useGatewayStatus();
-  const dataSource = useHQStore((state) => state.dataSource);
-  if (dataSource !== "live" || !status?.dashboardUrl) return null;
-
-  const base = status.dashboardUrl.replace(/\/+$/, "");
-  const href = `${base}/?profile=${encodeURIComponent(botId)}`;
-  return (
-    <a className="panel-link" href={href} target="_blank" rel="noreferrer noopener">
-      <ExternalLink size={12} aria-hidden />
-      Abrir no dashboard do Hermes
-    </a>
-  );
-}
-
-function BotPanel({ bot }: { bot: BotSnapshot }) {
-  const clearSelection = useHQStore((state) => state.clearSelection);
-  const fleet = useHQStore((state) => state.fleet);
-  const notice = gatewayNotice(fleet);
-
-  return (
-    <div className="panel">
-      <div className="panel-head">
-        <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />
-        <strong>{bot.name}</strong>
-        {bot.isDefault && <span className="panel-tag">default</span>}
-        <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
-          ×
-        </button>
-      </div>
-      {bot.title && <div className="panel-role">{bot.title}</div>}
-      <div className="panel-state">
-        Estado: <em>{stateLabel(bot.state)}</em> · {relativeTime(bot.lastActiveAt)}
-      </div>
-      {bot.activity ? (
-        <p className="panel-activity">{bot.activity}</p>
-      ) : (
-        <p className="panel-activity muted">Sem atividade recente reportada pelo Hermes.</p>
-      )}
-      <dl className="panel-stats">
-        <div>
-          <dt>Sessões</dt>
-          <dd>
-            {bot.sessionCount}
-            {bot.activeSessions > 0 ? ` (${bot.activeSessions} ativa${bot.activeSessions > 1 ? "s" : ""})` : ""}
-          </dd>
-        </div>
-        <div>
-          <dt>Rotinas</dt>
-          <dd>{bot.routineCount}</dd>
-        </div>
-        <div>
-          <dt>Modelo</dt>
-          <dd>{bot.model ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>Próxima rotina</dt>
-          <dd>{bot.nextRoutineAt ? relativeTime(bot.nextRoutineAt) : "—"}</dd>
-        </div>
-      </dl>
-      <BotSessions bot={bot} />
-      {(() => {
-        const failing = (bot.routines ?? []).filter((routine) => {
-          const health = routineHealth(routine);
-          return health === "failed" || health === "delivery";
-        });
-        if (failing.length === 0) return null;
-        const first = failing[0];
-        return (
-          <p className="panel-warn">
-            Rotina <strong>{first.name}</strong> {routineStatusText(first)}
-            {first.lastAt ? ` ${relativeTime(first.lastAt)}` : ""}
-            {first.lastError ? `: ${first.lastError}` : ""}
-            {failing.length > 1 ? ` (+${failing.length - 1} com problema)` : ""}
-          </p>
-        );
-      })()}
-      {bot.description && <p className="panel-resp">{bot.description}</p>}
-      {fleet?.stale && (
-        <p className="panel-warn">
-          Leitura atrasada: os dados têm {ageLabel(fleet.fetchedAt)}
-          {fleet.errorDetail ? ` (${fleet.errorDetail})` : ""}.
-        </p>
-      )}
-      {notice && !fleet?.stale && <p className="panel-warn">{notice}</p>}
-      <DashboardLink botId={bot.id} />
-      <CharacterEditor
-        agentId={bot.id}
-        base={sceneAgentsFromFleet(fleet).find((sceneAgent) => sceneAgent.id === bot.id) ?? { color: "#2563eb" }}
-      />
-    </div>
-  );
-}
-
-function AgentPanel() {
-  const fleet = useHQStore((state) => state.fleet);
-  const selectedBotId = useHQStore((state) => state.selectedBotId);
-  const selectedRoomId = useHQStore((state) => state.selectedRoomId);
-  const clearSelection = useHQStore((state) => state.clearSelection);
-
-  // hooks sempre na mesma ordem: a busca é dado, não hook
-  const direct = selectedBotId ? fleet?.bots.find((candidate) => candidate.id === selectedBotId) : undefined;
-  const viaRoom =
-    !direct && selectedRoomId
-      ? fleet?.bots.find((candidate) => AGENTS_BY_ID[candidate.id]?.roomId === selectedRoomId)
-      : undefined;
-  const bot = direct ?? viaRoom;
-
-  if (bot) return <BotPanel bot={bot} />;
-
-  if (selectedRoomId) {
-    const room = ROOMS_BY_ID[selectedRoomId];
-    if (room) {
-      return (
-        <div className="panel">
-          <div className="panel-head">
-            <span className="agent-dot" style={{ background: room.color }} aria-hidden />
-            <strong>{room.name}</strong>
-            <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
-              ×
-            </button>
-          </div>
-          <div className="panel-role">{room.kind === "department" ? "Departamento" : "Área comum"}</div>
-          <div className="panel-state">
-            <SlidersHorizontal size={12} /> Duplo clique foca a sala
-          </div>
-        </div>
-      );
-    }
-  }
-
-  return null;
-}
 
 function CameraHint() {
   return (
@@ -1247,9 +876,9 @@ export function Hud() {
       <FleetSummary />
       <div className="hud-bottom">
         <ActivityFeed />
-        <AgentPanel />
         <CameraHint />
       </div>
+      <BotDrawer />
     </div>
   );
 }
