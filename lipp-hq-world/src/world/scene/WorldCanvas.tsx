@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
-import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
+import { NeutralToneMapping, SRGBColorSpace } from "three";
 import { CAMERA } from "@/config/constants";
 import { HQScene } from "@/world/scene/HQScene";
 import { ReadySignal } from "@/app/ReadySignal";
@@ -13,8 +13,8 @@ export function WorldCanvas() {
   return (
     <Canvas
       className="world-canvas"
-      shadows
-      dpr={[1, 1.5]}
+      shadows="soft"
+      dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       camera={{
         fov: CAMERA.fov,
@@ -23,8 +23,8 @@ export function WorldCanvas() {
         position: [CAMERA.position[0], CAMERA.position[1], CAMERA.position[2]],
       }}
       onCreated={({ gl }) => {
-        gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.08;
+        gl.toneMapping = NeutralToneMapping;
+        gl.toneMappingExposure = 1.0;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
