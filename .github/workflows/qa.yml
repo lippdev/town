@@ -48,6 +48,11 @@ jobs:
       - name: Editor de personagem
         run: node scripts/visual-qa/character-editor.mjs
 
+      # O script de conferência de contrato também é código: sobe o fixture em
+      # portas livres e exige que ele reconheça tudo, senão o script apodrece.
+      - name: Conferência de contrato (fixture)
+        run: node scripts/hermes/contract-check.mjs --self-test
+
       - name: Cena em Demo (24 capturas)
         run: |
           pnpm preview --port 4173 --strictPort &
