@@ -387,3 +387,16 @@ export function classifyFailure(message: string | undefined): FailureClass | nul
   }
   return null;
 }
+
+/**
+ * Endereço do cliente é desta máquina? O proxy carrega o token do Hermes, então
+ * só atende loopback — como o `network-policy.js` do Claw3D, que recusa expor o
+ * Studio na rede sem token de acesso. Cobre IPv4, IPv6 e IPv4 mapeado em IPv6.
+ */
+export function isLoopbackAddress(address: string | undefined): boolean {
+  const value = String(address ?? "").trim().toLowerCase();
+  if (!value) return false;
+  if (value === "::1" || value === "0:0:0:0:0:0:0:1") return true;
+  const ipv4 = value.startsWith("::ffff:") ? value.slice("::ffff:".length) : value;
+  return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ipv4);
+}
