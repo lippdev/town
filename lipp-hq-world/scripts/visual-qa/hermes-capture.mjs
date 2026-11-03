@@ -95,6 +95,32 @@ async function main() {
     });
     await page.screenshot({ path: path.join(OUT, "bot-panel.png") });
 
+    // ---- diagnóstico do gateway: cada endpoint, com latência real ----
+    await page.locator(".sidebar-item", { hasText: "Integrações" }).click();
+    await page.waitForSelector(".gateway-row", { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const latency = document.querySelectorAll(".gateway-latency");
+        return latency.length > 0 && !Array.from(latency).some((node) => (node.textContent ?? "").includes("não lido"));
+      },
+      null,
+      { timeout: 20000 },
+    );
+    report.checks.diagnostics = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(".gateway-row"));
+      const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
+      return {
+        rows: rows.length,
+        allOk: rows.every((row) => row.classList.contains("ok")),
+        paths: rows.map((row) => textOf(row.querySelector("code"))),
+        latencies: rows.map((row) => textOf(row.querySelector(".gateway-latency"))),
+        summary: textOf(document.querySelector(".gateway-summary")),
+        config: Array.from(document.querySelectorAll(".gateway-config div")).map((row) => (row.textContent ?? "").trim()),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "gateway-diagnostics.png") });
+    await page.locator(".sidebar-item", { hasText: "Bots" }).click();
+
     report.checks.demoEventsAfterLive = await page.evaluate(() => {
       const events = Array.from(document.querySelectorAll(".feed li"));
       return events.filter((item) => item.querySelector(".feed-demo")).length;

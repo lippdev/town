@@ -23,6 +23,30 @@
       ],
       "activity": "Briefing diário"
     },
+    "diagnostics": {
+      "rows": 4,
+      "allOk": true,
+      "paths": [
+        "/health",
+        "/api/profiles",
+        "/api/profiles/sessions",
+        "/api/cron/jobs"
+      ],
+      "latencies": [
+        "4 ms",
+        "4 ms",
+        "4 ms",
+        "5 ms"
+      ],
+      "summary": "tudo respondendo4 de 4 endpoints",
+      "config": [
+        "ModoHermes (ao vivo)",
+        "APIhttp://127.0.0.1:43107",
+        "Dashboardhttp://127.0.0.1:42943",
+        "Credenciaissem chave · sem token",
+        "Última leituraagora"
+      ]
+    },
     "demoEventsAfterLive": 0
   },
   "ok": true
