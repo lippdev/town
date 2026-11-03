@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fleetCounts, gatewayNotice, relativeTime } from "@/components/hud/fleetView";
 import {
   ACTIVE_SESSION_WINDOW_MS,
+  SESSION_PREVIEW_LIMIT,
   WORKING_WINDOW_MS,
   botsFromHermes,
   gatewayStateOf,
@@ -146,5 +147,57 @@ describe("helpers de visão da frota", () => {
       ],
     });
     expect(counts).toEqual({ total: 3, working: 1, waiting: 1, idle: 1, sessions: 6, routines: 3 });
+  });
+});
+
+describe("sessões no contrato da cena", () => {
+  const build = (sessions: Array<Record<string, unknown>>) =>
+    botsFromHermes({
+      now: NOW,
+      health: { api: "online", dashboard: "online" },
+      profiles: [{ name: "argos", display_name: "Argos" }],
+      sessions: sessions as never,
+      jobs: [],
+    })[0];
+
+  it("mapeia id, título, origem e janela de atividade", () => {
+    const argos = build([
+      { id: "s1", profile: "argos", title: "Revisar roadmap", source: "cli", last_active: seconds(NOW - 20_000), message_count: 9 },
+      { id: "s2", profile: "argos", title: "Briefing diário", source: "cron", last_active: seconds(NOW - 6 * 60 * 1000), message_count: 4 },
+    ]);
+
+    const [recent, older] = argos.sessions ?? [];
+    expect(recent).toMatchObject({ id: "s1", title: "Revisar roadmap", source: "cli", messageCount: 9, active: true });
+    expect(older).toMatchObject({ source: "cron", active: false });
+    expect(argos.sessionCount).toBe(2);
+  });
+
+  it("sessão encerrada nunca conta como ativa, mesmo com last_active agora", () => {
+    const argos = build([
+      { id: "s1", profile: "argos", ended_at: seconds(NOW - 1000), last_active: seconds(NOW - 10_000) },
+    ]);
+    expect(argos.sessions?.[0].active).toBe(false);
+    expect(argos.activeSessions).toBe(0);
+  });
+
+  it("ordena por recência e corta a janela sem perder o total", () => {
+    const many = Array.from({ length: SESSION_PREVIEW_LIMIT + 4 }, (_, index) => ({
+      id: `s${index}`,
+      profile: "argos",
+      last_active: seconds(NOW - index * 60_000),
+    }));
+    const argos = build([...many].reverse());
+    expect(argos.sessions).toHaveLength(SESSION_PREVIEW_LIMIT);
+    expect(argos.sessions?.[0].id).toBe("s0");
+    expect(argos.sessionCount).toBe(SESSION_PREVIEW_LIMIT + 4);
+  });
+
+  it("campo ausente fica indefinido em vez de virar número inventado", () => {
+    const argos = build([{ id: "s1", profile: "argos" }]);
+    const session = argos.sessions?.[0];
+    expect(session?.title).toBeUndefined();
+    expect(session?.source).toBeUndefined();
+    expect(session?.messageCount).toBeUndefined();
+    expect(session?.active).toBe(false);
   });
 });
