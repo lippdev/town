@@ -5,6 +5,7 @@ import { BaseSlab } from "@/world/scene/BaseSlab";
 import { FloorPlates } from "@/world/rooms/FloorPlates";
 import { RoomSigns } from "@/world/rooms/RoomSigns";
 import { Furniture } from "@/world/furniture/Furnishing";
+import { BriefingBoard } from "@/world/furniture/BriefingBoard";
 import { Agents } from "@/world/characters/Agents";
 import { DemoDriver } from "@/integrations/mock/DemoDriver";
 import { DynamicWalls } from "@/world/walls/DynamicWalls";
@@ -25,6 +26,7 @@ export function HQScene() {
       <FloorPlates />
       <DynamicWalls />
       <Furniture />
+      <BriefingBoard />
       <Agents />
       <DemoDriver />
       <RoomSigns />

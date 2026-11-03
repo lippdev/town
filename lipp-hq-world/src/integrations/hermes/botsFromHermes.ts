@@ -1,4 +1,5 @@
 import type { BotSnapshot, GatewayHealth, GatewayState } from "@/integrations/hq/types";
+import { detectBriefing } from "@/integrations/hermes/briefings";
 
 /**
  * Mapeamento puro do que o Hermes expõe via gateway para a frota da cena.
@@ -27,6 +28,7 @@ export interface HermesProfile {
 export interface HermesSessionRow {
   id?: string;
   profile?: string;
+  source?: string | null;
   title?: string | null;
   preview?: string | null;
   started_at?: number | null;
@@ -44,6 +46,7 @@ export interface HermesSessionRow {
 export interface HermesCronJob {
   id?: string;
   name?: string;
+  schedule?: string | null;
   profile?: string | null;
   enabled?: boolean | null;
   next_run?: number | null;
@@ -168,6 +171,15 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
     }, undefined);
 
     const model = normalizeName(profile.model ?? latest?.model ?? undefined);
+    const jobNames = jobs.map((job) => normalizeName(job.name)).filter(Boolean);
+    const briefing = detectBriefing(latest, jobNames, now) ?? undefined;
+
+    const routines = jobs.map((job, position) => ({
+      id: normalizeName(job.id) || `${id}-routine-${position}`,
+      name: normalizeName(job.name) || "Rotina",
+      schedule: normalizeName(job.schedule ?? undefined) || undefined,
+      nextAt: secondsToMs(job.next_run) ?? secondsToMs(job.next_run_at),
+    }));
 
     bots.push({
       id,
@@ -176,13 +188,15 @@ export function botsFromHermes(raw: HermesRawPayload): BotSnapshot[] {
       description: normalizeName(profile.description) || undefined,
       model: model || undefined,
       provider: normalizeName(profile.provider ?? undefined) || undefined,
-      state: botState(lastActiveAt, activeSessions, now),
+      state: briefing ? "meeting" : botState(lastActiveAt, activeSessions, now),
       activity: activityText(latest),
       lastActiveAt,
       sessionCount: sessions.length,
       activeSessions,
       routineCount: jobs.length,
       nextRoutineAt,
+      briefing,
+      routines,
       isDefault: profile.is_default === true,
       gatewayRunning: profile.gateway_running === true,
     });
