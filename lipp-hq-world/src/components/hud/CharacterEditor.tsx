@@ -13,6 +13,7 @@ import {
   resolveLook,
 } from "@/world/characters/appearance";
 import { useHQStore } from "@/state/useHQStore";
+import { characterFor, useCharacterManifest } from "@/world/characters/characterManifest";
 
 function Swatches({
   label,
@@ -83,6 +84,7 @@ function Chips<T extends string>({
  */
 export function CharacterEditor({ agentId, base }: { agentId: string; base: { color: string; hairColor?: string } }) {
   const [open, setOpen] = useState(false);
+  const model = characterFor(useCharacterManifest(), agentId);
   const override = useHQStore((state) => state.agentLooks[agentId]);
   const chooseAgentPreset = useHQStore((state) => state.chooseAgentPreset);
   const updateAgentLook = useHQStore((state) => state.updateAgentLook);
@@ -99,6 +101,12 @@ export function CharacterEditor({ agentId, base }: { agentId: string; base: { co
 
   return (
     <section className="character-editor" aria-label="Editor de personagem">
+      {model && (
+        <p className="character-model-note">
+          Este bot usa o modelo 3D <code>{model.file}</code> (public/characters). Cores e peças abaixo valem para
+          a figura simples, que volta se o arquivo faltar; a altura vale para os dois.
+        </p>
+      )}
       <div className="appearance-head">
         <span>Personagem</span>
         <div className="editor-actions">
