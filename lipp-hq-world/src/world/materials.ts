@@ -1,4 +1,4 @@
-import { MeshStandardMaterial } from "three";
+import { BoxGeometry, BufferGeometry, CylinderGeometry, MeshStandardMaterial, SphereGeometry } from "three";
 
 /**
  * Cache de materiais padrão por chave visual. Paredes, móveis e detalhes
@@ -50,4 +50,47 @@ export function sharedMaterial(
 /** Número de materiais vivos no cache (para diagnóstico). */
 export function materialCacheSize(): number {
   return cache.size;
+}
+
+/** Cache de geometrias repetidas: mesma assinatura, mesmo BufferGeometry. */
+const geometryCache = new Map<string, BufferGeometry>();
+
+export function sharedBox(width: number, height: number, depth: number): BufferGeometry {
+  const key = `box:${width}:${height}:${depth}`;
+  let geometry = geometryCache.get(key);
+  if (!geometry) {
+    geometry = new BoxGeometry(width, height, depth);
+    geometryCache.set(key, geometry);
+  }
+  return geometry;
+}
+
+export function sharedCylinder(
+  radiusTop: number,
+  radiusBottom: number,
+  height: number,
+  segments = 12,
+): BufferGeometry {
+  const key = `cyl:${radiusTop}:${radiusBottom}:${height}:${segments}`;
+  let geometry = geometryCache.get(key);
+  if (!geometry) {
+    geometry = new CylinderGeometry(radiusTop, radiusBottom, height, segments);
+    geometryCache.set(key, geometry);
+  }
+  return geometry;
+}
+
+export function sharedSphere(radius: number, widthSegments = 12, heightSegments = 10): BufferGeometry {
+  const key = `sph:${radius}:${widthSegments}:${heightSegments}`;
+  let geometry = geometryCache.get(key);
+  if (!geometry) {
+    geometry = new SphereGeometry(radius, widthSegments, heightSegments);
+    geometryCache.set(key, geometry);
+  }
+  return geometry;
+}
+
+/** Número de geometrias vivas no cache (para diagnóstico). */
+export function geometryCacheSize(): number {
+  return geometryCache.size;
 }

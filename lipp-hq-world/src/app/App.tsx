@@ -1,11 +1,10 @@
-import { Canvas } from "@react-three/fiber";
-import { Component, Suspense, useEffect, useState, type ReactNode } from "react";
-import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
-import { CAMERA } from "@/config/constants";
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Hud } from "@/components/hud/Hud";
 import { LiveConnection } from "@/integrations/openmausbot/LiveConnection";
-import { HQScene } from "@/world/scene/HQScene";
-import { ReadySignal } from "@/app/ReadySignal";
+
+// three.js + toda a cena carregam num chunk próprio, depois do primeiro paint
+// da casca (HUD, boot e estados de erro).
+const WorldCanvas = lazy(() => import("@/world/scene/WorldCanvas").then((m) => ({ default: m.WorldCanvas })));
 
 function detectWebGL(): boolean {
   try {
@@ -80,33 +79,14 @@ export function App() {
       className="app-shell"
       onContextMenu={(event) => event.preventDefault()}
     >
-      <Canvas
-        className="world-canvas"
-        shadows
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
-        camera={{
-          fov: CAMERA.fov,
-          near: CAMERA.near,
-          far: CAMERA.far,
-          position: [CAMERA.position[0], CAMERA.position[1], CAMERA.position[2]],
-        }}
-        onCreated={({ gl }) => {
-          gl.toneMapping = ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.08;
-          gl.outputColorSpace = SRGBColorSpace;
-        }}
-      >
-        <SceneBoundary>
-          <Suspense fallback={null}>
-            <HQScene />
-          </Suspense>
-        </SceneBoundary>
-      </Canvas>
+      <SceneBoundary>
+        <Suspense fallback={null}>
+          <WorldCanvas />
+        </Suspense>
+      </SceneBoundary>
       {!booted && <BootLabel text="Carregando Lipp HQ World…" />}
       <Hud />
       <LiveConnection />
-      <ReadySignal />
     </div>
   );
 }
