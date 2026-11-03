@@ -47,6 +47,24 @@ Cada linha de `sessions[]` vem **marcada com o `profile` dono**
 Rotinas (`/api/cron/jobs`): `id`, `name`, `profile`, `enabled`, `paused`,
 `schedule`, `next_run` (segundos).
 
+### Sessões no HUD
+
+O número do resumo ("21 sessões") tem drill-down. Cada bot carrega as
+`SESSION_PREVIEW_LIMIT` (6) sessões mais recentes, com `id`, `title`, `preview`,
+`source`, `model`, `messageCount`, `toolCallCount`, custo e `active` — esta
+última usando a **mesma** heurística do Hermes (`ended_at` nulo e visto nos
+últimos 5 min), não uma regra nossa. O total continua em `sessionCount`, então
+cortar a janela não inventa número menor.
+
+A aba **Sessões** lista a frota inteira da mais recente para a mais antiga e
+mostra a origem crua traduzida só onde muda de sentido (`cron` → rotina,
+`cli` → terminal); o resto aparece como veio (`telegram`, `dashboard`). Clicar
+leva ao painel do bot dono. Sessão sem `last_active` vai para o fim em vez de
+fingir recência.
+
+A origem usada pelo fixture segue `KNOWN_SOURCES`
+(`hermes_cli/session_lost_and_found.py`): `cli`, `telegram`, `dashboard`, `cron`.
+
 ## Derivação de estado (sem inventar nada)
 
 `src/integrations/hermes/botsFromHermes.ts`:

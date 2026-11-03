@@ -195,6 +195,128 @@ button.sidebar-row:hover {
   color: var(--hq-text-dim);
 }
 
+/* ---- Sessões (lista lateral e painel do bot) ---- */
+.session-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "dot bot source time"
+    "dot title title title";
+  column-gap: 6px;
+  row-gap: 2px;
+  padding: 5px 6px;
+  border-radius: 7px;
+  text-align: left;
+}
+
+.session-row .agent-dot {
+  grid-area: dot;
+  align-self: center;
+}
+
+.session-bot {
+  grid-area: bot;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hq-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-source {
+  grid-area: source;
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(125, 211, 252, 0.08);
+  color: #9fc3e8;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.session-row .agent-state {
+  grid-area: time;
+  margin-left: 0;
+  font-size: 10px;
+}
+
+.session-title {
+  grid-area: title;
+  font-size: 10.5px;
+  color: var(--hq-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-sessions {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--hq-panel-border);
+}
+
+.panel-sessions-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #b8c4d8;
+}
+
+.panel-sessions-head span {
+  font-weight: 400;
+  color: var(--hq-text-dim);
+}
+
+.panel-sessions ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel-sessions li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* sessão ativa: barra discreta à esquerda, sem inventar estado */
+.panel-sessions li.active {
+  box-shadow: inset 2px 0 0 #4ade80;
+}
+
+.panel-sessions .session-source {
+  grid-row: span 1;
+}
+
+.panel-sessions .session-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hq-text);
+}
+
+.panel-sessions .session-meta {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--hq-text-dim);
+}
+
+.panel-sessions-empty {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--hq-text-dim);
+  font-style: italic;
+}
+
 .sidebar-note {
   margin-top: 10px;
   font-size: 11px;

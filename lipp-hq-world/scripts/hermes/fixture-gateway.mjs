@@ -62,12 +62,14 @@ function buildSessions(nowSeconds) {
       index += 1;
       const ageSeconds = (index % 7) * 40 + slot * 900;
       const startedAt = nowSeconds - ageSeconds - 600;
+      // origens que o Hermes realmente grava (KNOWN_SOURCES em session_lost_and_found.py)
+      const sources = ["cli", "telegram", "dashboard"];
       sessions.push({
         id: `sess_${bot.name}_${slot}`,
         profile: bot.name,
         title: titles[slot % titles.length],
         preview: `${titles[slot % titles.length]} — executando com ${bot.model}.`,
-        source: "local",
+        source: sources[slot % sources.length],
         model: bot.model,
         started_at: startedAt,
         last_active: nowSeconds - ageSeconds,

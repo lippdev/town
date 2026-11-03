@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
   Boxes,
   Cable,
   Camera,
   Clock,
+  MessageSquareText,
   MonitorUp,
   Users,
   Play,
@@ -42,6 +43,7 @@ import {
 import type { BotSnapshot } from "@/integrations/hq/types";
 import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/components/hud/fleetFilter";
 import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
+import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } from "@/components/hud/sessions";
 
 /** Ponto da sala em coordenadas de tela para o painel flutuante. */
 
@@ -57,6 +59,7 @@ function Sidebar() {
     { id: "bots", label: "Bots", icon: Bot, badge: bots.length || null },
     { id: "briefing", label: "Briefing", icon: Users, badge: briefings || null },
     { id: "rotinas", label: "Rotinas", icon: Clock, badge: counts.routines || null },
+    { id: "sessoes", label: "Sessões", icon: MessageSquareText, badge: counts.sessions || null },
     { id: "escritorio", label: "Escritório", icon: Boxes, badge: null },
     { id: "integracoes", label: "Integrações", icon: Cable, badge: null },
   ];
@@ -85,6 +88,7 @@ function Sidebar() {
       {section === "bots" && <BotRoster />}
       {section === "briefing" && <BriefingPanel />}
       {section === "rotinas" && <RoutineList />}
+      {section === "sessoes" && <SessionList />}
       {section === "escritorio" && (
         <div className="sidebar-note">
           {bots.length > 0
@@ -321,6 +325,81 @@ function RoutineList() {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Sessões reais da frota, uma linha por sessão, da mais recente para a mais
+ * antiga. Clicar leva ao bot dono dela — é o drill-down do número que aparece
+ * no resumo ("21 sessões").
+ */
+function SessionList() {
+  const fleet = useHQStore((state) => state.fleet);
+  const selectBot = useHQStore((state) => state.selectBot);
+  const bots = fleet?.bots ?? [];
+  const colors = useMemo(
+    () => Object.fromEntries(sceneAgentsFromFleet(fleet).map((agent) => [agent.id, agent.color])),
+    [fleet],
+  );
+  const rows = fleetSessions(bots, colors);
+  const active = activeSessionTotal(bots);
+  const total = bots.reduce((sum, bot) => sum + bot.sessionCount, 0);
+
+  if (rows.length === 0) {
+    return <div className="sidebar-note">Nenhuma sessão reportada pelo Hermes.</div>;
+  }
+
+  return (
+    <div className="sidebar-list">
+      <div className="sidebar-note">
+        {active} ativas de {total} sessões · janela de 5 min do Hermes
+      </div>
+      {rows.map((row) => (
+        <button
+          key={`${row.botId}-${row.session.id}`}
+          type="button"
+          className="sidebar-row session-row"
+          onClick={() => selectBot(row.botId)}
+          title={row.session.preview ?? row.session.title ?? "Sessão"}
+        >
+          <span className="agent-dot" style={{ background: row.botColor }} aria-hidden />
+          <span className="session-bot">{row.botName}</span>
+          <span className="session-source">{sourceLabel(row.session.source)}</span>
+          <span className="agent-state">{relativeTime(row.session.lastActiveAt)}</span>
+          <span className="session-title">{sessionTitle(row.session)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function sessionTitle(session: FleetSession["session"]): string {
+  return session.title ?? session.preview ?? "sem título";
+}
+
+/** Sessões recentes de um bot, dentro do painel. */
+function BotSessions({ bot }: { bot: BotSnapshot }) {
+  const sessions = bot.sessions ?? [];
+  if (sessions.length === 0) {
+    return <p className="panel-sessions-empty">Nenhuma sessão reportada para este bot.</p>;
+  }
+  return (
+    <div className="panel-sessions">
+      <div className="panel-sessions-head">
+        Sessões recentes <span>{bot.sessionCount > sessions.length ? `${sessions.length} de ${bot.sessionCount}` : bot.sessionCount}</span>
+      </div>
+      <ul>
+        {sessions.map((session) => (
+          <li key={session.id} className={session.active ? "active" : undefined}>
+            <span className="session-source">{sourceLabel(session.source)}</span>
+            <span className="session-name">{sessionTitle(session)}</span>
+            <span className="session-meta">
+              {relativeTime(session.lastActiveAt)} · {session.messageCount ?? 0} msg
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -721,6 +800,7 @@ function BotPanel({ bot }: { bot: BotSnapshot }) {
           <dd>{bot.nextRoutineAt ? relativeTime(bot.nextRoutineAt) : "—"}</dd>
         </div>
       </dl>
+      <BotSessions bot={bot} />
       {bot.description && <p className="panel-resp">{bot.description}</p>}
       {fleet?.stale && (
         <p className="panel-warn">
