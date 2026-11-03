@@ -14,8 +14,8 @@ import { ToneMappingMode } from "postprocessing";
  */
 export function PostEffects() {
   return (
-    <EffectComposer multisampling={4}>
-      <N8AO halfRes quality="medium" aoRadius={1.4} distanceFalloff={0.8} intensity={2.4} color="#1a1410" />
+    <EffectComposer multisampling={0}>
+      <N8AO halfRes quality="performance" aoRadius={1.4} distanceFalloff={0.8} intensity={2.4} color="#1a1410" />
       <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={0.45} />
       <ToneMapping mode={ToneMappingMode.NEUTRAL} />
       <Vignette offset={0.32} darkness={0.42} />
