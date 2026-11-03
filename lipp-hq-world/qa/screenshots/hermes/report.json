@@ -59,18 +59,24 @@
       ],
       "latencies": [
         "4 ms",
-        "3 ms",
-        "3 ms",
-        "3 ms"
+        "5 ms",
+        "5 ms",
+        "4 ms"
       ],
       "summary": "tudo respondendo4 de 4 endpoints",
       "config": [
         "ModoHermes (ao vivo)",
-        "APIhttp://127.0.0.1:37063",
-        "Dashboardhttp://127.0.0.1:45907",
+        "APIhttp://127.0.0.1:43109",
+        "Dashboardhttp://127.0.0.1:41091",
         "Credenciaissem chave · sem token",
         "Última leituraagora"
       ]
+    },
+    "dashboardLink": {
+      "href": "http://127.0.0.1:41091/?profile=argos",
+      "target": "_blank",
+      "rel": "noreferrer noopener",
+      "text": "Abrir no dashboard do Hermes"
     },
     "demoEventsAfterLive": 0
   },

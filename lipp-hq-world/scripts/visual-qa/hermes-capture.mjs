@@ -160,6 +160,22 @@ async function main() {
     await page.screenshot({ path: path.join(OUT, "gateway-diagnostics.png") });
     await page.locator(".sidebar-item", { hasText: "Bots" }).click();
 
+    // ---- link para o dashboard do Hermes, com o perfil do bot ----
+    await page.locator(".agent-row").first().click();
+    await page.waitForSelector(".panel-link", { timeout: 30000 });
+    report.checks.dashboardLink = await page.evaluate(() => {
+      const link = document.querySelector(".panel-link");
+      return {
+        href: link?.getAttribute("href") ?? null,
+        target: link?.getAttribute("target") ?? null,
+        rel: link?.getAttribute("rel") ?? null,
+        text: (link?.textContent ?? "").trim(),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "panel-dashboard-link.png") });
+    await page.locator(".panel-close").first().click();
+    await page.waitForTimeout(300);
+
     report.checks.demoEventsAfterLive = await page.evaluate(() => {
       const events = Array.from(document.querySelectorAll(".feed li"));
       return events.filter((item) => item.querySelector(".feed-demo")).length;
@@ -188,7 +204,10 @@ async function main() {
     report.checks.diagnostics?.rows === 4 &&
     report.checks.diagnostics?.allOk === true &&
     report.checks.diagnostics.latencies.every((value) => /ms|s$/.test(value ?? "")) &&
-    (report.checks.diagnostics.summary ?? "").includes("4 de 4");
+    (report.checks.diagnostics.summary ?? "").includes("4 de 4") &&
+    /\?profile=/.test(report.checks.dashboardLink?.href ?? "") &&
+    report.checks.dashboardLink?.target === "_blank" &&
+    (report.checks.dashboardLink?.rel ?? "").includes("noopener");
 
   await fs.writeFile(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
