@@ -12,14 +12,14 @@ import { botStatesFromFleet } from "@/integrations/hermes/fleetToStates";
  * em Demo, também declarado na tela.
  */
 export function HermesConnection() {
-  const setFleet = useHQStore((state) => state.setFleet);
+  const setFleetSnapshot = useHQStore((state) => state.setFleetSnapshot);
   const setGatewayRefresh = useHQStore((state) => state.setGatewayRefresh);
 
   useEffect(() => {
     const adapter = new HermesAdapter({
       onSnapshot: (snapshot) => {
         const store = useHQStore.getState();
-        store.setFleet(snapshot);
+        store.setFleetSnapshot(snapshot);
         store.setConnectionStatus(
           snapshot.health.api === "offline" && snapshot.health.dashboard === "offline"
             ? "offline"
@@ -54,9 +54,9 @@ export function HermesConnection() {
     return () => {
       adapter.dispose();
       setGatewayRefresh(null);
-      setFleet(null);
+      setFleetSnapshot(null);
     };
-  }, [setFleet, setGatewayRefresh]);
+  }, [setFleetSnapshot, setGatewayRefresh]);
 
   return null;
 }

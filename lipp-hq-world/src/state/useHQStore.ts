@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { FleetSnapshot } from "@/integrations/hq/types";
+import { pushSample, sampleFromBots, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import type { AgentAnimationState, ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
 
 export interface CameraView {
@@ -49,6 +50,9 @@ interface HQState {
   /** Última frota lida do Hermes (null em Demo ou antes do primeiro poll). */
   fleet: FleetSnapshot | null;
   setFleet: (fleet: FleetSnapshot | null) => void;
+  /** Amostras reais da frota, para a sparkline do resumo. */
+  fleetHistory: FleetSample[];
+  setFleetSnapshot: (fleet: FleetSnapshot | null) => void;
   /** Bot selecionado no painel sai da frota, não da lista fixa. */
   selectedBotId: string | null;
   selectBot: (botId: string | null) => void;
@@ -140,6 +144,14 @@ export const useHQStore = create<HQState>((set) => ({
     }),
   fleet: null,
   setFleet: (fleet) => set({ fleet }),
+  fleetHistory: [],
+  setFleetSnapshot: (fleet) =>
+    set((state) => {
+      if (!fleet) return { fleet: null, fleetHistory: [] };
+      // só leitura fresca entra no histórico; leitura atrasada repetiria o passado
+      if (fleet.stale) return { fleet };
+      return { fleet, fleetHistory: pushSample(state.fleetHistory, sampleFromBots(fleet.bots, fleet.fetchedAt)) };
+    }),
   selectedBotId: null,
   selectBot: (selectedBotId) => set({ selectedBotId, selectedAgentId: selectedBotId }),
   gatewayRefresh: null,

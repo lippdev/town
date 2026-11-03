@@ -717,3 +717,26 @@ button.sidebar-row:focus-visible {
   outline: 2px solid #7dd3fc;
   outline-offset: -2px;
 }
+
+/* ---- Sparkline do resumo ---- */
+.fleet-spark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 10px 3px 12px;
+  margin-left: 4px;
+  border-left: 1px solid var(--hq-panel-border);
+}
+
+.fleet-spark svg {
+  width: 120px;
+  height: 22px;
+  overflow: visible;
+}
+
+.fleet-spark-label {
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: var(--hq-text-dim);
+  white-space: nowrap;
+}

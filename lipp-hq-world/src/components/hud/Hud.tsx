@@ -28,6 +28,7 @@ import {
 } from "@/components/hud/fleetView";
 import type { BotSnapshot } from "@/integrations/hq/types";
 import { STATE_FILTERS, nextIndex, visibleBots, type StateFilter } from "@/components/hud/fleetFilter";
+import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fleetHistory";
 
 /** Ponto da sala em coordenadas de tela para o painel flutuante. */
 
@@ -311,8 +312,42 @@ function RoutineList() {
   );
 }
 
+/** Janela real das amostras e a variação de quem está trabalhando. */
+function windowLabel(samples: FleetSample[]): string {
+  if (samples.length < 2) return "lendo…";
+  const minutes = Math.max(1, Math.round((samples[samples.length - 1].at - samples[0].at) / 60000));
+  const delta = trend(samples, (sample) => sample.working);
+  const variation = delta === 0 ? "estável" : `${delta > 0 ? "+" : ""}${delta} trabalhando`;
+  return `${minutes} min · ${variation}`;
+}
+
+/** Sparkline real da frota: cada ponto é uma leitura do gateway. */
+function FleetSparkline({ samples }: { samples: FleetSample[] }) {
+  const series = [
+    { key: "working", color: "#4ade80", pick: (sample: FleetSample) => sample.working },
+    { key: "briefing", color: "#93c5fd", pick: (sample: FleetSample) => sample.briefing },
+    { key: "waiting", color: "#facc15", pick: (sample: FleetSample) => sample.waiting },
+  ];
+  const hasLine = series.some((entry) => sparklinePath(samples, entry.pick, 120, 22) !== "");
+
+  if (!hasLine) return null;
+
+  return (
+    <div className="fleet-spark" title="Atividade real nos últimos minutos">
+      <svg viewBox="0 0 120 22" preserveAspectRatio="none" aria-hidden focusable="false">
+        {series.map((entry) => {
+          const path = sparklinePath(samples, entry.pick, 120, 22);
+          return path ? <path key={entry.key} d={path} fill="none" stroke={entry.color} strokeWidth={1.4} /> : null;
+        })}
+      </svg>
+      <span className="fleet-spark-label">{windowLabel(samples)}</span>
+    </div>
+  );
+}
+
 function FleetSummary() {
   const fleet = useHQStore((state) => state.fleet);
+  const fleetHistory = useHQStore((state) => state.fleetHistory);
   if (!fleet || fleet.bots.length === 0) return null;
   const counts = fleetCounts(fleet);
   const items = [
@@ -331,6 +366,7 @@ function FleetSummary() {
           <span>{item.label}</span>
         </div>
       ))}
+      <FleetSparkline samples={fleetHistory} />
     </div>
   );
 }

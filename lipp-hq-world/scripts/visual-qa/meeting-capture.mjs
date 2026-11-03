@@ -35,7 +35,7 @@ async function main() {
   const fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs"], { cwd: ROOT, stdio: "ignore" });
   const preview = spawn("pnpm", ["preview", "--port", String(PORT), "--strictPort"], { cwd: ROOT, stdio: "ignore" });
   const browser = await chromium.launch({
-    executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
+    executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--disable-gpu-sandbox", "--ignore-gpu-blocklist"],
   });
