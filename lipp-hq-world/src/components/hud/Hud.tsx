@@ -10,6 +10,7 @@ import {
   Users,
   Radio,
   RotateCcw,
+  Gauge,
   TriangleAlert,
 } from "lucide-react";
 import { AGENTS_BY_ID } from "@/agents/agents";
@@ -31,6 +32,7 @@ import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "
 import { activeSessionTotal, fleetSessions, sessionTitle, sourceLabel } from "@/components/hud/sessions";
 import { botRoomId } from "@/components/hud/selection";
 import { BotDrawer } from "@/components/hud/BotDrawer";
+import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
 import {
   connectHermes,
@@ -863,6 +865,29 @@ function GatewayChip() {
   );
 }
 
+/**
+ * Qualidade gráfica num chip só (Auto → Alta → Leve). No Auto, mostra o que o
+ * monitor de desempenho escolheu, para ninguém achar que a cena "piorou" sozinha.
+ */
+function GraphicsChip() {
+  const mode = useHQStore((state) => state.graphicsMode);
+  const auto = useHQStore((state) => state.autoQuality);
+  const setMode = useHQStore((state) => state.setGraphicsMode);
+  const next = GRAPHICS_MODES[(GRAPHICS_MODES.indexOf(mode) + 1) % GRAPHICS_MODES.length];
+  const label = mode === "auto" ? `Auto · ${GRAPHICS_LABEL[auto]}` : GRAPHICS_LABEL[mode];
+  return (
+    <button
+      type="button"
+      className="chip"
+      onClick={() => setMode(next)}
+      title={`Gráficos: ${label}. Clique para ${GRAPHICS_LABEL[next]}.`}
+      aria-label={`Qualidade gráfica: ${label}`}
+    >
+      <Gauge size={12} /> {label}
+    </button>
+  );
+}
+
 function TopBar() {
   const wallMode = useHQStore((state) => state.wallMode);
   const setWallMode = useHQStore((state) => state.setWallMode);
@@ -895,6 +920,7 @@ function TopBar() {
           </button>
         ))}
       </div>
+      <GraphicsChip />
       <button type="button" className="chip" onClick={() => resetCamera()}>
         <RotateCcw size={12} /> Reset
       </button>
