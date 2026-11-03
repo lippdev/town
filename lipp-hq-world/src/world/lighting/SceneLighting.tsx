@@ -1,20 +1,34 @@
+import { useEffect } from "react";
 import { PALETTE } from "@/config/constants";
 import { ROOMS, roomCenter, roomSize } from "@/world/rooms/rooms";
+import { skyGradientTexture } from "@/world/textures/floorTextures";
+import { useThree } from "@react-three/fiber";
 
 /**
- * Iluminação base do diorama: ambiente neutro, preenchimento hemisférico e uma
- * direcional principal com sombra suave. Sem post-processing para manter o
- * custo de render baixo.
+ * Iluminação do diorama, com contraste de jogo moderno: chave quente forte,
+ * ambiente frio baixo (sombras leem azulado) e poças de luz quentes por sala.
+ * O fundo é um gradiente vertical, não uma cor chapada.
  */
 export function SceneLighting() {
+  const scene = useThree((state) => state.scene);
+
+  useEffect(() => {
+    const sky = skyGradientTexture();
+    scene.background = sky;
+    scene.backgroundIntensity = 0.9;
+    return () => {
+      scene.background = null;
+    };
+  }, [scene]);
+
   return (
     <>
-      <ambientLight intensity={0.72} color="#dfe8f6" />
-      <hemisphereLight args={["#cfe3ff", "#1b2436", 0.55]} />
+      <ambientLight intensity={0.34} color="#b8c6e2" />
+      <hemisphereLight args={["#bcd4ff", "#5e5240", 0.85]} />
       <directionalLight
-        position={[24, 34, 20]}
-        intensity={2.35}
-        color="#fff4e2"
+        position={[26, 38, 14]}
+        intensity={3.1}
+        color="#ffe2b8"
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -27,7 +41,7 @@ export function SceneLighting() {
         shadow-camera-top={26}
         shadow-camera-bottom={-26}
       />
-      <directionalLight position={[-22, 16, -18]} intensity={0.42} color="#8fb6e8" />
+      <directionalLight position={[-26, 18, -22]} intensity={0.55} color="#7ea4e0" />
       {ROOMS.map((room) => {
         const center = roomCenter(room);
         const size = roomSize(room);
@@ -35,7 +49,7 @@ export function SceneLighting() {
           <group key={room.id} position={[center[0], 0, center[2]]}>
             <pointLight
               position={[0, 2.55, 0]}
-              intensity={size.width * 2.6}
+              intensity={size.width * 2.2}
               distance={size.width * 1.5}
               decay={1.8}
               color="#ffd9a3"

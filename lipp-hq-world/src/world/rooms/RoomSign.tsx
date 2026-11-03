@@ -12,8 +12,9 @@ interface RoomSignProps {
 }
 
 /**
- * Totem de identificação na entrada da sala. Fica no piso, e não na parede,
- * para continuar legível quando a parede entra em cutaway.
+ * Totem de identificação na entrada da sala: placa única que gira para a
+ * câmera (legível de qualquer ângulo de órbita), sem as faces cruzadas que
+ * liam como um "X" escuro na vista de cima.
  */
 export function RoomSign({ room }: RoomSignProps) {
   const door = room.doors[0];
@@ -65,14 +66,20 @@ export function RoomSign({ room }: RoomSignProps) {
   const scaler = useRef<Group>(null);
 
   // Rótulos legíveis em qualquer distância: a placa cresce quando a câmera
-  // se afasta, com limite para não virar outdoor.
-  useFrame(({ camera }) => {
+  // se afasta (com limite) e gira só no eixo Y para encarar a câmera. Os
+  // fatores escalam com o delta real — em renders lentos (1–2 fps do QA)
+  // a placa ainda chega ao alvo em poucos frames.
+  useFrame(({ camera }, rawDelta) => {
     const node = scaler.current;
     if (!node) return;
-    const distance = camera.position.distanceTo(node.getWorldPosition(node.position.clone().set(0, 0, 0)));
+    const delta = Math.min(rawDelta, 0.12);
+    const world = node.getWorldPosition(node.position.clone().set(0, 0, 0));
+    const distance = camera.position.distanceTo(world);
     const target = Math.min(Math.max(distance / 54, 1), 2.3);
-    node.scale.x += (target - node.scale.x) * 0.08;
+    node.scale.x += (target - node.scale.x) * Math.min(1, delta * 8);
     node.scale.y = node.scale.x;
+    const yaw = Math.atan2(camera.position.x - world.x, camera.position.z - world.z);
+    node.rotation.y += (yaw - node.rotation.y) * Math.min(1, delta * 10);
   });
 
   return (
@@ -82,42 +89,27 @@ export function RoomSign({ room }: RoomSignProps) {
       rotation={[0, placement.rotationY, 0]}
     >
       <group ref={scaler}>
-      <mesh position={[0, 0.78, 0]} castShadow>
-        <cylinderGeometry args={[0.055, 0.07, 1.56, 10]} />
-        <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.06, 0]} castShadow>
-        <cylinderGeometry args={[0.24, 0.24, 0.12, 14]} />
-        <meshStandardMaterial color={PALETTE.chair} roughness={0.7} metalness={0.15} />
-      </mesh>
-      <mesh position={[0, 1.78, 0]} castShadow>
-        <boxGeometry args={[plateWidth + 0.08, plateHeight + 0.08, 0.07]} />
-        <meshStandardMaterial color="#0d1420" roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 1.78, 0]} castShadow>
-        <boxGeometry args={[0.07, plateHeight + 0.08, plateWidth + 0.08]} />
-        <meshStandardMaterial color="#0d1420" roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 1.78, 0.041]}>
-        <planeGeometry args={[plateWidth, plateHeight]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
-      <mesh position={[0, 1.78, -0.041]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[plateWidth, plateHeight]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
-
-      {/* Face cruzada: legível no outro sentido do corredor. */}
-      <group rotation={[0, Math.PI / 2, 0]}>
-        <mesh position={[0, 1.78, 0.046]}>
+        <mesh position={[0, 0.78, 0]} castShadow>
+          <cylinderGeometry args={[0.055, 0.07, 1.56, 10]} />
+          <meshStandardMaterial color={PALETTE.metal} roughness={0.45} metalness={0.35} />
+        </mesh>
+        <mesh position={[0, 0.06, 0]} castShadow>
+          <cylinderGeometry args={[0.24, 0.24, 0.12, 14]} />
+          <meshStandardMaterial color={PALETTE.chair} roughness={0.7} metalness={0.15} />
+        </mesh>
+        <mesh position={[0, 1.78, -0.03]} castShadow>
+          <boxGeometry args={[plateWidth + 0.08, plateHeight + 0.08, 0.06]} />
+          <meshStandardMaterial color="#101826" roughness={0.55} metalness={0.2} />
+        </mesh>
+        <mesh position={[0, 1.78, 0.005]}>
           <planeGeometry args={[plateWidth, plateHeight]} />
           <meshBasicMaterial map={texture} toneMapped={false} />
         </mesh>
-        <mesh position={[0, 1.78, -0.046]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[plateWidth, plateHeight]} />
-          <meshBasicMaterial map={texture} toneMapped={false} />
+        {/* filete emissivo na cor da sala — lê como "placa acesa" de longe */}
+        <mesh position={[0, 1.31, 0.012]}>
+          <planeGeometry args={[plateWidth + 0.08, 0.07]} />
+          <meshBasicMaterial color={room.color} toneMapped={false} />
         </mesh>
-      </group>
       </group>
     </group>
   );
