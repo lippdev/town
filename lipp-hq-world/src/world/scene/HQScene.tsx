@@ -7,7 +7,6 @@ import { RoomSigns } from "@/world/rooms/RoomSigns";
 import { Furniture } from "@/world/furniture/Furnishing";
 import { BriefingBoard } from "@/world/furniture/BriefingBoard";
 import { Agents } from "@/world/characters/Agents";
-import { DemoDriver } from "@/integrations/mock/DemoDriver";
 import { DynamicWalls } from "@/world/walls/DynamicWalls";
 import { CameraRig } from "@/world/camera/CameraRig";
 import { Picking } from "@/world/scene/Picking";
@@ -28,7 +27,6 @@ export function HQScene() {
       <Furniture />
       <BriefingBoard />
       <Agents />
-      <DemoDriver />
       <RoomSigns />
       <CameraRig />
       <Picking />

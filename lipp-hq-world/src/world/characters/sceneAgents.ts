@@ -1,15 +1,15 @@
 import type { AgentAnimationState, AgentDefinition, RoomDefinition } from "@/types/hq";
-import { AGENTS, AGENTS_BY_ID } from "@/agents/agents";
+import { AGENTS_BY_ID } from "@/agents/agents";
 import { CHARACTER_PRESETS } from "@/world/characters/appearance";
 import { ROOMS } from "@/world/rooms/rooms";
 import type { FleetSnapshot } from "@/integrations/hq/types";
 
 /**
- * Quem está na cena. Em Demo são os 7 agentes da Lipp HQ; ao vivo são os bots
- * que o Hermes reporta, encaixados nos mesmos postos de trabalho.
+ * Quem está na cena: os bots que o Hermes reporta, encaixados nos postos de
+ * trabalho. Sem frota lida, a cena fica vazia.
  */
 export interface SceneAgent extends AgentDefinition {
-  /** Estado vindo da frota ao vivo; ausente em Demo (o DemoDriver manda). */
+  /** Estado vindo da frota ao vivo. */
   liveState?: AgentAnimationState;
   /** True quando o bot veio do Hermes (frota real). */
   live: boolean;
@@ -109,11 +109,6 @@ export function sceneAgentsFromFleet(fleet: FleetSnapshot | null): SceneAgent[] 
   });
 
   return agents;
-}
-
-/** Frota em Demo: os 7 agentes da Lipp HQ, como antes. */
-export function demoSceneAgents(): SceneAgent[] {
-  return AGENTS.map((agent) => ({ ...agent, live: false }));
 }
 
 /** Quantos bots da frota não couberam nos postos e ficaram sem cena. */
