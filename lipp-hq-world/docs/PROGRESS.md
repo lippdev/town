@@ -3,6 +3,26 @@
 Memória operacional da implementação. Atualizado ao fim de cada ciclo, antes de
 qualquer commit.
 
+## Validação final no `main` (2026-11-03, 16:32)
+
+Rodada depois de mergear todas as PRs do ciclo, no commit `1204146`:
+
+| Verificação                  | Resultado                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm typecheck`             | limpo                                                                                   |
+| `pnpm lint`                  | 0 problemas                                                                             |
+| `pnpm test`                  | **79 testes** passando                                                                  |
+| `pnpm build`                 | ok                                                                                      |
+| `hermes-capture`             | `ok: true` — 7 bots, 21 sessões, 6 rotinas, 4 endpoints, link do dashboard              |
+| `hermes-resilience`          | `ok: true` — gateway caindo e voltando, frota preservada                                |
+| `meeting-capture`            | `ok: true` — briefing leva os bots à sala                                               |
+| `character-editor`           | `ok: true` — 10/10 (malhas, cores, altura, storage, reload, restaurar)                  |
+| `capture` (Demo)             | `ok: true` — 24 capturas, 0 chapadas, 0 fora de centro, 0 duplicadas, 0 erro de console |
+| `contract-check --self-test` | contrato completo                                                                       |
+
+Métrica honesta de render nesta máquina: **1,3 fps** (1 vCPU, SwiftShader por
+software). É o número medido, não uma estimativa.
+
 ## Ciclo 2026-11-03 (tarde) — frota Hermes completa
 
 | Área        | Estado                                                                                                     |
