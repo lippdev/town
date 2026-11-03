@@ -82,3 +82,66 @@ auditoria; os demais estão prontos para execução.
 - Exportar GIF do passeio do agente para compartilhar.
 - Painel "projetos" com métricas reais quando a integração Live existir
   (nunca inventadas).
+
+## 7. Multi-bot — veredito de 2026-10-30 (OpenBot e GrokBot)
+
+Pergunta: o app (visão por cima do OpenMausBot) serve também para OpenBot
+(nightly-labs/openbot) e GrokBot? Veredito, com contratos verificados no
+clone do repo (`~/.capy/work/openbot`, commit de 2026-10-29): **backlog para
+os dois**. OpenMausBot continua sendo o alvo primário e nada muda nele.
+
+### OpenBot — viável, mas 2–3× o esforço do adapter do OpenMausBot
+
+O que existe de verdade no repo:
+
+- **Team API HTTP versionada** (`src/main/team-api/`, rotas em
+  `packages/contracts/src/team-api-routes.ts`): `GET /v1/agents` (coleção),
+  `GET /v1/agents/status` (fase, auth, capacidades, mensagem) e conversa/
+  fila por agente. Ou seja, dá para ler agentes de verdade.
+- **Eventos só por WebSocket** — `GET /v1/events` responde 426
+  ("Use WebSocket for remote events", `route-team.ts`). Não é SSE como no
+  OpenMausBot; o adaptador precisa de cliente WS com reconexão própria.
+- **Fase ≠ atividade.** `AgentPhase` é `idle | starting | ready | restarting
+  | blocked | stopped` — estado do runtime do CLI, não "trabalhando na
+  tarefa X". Derivar working/waiting exige interpretar presença
+  (`GET /v1/team/presence`) + fila/conversa. No OpenMausBot o campo
+  `activity` já vem pronto; no OpenBot é inferência nossa.
+- **Auth por conta OpenBot** (código por e-mail) mesmo self-hosted. O modelo
+  do nosso proxy de leitura same-origin resolve (o proxy guarda a sessão,
+  como já faz com o token do OpenMausBot), mas é um pré-requisito a mais.
+- **"Development preview"**: o repo declara preview e o contrato se protege
+  de version skew (strings abertas em `AgentStatus.kind`) — o que confirma
+  que a API pode mudar entre releases. Integrar hoje é mirar em areia
+  moviça, sem versão estável para testar.
+
+Por que não agora: sem instância OpenBot rodando com conta para testar, o
+adaptador ficaria no mesmo estado em que o Live do OpenMausBot estava antes
+do proxy — código sem prova. E o mapeamento para a cena muda de conceito: os
+7 personagens são os agentes reais da Lipp HQ no OpenMausBot; para OpenBot,
+a lista de agentes é arbitrária e precisa de política genérica de
+nome→personagem (escopo V0 continua Lipp HQ only).
+
+Quando pegar: depois do Live do OpenMausBot provado de ponta a ponta, com
+uma instância OpenBot self-hosted disponível para teste real.
+
+### GrokBot — sem API pública; automatizar o app não é integração
+
+GrokBot (produto desktop da xAI) **não expõe API** — projetos da comunidade
+confirmam por tabela: o `grokbot-bridge` existe porque "It doesn't have an
+API, so other agents can't hand it work", e o `grokbot-cdp` só funciona
+anexando via Chrome DevTools Protocol no Electron do app. Integrar hoje
+significaria automação de UI/CDP — frágil, não suportada, e contra as
+regras de honestidade do projeto (dados raspadinhos de uma interface não
+oferecida não são um contrato). Backlog até a xAI publicar uma API.
+
+Ressalva: o OpenBot se chamava "Grok Bot" até ago/2026 (rename no próprio
+repo); se "GrokBot" aqui for outro produto, o veredito precisa do contrato
+dele — mas todo GrokBot sem API conhecida cai no mesmo lugar.
+
+### Ponto de extensão que já existe (nada a fazer agora)
+
+O `LiveConnection.tsx` constrói o adaptador com três callbacks
+(`onEvent`/`onState`/`onStatus`) — trocar a fonte é trocar a classe
+construída ali. Quando o segundo adaptador for de verdade, a interface
+`HQSource` nasce ali em uma PR própria; extrair antes disso seria abstração
+sem consumidor.
