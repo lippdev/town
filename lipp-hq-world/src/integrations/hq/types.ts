@@ -43,6 +43,24 @@ export interface SessionSnapshot {
 }
 
 /**
+ * Uma rotina (cron job) do Hermes: quando roda, quando rodou e como terminou.
+ * `lastStatus` é o valor cru do Hermes (`ok`, `error`, `delivery_failed`,
+ * `cancelled`…); a UI traduz sem inventar estado.
+ */
+export interface RoutineSnapshot {
+  id: string;
+  name: string;
+  schedule?: string;
+  nextAt?: number;
+  lastAt?: number;
+  lastStatus?: string;
+  lastError?: string;
+  failureStreak?: number;
+  paused?: boolean;
+  enabled?: boolean;
+}
+
+/**
  * Um bot da frota. `id` é estável entre polls (nome do profile no Hermes),
  * então a cena consegue manter o mesmo personagem no mesmo lugar.
  */
@@ -69,7 +87,7 @@ export interface BotSnapshot {
   /** Briefing em andamento (diário/semanal/mensal), detectado de sessão cron real. */
   briefing?: { kind: "diario" | "semanal" | "mensal" | "briefing"; title: string; since?: number };
   /** Rotinas do bot, para o HUD mostrar a agenda real (vazio quando não há). */
-  routines?: Array<{ id: string; name: string; schedule?: string; nextAt?: number }>;
+  routines?: RoutineSnapshot[];
   /** Sessões mais recentes do bot (limitadas); `sessionCount` é o total real. */
   sessions?: SessionSnapshot[];
 }

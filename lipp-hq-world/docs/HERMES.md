@@ -44,8 +44,17 @@ Cada linha de `sessions[]` vem **marcada com o `profile` dono**
 - `message_count`, `tool_call_count`, `input_tokens`, `output_tokens`
 - `estimated_cost_usd`, `model`
 
-Rotinas (`/api/cron/jobs`): `id`, `name`, `profile`, `enabled`, `paused`,
-`schedule`, `next_run` (segundos).
+Rotinas (`/api/cron/jobs`) — campos lidos de `cron/jobs.py`:
+
+- `id`, `name`, `profile`, `enabled`, `state` (`scheduled`/`paused`), `paused`
+- `schedule` (objeto) e `schedule_display` (texto pronto, ex.: `0 9 * * *`)
+- `next_run_at` e `last_run_at` — **ISO-8601** no Hermes atual
+- `last_status` (`ok`, `error`, `delivery_failed`, `delivery_queued`, `cancelled`),
+  `last_error`, `failure_streak`
+
+O app aceita ISO-8601, segundos epoch e milissegundos para esses carimbos
+(`cronTimestampMs`): versões antigas e o fixture usam segundos, o Hermes atual usa
+ISO, e ler só um dos formatos faria toda rotina real aparecer como "sem agenda".
 
 ### Sessões no HUD
 

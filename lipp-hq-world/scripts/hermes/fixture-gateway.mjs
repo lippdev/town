@@ -114,20 +114,30 @@ function buildSessions(nowSeconds) {
   return sessions;
 }
 
-const JOBS = BOTS.filter((bot) => bot.name !== "echo").map((bot, position) => ({
-  id: `job_${bot.name}`,
-  name:
-    position % 3 === 0
-      ? "Briefing diário"
-      : position % 3 === 1
-        ? "Briefing semanal"
-        : `Rotina de ${bot.display_name}`,
-  profile: bot.name,
-  enabled: true,
-  paused: false,
-  schedule: position % 2 === 0 ? "0 9 * * *" : "30 18 * * *",
-  next_run: Math.floor(Date.now() / 1000) + 900 + position * 600,
-}));
+// Rotinas como o Hermes grava: `schedule_display`, `next_run_at`/`last_run_at`
+// em ISO-8601, `last_status` cru e a sequência de falhas. Uma delas falha de
+// propósito para a tela de rotinas ter o que mostrar.
+const JOBS = BOTS.filter((bot) => bot.name !== "echo").map((bot, position) => {
+  const names = ["Briefing diário", "Briefing semanal", "Revisar inbox", "Publicar changelog"];
+  const schedules = ["0 9 * * *", "30 18 * * 1", "0 */4 * * *", "0 12 1 * *"];
+  const iso = (offsetSeconds) => new Date(Date.now() + offsetSeconds * 1000).toISOString();
+  const failed = bot.name === "forge";
+  return {
+    id: `job_${bot.name}`,
+    name: names[position % names.length],
+    profile: bot.name,
+    enabled: !failed,
+    paused: false,
+    state: failed ? "paused" : "scheduled",
+    schedule: { kind: "cron", expr: schedules[position % schedules.length] },
+    schedule_display: schedules[position % schedules.length],
+    next_run_at: iso(failed ? 86400 : 900 + position * 600),
+    last_run_at: iso(-3600 - position * 900),
+    last_status: failed ? "error" : position % 2 === 0 ? "ok" : "delivery_failed",
+    last_error: failed ? "sessão encerrou sem resposta do modelo (timeout 600s)" : null,
+    failure_streak: failed ? 3 : 0,
+  };
+});
 
 function authorized(request) {
   if (!TOKEN) return true;
