@@ -34,9 +34,11 @@ import { BotDrawer } from "@/components/hud/BotDrawer";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
 import {
   connectHermes,
+  connectHermesApi,
   connectLocalHermes,
   detectLocalHermes,
   disconnectHermes,
+  disconnectHermesApi,
   useGatewayStatus,
   type ConnectResult,
   type GatewayStatus,
@@ -68,6 +70,7 @@ function GatewayDiagnostics() {
   return (
     <div className="sidebar-list gateway-diagnostics">
       <ConnectionForm config={config} onConnected={() => refresh?.()} />
+      {config?.source === "saved" && <ApiConnectionForm config={config} />}
 
       <div className={`gateway-summary gateway-${summary.severity}`}>
         <strong>{SEVERITY_LABEL[summary.severity]}</strong>
@@ -133,7 +136,9 @@ function GatewayDiagnostics() {
         Testar agora
       </button>
       <div className="sidebar-note">
-        Somente leitura: o app faz GET nos endpoints documentados e nunca envia comando ao Hermes.
+        {config?.canSend
+          ? "Leitura por GET nos endpoints documentados. A única escrita é a mensagem que você manda a um bot pelo chat."
+          : "Somente leitura: o app faz GET nos endpoints documentados e nunca envia comando ao Hermes."}
       </div>
     </div>
   );
@@ -256,6 +261,94 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
         {saved && (
           <button type="button" className="note-retry" onClick={() => void disconnect()} disabled={busy}>
             desconectar
+          </button>
+        )}
+      </div>
+      {message && (
+        <span className={`connection-message ${message.tone}`}>
+          {message.text}
+          {message.action && <em className="connection-action">{message.action}</em>}
+        </span>
+      )}
+    </form>
+  );
+}
+
+/**
+ * Envio de mensagens: a API do Hermes (`:8642`) é outro serviço, com outra
+ * credencial (`API_SERVER_KEY`). Sem ela o chat fica só leitura. A chave vai
+ * ao proxy, que testa e salva; a página só vê a prévia.
+ */
+function ApiConnectionForm({ config }: { config: GatewayStatus }) {
+  const enabled = Boolean(config.canSend);
+  const [url, setUrl] = useState(config.apiUrl ?? "http://127.0.0.1:8642");
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "fail"; text: string; action?: string } | null>(null);
+
+  const save = async () => {
+    setBusy(true);
+    setMessage(null);
+    const result = await connectHermesApi(url, key);
+    setBusy(false);
+    if (result.ok) {
+      setKey("");
+      setMessage({ tone: "ok", text: `Envio habilitado${result.version ? ` · API ${result.version}` : ""}` });
+    } else {
+      setMessage({ tone: "fail", text: result.error ?? "não foi possível habilitar", action: result.action });
+    }
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    const result = await disconnectHermesApi();
+    setBusy(false);
+    setMessage(result.ok ? { tone: "ok", text: "Envio desligado: o chat volta a só ler." } : { tone: "fail", text: result.error ?? "falhou" });
+  };
+
+  return (
+    <form
+      className="connection-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <strong>API do Hermes (envio)</strong>
+      <span className="connection-hint">
+        {enabled
+          ? `Chat com envio ligado · chave ${config.apiKeyPreview ?? "salva"}`
+          : "Opcional. Sem a API, o chat só lê as conversas."}
+      </span>
+      <label>
+        <span>URL da API</span>
+        <input
+          type="text"
+          inputMode="url"
+          placeholder="http://127.0.0.1:8642"
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <label>
+        <span>API_SERVER_KEY</span>
+        <input
+          type="password"
+          autoComplete="off"
+          placeholder={enabled ? `chave salva ${config.apiKeyPreview ?? ""}` : "cole a API_SERVER_KEY"}
+          value={key}
+          onChange={(event) => setKey(event.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <div className="connection-actions">
+        <button type="submit" className="gateway-retry" disabled={busy || (!key.trim() && !enabled)}>
+          {busy ? "Testando…" : enabled ? "Atualizar" : "Habilitar envio"}
+        </button>
+        {enabled && (
+          <button type="button" className="note-retry" onClick={() => void remove()} disabled={busy}>
+            desligar envio
           </button>
         )}
       </div>
