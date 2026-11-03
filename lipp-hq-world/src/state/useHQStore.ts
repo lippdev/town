@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { loadGraphicsMode, saveGraphicsMode, type GraphicsMode, type GraphicsQuality } from "@/world/quality";
 import type { FleetSnapshot } from "@/integrations/hq/types";
 import { pushSample, sampleFromBots, type FleetSample } from "@/integrations/hermes/fleetHistory";
 import type { AgentAnimationState, ConnectionStatus, DataSource, HQEvent, WallMode } from "@/types/hq";
@@ -77,6 +78,11 @@ interface HQState {
    */
   viewInsetRight: number;
   setViewInsetRight: (pixels: number) => void;
+  /** Escolha de qualidade gráfica (persistida) e a decisão do modo auto. */
+  graphicsMode: GraphicsMode;
+  setGraphicsMode: (mode: GraphicsMode) => void;
+  autoQuality: GraphicsQuality;
+  setAutoQuality: (quality: GraphicsQuality) => void;
 }
 
 const MAX_EVENTS = 60;
@@ -214,6 +220,13 @@ export const useHQStore = create<HQState>((set) => ({
   openSessionId: null,
   openBotSession: (botId, openSessionId) => set({ selectedBotId: botId, selectedAgentId: botId, openSessionId }),
   closeSession: () => set({ openSessionId: null }),
+  graphicsMode: typeof window === "undefined" ? "auto" : loadGraphicsMode(),
+  setGraphicsMode: (graphicsMode) => {
+    saveGraphicsMode(graphicsMode);
+    set({ graphicsMode });
+  },
+  autoQuality: "alta",
+  setAutoQuality: (autoQuality) => set({ autoQuality }),
   viewInsetRight: 0,
   setViewInsetRight: (viewInsetRight) => set({ viewInsetRight }),
   gatewayRefresh: null,
