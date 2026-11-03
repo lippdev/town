@@ -813,17 +813,6 @@ button.sidebar-row:hover {
   font-size: 11px;
 }
 
-.feed-demo {
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 5px;
-  background: rgba(250, 204, 21, 0.14);
-  color: #fde68a;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 button.sidebar-row.active {
   background: rgba(125, 211, 252, 0.12);
   outline: 1px solid rgba(125, 211, 252, 0.35);
