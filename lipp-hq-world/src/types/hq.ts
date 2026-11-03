@@ -88,7 +88,7 @@ export interface VirtualAgent extends AgentDefinition {
   currentPosition: Vector3Tuple;
   destination?: Vector3Tuple;
   animationState: AgentAnimationState;
-  statusSource: "live" | "demo" | "unknown";
+  statusSource: "live" | "unknown";
   summary?: string;
   lastEventAt?: number;
 }
@@ -111,14 +111,15 @@ export interface HQEvent {
   agentId?: string;
   taskId?: string;
   projectId?: string;
-  source: "live" | "demo";
+  source: "live";
   type: HQEventType;
   summary?: string;
   fromAgentId?: string;
   toAgentId?: string;
 }
 
-export type DataSource = "live" | "demo";
+/** "none": nenhuma frota lida do Hermes ainda (a cena fica vazia). */
+export type DataSource = "live" | "none";
 export type ConnectionStatus = "connecting" | "online" | "offline" | "error";
 export type WallMode = "auto" | "low" | "full";
 

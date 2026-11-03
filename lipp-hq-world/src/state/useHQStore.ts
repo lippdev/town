@@ -37,7 +37,6 @@ interface HQState {
   cameraView: CameraView | null;
   demoPaused: boolean;
   setDemoPaused: (paused: boolean) => void;
-  demoRestart: number;
   agentStates: Record<string, AgentAnimationState>;
   setAgentState: (agentId: string, state: AgentAnimationState, summary?: string) => void;
   setWallMode: (mode: WallMode) => void;
@@ -49,15 +48,13 @@ interface HQState {
   pushEvent: (event: HQEvent) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setDataSource: (source: DataSource) => void;
-  /** Remove eventos de simulação ao entrar ao vivo — nunca misturar os dois no feed. */
-  dropDemoEvents: () => void;
   /** Aparência personalizada por agente: peças sobrepostas ao preset padrão. */
   agentLooks: Record<string, CharacterOverride>;
   chooseAgentPreset: (agentId: string, presetId: string | null) => void;
   updateAgentLook: (agentId: string, patch: CharacterOverride) => void;
   randomizeAgentLook: (agentId: string) => void;
   resetAgentLook: (agentId: string) => void;
-  /** Última frota lida do Hermes (null em Demo ou antes do primeiro poll). */
+  /** Última frota lida do Hermes (null antes do primeiro poll). */
   fleet: FleetSnapshot | null;
   setFleet: (fleet: FleetSnapshot | null) => void;
   /** Amostras reais da frota, para a sparkline do resumo. */
@@ -138,7 +135,7 @@ function saveAgentLooks(looks: Record<string, CharacterOverride>): void {
 
 export const useHQStore = create<HQState>((set) => ({
   wallMode: "auto",
-  dataSource: "demo",
+  dataSource: "none",
   connectionStatus: "offline",
   selectedRoomId: null,
   selectedAgentId: null,
@@ -150,7 +147,6 @@ export const useHQStore = create<HQState>((set) => ({
   agentStates: {},
   demoPaused: false,
   setDemoPaused: (demoPaused) => set({ demoPaused }),
-  demoRestart: 0,
 
   setAgentState: (agentId, agentState, summary) =>
     set((state) => {
@@ -159,7 +155,7 @@ export const useHQStore = create<HQState>((set) => ({
             id: `${agentId}-${agentState}-${Date.now()}`,
             timestamp: Date.now(),
             agentId,
-            source: state.dataSource,
+            source: "live",
             type: agentState === "working" ? "agent.working" : agentState === "idle" ? "agent.idle" : "agent.started",
             summary,
           }
@@ -186,11 +182,6 @@ export const useHQStore = create<HQState>((set) => ({
     set((state) => ({ events: [event, ...state.events].slice(0, MAX_EVENTS) })),
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
   setDataSource: (dataSource) => set({ dataSource }),
-  dropDemoEvents: () =>
-    set((state) => {
-      const kept = state.events.filter((event) => event.source !== "demo");
-      return kept.length === state.events.length ? {} : { events: kept };
-    }),
   fleet: null,
   setFleet: (fleet) => set({ fleet }),
   fleetHistory: [],
