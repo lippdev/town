@@ -1,4 +1,4 @@
-﻿# Filipe — referência de personagem v1
+# Filipe — referência de personagem v1
 
 Estado: proposta visual gerada; não implica aprovação final do usuário.
 Fonte principal: original.png. Folha derivada: ficha-v1.png.
@@ -51,4 +51,3 @@ Não definir aparência dos agentes antes das instruções do usuário.
 
 ## Produção
 Gerado com ferramenta integrada image_gen. Prompt completo em prompt-geracao-v1.txt.
-
