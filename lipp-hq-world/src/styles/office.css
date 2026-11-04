@@ -666,3 +666,6 @@ button.office-roster-room:hover {
 .office-visit select { background: #1d293d; color: inherit; border: 1px solid #536078; border-radius: 4px; padding: 4px; }
 .office-visit small { color: var(--hq-text-dim); }
 .office-visit button:disabled { opacity: .4; cursor: default; }
+.office-scenario { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.office-scenario select { flex: 1; min-width: 0; }
+.office-visit p { margin: 8px 0; color: var(--hq-text-dim); line-height: 1.4; }

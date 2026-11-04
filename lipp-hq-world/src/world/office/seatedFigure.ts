@@ -151,7 +151,15 @@ export class SeatedFigure {
       base.node.quaternion.slerpQuaternions(base.rotation, target.rotation, standing);
     });
     this.offset.position.lerpVectors(this.seatedOffset, this.standingOffset, standing);
-    if (standing < 0.99) return;
+    if (standing < 0.99) {
+      if (!reduced && talk > 0 && standing < 0.01) {
+        this.sway(seconds);
+        this.rig.holder.getObjectByName("Head")!.rotateX(Math.sin(seconds * 2.5) * 0.04 * talk);
+        this.rig.holder.getObjectByName("UpperArmR")!.rotateX(Math.sin(seconds * 3) * 0.10 * talk);
+        this.rig.holder.getObjectByName("LowerArmR")!.rotateX(-0.12 * talk);
+      }
+      return;
+    }
     const bone = (name: string) => this.rig.holder.getObjectByName(name)!;
     const cycle = movement?.gaitPhase ?? 0;
     const stride = reduced ? 0 : walk;

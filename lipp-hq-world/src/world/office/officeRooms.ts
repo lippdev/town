@@ -9,6 +9,7 @@ import {
   FLOOR_BOUNDS,
   FRONT_WALL_CUT,
   MEETING,
+  EVENT_MEETING_SEATS,
   OFFICE_ROOMS,
   OFFICE_SEATS,
   WALL_HEIGHT,
@@ -570,7 +571,7 @@ function furnishReunioes(b: KitBuilder, room: OfficeRoom) {
     b.prop("planta", [2.6, 0.02, 2.0], 0.85);
     b.at([3.05, 0, 1.3], 0, () => glassPanel(b, 1.2));
   });
-  OFFICE_SEATS.filter((seat) => seat.roomId === room.id).forEach((seat) => {
+  EVENT_MEETING_SEATS.forEach((seat) => {
     b.at([seat.x, 0, seat.z], seat.yaw, () => chair(b, "#3b3f46"));
   });
 }

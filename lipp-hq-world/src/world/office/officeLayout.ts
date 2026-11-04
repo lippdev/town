@@ -199,3 +199,7 @@ export const SEAT_KIND_LABEL: Record<SeatKind, string> = {
   compartilhado: "Bancada compartilhada",
   reuniao: "Mesa de reunião (posto provisório)",
 };
+
+/** Cadeira de cabeceira para o briefing dos sete; não é um posto extra da frota. */
+export const MEETING_HEAD_SEAT = seat("reunioes", "reuniao", 6, -MEETING.width / 2 - DESK_REACH, MEETING.z, FACING.east);
+export const EVENT_MEETING_SEATS = [...OFFICE_SEATS.filter((entry) => entry.roomId === "reunioes"), MEETING_HEAD_SEAT];

@@ -1,3 +1,4 @@
+import { SCENARIOS, meetingDuration, sampleMeeting, type DemoScenario } from "./officeMeeting";
 import { create } from "zustand";
 import { VisitPath, STRIDE_LENGTH, type Footstep } from "./visitPath";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
@@ -77,21 +78,23 @@ export function sampleVisit(time: number): { visitor: ActorPose; host: ActorPose
 }
 
 interface VisitState {
+  scenario: DemoScenario;
   active: boolean; paused: boolean; time: number; speed: number; label: string;
-  start: () => void; reset: () => void; togglePause: () => void;
+  start: (scenario?: DemoScenario) => void; reset: () => void; togglePause: () => void;
   setSpeed: (speed: number) => void; advance: (delta: number) => void;
 }
 export const useVisitStore = create<VisitState>((set, get) => ({
-  active: false, paused: false, time: 0, speed: 1.5, label: "Pulse visita Scout",
-  start: () => set({ active: true, paused: false, time: 0, label: sampleVisit(0).label }),
-  reset: () => set({ active: false, paused: false, time: 0, label: "Pulse visita Scout" }),
+  scenario: "visit", active: false, paused: false, time: 0, speed: 1.5, label: "Pulse visita Scout",
+  start: (scenario = "visit") => set({ scenario, active: true, paused: false, time: 0, label: scenario === "visit" ? sampleVisit(0).label : sampleMeeting(scenario, 0).label }),
+  reset: () => set({ active: false, paused: false, time: 0, label: SCENARIOS[get().scenario].title }),
   togglePause: () => set({ paused: !get().paused }),
   setSpeed: (speed) => set({ speed: Math.max(0.5, Math.min(2, speed)) }),
   advance: (delta) => {
     const state = get();
     if (!state.active || state.paused) return;
-    const time = Math.min(VISIT_DURATION, state.time + Math.max(0, Math.min(delta, 0.05)) * state.speed);
-    set({ time, active: time < VISIT_DURATION, label: sampleVisit(time).label });
+    const duration = state.scenario === "visit" ? VISIT_DURATION : meetingDuration(state.scenario);
+    const time = Math.min(duration, state.time + Math.max(0, Math.min(delta, 0.05)) * state.speed);
+    set({ time, active: time < duration, label: state.scenario === "visit" ? sampleVisit(time).label : sampleMeeting(state.scenario, time).label });
   },
 }));
 
@@ -99,6 +102,7 @@ export const useVisitStore = create<VisitState>((set, get) => ({
 export function visitPose(botId: string): ActorPose | null {
   const state = useVisitStore.getState();
   if (!state.active) return null;
+  if (state.scenario !== "visit") return sampleMeeting(state.scenario, state.time).poses[botId] ?? null;
   const sample = sampleVisit(state.time);
   return botId === "pulse" ? sample.visitor : botId === "scout" ? sample.host : null;
 }

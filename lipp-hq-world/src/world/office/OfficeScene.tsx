@@ -1,3 +1,4 @@
+import { SCENARIOS } from "./officeMeeting";
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
@@ -375,7 +376,7 @@ function OfficeFigure({ bot, seat }: { bot: OfficeBot; seat: OfficeSeat }) {
 
 function OfficeFigures() {
   useFrame((_, delta) => {
-    if (useOfficeStore.getState().mode === "demo" && !document.hidden && seatedFigures.has("pulse") && seatedFigures.has("scout")) useVisitStore.getState().advance(delta);
+    if (useOfficeStore.getState().mode === "demo" && !document.hidden && SCENARIOS[useVisitStore.getState().scenario].participants.every((id) => seatedFigures.has(id))) useVisitStore.getState().advance(delta);
   }, -1);
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
