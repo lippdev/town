@@ -9,7 +9,6 @@ import {
   MessageSquareText,
   MonitorUp,
   Users,
-  Play,
   Radio,
   RotateCcw,
   SlidersHorizontal,
@@ -100,7 +99,7 @@ function GatewayDiagnostics() {
       <dl className="gateway-config">
         <div>
           <dt>Modo</dt>
-          <dd>{dataSource === "live" ? "Hermes (ao vivo)" : "Demo"}</dd>
+          <dd>{dataSource === "live" ? "Hermes (ao vivo)" : "Sem bots lidos"}</dd>
         </div>
         <div>
           <dt>API</dt>
@@ -156,7 +155,7 @@ function Sidebar() {
       <div className="sidebar-brand">
         <span className="sidebar-dot" aria-hidden />
         <strong>Lipp HQ</strong>
-        <span className="sidebar-mode">{dataSource === "demo" ? "Demo" : "Hermes"}</span>
+        <span className="sidebar-mode">{dataSource === "live" ? "Hermes" : "Aguardando Hermes"}</span>
       </div>
       <nav>
         {items.map((item) => (
@@ -190,8 +189,6 @@ function Sidebar() {
 
 function BotRoster() {
   const fleet = useHQStore((state) => state.fleet);
-  const dataSource = useHQStore((state) => state.dataSource);
-  const agentStates = useHQStore((state) => state.agentStates);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const selectBot = useHQStore((state) => state.selectBot);
   const focusRoom = useHQStore((state) => state.focusRoom);
@@ -216,34 +213,6 @@ function BotRoster() {
   };
 
   if (!fleet || fleet.bots.length === 0) {
-    if (dataSource === "demo") {
-      return (
-        <>
-          <div className="sidebar-note">
-            Modo Demo: frota simulada. Configure o gateway Hermes (<code>HERMES_DASHBOARD_URL</code>) para ver os bots reais.
-          </div>
-          <div className="sidebar-list">
-            {Object.entries(agentStates)
-              .filter(([agentId]) => AGENTS_BY_ID[agentId])
-              .map(([agentId, state]) => (
-                <button
-                  key={agentId}
-                  type="button"
-                  className={selectedBotId === agentId ? "sidebar-row agent-row active" : "sidebar-row agent-row"}
-                  onClick={() => {
-                    focusRoom(AGENTS_BY_ID[agentId].roomId);
-                    selectBot(agentId);
-                  }}
-                >
-                  <span className={`bot-state-dot bot-state-${state === "working" ? "working" : "idle"}`} aria-hidden />
-                  <span className="agent-name">{AGENTS_BY_ID[agentId].name}</span>
-                  <span className="agent-state">{stateLabel(state)}</span>
-                </button>
-              ))}
-          </div>
-        </>
-      );
-    }
     return (
       <div className="sidebar-note sidebar-note-warn">
         <TriangleAlert size={12} />
@@ -584,21 +553,6 @@ function FleetSummary() {
   );
 }
 
-function ReplayDemoButton() {
-  const dataSource = useHQStore((state) => state.dataSource);
-  if (dataSource !== "demo") return null;
-
-  return (
-    <button
-      type="button"
-      className="chip"
-      onClick={() => useHQStore.setState({ demoRestart: Date.now() })}
-    >
-      <Play size={12} /> Replay demo
-    </button>
-  );
-}
-
 function GatewayChip() {
   const fleet = useHQStore((state) => state.fleet);
   const health = fleet?.health;
@@ -656,7 +610,6 @@ function TopBar() {
       <button type="button" className="chip" onClick={() => resetCamera()}>
         <RotateCcw size={12} /> Reset
       </button>
-      <ReplayDemoButton />
     </div>
   );
 }
@@ -681,7 +634,6 @@ function ActivityFeed() {
                 </span>
                 {agent && <span className="agent-dot" style={{ background: agent.color }} aria-hidden />}
                 <span className="feed-summary">{event.summary ?? event.type}</span>
-                {event.source === "demo" && <span className="feed-demo">demo</span>}
               </li>
             );
           })}
@@ -981,37 +933,6 @@ function BotPanel({ bot }: { bot: BotSnapshot }) {
   );
 }
 
-/**
- * Painel de um agente em Demo: mesma estrutura do painel de bot, mas sem as
- * métricas do Hermes (que não existem em simulação) e com o rótulo explícito.
- */
-function DemoAgentPanel({ agentId }: { agentId: string }) {
-  const agent = AGENTS_BY_ID[agentId];
-  const state = useHQStore((store) => store.agentStates[agentId] ?? "idle");
-  const clearSelection = useHQStore((store) => store.clearSelection);
-  if (!agent) return null;
-
-  return (
-    <div className="panel">
-      <div className="panel-head">
-        <span className="agent-dot" style={{ background: agent.color }} aria-hidden />
-        <strong>{agent.name}</strong>
-        <button type="button" className="panel-close" onClick={clearSelection} aria-label="Fechar">
-          ×
-        </button>
-      </div>
-      <div className="panel-role">
-        {agent.role} · {ROOMS_BY_ID[agent.roomId]?.name ?? "—"}
-      </div>
-      <div className="panel-state">
-        Estado: <em>{stateLabel(state)}</em> (simulação)
-      </div>
-      <p className="panel-resp">{agent.responsibility}</p>
-      <CharacterEditor agentId={agent.id} base={agent} />
-    </div>
-  );
-}
-
 function AgentPanel() {
   const fleet = useHQStore((state) => state.fleet);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
@@ -1027,13 +948,6 @@ function AgentPanel() {
   const bot = direct ?? viaRoom;
 
   if (bot) return <BotPanel bot={bot} />;
-
-  // Demo: o agente selecionado não vem de uma frota, vem da lista fixa.
-  // Um snapshot offline também é "sem frota" — bots vazios não são frota.
-  const hasFleet = Boolean(fleet && fleet.bots.length > 0);
-  if (!hasFleet && selectedBotId && AGENTS_BY_ID[selectedBotId]) {
-    return <DemoAgentPanel agentId={selectedBotId} />;
-  }
 
   if (selectedRoomId) {
     const room = ROOMS_BY_ID[selectedRoomId];

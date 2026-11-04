@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoSceneAgents, overflowCount, sceneAgentsFromFleet } from "@/world/characters/sceneAgents";
+import { overflowCount, sceneAgentsFromFleet } from "@/world/characters/sceneAgents";
 import type { FleetSnapshot } from "@/integrations/hq/types";
 
 function fleetOf(bots: Array<{ id: string; name?: string; state?: "working" | "idle" }>): FleetSnapshot {
@@ -19,7 +19,7 @@ function fleetOf(bots: Array<{ id: string; name?: string; state?: "working" | "i
 }
 
 describe("agentes da cena a partir da frota", () => {
-  it("sem frota devolve lista vazia (a cena decide o fallback de demo)", () => {
+  it("sem frota devolve lista vazia (a cena fica sem bots)", () => {
     expect(sceneAgentsFromFleet(null)).toEqual([]);
     expect(sceneAgentsFromFleet(fleetOf([]))).toEqual([]);
   });
@@ -45,11 +45,5 @@ describe("agentes da cena a partir da frota", () => {
     );
     expect(agents).toHaveLength(9);
     expect(overflowCount(agents)).toBe(2);
-  });
-
-  it("demo mantém exatamente os 7 agentes Lipp", () => {
-    const demo = demoSceneAgents();
-    expect(demo).toHaveLength(7);
-    expect(demo.every((agent) => agent.live === false)).toBe(true);
   });
 });

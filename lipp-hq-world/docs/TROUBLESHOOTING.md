@@ -4,10 +4,10 @@ Sintoma → causa provável → o que fazer. Tudo aqui foi escrito a partir do q
 app realmente distingue; onde ele não sabe, ele diz "não sei" em vez de fingir
 dado.
 
-## A tela está em Demo com "Hermes fora do ar"
+## A cena está vazia com "Aguardando Hermes"
 
 O proxy existe no `dev` e no `preview` do Vite; um build estático servido por
-outra coisa não tem `/api/hq` e cai em Demo por definição.
+outra coisa não tem `/api/hq`, então nenhum bot é lido.
 
 ```bash
 pnpm dev                                     # ou: pnpm build && pnpm preview

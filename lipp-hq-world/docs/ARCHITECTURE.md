@@ -106,7 +106,6 @@ fecham na periferia com muros de perímetro.
 | `src/world/lighting` | luzes fixas da cena |
 | `src/agents` | definição dos sete agentes |
 | `src/integrations/openmausbot` | adaptador de leitura da API real |
-| `src/integrations/mock` | cenário determinístico de demonstração |
 | `src/state` | store Zustand da aplicação |
 | `src/components` | HUD, painéis e controles HTML |
 | `scripts/visual-qa` | captura e auditoria de screenshots |

@@ -2,22 +2,14 @@ import { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { useHQStore } from "@/state/useHQStore";
-import { demoSceneAgents, sceneAgentsFromFleet, type SceneAgent } from "@/world/characters/sceneAgents";
+import { sceneAgentsFromFleet, type SceneAgent } from "@/world/characters/sceneAgents";
 import { useReducedMotion } from "@/app/useReducedMotion";
-import type { AgentAnimationState, VirtualAgent } from "@/types/hq";
+import type { AgentAnimationState } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
 import { resolveLook } from "@/world/characters/appearance";
 import { findPath, type NavPoint } from "@/world/navigation/navGrid";
 
-/** Hash determinístico por id — substitui Math.random no cenário demo. */
-function deterministicHash(text: string): number {
-  let hash = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = (hash * 31 + text.charCodeAt(index)) % 997;
-  }
-  return hash;
-}
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
 
 const WALK_SPEED = 1.55;
@@ -30,14 +22,11 @@ interface AgentRuntime {
   definition: SceneAgent;
   figure: AgentFigureHandle | null;
   state: AgentAnimationState;
-  source: VirtualAgent["statusSource"];
   summary?: string;
   path: NavPoint[];
   pathIndex: number;
   walkPhase: number;
   heading: number;
-  walkTimer: number;
-  nextIdleWalkAt: number;
   pendingState?: AgentAnimationState;
   pendingHeading?: number;
   seatHeading?: number;
@@ -55,13 +44,10 @@ function getRuntime(definition: SceneAgent): AgentRuntime {
       definition,
       figure: null,
       state: "idle",
-      source: "demo",
       path: [],
       pathIndex: 0,
       walkPhase: 0,
       heading: Math.PI,
-      walkTimer: 0,
-      nextIdleWalkAt: 6 + Math.random() * 8,
       meetingSlot: 0,
     };
     runtimes.set(definition.id, runtime);
@@ -69,7 +55,7 @@ function getRuntime(definition: SceneAgent): AgentRuntime {
   return runtime;
 }
 
-/** Comando demo: manda o agente caminhar até o hall e voltar ao trabalho. */
+/** Comando de QA: manda o agente caminhar até o hall e voltar ao trabalho. */
 export function demoWalkToHall(agentId: string) {
   const runtime = runtimes.get(agentId);
   if (!runtime) return;
@@ -176,12 +162,11 @@ declare module "@/world/characters/Agents" {
  */
 export function Agents() {
   const selectedAgentId = useHQStore((state) => state.selectedAgentId);
-  const dataSource = useHQStore((state) => state.dataSource);
   const agentLooks = useHQStore((state) => state.agentLooks);
   const fleet = useHQStore((state) => state.fleet);
   const agents = useMemo(() => {
     const live = sceneAgentsFromFleet(fleet);
-    return live.length > 0 ? live : demoSceneAgents();
+    return live;
   }, [fleet]);
   const reducedMotion = useReducedMotion();
   const reducedRef = useRef(reducedMotion);
@@ -222,7 +207,6 @@ export function Agents() {
           walkTo(runtime, { x: seat.x, z: seat.z }, "meeting", seat.heading);
         } else {
           runtime.state = state;
-          runtime.source = dataSource;
         }
       }
 
@@ -314,17 +298,6 @@ export function Agents() {
           // a mesa. Posição sempre por navegação — personagem não atravessa parede
           const target = runtime.seatHeading ?? 0;
           runtime.heading += (target - runtime.heading) * Math.min(1, delta * 2);
-        }
-      }
-
-      // ---- passeio de idle em modo demo ----
-      if (dataSource === "demo" && runtime.state === "idle" && runtime.path.length === 0) {
-        runtime.walkTimer += delta;
-        if (runtime.walkTimer > runtime.nextIdleWalkAt) {
-          runtime.walkTimer = 0;
-          runtime.nextIdleWalkAt = 14 + (deterministicHash(agentId) % 16);
-          const hallIndex = [...runtimes.keys()].indexOf(agentId);
-          walkTo(runtime, hallSpot(hallIndex), "idle");
         }
       }
     }
