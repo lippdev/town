@@ -22,6 +22,9 @@ Pessoas e bots são coisas diferentes neste projeto, e cada um tem o seu modelo:
 - **Autorização de uso:** informada pelo Filipe Moreira em 2026-11-04 ("Já vi aqui tudo
   podemos usar, bora usar"). O registro é do que foi informado; quem for redistribuir
   este projeto fora daqui precisa reavaliar.
+- **Onde aparece:** este registro fica aqui e em `public/avatares/proveniencia.json`. O rodapé do
+  editor dá só o crédito ao autor e um link para `public/avatares/CREDITOS.md`, porque a situação
+  da licença é assunto de quem mantém o projeto, não de quem está montando uma pessoa.
 
 ### Robôs: RobotExpressive
 
@@ -88,16 +91,21 @@ Inspecionei `Poses.glb`, `Armature.glb` e os `.blend` do pacote.
 | Em pé                                                | `Idle` do `Poses.glb` (8,37 s)                          | animação do pacote |
 | Relaxada, Descolada, Dramática, Rei, Ninja, Ocupada, Soco | `Poses.glb` (um quadro cada)                            | foto parada        |
 | Andando                                              | `Walking` do RobotExpressive, redirecionado             | retarget           |
-| Sentada                                              | `SitDown` do `pulse.glb`, redirecionado                 | retarget           |
-| Levantar                                             | o `Sentada` de trás para a frente                       | retarget           |
+| Sentada                                              | `seatedPose.ts`, contra as medidas do móvel             | pose calculada     |
+| Levantar                                             | o `Sentada` de trás para a frente                       | pose calculada     |
 
-**O pacote não tem andar nem sentar.** `retarget.ts` assa esses dois quadro a quadro no
-esqueleto do avatar: membros apontam para onde os da origem apontam (as poses de repouso
-são diferentes), e bacia, coluna, cabeça e pés recebem a rotação da origem.
+**O pacote não tem andar nem sentar.** `retarget.ts` assa o andar quadro a quadro no esqueleto
+do avatar: membros apontam para onde os da origem apontam (as poses de repouso são diferentes),
+e bacia, coluna, cabeça e pés recebem a rotação da origem.
+
+O sentar não vem de outra figura. `seatedPose.ts` tem os instantes da coreografia, escritos à
+mão em metros do andar, e resolve pernas e braços por cinemática inversa, contra as medidas de
+`seatFit.ts`, as mesmas que desenham a cadeira. Sai um clipe comum, como os outros. O `pulse.glb`
+não é mais baixado para as pessoas.
 
 Limites reais: o andar vem de um robô de pernas curtas, então lê como caminhada, mas sem a
-qualidade de uma captura feita para esta figura. Dedos não acompanham a origem e o Sentada
-deixa as mãos soltas, sem apoiar em nada.
+qualidade de uma captura feita para esta figura. Os instantes do sentar são escritos à mão: dá
+para ver que é animação de pose em pose, e isto não é captura de movimento.
 
 ## Persistência
 
@@ -110,6 +118,8 @@ que saiu do catálogo volta ao padrão sem apagar a pessoa.
 - `pnpm test`: catálogo contra os arquivos, preset, persistência, figura, rotas e robôs.
 - `pnpm qa:avatar`: o editor de pessoas no navegador (`HQ_URL` aponta para o servidor).
 - `pnpm qa:pessoas`: do editor até sentar na bancada.
+- `pnpm qa:assento`: fotos de corte e ossos lidos quadro a quadro, nos seis lugares.
+  `scripts/visual-qa/office-seat-report.mjs` resume o que foi gravado.
 - `pnpm qa:robos`: voo, clique, cor, expressão, movimento reduzido e fps.
 
 ## Pessoas no escritório
@@ -123,24 +133,93 @@ Salvar em outra aba já atualiza o escritório aberto.
 - **Só se mexe quando mandam.** O painel tem "Sentar na bancada" e "Levantar e voltar". Não
   há rotina própria, para não parecer que a pessoa está trabalhando. Parada, ela só toca o
   `Idle` e pisca.
-- **Caminhos contra a mobília real.** `chairRoute` para ao lado da cadeira, no vão entre uma
-  e outra, porque por trás a pessoa atravessaria o encosto. Os testes percorrem cada caminho
-  contra os `footprints` que `buildOffice()` gera. Pessoas não desviam umas das outras.
+- **Caminhos contra a mobília real.** `chairRoute` vem por trás da fileira. Os testes percorrem
+  cada caminho contra os `footprints` que `buildOffice()` gera e contra os vértices vestidos.
+  Pessoas não desviam umas das outras.
 - **Movimento reduzido.** O comando vai direto ao fim, sem andar e sem piscar.
 - **Capacidade.** Seis no hall, uma para cada cadeira da bancada. Além disso, a pessoa segue
   salva e listada, sem corpo na cena, porque cada uma soma de 30 a 100 mil triângulos, conforme a roupa.
 - **Escala.** O arquivo tem 2,05 m, e metade é cabeça: no tamanho original ela cobria quem
-  estava atrás. No escritório a pessoa fica com 1,48 m. Sentada, os pés ficam soltos: o
-  assento é alto para estas pernas.
+  estava atrás. No escritório a pessoa fica com 1,48 m.
 
-Limites reais: entrar na cadeira é um deslizar de lado enquanto o clipe toca, não um passo.
-As mãos da pose sentada não pousam na mesa. A sombra acompanha quem anda a cada 6 quadros.
+Limites reais: a sombra acompanha quem anda a cada 6 quadros.
+
+### Sentar na bancada
+
+A figura tem 90 cm de largura com os braços, e o vão entre duas cadeiras tem 38 cm. O assento antigo
+ficava a 5,5 cm da mesa. Não existe caminho até uma cadeira parada, então a cadeira do hall se move
+como uma de verdade (`HumanChairs.tsx`, `seatMoment`):
+
+1. A pessoa vem por trás da fileira. Antes de ela chegar, a cadeira recua 9 cm e gira para ela.
+2. Ela vira de costas para o assento e sobe: um pé no apoio, o impulso, a bacia no assento.
+3. A cadeira gira meia volta com ela em cima, e depois rola até a mesa. Os pés ficam no apoio da
+   própria cadeira, então nada escorrega no chão.
+4. As mãos sobem, cruzam a borda acima do tampo e pousam ao lado do laptop.
+
+Levantar é o mesmo tempo ao contrário, e a cadeira volta ao lugar quando ela já se afastou.
+Caminho curto não dá tempo de a cadeira girar: a pessoa espera a cadeira começar, em vez de ser
+atingida pelo encosto. Com movimento reduzido, tudo vai direto ao fim.
+
+**A figura não cabe numa cadeira de escritório comum, e isso não se resolve só com a pose.**
+
+| Medida da figura                        |   cm | Consequência                                                   |
+| --------------------------------------- | ---- | -------------------------------------------------------------- |
+| Perna inteira, do quadril ao chão       |   36 | assento a 33 cm: quem senta sobe, e os pés não alcançam o chão |
+| Coxa                                    |   16 | num assento de 55 cm, a canela não teria para onde dobrar      |
+| Braço, do ombro ao punho                |   25 | com a barriga de 27 cm, o punho para na borda da mesa          |
+
+Por isso, a cadeira do hall tem o assento mais curto (33 cm de fundo), a base em X e uma barra de
+apoio para os pés. Altura do assento, encosto e mesa não mudaram. As cadeiras das outras salas
+continuam como eram: ninguém senta nelas.
+
+Medido nos vértices vestidos, com a roupa padrão, contra as caixas do móvel:
+
+| Contato                                                    | Antes                          | Agora           |
+| ---------------------------------------------------------- | ------------------------------ | --------------- |
+| Deslocamento de lado enquanto senta                        | 50 cm em 0,95 s                | 0               |
+| Mãos em relação ao tampo (72 cm)                           | punhos a 17 e 26 cm abaixo dele | 1,0 e 0,1 cm acima |
+| Pés                                                        | soltos, sem apoio              | 0 e 0,1 cm da barra |
+| Quadril em relação ao assento                              | canelas e mãos dentro dele     | 0,2 cm dentro   |
+| Costas em relação ao encosto                               | atravessavam                   | 0,6 cm dentro   |
+
+Os seis lugares passam pelo mesmo teste, na ida e na volta (`tests/unit/humanSeat.test.ts`):
+nenhum osso anda mais que 14 cm entre dois quadros, a bacia e os pés não saem do lugar em relação
+à cadeira depois de pousar, e a roupa entra menos de 2 cm no assento e no encosto e menos de 1 cm
+no tampo e nas cadeiras vizinhas. No navegador, os mesmos ossos foram lidos da cena, quadro a quadro
+(`docs/avatares-evidencias/assento-depois-medidas.json`; o de antes está ao lado).
+
+![Antes e depois](avatares-evidencias/assento-comparacao.png)
+
+![A entrada, de lado](avatares-evidencias/assento-entrada.png)
+
+![A saída, de lado](avatares-evidencias/assento-saida.png)
+
+![Seis pessoas sentadas](avatares-evidencias/assento-seis-pessoas.png)
+
+Limites reais, depois da correção:
+
+- **Saia, vestido e rabo de fantasia atravessam.** Não há simulação de pano: as peças só seguem o
+  esqueleto. Com `Bottom.003` e `WawaDress`, a saia entra 6 cm no assento e sobe 1,6 a 4 cm além
+  da face de baixo da mesa. O rabo de `Outfit.003` entra 4 cm no encosto.
+- **A cadeira se move sozinha.** Não há gesto de puxar: nenhuma mão encosta nela quando ela recua
+  e gira, porque a pessoa ainda está longe.
+- **A subida é um salto pequeno.** Com pernas de 36 cm, os dois pés deixam o chão por um instante,
+  com o peso num pé só, sobre a barra. Ninguém simulou esse peso: a subida foi escrita pose a pose.
+- **Os braços ficam quase esticados.** O punho para 1,5 cm antes da borda, e palma e dedos ficam
+  sobre o tampo. A pessoa não digita: as mãos ficam ao lado do laptop.
+- **Duas pessoas se cruzando não se enxergam.** A cadeira de quem está sentando pode passar por
+  quem anda atrás da fileira, e duas pessoas podem se atravessar no caminho. Só foi medido uma de
+  cada vez e com as seis já sentadas, não com as seis se movendo juntas.
+- **Mão perto da parede.** Na fileira de trás, a faixa de passagem fica a cerca de 1 cm da parede
+  norte, na mão mais aberta. É estimativa: o teste não mede a parede.
+- **Sombra de contato.** A sombra suave do chão é feita uma vez, com as cadeiras no lugar. Só o mapa
+  de sombra do sol acompanha a cadeira afastada.
 
 ## Robôs no escritório
 
 Cada bot é um RobotExpressive, com o nome, a sala, a etiqueta, o painel e o estado que já
 tinha. A figura sentada do Pulse saiu do escritório; o `pulse.glb` segue no estúdio de
-personagens e como fonte do clipe de sentar das pessoas.
+personagens.
 
 - **Voo só na demonstração.** Na frota real o robô flutua no posto e não sai dali: um voo
   pareceria dizer algo sobre o que o bot está fazendo. O estado continua vindo do Hermes, no
