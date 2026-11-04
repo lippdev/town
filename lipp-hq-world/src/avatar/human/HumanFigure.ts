@@ -7,6 +7,7 @@ import {
   LoopRepeat,
   MeshStandardMaterial,
   SkinnedMesh,
+  Vector3,
   type AnimationAction,
   type AnimationClip,
   type Material,
@@ -270,6 +271,27 @@ export class HumanFigure {
         if (index !== undefined) mesh.morphTargetInfluences![index] = amount;
       }
     }
+  }
+
+  /** Onde estão os ossos que encostam nos móveis, em coordenadas do mundo. */
+  joints() {
+    this.root.updateWorldMatrix(true, true);
+    const at = (name: string) => {
+      const { x, y, z } = this.skeleton.getBoneByName(`mixamorig${name}`)!.getWorldPosition(new Vector3());
+      return { x, y, z };
+    };
+    return {
+      hips: at("Hips"),
+      head: at("Head"),
+      leftHand: at("LeftHand"),
+      rightHand: at("RightHand"),
+      leftFinger: at("LeftHandMiddle4"),
+      rightFinger: at("RightHandMiddle4"),
+      leftFoot: at("LeftFoot"),
+      rightFoot: at("RightFoot"),
+      leftToe: at("LeftToeBase"),
+      rightToe: at("RightToeBase"),
+    };
   }
 
   /** Para o QA conferir o que está vestido de verdade, não o que o estado pediu. */
