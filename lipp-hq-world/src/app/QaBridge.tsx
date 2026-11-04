@@ -27,6 +27,16 @@ export interface HqQaFraming {
 }
 
 export interface HqQaApi {
+  /** Custo do último quadro: chamadas de desenho, triângulos, programas e luzes. */
+  renderInfo: () => {
+    calls: number;
+    triangles: number;
+    programs: number;
+    lights: number;
+    pixelRatio: number;
+    mode: string;
+    autoQuality: string;
+  };
   /** Estado da iluminação: sombras ligadas, quem projeta e o ambiente PBR. */
   lightingInfo: () => {
     shadowsEnabled: boolean;
@@ -155,6 +165,21 @@ export function QaBridge() {
           }
         });
         return found.sort((a, b) => a.id.localeCompare(b.id));
+      },
+      renderInfo: () => {
+        let lights = 0;
+        scene.traverse((object) => {
+          if ((object as { isLight?: boolean }).isLight && object.visible) lights += 1;
+        });
+        return {
+          calls: gl.info.render.calls,
+          triangles: gl.info.render.triangles,
+          programs: gl.info.programs?.length ?? 0,
+          lights,
+          pixelRatio: gl.getPixelRatio(),
+          mode: useHQStore.getState().graphicsMode,
+          autoQuality: useHQStore.getState().autoQuality,
+        };
       },
       lightingInfo: () => {
         let shadowLights = 0;

@@ -2,6 +2,9 @@ import { PALETTE } from "@/config/constants";
 import { QaBridge } from "@/app/QaBridge";
 import { SceneLighting } from "@/world/lighting/SceneLighting";
 import { PostEffects } from "@/world/lighting/PostEffects";
+import { QualityController } from "@/world/scene/QualityController";
+import { useHQStore } from "@/state/useHQStore";
+import { effectiveQuality } from "@/world/quality";
 import { BaseSlab } from "@/world/scene/BaseSlab";
 import { FloorPlates } from "@/world/rooms/FloorPlates";
 import { RoomSigns } from "@/world/rooms/RoomSigns";
@@ -18,6 +21,8 @@ import { Picking } from "@/world/scene/Picking";
  * O prédio é montado a partir da planta declarativa em `world/rooms/rooms.ts`.
  */
 export function HQScene() {
+  // leve: sem composer — o tone mapping do renderer e o MSAA nativo bastam
+  const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   return (
     <>
       <fog attach="fog" args={[PALETTE.backgroundDeep, 70, 170]} />
@@ -33,7 +38,8 @@ export function HQScene() {
       <ViewportInset />
       <Picking />
       <QaBridge />
-      <PostEffects />
+      <QualityController />
+      {quality === "alta" && <PostEffects />}
     </>
   );
 }
