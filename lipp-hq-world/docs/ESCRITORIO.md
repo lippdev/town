@@ -163,3 +163,27 @@ em `/tmp/hq-escritorio`. O harness não roda no CI: precisa de GPU real.
 - **Associação com o estúdio:** ligar uma variação salva a um bot ficou fora desta etapa.
 - **CI visual:** `hermes-capture.mjs` já falhava em #48 e #49 esperando `.panel-sessions`. Não é
   deste trabalho e não foi mexido.
+
+## Ensaio de visita (demonstração)
+
+No modo demonstração, o painel **Visita · Pulse → Scout** inicia a primeira coreografia:
+Pulse levanta, passa pela porta sul da Engenharia e pelo corredor oeste, entra na Pesquisa,
+desvia da mesa de mapas, conversa com Scout e volta à mesma cadeira. Scout levanta para
+recebê-lo, alterna fala e escuta e volta a sentar. O indicador sobre cada nome acompanha
+quem está falando. Nada chama o Hermes ou envia mensagens.
+
+- **Simular visita:** inicia o ensaio e enquadra o andar inteiro.
+- **Pausar / Continuar:** congela e retoma o relógio da coreografia, inclusive os gestos.
+- **Reiniciar:** retorna imediatamente ao início; este é um comando do laboratório.
+- **Ritmo:** 0,5×, 1×, 1,5× ou 2×. A aba oculta não avança a coreografia.
+- Novas execuções ficam desabilitadas durante a visita; não há fila nesta primeira etapa.
+
+`officeVisit.ts` contém um roteiro determinístico, separado da renderização. A posição
+visual alimenta corpo, etiquetas, seleção e clique. `SeatedFigure.perform` interpola poses
+e aplica uma caminhada procedural com alvos dos pés e IK das pernas. A preferência por
+movimento reduzido remove a passada e gesticulação secundária, mantendo o percurso.
+
+Limites desta entrega: somente Pulse → Scout, com rota autoral; sem navegação genérica,
+fila de visitas, reunião coletiva ou vínculo com a automação das 17h30. Caminhada e gestos
+são uma primeira interpretação procedural para refinar visualmente; não são clipes novos
+no GLB. Compilação e testes da sequência não substituem a avaliação visual do movimento.

@@ -11,6 +11,7 @@ import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { OfficeHud } from "./OfficeHud";
+import { VisitControls } from "./VisitControls";
 import { OfficeLabels } from "./OfficeLabels";
 import "@/styles/office.css";
 
@@ -62,6 +63,7 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
         <OfficeLabels />
       </div>
       <OfficeHud live={mode === "live"} />
+      {mode === "demo" && <VisitControls />}
       {mode === "live" && <HermesConnection />}
     </div>
   );

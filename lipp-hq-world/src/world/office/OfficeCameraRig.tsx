@@ -1,3 +1,4 @@
+import { visitPose } from "./officeVisit";
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
@@ -28,8 +29,11 @@ function botBoxes(onlyRoom?: string): PickBox[] {
   const { seating } = useOfficeStore.getState();
   return Object.entries(seating.seats).flatMap(([botId, seatId]) => {
     const seat = OFFICE_SEATS_BY_ID[seatId];
-    if (!seat || (onlyRoom && seat.roomId !== onlyRoom)) return [];
-    return [{ id: botId, minX: seat.x - 0.38, maxX: seat.x + 0.38, minY: 0, maxY: 1.85, minZ: seat.z - 0.38, maxZ: seat.z + 0.38 }];
+    if (!seat) return [];
+    const pose = useOfficeStore.getState().mode === "demo" ? visitPose(botId) : null;
+    const x = pose?.x ?? seat.x, z = pose?.z ?? seat.z;
+    if (onlyRoom && (pose ? roomAt(x, z)?.id : seat.roomId) !== onlyRoom) return [];
+    return [{ id: botId, minX: x - 0.38, maxX: x + 0.38, minY: 0, maxY: 1.85, minZ: z - 0.38, maxZ: z + 0.38 }];
   });
 }
 

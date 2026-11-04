@@ -42,6 +42,13 @@ export function solveTwoBones(upper: Object3D, lower: Object3D, end: Object3D, t
   aimBone(lower, scratchA.copy(movedHand).sub(movedElbow), scratchB.copy(target).sub(movedElbow));
 }
 
+interface Transform { node: Object3D; position: Vector3; rotation: Quaternion }
+function capture(root: Object3D): Transform[] {
+  const result: Transform[] = [];
+  root.traverse((node) => result.push({ node, position: node.position.clone(), rotation: node.quaternion.clone() }));
+  return result;
+}
+
 interface Sway {
   bone: Object3D;
   base: Quaternion;
@@ -80,12 +87,21 @@ export class SeatedFigure {
   private readonly head: Sway;
   private readonly torso: Sway;
   private readonly phase: number;
+  private readonly seated: Transform[];
+  private readonly standing: Transform[];
+  private readonly seatedOffset: Vector3;
+  private readonly standingOffset: Vector3;
 
   constructor(scene: Object3D, clips: AnimationClip[], spec: CharacterSpec, options: SeatOptions) {
     this.phase = options.phase;
     this.rig = new FigureRig(scene, clips, { bench: false });
     // A pose é calculada sem a largura: escala desigual distorce as rotações do mundo.
     this.rig.apply({ ...spec, proportions: { ...spec.proportions, width: 1 } });
+    this.standing = capture(this.rig.holder);
+    this.standingOffset = new Vector3();
+    this.rig.holder.updateMatrixWorld(true);
+    const standingHips = this.rig.holder.getObjectByName("Hips")!.getWorldPosition(new Vector3());
+    this.standingOffset.set(-standingHips.x, 0, -standingHips.z);
     this.rig.setPose("sitting", false, true);
     this.offset.add(this.rig.holder);
     this.root.add(this.offset);
@@ -111,6 +127,8 @@ export class SeatedFigure {
     applySway(neck, 0.14);
     this.head = swayOn(bone("Head"), new Vector3(0, 1, 0));
 
+    this.seated = capture(this.rig.holder);
+    this.seatedOffset = this.offset.position.clone();
     this.rig.apply(spec);
     this.root.traverse((node) => {
       if ((node as { isMesh?: boolean }).isMesh) node.castShadow = true;
@@ -122,6 +140,41 @@ export class SeatedFigure {
     const t = seconds + this.phase;
     applySway(this.torso, Math.sin(t * 1.5) * 0.008);
     applySway(this.head, Math.sin(t * 0.37) * 0.09 + Math.sin(t * 0.91) * 0.025);
+  }
+
+  /** Pose procedural da demonstração; restaura a base a cada quadro, sem acumular rotações. */
+  perform(standing: number, walk: number, talk: number, seconds: number, reduced: boolean) {
+    this.seated.forEach((base, index) => {
+      const target = this.standing[index]!;
+      base.node.position.lerpVectors(base.position, target.position, standing);
+      base.node.quaternion.slerpQuaternions(base.rotation, target.rotation, standing);
+    });
+    this.offset.position.lerpVectors(this.seatedOffset, this.standingOffset, standing);
+    if (standing < 0.99) return;
+    const bone = (name: string) => this.rig.holder.getObjectByName(name)!;
+    const cycle = seconds * 8;
+    const stride = reduced ? 0 : walk;
+    this.root.updateWorldMatrix(true, true);
+    const orientation = this.root.getWorldQuaternion(new Quaternion());
+    const forward = new Vector3(0, 0, 1).applyQuaternion(orientation);
+    const up = new Vector3(0, 1, 0).applyQuaternion(orientation);
+    // FootL/R são alvos independentes no GLB: mover só a coxa separaria as pernas.
+    for (const [suffix, sign] of [["L", 1], ["R", -1]] as const) {
+      const foot = bone(`Foot${suffix}`);
+      const wave = Math.sin(cycle + (sign === 1 ? 0 : Math.PI));
+      const target = foot.getWorldPosition(new Vector3())
+        .addScaledVector(forward, wave * 0.16 * stride)
+        .addScaledVector(up, Math.max(0, Math.cos(cycle + (sign === 1 ? 0 : Math.PI))) * 0.09 * stride);
+      solveTwoBones(bone(`UpperLeg${suffix}`), bone(`LowerLeg${suffix}`), foot, target, forward);
+      foot.position.copy(foot.parent!.worldToLocal(target.clone()));
+      const arm = bone(`UpperArm${suffix}`);
+      arm.rotateX(-wave * 0.22 * stride);
+      if (!reduced && talk > 0) {
+        arm.rotateX(-0.15 * talk + Math.sin(seconds * 3 + sign) * 0.12 * talk);
+        bone(`LowerArm${suffix}`).rotateX(-0.25 * talk);
+      }
+    }
+    if (!reduced && talk > 0) bone("Head").rotateX(Math.sin(seconds * 2.5) * 0.045 * talk);
   }
 
   get pose() {

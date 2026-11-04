@@ -1,6 +1,7 @@
+import { visitPose } from "./officeVisit";
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
-import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
+import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import { type OfficeBot, type Seating } from "./officeRoster";
 import type { OfficeMode } from "./officeRoute";
@@ -70,7 +71,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     const seatId = get().seating.seats[botId];
     const seat = seatId ? OFFICE_SEATS_BY_ID[seatId] : undefined;
     // Bot sem posto não tem sala para focar: a gaveta abre e a câmera fica onde está.
-    if (seat) set({ focusedRoomId: seat.roomId, framing: "room" });
+    const moving = get().mode === "demo" ? visitPose(botId) : null;
+    if (moving) {
+      const room = roomAt(moving.x, moving.z);
+      set({ focusedRoomId: room?.id ?? null, framing: room ? "room" : "floor" });
+    } else if (seat) set({ focusedRoomId: seat.roomId, framing: "room" });
   },
   markFree: () => set({ framing: "free" }),
 }));

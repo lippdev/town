@@ -36,6 +36,7 @@ import { OfficeCameraRig } from "./OfficeCameraRig";
 import { SeatedFigure } from "./seatedFigure";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
+import { useVisitStore, visitPose } from "./officeVisit";
 
 export const FIGURE_URL = "/prototipo/pulse.glb";
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
@@ -283,6 +284,13 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
 }
 
 function SeatMarker() {
+  const marker = useRef<Mesh>(null);
+  useFrame(() => {
+    const id = useHQStore.getState().selectedBotId ?? useOfficeStore.getState().hoveredBotId;
+    const seat = id ? OFFICE_SEATS_BY_ID[useOfficeStore.getState().seating.seats[id] ?? ""] : undefined;
+    const pose = id && useOfficeStore.getState().mode === "demo" ? visitPose(id) : null;
+    if (marker.current && seat) marker.current.position.set(pose?.x ?? seat.x, 0.07, pose?.z ?? seat.z);
+  });
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const hoveredBotId = useOfficeStore((state) => state.hoveredBotId);
   const seating = useOfficeStore((state) => state.seating);
@@ -293,7 +301,7 @@ function SeatMarker() {
   if (!seat || !bot) return null;
   const selected = selectedBotId === id;
   return (
-    <mesh position={[seat.x, 0.07, seat.z]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+    <mesh ref={marker} position={[seat.x, 0.07, seat.z]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
       <ringGeometry args={[0.5, selected ? 0.62 : 0.56, 48]} />
       <meshBasicMaterial color={bot.color} transparent opacity={selected ? 0.95 : 0.55} depthWrite={false} toneMapped={false} />
     </mesh>
@@ -318,6 +326,7 @@ function RoomGlow() {
 export const seatedFigures = new Map<string, SeatedFigure>();
 
 function OfficeFigure({ bot, seat }: { bot: OfficeBot; seat: OfficeSeat }) {
+  const group = useRef<Group>(null);
   const { scene, animations } = useGLTF(FIGURE_URL);
   const [figure, setFigure] = useState<SeatedFigure | null>(null);
   const specKey = JSON.stringify(bot.spec);
@@ -344,17 +353,30 @@ function OfficeFigure({ bot, seat }: { bot: OfficeBot; seat: OfficeSeat }) {
     };
   }, [scene, animations, specKey, phase, bot.id]);
   useFrame(({ clock }) => {
-    if (!reduced) figure?.sway(clock.elapsedTime);
+    const pose = useOfficeStore.getState().mode === "demo" ? visitPose(bot.id) : null;
+    if (pose) {
+      group.current?.position.set(pose.x, 0, pose.z);
+      if (group.current) group.current.rotation.y = pose.yaw;
+      figure?.perform(pose.standing, pose.walk, pose.talk, useVisitStore.getState().time, reduced);
+    } else {
+      group.current?.position.set(seat.x, 0, seat.z);
+      if (group.current) group.current.rotation.y = seat.yaw;
+      figure?.perform(0, 0, 0, 0, true);
+      if (!reduced) figure?.sway(clock.elapsedTime);
+    }
   });
   if (!figure) return null;
   return (
-    <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]} scale={FIGURE_SCALE} name={`bot-${bot.id}`} userData={{ botId: bot.id }}>
+    <group ref={group} position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]} scale={FIGURE_SCALE} name={`bot-${bot.id}`} userData={{ botId: bot.id }}>
       <primitive object={figure.root} />
     </group>
   );
 }
 
 function OfficeFigures() {
+  useFrame((_, delta) => {
+    if (useOfficeStore.getState().mode === "demo" && !document.hidden && seatedFigures.has("pulse") && seatedFigures.has("scout")) useVisitStore.getState().advance(delta);
+  }, -1);
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
   useEffect(() => {

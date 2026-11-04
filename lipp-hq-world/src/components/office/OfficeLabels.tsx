@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
-import { CORRIDOR, ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { CORRIDOR, ENTRANCE, roomAt, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 import { botsInRoom } from "@/world/office/officeRoster";
+
+import { useVisitStore, visitPose } from "@/world/office/officeVisit";
 
 type Anchor = readonly [number, number, number];
 
@@ -36,11 +38,12 @@ export function OfficeLabels() {
     let frame = 0;
     let last: OfficeView = { x: NaN, z: NaN, zoom: NaN };
     let lastCount = -1;
+    const unsubscribe = useVisitStore.subscribe(() => { if (layer.current) layer.current.dataset.dirty = "true"; });
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const { view, viewport } = officeRuntime;
       const count = nodes.current.size;
-      if (view.x === last.x && view.z === last.z && view.zoom === last.zoom && count === lastCount && !layer.current?.dataset.dirty) return;
+      if (view.x === last.x && view.z === last.z && view.zoom === last.zoom && count === lastCount && !layer.current?.dataset.dirty && !useVisitStore.getState().active) return;
       last = { ...view };
       lastCount = count;
       if (layer.current) {
@@ -56,7 +59,17 @@ export function OfficeLabels() {
         shade.current.style.clipPath = `path(evenodd, "M0 0H${viewport.width}V${viewport.height}H0Z ${outline}Z")`;
       }
       for (const [node, anchor] of nodes.current) {
-        const point = worldToScreen(anchor, view, viewport);
+        const moving = node.dataset.bot && useOfficeStore.getState().mode === "demo" ? visitPose(node.dataset.bot) : null;
+        if (node.dataset.bot) {
+          const seat = OFFICE_SEATS_BY_ID[useOfficeStore.getState().seating.seats[node.dataset.bot] ?? ""];
+          node.classList.toggle("elsewhere", !!focused && (moving ? roomAt(moving.x, moving.z)?.id : seat?.roomId) !== focused);
+          const speech = node.querySelector<HTMLElement>(".office-visit-speech");
+          if (speech) {
+            speech.textContent = moving?.talk ? (moving.talk > 0.5 ? "Falando" : "Ouvindo") : "";
+            speech.hidden = !moving?.talk;
+          }
+        }
+        const point = worldToScreen(moving ? [moving.x, 1.92 + moving.standing * 0.2, moving.z] : anchor, view, viewport);
         // A etiqueta da sala fica no cruzamento dos corredores, sem cobrir sala nenhuma;
         // a do bot fica acima da cabeça.
         const centered = node.dataset.bot === undefined;
@@ -64,7 +77,7 @@ export function OfficeLabels() {
       }
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => { cancelAnimationFrame(frame); unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -115,6 +128,7 @@ export function OfficeLabels() {
           >
             {mode === "live" && bot.state && <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />}
             <strong>{bot.name}</strong>
+            {mode === "demo" && <em className="office-visit-speech" hidden />}
             {mode === "live" && bot.state && focusedRoomId === seat.roomId && <em>{stateLabel(bot.state)}</em>}
           </button>
         );

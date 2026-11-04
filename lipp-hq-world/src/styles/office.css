@@ -646,3 +646,23 @@ button.office-roster-room:hover {
 .office-hud .boot-error {
   pointer-events: auto;
 }
+
+.office-visit {
+  position: absolute;
+  z-index: 12;
+  right: 16px;
+  bottom: 76px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  background: rgba(15, 21, 34, .96);
+  color: var(--hq-text);
+  font-size: 12px;
+}
+.office-visit strong, .office-visit span { display: block; }
+.office-visit span { margin-top: 4px; color: var(--hq-text-dim); }
+.office-visit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0; }
+.office-visit select { background: #1d293d; color: inherit; border: 1px solid #536078; border-radius: 4px; padding: 4px; }
+.office-visit small { color: var(--hq-text-dim); }
+.office-visit button:disabled { opacity: .4; cursor: default; }
