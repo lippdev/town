@@ -431,6 +431,13 @@ button.office-roster-room:hover {
   border-style: dashed;
 }
 
+.office-demo-panel .panel-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
 .office-human-actions {
   display: flex;
   flex-wrap: wrap;

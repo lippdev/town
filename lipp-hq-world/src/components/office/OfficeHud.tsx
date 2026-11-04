@@ -60,6 +60,7 @@ function TopBar({ connection }: { connection: OfficeConnection | null }) {
         <a href="/?prototipo=engenharia">Sala Engenharia</a>
         <a href="/personagens.html">Estúdio</a>
         <a href="/avatares.html">Criar pessoa</a>
+        <a href="/avatares.html?aba=robos">Robôs</a>
       </nav>
     </header>
   );
@@ -394,9 +395,13 @@ function DemoPanel() {
           </div>
         </dl>
         <p className="panel-warn">
-          Isto é uma demonstração: o bot não está executando nada, e não há sessões, mensagens nem estado ao vivo aqui. A
-          pose sentada é só uma pose.
+          Isto é uma demonstração: o bot não está executando nada, e não há sessões, mensagens nem estado ao vivo aqui. O
+          voo é só desenho: não representa nenhuma tarefa.
         </p>
+        <a className="panel-link" href="/avatares.html?aba=robos">
+          <Pencil size={12} aria-hidden />
+          Mudar cor e expressão do robô
+        </a>
         <a className="panel-link" href={OFFICE_LIVE_URL}>
           <ExternalLink size={12} aria-hidden />
           Abrir com a frota real do Hermes
@@ -425,7 +430,7 @@ function LoadOverlay() {
     return (
       <div className="office-notice slim figures" role="alert">
         <TriangleAlert size={14} aria-hidden />
-        <span>Os personagens não carregaram ({figuresError}); a planta e a lista seguem funcionando.</span>
+        <span>Os robôs não carregaram ({figuresError}); a planta e a lista seguem funcionando.</span>
         <button type="button" className="office-button" onClick={() => window.location.reload()}>Tentar de novo</button>
       </div>
     );

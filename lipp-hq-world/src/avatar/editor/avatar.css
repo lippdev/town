@@ -3,6 +3,11 @@
 
 .av-rail__actions { grid-template-columns: 1fr; }
 
+.av-kind { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; margin: 0 8px; background: rgba(31, 35, 40, 0.06); border-radius: 8px; }
+.av-kind button { min-height: 28px; background: none; border: 0; border-radius: 6px; font-size: 12.5px; font-weight: 500; }
+.av-kind button[aria-selected="true"] { background: var(--cs-surface-raised); box-shadow: 0 0 0 1px var(--cs-line); }
+.av-hex { display: flex; align-items: center; }
+
 .av-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .av-tab {
   min-height: 30px; padding: 4px 6px; background: var(--cs-surface-raised); border: 1px solid var(--cs-line); border-radius: 7px;
