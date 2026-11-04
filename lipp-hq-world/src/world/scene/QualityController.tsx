@@ -44,7 +44,7 @@ function trimShadowCasters(root: { traverse: (fn: (node: unknown) => void) => vo
  *   móveis não se mexem e os bots andam devagar;
  * - objetos miúdos deixam de projetar sombra.
  */
-export function QualityController() {
+export function QualityController({ shadowEvery = SHADOW_EVERY }: { shadowEvery?: Record<"alta" | "leve", number> } = {}) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const setAutoQuality = useHQStore((state) => state.setAutoQuality);
@@ -73,7 +73,7 @@ export function QualityController() {
 
   useFrame(() => {
     const { graphicsMode, autoQuality } = useHQStore.getState();
-    const every = SHADOW_EVERY[effectiveQuality(graphicsMode, autoQuality)];
+    const every = shadowEvery[effectiveQuality(graphicsMode, autoQuality)];
     frame.current = (frame.current + 1) % every;
     if (frame.current === 0) gl.shadowMap.needsUpdate = true;
   });
