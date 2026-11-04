@@ -115,7 +115,7 @@ medição em GPU integrada mais fraca, em tela 4K nem em celular, e nada aqui pr
 casos. O modo Auto cai para Leve se a cena ficar abaixo de cerca de 38 fps. Essa queda não foi
 provocada nos testes.
 
-**Peso:** uma visita sem cache baixa 5,1 MB até a cena ficar pronta, sendo 4,4 MB de texturas e
+**Peso:** uma visita sem cache baixa 5,1 MB até a cena ficar pronta, sendo 4,7 MB de texturas e
 GLBs (nada de novo: são os arquivos que a sala aprovada já usava). As texturas viram memória de
 vídeo descomprimida, então o custo real em GPU é maior que o download.
 
@@ -137,8 +137,9 @@ vídeo descomprimida, então o custo real em GPU é maior que o download.
 | Falta textura | A interface fica de pé e diz qual arquivo faltou, com **Tentar de novo** |
 | Arquivo que nunca chega | Em 20 s, troca o carregamento por aviso e **Tentar de novo** |
 | Falta `pulse.glb` | Planta e lista seguem, com aviso; nada de figura antiga no lugar |
-| Falta planta ou luminária | A cena segue sem elas, com aviso no console |
-| Hermes fora ou leitura atrasada | Aviso; a última leitura boa fica marcada como atrasada |
+| Falta planta ou luminária | A cena segue sem elas, com aviso no console (o harness não provoca esse caso) |
+| Hermes fora | Aviso com demonstração e nova tentativa |
+| Leitura atrasada | Aviso; a última leitura boa continua na tela (coberto só em teste de unidade) |
 
 ## Reproduzir
 
