@@ -10,6 +10,7 @@
  *   :8000  Dashboard do Hermes   → GET /api/profiles
  *                                  GET /api/profiles/sessions
  *                                  GET /api/cron/jobs
+ *                                  GET /api/sessions/{id}/messages?profile=
  *
  * Os dados evoluem com o tempo (um bot trabalha, uma rotina dispara) para que
  * as capturas do harness mostrem atividade real vinda do "gateway".
@@ -116,6 +117,40 @@ function buildSessions(nowSeconds) {
   return sessions;
 }
 
+// Transcrições em memória, no formato de GET /api/sessions/{id}/messages do
+// dashboard: linhas com role/content/timestamp em segundos, chamadas de
+// ferramenta no assistant e o resultado numa linha role=tool. Uma linha
+// "hidden" imita o andaime que o Hermes esconde da exibição.
+const transcripts = new Map();
+
+function transcriptFor(sessionId, nowSeconds) {
+  const existing = transcripts.get(sessionId);
+  if (existing) return existing;
+  const session = buildSessions(nowSeconds).find((candidate) => candidate.id === sessionId);
+  if (!session) return null;
+  const at = session.started_at;
+  let row = 0;
+  const line = (role, content, offset, extra = {}) => ({
+    id: ++row,
+    session_id: sessionId,
+    role,
+    content,
+    timestamp: at + offset,
+    ...extra,
+  });
+  const messages = [
+    line("user", `${session.title}: pode começar?`, 0),
+    line("assistant", "", 12, {
+      tool_calls: [{ id: "call_1", type: "function", function: { name: "web_search", arguments: "{}" } }],
+    }),
+    line("tool", "3 resultados encontrados.", 20, { tool_call_id: "call_1", tool_name: "web_search" }),
+    line("user", "[System: stream timeout — continue]", 25, { display_kind: "hidden" }),
+    line("assistant", `Comecei. ${session.preview}\n\nVou trazer um resumo em seguida.`, 31),
+  ];
+  transcripts.set(sessionId, { profile: session.profile, messages });
+  return transcripts.get(sessionId);
+}
+
 // Rotinas como o Hermes grava: `schedule_display`, `next_run_at`/`last_run_at`
 // em ISO-8601, `last_status` cru e a sequência de falhas. Uma delas falha de
 // propósito para a tela de rotinas ter o que mostrar.
@@ -215,6 +250,24 @@ const dashboardServer = http.createServer((request, response) => {
   }
   if (url.pathname === "/api/cron/jobs") {
     send(response, 200, { jobs: JOBS });
+    return;
+  }
+  const messagesRoute = url.pathname.match(/^\/api\/sessions\/([^/]+)\/messages$/);
+  if (messagesRoute) {
+    const transcript = transcriptFor(decodeURIComponent(messagesRoute[1]), nowSeconds);
+    // o Hermes só acha a sessão no store do perfil pedido
+    if (!transcript || (url.searchParams.get("profile") ?? "default") !== transcript.profile) {
+      send(response, 404, { detail: "Session not found" });
+      return;
+    }
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 500), 500);
+    const page = transcript.messages.slice(-limit);
+    send(response, 200, {
+      session_id: decodeURIComponent(messagesRoute[1]),
+      profile: transcript.profile,
+      messages: page,
+      pagination: { limit, offset: 0, order: "latest", returned: page.length },
+    });
     return;
   }
   send(response, 404, { detail: `unknown route ${url.pathname}` });
