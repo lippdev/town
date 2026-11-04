@@ -14,7 +14,8 @@ const FIGURE_HEIGHT = 134.4;
 /** Acima disso a imagem não ganha detalhe, só gasta memória e GPU. */
 const MAX_PIXEL_RATIO = 2;
 const ZOOM_STEP = 1.25;
-const SHADOW_ROWS = [14, 22, 24, 22, 14];
+/** Meia largura e meia altura da sombra no piso, em pixels do cenário. */
+const SHADOW = { width: 34, height: 12 };
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -29,6 +30,16 @@ interface Art {
   scene: HTMLImageElement;
   figure: HTMLImageElement;
   atlas: SpriteAtlas;
+  shadow: CanvasGradient;
+}
+
+/** Sombra de raio 1, escalada no desenho: forte sob os pés e sumindo sem borda. */
+function softShadow(context: CanvasRenderingContext2D): CanvasGradient {
+  const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+  gradient.addColorStop(0, "rgba(38, 24, 26, 0.46)");
+  gradient.addColorStop(0.55, "rgba(38, 24, 26, 0.26)");
+  gradient.addColorStop(1, "rgba(38, 24, 26, 0)");
+  return gradient;
 }
 
 function draw(context: CanvasRenderingContext2D, art: Art, walk: ReturnType<typeof initialPixelWalk>, view: OfficeView, ratio: number) {
@@ -46,8 +57,13 @@ function draw(context: CanvasRenderingContext2D, art: Art, walk: ReturnType<type
   context.imageSmoothingQuality = "high";
   context.drawImage(art.scene, 0, 0, SCENE.width, SCENE.height);
   context.translate(pose.x, pose.y);
-  context.fillStyle = "rgba(38, 24, 26, 0.32)";
-  SHADOW_ROWS.forEach((half, row) => context.fillRect(-half, (row - 2) * 2.4, half * 2, 2.4));
+  context.save();
+  context.scale(SHADOW.width, SHADOW.height);
+  context.fillStyle = art.shadow;
+  context.beginPath();
+  context.arc(0, 0, 1, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
   if (pose.mirrored) context.scale(-1, 1);
   context.drawImage(figure, cell.column * width, cell.row * height, width, height, (-width / 2) * scale, -atlas.soleRow * scale, width * scale, height * scale);
 }
@@ -78,7 +94,7 @@ export function PixelOfficeApp() {
         const element = canvas.current;
         const context = element?.getContext("2d");
         if (!alive || !element || !context) return;
-        const art = { scene, figure, atlas: parseSpriteAtlas(raw) };
+        const art = { scene, figure, atlas: parseSpriteAtlas(raw), shadow: softShadow(context) };
         let walk = initialPixelWalk();
         let last = performance.now();
         let drawn = "";
