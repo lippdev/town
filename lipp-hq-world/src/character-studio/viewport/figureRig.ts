@@ -131,7 +131,8 @@ export class FigureRig {
   private scaleZ = 1;
   private active: AnimationAction | null = null;
 
-  constructor(scene: Object3D, clips: AnimationClip[]) {
+  /** `bench: false` deixa de fora o banco neutro do estúdio: quem usa já tem cadeira. */
+  constructor(scene: Object3D, clips: AnimationClip[], { bench = true }: { bench?: boolean } = {}) {
     this.root = cloneSkinned(scene);
     this.holder.name = "figura-pulse";
     this.holder.add(this.root);
@@ -180,7 +181,7 @@ export class FigureRig {
     this.root.updateMatrixWorld(true);
     const seated = this.allBounds();
     this.seatedCenterZ = (seated.min.z + seated.max.z) / 2;
-    this.buildSeat();
+    if (bench) this.buildSeat();
     this.buildGlasses(scene);
     this.hold(this.idle, 0);
   }

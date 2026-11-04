@@ -1,0 +1,68 @@
+import { useEffect, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { NeutralToneMapping, SRGBColorSpace } from "three";
+import { ReadySignal } from "@/app/ReadySignal";
+import { HermesConnection } from "@/integrations/hermes/HermesConnection";
+import { useHQStore } from "@/state/useHQStore";
+import { effectiveQuality, pixelRatioFor } from "@/world/quality";
+import { OfficeScene } from "@/world/office/OfficeScene";
+import { OfficeQa } from "@/world/office/OfficeQa";
+import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
+import type { OfficeMode } from "@/world/office/officeRoute";
+import { useOfficeStore } from "@/world/office/officeStore";
+import { OfficeHud } from "./OfficeHud";
+import { OfficeLabels } from "./OfficeLabels";
+import "@/styles/office.css";
+
+/** Quem está em cena: os sete da demonstração, ou a frota real a cada leitura. */
+function useRoster(mode: OfficeMode) {
+  const fleet = useHQStore((state) => state.fleet);
+  const previous = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const bots = mode === "demo" ? demoBots() : fleetBots(fleet);
+    const seating = assignSeats(bots.map((bot) => bot.id), undefined, previous.current);
+    previous.current = seating.seats;
+    useOfficeStore.getState().setRoster(bots, seating);
+    // A sala em foco continua, mas a gaveta não pode apontar para bot que saiu da frota.
+    const { selectedBotId, clearSelection } = useHQStore.getState();
+    if (selectedBotId && !bots.some((bot) => bot.id === selectedBotId)) clearSelection();
+  }, [mode, fleet]);
+}
+
+/** Escritório completo: página própria, sem o HUD nem a cena antiga. */
+export function OfficeApp({ mode }: { mode: OfficeMode }) {
+  const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
+  const dpr = pixelRatioFor(quality, window.devicePixelRatio);
+  const [stage, setStage] = useState<HTMLDivElement | null>(null);
+  useRoster(mode);
+  useEffect(() => useOfficeStore.getState().setMode(mode), [mode]);
+
+  return (
+    <div className="app-shell office-shell" onContextMenu={(event) => event.preventDefault()}>
+      <div className="office-stage" ref={setStage}>
+        {stage && (
+          <Canvas
+            className="world-canvas"
+            orthographic
+            shadows="soft"
+            dpr={dpr}
+            gl={{ antialias: true, powerPreference: "high-performance" }}
+            camera={{ near: 0.5, far: 120, position: [30, 26, 30], zoom: 30 }}
+            onCreated={({ gl }) => {
+              gl.toneMapping = NeutralToneMapping;
+              gl.toneMappingExposure = 1;
+              gl.outputColorSpace = SRGBColorSpace;
+            }}
+          >
+            <OfficeScene stage={stage} />
+            <OfficeQa />
+            <ReadySignal />
+          </Canvas>
+        )}
+        <OfficeLabels />
+      </div>
+      <OfficeHud live={mode === "live"} />
+      {mode === "live" && <HermesConnection />}
+    </div>
+  );
+}

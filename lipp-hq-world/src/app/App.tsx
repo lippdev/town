@@ -1,10 +1,13 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Hud } from "@/components/hud/Hud";
 import { HermesConnection } from "@/integrations/hermes/HermesConnection";
+import { parseOfficeRoute } from "@/world/office/officeRoute";
 
 // three.js + toda a cena carregam num chunk próprio, depois do primeiro paint
 // da casca (HUD, boot e estados de erro).
 const WorldCanvas = lazy(() => import("@/world/scene/WorldCanvas").then((m) => ({ default: m.WorldCanvas })));
+// O escritório completo é outra página: não carrega a cena antiga, nem ela carrega ele.
+const OfficeApp = lazy(() => import("@/components/office/OfficeApp").then((m) => ({ default: m.OfficeApp })));
 
 function detectWebGL(): boolean {
   try {
@@ -54,6 +57,29 @@ class SceneBoundary extends Component<{ children: ReactNode }, { error: Error | 
 
 export function App() {
   const [webgl] = useState(detectWebGL);
+  const [officeMode] = useState(() => parseOfficeRoute(window.location.search));
+
+  if (!webgl) {
+    return (
+      <div className="app-shell">
+        <NoWebGL />
+      </div>
+    );
+  }
+  if (officeMode) {
+    return (
+      <SceneBoundary>
+        <Suspense fallback={<BootLabel text="Carregando o escritório…" />}>
+          <OfficeApp mode={officeMode} />
+        </Suspense>
+      </SceneBoundary>
+    );
+  }
+  return <ClassicApp />;
+}
+
+/** A cena antiga e o HUD integrado ao Hermes. */
+function ClassicApp() {
   const [booted, setBooted] = useState(false);
 
   useEffect(() => {
@@ -65,14 +91,6 @@ export function App() {
       window.removeEventListener("hq-world-ready", mark);
     };
   }, []);
-
-  if (!webgl) {
-    return (
-      <div className="app-shell">
-        <NoWebGL />
-      </div>
-    );
-  }
 
   return (
     <div
