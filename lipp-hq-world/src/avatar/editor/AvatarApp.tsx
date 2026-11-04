@@ -23,6 +23,9 @@ import "./avatar.css";
 const OFFICE_DEMO = "/?escritorio=completo&modo=demonstracao";
 const QA_ENABLED = import.meta.env.DEV || new URLSearchParams(window.location.search).has("qa");
 
+/** O escritório abre o editor já na pessoa clicada. */
+const askedPerson = new URLSearchParams(window.location.search).get("pessoa");
+
 const newId = () => `pessoa-${crypto.randomUUID().slice(0, 8)}`;
 const nextName = (doc: AvatarDoc) => `Pessoa ${doc.presets.length + 1}`;
 
@@ -84,7 +87,7 @@ function ColorField({ label, value, palette, onChange }: { label: string; value:
 export function AvatarApp() {
   const [loaded] = useState(() => loadAvatars(browserStorage()));
   const [doc, setDoc] = useState<AvatarDoc>(loaded.doc);
-  const [draft, setDraft] = useState<HumanPreset>(() => doc.presets.find((preset) => preset.id === doc.selectedId) ?? newPreset(newId(), nextName(doc), ""));
+  const [draft, setDraft] = useState<HumanPreset>(() => doc.presets.find((preset) => preset.id === askedPerson) ?? doc.presets.find((preset) => preset.id === doc.selectedId) ?? newPreset(newId(), nextName(doc), ""));
   const [categoryId, setCategoryId] = useState<CategoryId>("hair");
   const [notice, setNotice] = useState<string | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -151,7 +154,7 @@ export function AvatarApp() {
   };
 
   const remove = () => {
-    if (!saved || !window.confirm(`Apagar ${saved.name}?`)) return;
+    if (!saved || !window.confirm(`Apagar ${saved.name}? Ela também sai do escritório.`)) return;
     const presets = doc.presets.filter((preset) => preset.id !== saved.id);
     const fallback = presets[0] ?? null;
     persist({ presets, selectedId: fallback?.id ?? null });
@@ -187,7 +190,7 @@ export function AvatarApp() {
         <div className="cs-rail__scroll">
           <section aria-labelledby="av-people">
             <h2 id="av-people" className="cs-eyebrow">Pessoas salvas <span className="cs-count">{doc.presets.length}</span></h2>
-            {doc.presets.length === 0 && <p className="cs-empty">Nenhuma ainda. Monte a primeira e salve.</p>}
+            {doc.presets.length === 0 && <p className="cs-empty">Nenhuma ainda. Monte a primeira e salve: ela aparece no hall do escritório.</p>}
             <ul className="cs-cast">
               {doc.presets.map((preset) => (
                 <li key={preset.id}>
@@ -308,11 +311,21 @@ export function AvatarApp() {
             data-save
             onClick={() => {
               const ok = save();
-              if (ok !== null) setNotice(ok ? `${draft.name.trim()} foi salva.` : "Não consegui gravar neste navegador: a pessoa dura só até fechar a aba.");
+              if (ok !== null) setNotice(ok ? `${draft.name.trim()} foi salva e já aparece no escritório.` : "Não consegui gravar neste navegador: a pessoa dura só até fechar a aba.");
             }}
           >
             Salvar
           </button>
+          <a
+            className={nameProblem ? "cs-button av-go av-go--off" : "cs-button av-go"}
+            href={OFFICE_DEMO}
+            data-save-go
+            onClick={(event) => {
+              if (nameProblem || save() === null) event.preventDefault();
+            }}
+          >
+            Salvar e ver no escritório
+          </a>
           {saveFailed && <p className="cs-save cs-save--warn av-foot__warn">Sem salvamento local nesta aba.</p>}
         </footer>
       </aside>
