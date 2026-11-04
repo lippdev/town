@@ -138,11 +138,14 @@ export function StudioViewport({ spec, name, pose, motion, onPose, onMotion, api
                 gl.setClearColor(0x000000, 0);
                 const canvas = gl.domElement;
                 canvas.tabIndex = -1;
+                // Desmontar o Canvas depois de um erro também dispara a perda de contexto:
+                // sem esse filtro a cena remontaria e falharia de novo, em laço.
                 const lost = (event: Event) => {
                   event.preventDefault();
-                  setPhase({ name: "contextLost" });
+                  setPhase((current) => (current.name === "ready" ? { name: "contextLost" } : current));
                 };
-                const restored = () => setPhase({ name: "ready" });
+                const restored = () => setPhase((current) => (current.name === "contextLost" ? { name: "ready" } : current));
+                cleanup.current?.();
                 canvas.addEventListener("webglcontextlost", lost);
                 canvas.addEventListener("webglcontextrestored", restored);
                 cleanup.current = () => {
