@@ -53,9 +53,15 @@ async function main() {
 
     // sobe o gateway de novo e usa "tentar de novo" pelo roster
     await stack.restartFixture();
-    await page.locator(".note-retry").click({ timeout: 5000 }).catch(async () => {
-      await page.evaluate(() => window.__HQ_QA__ && null);
-    });
+    // o poll pode recuperar antes do clique; com o selo ainda lá, falhar o clique é falha
+    report.checks.retryClicked = await page
+      .locator(".sidebar-note-warn .note-retry")
+      .click({ timeout: 5000 })
+      .then(() => true)
+      .catch(async (error) => {
+        if ((await page.locator(".connection-stale").count()) > 0) throw error;
+        return false;
+      });
     await page.waitForFunction(() => !document.querySelector(".connection-stale"), null, { timeout: 60000 });
     report.checks.staleBadgeAfterRecovery = await page.locator(".connection-stale").count();
     report.checks.botsAfterRecovery = await page.locator(".agent-row").count();
