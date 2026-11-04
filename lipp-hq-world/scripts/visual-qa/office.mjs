@@ -237,12 +237,12 @@ async function demoSuite(browser, origin) {
     assert.equal(await page.evaluate(() => window.__HQ_OFFICE_QA__.renderInfo().shadowLights), 1);
   });
 
-  await check("figura real sentada: pés no chão e nenhuma figura antiga", async () => {
+  await check("cada bot é um robô no ar, com os pés acima da cadeira", async () => {
+    const { robots } = await qa(page);
     for (const bot of Object.keys(BOTS)) {
-      const info = await page.evaluate((id) => window.__HQ_OFFICE_QA__.figureInfo(id), bot);
-      assert.equal(info.roomOfHips, ROOM_OF[bot]);
-      assert.ok(info.footL[1] < 0.08 && info.footL[1] >= 0, `${bot}: pé em ${info.footL[1]}`);
-      assert.ok(info.hips[1] > 0.3 && info.hips[1] < 0.6, `${bot}: quadril em ${info.hips[1]}`);
+      assert.ok(robots[bot], `${bot}: sem robô`);
+      assert.ok(robots[bot].y > 1.03, `${bot}: pé em ${robots[bot].y}`);
+      assert.ok(robots[bot].y + robots[bot].height < 2.25, `${bot}: bate na verga`);
     }
   });
 
@@ -321,6 +321,14 @@ async function liveSuite(browser, origin) {
     assert.ok((await page.locator(".office-roster-state").count()) === 7);
     assert.ok(page.apiCalls.length > 0);
   });
+  await check("na frota real, o robô flutua no posto e não voa: voo diria algo que não aconteceu", async () => {
+    for (let sample = 0; sample < 6; sample += 1) {
+      const { robots } = await qa(page);
+      for (const [bot, robot] of Object.entries(robots)) assert.equal(robot.flown, 0, bot);
+      await page.waitForTimeout(500);
+    }
+  });
+
   await check("clique em cada figura abre a gaveta do bot certo, sem aba de personagem", async () => {
     for (const [bot, name] of Object.entries(BOTS)) {
       await page.evaluate(() => document.querySelector(".office-focus .office-button.primary")?.click());
@@ -436,8 +444,8 @@ async function failureSuite(browser, origin, offlineOrigin) {
   });
   await offline.context().close();
 
-  const noFigure = await open(browser, origin + DEMO, { routes: (page) => page.route("**/prototipo/pulse.glb", (route) => route.abort()) });
-  await check("sem o GLB da figura: planta e lista seguem, com aviso e nova tentativa", async () => {
+  const noFigure = await open(browser, origin + DEMO, { routes: (page) => page.route("**/avatares/robo/RobotExpressive.glb", (route) => route.abort()) });
+  await check("sem o GLB do robô: planta e lista seguem, com aviso e nova tentativa", async () => {
     await noFigure.waitForSelector(".office-notice.figures", { timeout: 20000 });
     assert.equal((await qa(noFigure)).load, "ready");
     assert.equal((await qa(noFigure)).rigs.length, 0);

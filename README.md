@@ -21,6 +21,7 @@ pnpm dev        # http://127.0.0.1:5173
 | [lipp-hq-world/docs/BACKLOG.md](lipp-hq-world/docs/BACKLOG.md)           | auditoria geral e melhorias           |
 | [lipp-hq-world/docs/PROGRESS.md](lipp-hq-world/docs/PROGRESS.md)         | estado atual                          |
 | [lipp-hq-world/docs/INTEGRATION.md](lipp-hq-world/docs/INTEGRATION.md)   | contratos do OpenMausBot              |
+| [lipp-hq-world/docs/AVATARES.md](lipp-hq-world/docs/AVATARES.md)         | pessoas e robôs: origem e limites     |
 | [AGENTS.md](AGENTS.md)                                                   | regras para agentes neste repositório |
 
 ## Fluxo de trabalho
