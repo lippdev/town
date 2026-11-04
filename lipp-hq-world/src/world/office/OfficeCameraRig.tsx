@@ -24,29 +24,32 @@ const CLICK_SLOP = 5;
 const KEY_PAN = 60;
 
 /** Caixas de clique das figuras: bem mais barato e estável que testar a malha com esqueleto. */
-function botBoxes(): PickBox[] {
+function botBoxes(onlyRoom?: string): PickBox[] {
   const { seating } = useOfficeStore.getState();
   return Object.entries(seating.seats).flatMap(([botId, seatId]) => {
     const seat = OFFICE_SEATS_BY_ID[seatId];
-    if (!seat) return [];
+    if (!seat || (onlyRoom && seat.roomId !== onlyRoom)) return [];
     return [{ id: botId, minX: seat.x - 0.38, maxX: seat.x + 0.38, minY: 0, maxY: 1.85, minZ: seat.z - 0.38, maxZ: seat.z + 0.38 }];
   });
 }
 
-/** Sala sob o pixel. A parede alta da sala em foco conta como parte dela. */
-function roomUnder(px: number, py: number): string | null {
+/**
+ * O que está sob o pixel. A parede alta da sala em foco é sólida: o que aparece nela é a
+ * própria sala, nunca a sala ou o bot escondidos atrás.
+ */
+function pickAt(px: number, py: number): { botId: string | null; roomId: string | null } {
   const { view, viewport } = officeRuntime;
   const focused = useOfficeStore.getState().focusedRoomId;
   if (focused) {
     const { bounds } = OFFICE_ROOMS_BY_ID[focused]!;
-    const wallHit = pickBoxAt(px, py, view, viewport, [
+    const wall = pickBoxAt(px, py, view, viewport, [
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.maxX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.minZ },
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.minX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.maxZ },
     ]);
-    if (wallHit) return wallHit;
+    if (wall) return { botId: pickBoxAt(px, py, view, viewport, botBoxes(focused)), roomId: wall };
   }
   const ground = screenToGround(px, py, view, viewport);
-  return roomAt(ground.x, ground.z)?.id ?? null;
+  return { botId: pickBoxAt(px, py, view, viewport, botBoxes()), roomId: roomAt(ground.x, ground.z)?.id ?? null };
 }
 
 /**
@@ -121,11 +124,9 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const hover = (point: { x: number; y: number }) => {
-      const { view, viewport } = officeRuntime;
-      const bot = pickBoxAt(point.x, point.y, view, viewport, botBoxes());
-      const roomId = roomUnder(point.x, point.y);
-      useOfficeStore.getState().setHovered(roomId, bot);
-      stage.style.cursor = bot || roomId ? "pointer" : "grab";
+      const { botId, roomId } = pickAt(point.x, point.y);
+      useOfficeStore.getState().setHovered(roomId, botId);
+      stage.style.cursor = botId || roomId ? "pointer" : "grab";
     };
 
     const onMove = (event: PointerEvent) => {
@@ -162,14 +163,12 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       pointers.delete(event.pointerId);
       if (dragged || pointers.size > 0) return;
       const point = local(event);
-      const { view, viewport } = officeRuntime;
       const store = useOfficeStore.getState();
-      const bot = pickBoxAt(point.x, point.y, view, viewport, botBoxes());
-      if (bot) {
-        store.selectBot(bot);
+      const { botId, roomId } = pickAt(point.x, point.y);
+      if (botId) {
+        store.selectBot(botId);
         return;
       }
-      const roomId = roomUnder(point.x, point.y);
       if (roomId) {
         if (roomId !== store.focusedRoomId) useHQStore.getState().clearSelection();
         store.focusRoom(roomId);

@@ -128,6 +128,10 @@
   display: none;
 }
 
+.office-bot-tag.elsewhere {
+  display: none;
+}
+
 .office-entrance-tag {
   padding: 1px 8px;
   border-radius: 6px;

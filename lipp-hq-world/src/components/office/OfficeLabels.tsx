@@ -57,7 +57,10 @@ export function OfficeLabels() {
       }
       for (const [node, anchor] of nodes.current) {
         const point = worldToScreen(anchor, view, viewport);
-        node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+        // A etiqueta da sala desce para o cruzamento dos corredores, sem cobrir a sala;
+        // a do bot fica acima da cabeça.
+        const below = node.dataset.room !== undefined || node.classList.contains("office-entrance-tag");
+        node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, ${below ? "4px" : "-100%"})`;
       }
     };
     frame = requestAnimationFrame(tick);
@@ -75,7 +78,8 @@ export function OfficeLabels() {
         const occupants = botsInRoom(seating, room.id);
         const names = occupants.map((id) => bots.find((bot) => bot.id === id)?.name ?? id);
         const owner = room.kind === "department" ? (names[0] ?? "posto vazio") : occupants.length > 0 ? `${occupants.length} em posto` : "área comum";
-        const classes = ["office-room-tag", room.id === hoveredRoomId ? "hovered" : "", room.id === focusedRoomId ? "focused" : ""].filter(Boolean).join(" ");
+        // Em foco, a parede alta pode esconder os vizinhos: etiqueta deles só atrapalharia.
+        const classes = ["office-room-tag", room.id === hoveredRoomId ? "hovered" : "", focusedRoomId ? "focused" : ""].filter(Boolean).join(" ");
         return (
           <button
             key={room.id}
@@ -96,7 +100,8 @@ export function OfficeLabels() {
         const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
         if (!seat) return null;
         const active = bot.id === selectedBotId || bot.id === hoveredBotId;
-        const classes = ["office-bot-tag", active ? "active" : "", seat.kind === "posto" ? "" : "extra"].filter(Boolean).join(" ");
+        const elsewhere = focusedRoomId !== null && seat.roomId !== focusedRoomId;
+        const classes = ["office-bot-tag", active ? "active" : "", seat.kind === "posto" ? "" : "extra", elsewhere ? "elsewhere" : ""].filter(Boolean).join(" ");
         return (
           <button
             key={bot.id}

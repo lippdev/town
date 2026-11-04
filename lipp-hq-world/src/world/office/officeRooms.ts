@@ -248,6 +248,14 @@ export function wallRuns(halfLength: number, doors: readonly { at: number; width
   return runs.filter(([from, to]) => to - from > 0.01);
 }
 
+/**
+ * Duas paredes se cruzam no canto com o topo no mesmo plano; a diferença de milímetros
+ * entre os eixos evita o serrilhado de profundidade ali.
+ */
+function cutHeight(side: RoomSide, height: number) {
+  return side === "west" || side === "east" ? height + 0.004 : height;
+}
+
 function wallColor(side: RoomSide) {
   return side === "west" ? WALL_WEST : side === "north" ? WALL_NORTH : WALL_FRONT;
 }
@@ -304,7 +312,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
       const runs = window
         ? wallRuns(halfLength, [{ at: (window.from + window.to) / 2, width: window.to - window.from }])
         : [[-halfLength, halfLength] as [number, number]];
-      buildWallBand(b, runs, 0, WALL_HEIGHT, color);
+      buildWallBand(b, runs, 0, cutHeight(side, WALL_HEIGHT), color);
       if (window) windowUnit(b, window.from, window.to, color);
       skirt(b);
     });
@@ -313,7 +321,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
 
   const runs = wallRuns(halfLength, doors);
   wallFrame(b, room, side)(() => {
-    buildWallBand(b, runs, 0, BACK_WALL_CUT, color);
+    buildWallBand(b, runs, 0, cutHeight(side, BACK_WALL_CUT), color);
     skirt(b);
     for (const door of doors) {
       for (const edge of [-1, 1]) b.box([door.at + edge * (door.width / 2 + 0.03), BACK_WALL_CUT / 2, 0], [0.06, BACK_WALL_CUT + 0.02, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
@@ -322,7 +330,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
   // A parte de cima só existe com a sala em foco: não projeta sombra, senão a luz da
   // sala mudaria ao entrar nela.
   wallFrame(raised, room, side)(() => {
-    buildWallBand(raised, runs, BACK_WALL_CUT, WALL_HEIGHT, color, false);
+    buildWallBand(raised, runs, BACK_WALL_CUT, cutHeight(side, WALL_HEIGHT), color, false);
     for (const door of doors) {
       raised.box([door.at, (2.25 + WALL_HEIGHT) / 2, 0], [door.width, WALL_HEIGHT - 2.25, WALL_THICKNESS], { color, cast: false });
       for (const edge of [-1, 1]) raised.box([door.at + edge * (door.width / 2 + 0.03), (BACK_WALL_CUT + 2.25) / 2, 0], [0.06, 2.25 - BACK_WALL_CUT, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
@@ -333,7 +341,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
 function buildFrontWall(b: KitBuilder, room: OfficeRoom, side: RoomSide) {
   const doors = room.doors.filter((door) => door.side === side).map((door) => ({ at: doorInFrame(door), width: door.width }));
   wallFrame(b, room, side)(() => {
-    buildWallBand(b, wallRuns(wallHalfLength(room, side), doors), 0, FRONT_WALL_CUT, WALL_FRONT);
+    buildWallBand(b, wallRuns(wallHalfLength(room, side), doors), 0, cutHeight(side, FRONT_WALL_CUT), WALL_FRONT);
     for (const door of doors) {
       for (const edge of [-1, 1]) b.box([door.at + edge * (door.width / 2 + 0.03), FRONT_WALL_CUT / 2, 0], [0.06, FRONT_WALL_CUT + 0.02, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
     }
@@ -450,7 +458,7 @@ function furnishComunidade(b: KitBuilder, room: OfficeRoom) {
 }
 
 function furnishPesquisa(b: KitBuilder, room: OfficeRoom) {
-  workstation(b, seatOfRoom(room.id), { width: 2.2, depth: 0.85, monitors: [[-0.45, 2], [0.45, 3]], lamp: 0.95 });
+  workstation(b, seatOfRoom(room.id), { width: 2.2, depth: 0.85, monitors: [[-0.15, 2], [0.72, 3]], lamp: -0.92 });
   b.at([room.center.x, 0, room.center.z], 0, () => {
     b.at([-2.78, 0, -1.75], 0, () => bookshelf(b, 2.3, 1.55, [0.12, 0.67, 1.22, 1.77, 2.27]));
     b.at([1.2, 0, -0.1], 0, () => {
@@ -491,7 +499,7 @@ function furnishProduto(b: KitBuilder, room: OfficeRoom) {
 }
 
 function furnishConteudo(b: KitBuilder, room: OfficeRoom) {
-  workstation(b, seatOfRoom(room.id), { width: 2.2, depth: 0.85, monitors: [[0, 0]], lamp: 0.85 });
+  workstation(b, seatOfRoom(room.id), { width: 2.2, depth: 0.85, monitors: [[0.2, 0]], lamp: -0.85 });
   b.at([room.center.x, 0, room.center.z], 0, () => {
     b.at([-2.78, 0, 1.65], 0, () => bookshelf(b, 2.3, 1.3, [0.12, 0.67, 1.22, 1.77, 2.27]));
     rug(b, 1.25, 0.75, 2.8, 2.5, "#80756f");
@@ -523,14 +531,16 @@ function furnishOperacoes(b: KitBuilder, room: OfficeRoom) {
 
 function furnishHall(b: KitBuilder, room: OfficeRoom) {
   b.at([room.center.x, 0, room.center.z], 0, () => {
-    // Recepção virada para a porta sul.
-    b.at([-2.25, 0, 1.75], 0, () => {
-      b.box([0, 0.5, 0], [1.9, 1.0, 0.55], WOOD);
-      b.box([0, 1.02, 0.02], [2.0, 0.05, 0.68], { color: "#d8cdb8" });
-      b.solid("recepção", 0, 0, 2.0, 0.68);
+    // Recepção virada para a porta sul: balcão alto na frente, posto atrás dele.
+    b.at([-2.25, 0, 1.95], 0, () => {
+      b.box([0, 0.52, 0], [1.9, 1.04, 0.18], WOOD);
+      b.box([0, 1.06, -0.05], [2.0, 0.05, 0.42], { color: "#d8cdb8" });
+      b.solid("recepção", 0, 0, 2.0, 0.42);
     });
     b.at([-2.25, 0, 0.95], 0, () => {
-      monitor(b, 0.5, 0.45, 3, Math.PI);
+      chair(b, "#4d5159");
+      deskTop(b, 0, DESK_REACH + 0.26, 1.9, 0.52);
+      monitor(b, 0.45, DESK_REACH + 0.34, 3);
     });
     // Espera: sofá, poltrona e mesa baixa num tapete.
     rug(b, -1.95, -1.35, 3.0, 2.2, "#7b7671");
@@ -542,7 +552,7 @@ function furnishHall(b: KitBuilder, room: OfficeRoom) {
     // Bancada compartilhada: postos de bots além dos sete departamentos.
     b.at([BENCH.x, 0, BENCH.z], 0, () => deskTop(b, 0, 0, BENCH.width, BENCH.depth));
     b.prop("planta", [3.2, 0.02, 2.3], 0.85);
-    b.prop("planta", [-3.2, 0.02, 0.95], 0.75);
+    b.prop("planta", [-3.25, 0.02, -1.15], 0.72, 1.2);
   });
   OFFICE_SEATS.filter((seat) => seat.roomId === room.id).forEach((seat, index) => {
     b.at([seat.x, 0, seat.z], seat.yaw, () => {
@@ -579,7 +589,7 @@ const FURNISH: Record<string, (b: KitBuilder, room: OfficeRoom) => void> = {
 
 /** O que a parede de trás mostra com a sala em foco. */
 function decorateRaised(raised: KitBuilder, room: OfficeRoom) {
-  if (room.row !== 0) signOn(raised, room, room.id === "operacoes" ? 1.2 : -1.0);
+  if (room.row !== 0) signOn(raised, room, room.id === "operacoes" ? 2.45 : -1.0);
   if (room.id === "produto") {
     wallFrame(raised, room, "north")(() => raised.at([1.1, 1.85, 0.12], 0, () => whiteboard(raised, 2.4, 1.3, ["#c9b48e", "#d3a860", "#a39b8c", "#8a9b8a"])));
   } else if (room.id === "reunioes") {
@@ -588,7 +598,7 @@ function decorateRaised(raised: KitBuilder, room: OfficeRoom) {
       raised.plane([0, 0, 0.03], 2.2, 1.2, screenUv(1), "screen");
     }));
   } else if (room.id === "operacoes") {
-    wallFrame(raised, room, "north")(() => raised.at([-1.0, 1.85, 0.12], 0, () => {
+    wallFrame(raised, room, "north")(() => raised.at([-0.1, 1.85, 0.12], 0, () => {
       for (const [x, variant] of [[-0.75, 2], [0.75, 0]] as const) {
         raised.box([x, 0, 0], [1.4, 0.82, 0.05], { color: "#1f2329", cast: false });
         raised.plane([x, 0, 0.03], 1.32, 0.74, screenUv(variant + 3), "screen");
