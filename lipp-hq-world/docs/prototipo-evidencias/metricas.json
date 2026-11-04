@@ -1,0 +1,823 @@
+{
+  "timestamp": "2026-11-03T20:47:12.786Z",
+  "viewport": {
+    "width": 1728,
+    "height": 1000
+  },
+  "deviceScaleFactor": 2,
+  "hardware": {
+    "os": "darwin",
+    "release": "27.0.0",
+    "arch": "arm64",
+    "cpu": "Apple M1",
+    "ramGB": 8
+  },
+  "browser": "156.0.8078.4",
+  "runs": [
+    {
+      "scene": "atual",
+      "mode": "alta",
+      "samples": [
+        {
+          "durationMs": 5016.4,
+          "frames": 161,
+          "fpsMean": 32.09,
+          "fpsP50": 30.03,
+          "fpsP95": 59.88,
+          "fpsP05": 29.94,
+          "frameMsP50": 33.3,
+          "frameMsP95": 33.4,
+          "callsMin": 1,
+          "callsMax": 1,
+          "trianglesMin": 1,
+          "trianglesMax": 1,
+          "info": {
+            "calls": 1,
+            "triangles": 1,
+            "programs": 25,
+            "lights": 12,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "leve"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 155,
+          "fpsMean": 30.9,
+          "fpsP50": 30.03,
+          "fpsP95": 59.88,
+          "fpsP05": 29.94,
+          "frameMsP50": 33.3,
+          "frameMsP95": 33.4,
+          "callsMin": 1,
+          "callsMax": 1,
+          "trianglesMin": 1,
+          "trianglesMax": 1,
+          "info": {
+            "calls": 1,
+            "triangles": 1,
+            "programs": 25,
+            "lights": 12,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "leve"
+          }
+        },
+        {
+          "durationMs": 5033.1,
+          "frames": 162,
+          "fpsMean": 32.19,
+          "fpsP50": 30.03,
+          "fpsP95": 60.24,
+          "fpsP05": 29.94,
+          "frameMsP50": 33.3,
+          "frameMsP95": 33.4,
+          "callsMin": 1,
+          "callsMax": 1,
+          "trianglesMin": 1,
+          "trianglesMax": 1,
+          "info": {
+            "calls": 1,
+            "triangles": 1,
+            "programs": 25,
+            "lights": 12,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "leve"
+          }
+        }
+      ],
+      "resources": [],
+      "assetUrls": [],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    {
+      "scene": "prototipo",
+      "mode": "alta",
+      "samples": [
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "alta",
+            "autoQuality": "alta"
+          }
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+          "transferSize": 423603,
+          "encodedBodySize": 423303,
+          "decodedBodySize": 423303
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+          "transferSize": 734793,
+          "encodedBodySize": 734493,
+          "decodedBodySize": 734493
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+          "transferSize": 448155,
+          "encodedBodySize": 447855,
+          "decodedBodySize": 447855
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+          "transferSize": 315765,
+          "encodedBodySize": 315465,
+          "decodedBodySize": 315465
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+          "transferSize": 50320,
+          "encodedBodySize": 50020,
+          "decodedBodySize": 50020
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+          "transferSize": 155576,
+          "encodedBodySize": 155276,
+          "decodedBodySize": 155276
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+          "transferSize": 227359,
+          "encodedBodySize": 227059,
+          "decodedBodySize": 227059
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+          "transferSize": 828371,
+          "encodedBodySize": 828071,
+          "decodedBodySize": 828071
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+          "transferSize": 788893,
+          "encodedBodySize": 788593,
+          "decodedBodySize": 788593
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/planta.glb",
+          "transferSize": 888680,
+          "encodedBodySize": 888380,
+          "decodedBodySize": 888380
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/luminaria.glb",
+          "transferSize": 502416,
+          "encodedBodySize": 502116,
+          "decodedBodySize": 502116
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/pulse.glb",
+          "transferSize": 148348,
+          "encodedBodySize": 148048,
+          "decodedBodySize": 148048
+        }
+      ],
+      "assetUrls": [
+        "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/planta.glb",
+        "http://127.0.0.1:5198/prototipo/luminaria.glb",
+        "http://127.0.0.1:5198/prototipo/pulse.glb"
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    {
+      "scene": "atual",
+      "mode": "leve",
+      "samples": [
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 694,
+            "triangles": 45742,
+            "programs": 14,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 1186,
+            "triangles": 78712,
+            "programs": 14,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 294,
+          "fpsMean": 58.61,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 694,
+            "triangles": 45742,
+            "programs": 14,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        }
+      ],
+      "resources": [],
+      "assetUrls": [],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    {
+      "scene": "prototipo",
+      "mode": "leve",
+      "samples": [
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1,
+            "mode": "leve",
+            "autoQuality": "alta"
+          }
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+          "transferSize": 423603,
+          "encodedBodySize": 423303,
+          "decodedBodySize": 423303
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+          "transferSize": 734793,
+          "encodedBodySize": 734493,
+          "decodedBodySize": 734493
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+          "transferSize": 448155,
+          "encodedBodySize": 447855,
+          "decodedBodySize": 447855
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+          "transferSize": 315765,
+          "encodedBodySize": 315465,
+          "decodedBodySize": 315465
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+          "transferSize": 50320,
+          "encodedBodySize": 50020,
+          "decodedBodySize": 50020
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+          "transferSize": 155576,
+          "encodedBodySize": 155276,
+          "decodedBodySize": 155276
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+          "transferSize": 828371,
+          "encodedBodySize": 828071,
+          "decodedBodySize": 828071
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+          "transferSize": 788893,
+          "encodedBodySize": 788593,
+          "decodedBodySize": 788593
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+          "transferSize": 227359,
+          "encodedBodySize": 227059,
+          "decodedBodySize": 227059
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/planta.glb",
+          "transferSize": 888680,
+          "encodedBodySize": 888380,
+          "decodedBodySize": 888380
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/luminaria.glb",
+          "transferSize": 502416,
+          "encodedBodySize": 502116,
+          "decodedBodySize": 502116
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/pulse.glb",
+          "transferSize": 148348,
+          "encodedBodySize": 148048,
+          "decodedBodySize": 148048
+        }
+      ],
+      "assetUrls": [
+        "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/planta.glb",
+        "http://127.0.0.1:5198/prototipo/luminaria.glb",
+        "http://127.0.0.1:5198/prototipo/pulse.glb"
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    {
+      "scene": "atual",
+      "mode": "auto",
+      "samples": [
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 694,
+            "triangles": 45742,
+            "programs": 26,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "auto",
+            "autoQuality": "leve"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 694,
+            "triangles": 45742,
+            "programs": 26,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "auto",
+            "autoQuality": "leve"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 694,
+          "callsMax": 1186,
+          "trianglesMin": 45742,
+          "trianglesMax": 78712,
+          "info": {
+            "calls": 694,
+            "triangles": 45742,
+            "programs": 26,
+            "lights": 12,
+            "pixelRatio": 1,
+            "mode": "auto",
+            "autoQuality": "leve"
+          }
+        }
+      ],
+      "resources": [],
+      "assetUrls": [],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    },
+    {
+      "scene": "prototipo",
+      "mode": "auto",
+      "samples": [
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.52,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.8,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "auto",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.4,
+          "frames": 301,
+          "fpsMean": 60,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 127,
+            "triangles": 240371,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "auto",
+            "autoQuality": "alta"
+          }
+        },
+        {
+          "durationMs": 5016.5,
+          "frames": 300,
+          "fpsMean": 59.8,
+          "fpsP50": 59.88,
+          "fpsP95": 60.24,
+          "fpsP05": 59.88,
+          "frameMsP50": 16.7,
+          "frameMsP95": 16.7,
+          "callsMin": 127,
+          "callsMax": 199,
+          "trianglesMin": 240371,
+          "trianglesMax": 472242,
+          "info": {
+            "calls": 199,
+            "triangles": 472242,
+            "programs": 26,
+            "lights": 4,
+            "pixelRatio": 1.5,
+            "mode": "auto",
+            "autoQuality": "alta"
+          }
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+          "transferSize": 423603,
+          "encodedBodySize": 423303,
+          "decodedBodySize": 423303
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+          "transferSize": 448155,
+          "encodedBodySize": 447855,
+          "decodedBodySize": 447855
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+          "transferSize": 734793,
+          "encodedBodySize": 734493,
+          "decodedBodySize": 734493
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+          "transferSize": 50320,
+          "encodedBodySize": 50020,
+          "decodedBodySize": 50020
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+          "transferSize": 155576,
+          "encodedBodySize": 155276,
+          "decodedBodySize": 155276
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+          "transferSize": 315765,
+          "encodedBodySize": 315465,
+          "decodedBodySize": 315465
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+          "transferSize": 788893,
+          "encodedBodySize": 788593,
+          "decodedBodySize": 788593
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+          "transferSize": 227359,
+          "encodedBodySize": 227059,
+          "decodedBodySize": 227059
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+          "transferSize": 828371,
+          "encodedBodySize": 828071,
+          "decodedBodySize": 828071
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/planta.glb",
+          "transferSize": 888680,
+          "encodedBodySize": 888380,
+          "decodedBodySize": 888380
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/luminaria.glb",
+          "transferSize": 502416,
+          "encodedBodySize": 502116,
+          "decodedBodySize": 502116
+        },
+        {
+          "name": "http://127.0.0.1:5198/prototipo/pulse.glb",
+          "transferSize": 148348,
+          "encodedBodySize": 148048,
+          "decodedBodySize": 148048
+        }
+      ],
+      "assetUrls": [
+        "http://127.0.0.1:5198/prototipo/wood_floor_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/wood_floor_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/floor_tiles_04_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_diff_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_arm_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+        "http://127.0.0.1:5198/prototipo/planta.glb",
+        "http://127.0.0.1:5198/prototipo/luminaria.glb",
+        "http://127.0.0.1:5198/prototipo/pulse.glb"
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "forwardRef render functions accept exactly two parameters: props and ref. %s Did you forget to use the ref parameter?"
+      ],
+      "failedRequests": [
+        {
+          "url": "http://127.0.0.1:5198/api/hq/hermes/snapshot",
+          "error": "net::ERR_ABORTED"
+        }
+      ]
+    }
+  ],
+  "interactions": {
+    "hover": "DEPARTAMENTO\nEngenharia\nPulse\ntrabalhando\n1",
+    "hoverCleared": true,
+    "drawer": true,
+    "unknownQueryUsesHQ": true
+  },
+  "prototypeAssetBytes": 5508679,
+  "screenshots": [
+    {
+      "path": "/tmp/hq-proto/atual-alta.png",
+      "bytes": 2208611
+    },
+    {
+      "path": "/tmp/hq-proto/prototipo-alta.png",
+      "bytes": 1838536
+    },
+    {
+      "path": "/tmp/hq-proto/prototipo-hover.png",
+      "bytes": 1887775
+    },
+    {
+      "path": "/tmp/hq-proto/prototipo-gaveta.png",
+      "bytes": 1991643
+    }
+  ]
+}
