@@ -72,13 +72,14 @@ function pick<T>(list: readonly T[] | undefined, value: number, fallback: T): T 
 export function specForBot(id: string, color: string): CharacterSpec {
   const known = KNOWN_SPECS[id];
   if (known) return known;
-  const seed = hash(id);
+  // Mistura os bits: ids em sequência (bot-1, bot-2) também saem diferentes.
+  const seed = (Math.imul(hash(id) + 1, 2654435761) >>> 8) & 0xffff;
   return {
     colors: {
       ...PULSE_BASE_SPEC.colors,
       skin: pick(PALETTES.skin, seed, PULSE_BASE_SPEC.colors.skin),
-      hair: pick(PALETTES.hair, seed >> 2, PULSE_BASE_SPEC.colors.hair),
-      pants: pick(PALETTES.pants, seed >> 3, PULSE_BASE_SPEC.colors.pants),
+      hair: pick(PALETTES.hair, seed >> 4, PULSE_BASE_SPEC.colors.hair),
+      pants: pick(PALETTES.pants, seed >> 8, PULSE_BASE_SPEC.colors.pants),
       face: "#17120f",
       shirt: color,
     },

@@ -591,6 +591,30 @@ async function perfSuite(browser, origin, results) {
   console.log(`  alta · 19 bots: ${last.fpsMean} fps, p95 ${last.frameMsP95} ms, ${last.callsMax} chamadas, ${last.trianglesMax} tri`);
   await context.close();
 
+  // Sem VSync o teto de 60 sai da frente e aparece a folga desta máquina.
+  const uncapped = await chromium.launch({ headless: true, args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });
+  for (const mode of ["alta", "leve"]) {
+    for (const room of [null, "hall"]) {
+      const free = await uncapped.newContext({ viewport: { width: 1728, height: 1000 }, deviceScaleFactor: 2 });
+      const freePage = await free.newPage();
+      await freePage.addInitScript((value) => localStorage.setItem("hq.graphics", value), mode);
+      await freePage.goto(origin + DEMO);
+      await ready(freePage, 7);
+      await freePage.waitForTimeout(6000);
+      if (room) {
+        await freePage.locator(`[data-room="${room}"]`).click();
+        await settle(freePage);
+      }
+      const windowsFree = [];
+      for (let index = 0; index < 2; index += 1) windowsFree.push(await freePage.evaluate(`(${FRAME_WINDOW})(5000)`));
+      results.runs.push({ mode, scenario: `sem VSync · ${room ?? "andar parado"}`, samples: windowsFree });
+      const final = windowsFree.at(-1);
+      console.log(`  ${mode} · sem VSync · ${room ?? "andar"}: ${final.fpsMean} fps, p50 ${final.frameMsP50} ms, p95 ${final.frameMsP95} ms`);
+      await free.close();
+    }
+  }
+  await uncapped.close();
+
   // Peso: o que uma visita sem cache baixa até a cena ficar pronta.
   const weight = await browser.newContext({ viewport: { width: 1728, height: 1000 } });
   const weightPage = await weight.newPage();

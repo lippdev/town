@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
-import { ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { CORRIDOR, ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 import { botsInRoom } from "@/world/office/officeRoster";
@@ -57,10 +57,10 @@ export function OfficeLabels() {
       }
       for (const [node, anchor] of nodes.current) {
         const point = worldToScreen(anchor, view, viewport);
-        // A etiqueta da sala desce para o cruzamento dos corredores, sem cobrir a sala;
+        // A etiqueta da sala fica no cruzamento dos corredores, sem cobrir sala nenhuma;
         // a do bot fica acima da cabeça.
-        const below = node.dataset.room !== undefined || node.classList.contains("office-entrance-tag");
-        node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, ${below ? "4px" : "-100%"})`;
+        const centered = node.dataset.bot === undefined;
+        node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, ${centered ? "-50%" : "-100%"})`;
       }
     };
     frame = requestAnimationFrame(tick);
@@ -84,7 +84,7 @@ export function OfficeLabels() {
           <button
             key={room.id}
             type="button"
-            ref={place([room.bounds.maxX - 0.15, 0.1, room.bounds.maxZ + 0.22])}
+            ref={place([room.bounds.maxX + CORRIDOR / 2, 0.02, room.bounds.maxZ + CORRIDOR / 2])}
             className={classes}
             style={{ "--tag-color": room.color } as React.CSSProperties}
             data-room={room.id}
@@ -120,7 +120,7 @@ export function OfficeLabels() {
         );
       })}
       {!focusedRoomId && (
-        <span className="office-entrance-tag" ref={place([ENTRANCE.x + 0.95, 0.1, ENTRANCE.z + 0.55])}>
+        <span className="office-entrance-tag" ref={place([ENTRANCE.x + 0.2, 0.02, ENTRANCE.z + 2.6])}>
           Entrada
         </span>
       )}

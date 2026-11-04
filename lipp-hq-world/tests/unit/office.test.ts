@@ -243,6 +243,11 @@ describe("quem está em cena", () => {
     for (const spec of specs) expect(parseSpec(spec).errors).toEqual([]);
     expect(specForBot("qualquer", "#123456")).toEqual(specForBot("qualquer", "#123456"));
     expect(specForBot("qualquer", "#123456").colors.shirt).toBe("#123456");
+    // Ids em sequência não podem virar uma turma de gêmeos.
+    const sequence = Array.from({ length: 12 }, (_, index) => specForBot(`extra-${index}`, "#123456"));
+    expect(new Set(sequence.map((spec) => spec.colors.hair)).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(sequence.map((spec) => spec.colors.skin)).size).toBeGreaterThanOrEqual(3);
+    for (const spec of sequence) expect(parseSpec(spec).errors).toEqual([]);
   });
 });
 
