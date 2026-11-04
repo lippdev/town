@@ -5,6 +5,7 @@ import { Armchair, CircleUserRound, Footprints, PersonStanding, ScanFace } from 
 import { NeutralToneMapping, PCFShadowMap, Vector3 } from "three";
 import { HumanFigure, loadHumanBase, type HumanBase, type HumanMotion } from "@/avatar/human/HumanFigure";
 import { PHOTO_POSES } from "@/avatar/human/humanClips";
+import { CHAIR, HUMAN_SCALE, SIT } from "@/avatar/human/seatFit";
 import type { ResolvedHuman } from "@/avatar/human/preset";
 
 export type PreviewMotion = Exclude<HumanMotion, "stand">;
@@ -29,19 +30,33 @@ const POSE_LABEL: Record<(typeof PHOTO_POSES)[number], string> = {
 
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Banco neutro da prévia, sob o quadril da pose sentada; não é uma peça do pacote. */
-const STOOL_TOP = 0.2;
-const STOOL_Z = -0.2;
+/**
+ * Banco neutro da prévia, com a altura do assento e do apoio dos pés da bancada do escritório.
+ * Não é uma peça do pacote. A pose sentada recua a bacia dos pés: quem chama anda a figura.
+ */
+const inFile = (meters: number) => meters / HUMAN_SCALE;
+const STOOL_TOP = inFile(CHAIR.seatTop);
+const BAR_Y = inFile(CHAIR.footBar.y);
+const BAR_Z = inFile(CHAIR.footBar.z);
+const SIT_SHIFT = inFile(SIT.standOff);
 
 function Stool() {
   return (
     <group>
-      <mesh position={[0, STOOL_TOP - 0.03, STOOL_Z]} castShadow>
-        <cylinderGeometry args={[0.26, 0.26, 0.06, 28]} />
+      <mesh position={[0, STOOL_TOP - 0.03, inFile((CHAIR.seatFront + CHAIR.seatRear) / 2)]} castShadow>
+        <boxGeometry args={[inFile(CHAIR.seatWidth), 0.06, inFile(CHAIR.seatFront - CHAIR.seatRear)]} />
         <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
       </mesh>
-      <mesh position={[0, (STOOL_TOP - 0.06) / 2, STOOL_Z]} castShadow>
+      <mesh position={[0, (STOOL_TOP - 0.06) / 2, 0]} castShadow>
         <cylinderGeometry args={[0.04, 0.04, STOOL_TOP - 0.06, 12]} />
+        <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
+      </mesh>
+      <mesh position={[0, BAR_Y, BAR_Z / 2]} castShadow>
+        <boxGeometry args={[0.03, 0.02, BAR_Z]} />
+        <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
+      </mesh>
+      <mesh position={[0, BAR_Y, BAR_Z]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[inFile(CHAIR.footBar.radius), inFile(CHAIR.footBar.radius), inFile(CHAIR.footBar.halfWidth * 2), 10]} />
         <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
       </mesh>
     </group>
@@ -101,7 +116,9 @@ function Scene({ human, motion, apiRef, onReady, onError, onWorn }: {
   useEffect(() => {
     if (!figure) return;
     const still = reduced();
-    figure.play(motion, { instant: still, frozen: still && motion !== "sit" });
+    // Na prévia, sentar mostra a pose pronta: não há cadeira para girar nem mesa para alcançar.
+    figure.play(motion, { instant: still || motion === "sit", frozen: still && motion !== "sit" });
+    figure.root.position.z = motion === "sit" ? SIT_SHIFT : 0;
     invalidate();
   }, [figure, motion, invalidate]);
 
