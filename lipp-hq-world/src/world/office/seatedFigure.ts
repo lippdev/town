@@ -1,3 +1,4 @@
+import type { ActorPose } from "./officeVisit";
 import { Group, Quaternion, Vector3, type AnimationClip, type Object3D } from "three";
 import type { CharacterSpec } from "@/character-studio/model/schema";
 import { FigureRig } from "@/character-studio/viewport/figureRig";
@@ -143,7 +144,7 @@ export class SeatedFigure {
   }
 
   /** Pose procedural da demonstração; restaura a base a cada quadro, sem acumular rotações. */
-  perform(standing: number, walk: number, talk: number, seconds: number, reduced: boolean) {
+  perform(standing: number, walk: number, talk: number, seconds: number, reduced: boolean, movement?: ActorPose) {
     this.seated.forEach((base, index) => {
       const target = this.standing[index]!;
       base.node.position.lerpVectors(base.position, target.position, standing);
@@ -152,7 +153,7 @@ export class SeatedFigure {
     this.offset.position.lerpVectors(this.seatedOffset, this.standingOffset, standing);
     if (standing < 0.99) return;
     const bone = (name: string) => this.rig.holder.getObjectByName(name)!;
-    const cycle = seconds * 8;
+    const cycle = movement?.gaitPhase ?? 0;
     const stride = reduced ? 0 : walk;
     this.root.updateWorldMatrix(true, true);
     const orientation = this.root.getWorldQuaternion(new Quaternion());
@@ -162,11 +163,23 @@ export class SeatedFigure {
     for (const [suffix, sign] of [["L", 1], ["R", -1]] as const) {
       const foot = bone(`Foot${suffix}`);
       const wave = Math.sin(cycle + (sign === 1 ? 0 : Math.PI));
-      const target = foot.getWorldPosition(new Vector3())
-        .addScaledVector(forward, wave * 0.16 * stride)
-        .addScaledVector(up, Math.max(0, Math.cos(cycle + (sign === 1 ? 0 : Math.PI))) * 0.09 * stride);
+      const base = foot.getWorldPosition(new Vector3());
+      const target = base.clone();
+      const step = !reduced ? movement?.feet?.[suffix] : undefined;
+      const footRotation = foot.getWorldQuaternion(new Quaternion());
+      if (step) {
+        // Retire apenas a translação/rotação atual do ator: a largura e a altura
+        // do personagem continuam incorporadas no deslocamento natural do pé.
+        const local = base.clone().sub(this.root.getWorldPosition(new Vector3()))
+          .applyQuaternion(orientation.clone().invert());
+        const heading = new Quaternion().setFromAxisAngle(up, step.yaw);
+        local.applyQuaternion(heading);
+        target.set(step.x + local.x, base.y + step.lift, step.z + local.z);
+        footRotation.premultiply(new Quaternion().setFromAxisAngle(up, step.yaw - movement!.yaw));
+      }
       solveTwoBones(bone(`UpperLeg${suffix}`), bone(`LowerLeg${suffix}`), foot, target, forward);
       foot.position.copy(foot.parent!.worldToLocal(target.clone()));
+      foot.quaternion.copy(foot.parent!.getWorldQuaternion(new Quaternion()).invert().multiply(footRotation));
       const arm = bone(`UpperArm${suffix}`);
       arm.rotateX(-wave * 0.22 * stride);
       if (!reduced && talk > 0) {

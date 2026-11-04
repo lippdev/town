@@ -168,7 +168,7 @@ em `/tmp/hq-escritorio`. O harness não roda no CI: precisa de GPU real.
 
 No modo demonstração, o painel **Visita · Pulse → Scout** inicia a primeira coreografia:
 Pulse levanta, passa pela porta sul da Engenharia e pelo corredor oeste, entra na Pesquisa,
-usa as oito direções (incluindo diagonais de 45° nas áreas livres), desvia da mesa de mapas, conversa com Scout e volta à mesma cadeira. Scout levanta para
+percorre retas e diagonais conectadas por curvas contínuas, desvia da mesa de mapas, conversa com Scout e volta à mesma cadeira. Scout levanta para
 recebê-lo, alterna fala e escuta e volta a sentar. O indicador sobre cada nome acompanha
 quem está falando. Nada chama o Hermes ou envia mensagens.
 
@@ -180,7 +180,11 @@ quem está falando. Nada chama o Hermes ou envia mensagens.
 
 `officeVisit.ts` contém um roteiro determinístico, separado da renderização. A posição
 visual alimenta corpo, etiquetas, seleção e clique. `SeatedFigure.perform` interpola poses
-e aplica uma caminhada procedural com alvos dos pés e IK das pernas. A preferência por
+e aplica uma caminhada procedural com alvos dos pés e IK das pernas. `VisitPath` arredonda
+as esquinas e amostra o percurso por distância, sem pausa para mudar de direção. A fase
+da passada acompanha a distância percorrida; cada pé mantém posição e orientação fixas
+no mundo durante o apoio e só avança durante a fase elevada. As pegadas convergem para
+a postura de repouso no fim do trajeto. A preferência por
 movimento reduzido remove a passada e gesticulação secundária, mantendo o percurso.
 
 Limites desta entrega: somente Pulse → Scout, com rota autoral; sem navegação genérica,

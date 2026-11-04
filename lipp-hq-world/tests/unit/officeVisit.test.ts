@@ -18,19 +18,18 @@ describe("visita demonstrativa", () => {
       expect(current.x > -8.2 && current.x < -5.7 && current.z > -0.97 && current.z < 0.77).toBe(false);
     }
   });
-  it("percorre oito direções com a mesma velocidade nas diagonais", () => {
-    const headings = new Set<number>();
-    for (let time = 0; time < VISIT_DURATION; time += 0.01) {
+  it("vira durante o deslocamento sem pausas nem mudança de velocidade nas curvas", () => {
+    let curves = 0;
+    for (let time = 1.61; time < TALK_START - 1.61; time += 0.01) {
       const a = sampleVisit(time).visitor;
       const b = sampleVisit(time + 0.001).visitor;
-      if (a.walk < 0.1 || b.walk < 0.1) continue;
-      const dx = b.x - a.x, dz = b.z - a.z;
-      const heading = Math.atan2(dx, dz) / (Math.PI / 4);
-      expect(heading).toBeCloseTo(Math.round(heading), 5);
-      expect(Math.hypot(dx, dz) / 0.001).toBeCloseTo(0.85, 5);
-      headings.add((Math.round(heading) + 8) % 8);
+      expect(a.walk).toBeGreaterThan(0);
+      expect(Math.hypot(b.x - a.x, b.z - a.z) / 0.001).toBeCloseTo(0.85, 2);
+      const turn = Math.atan2(Math.sin(b.yaw - a.yaw), Math.cos(b.yaw - a.yaw));
+      expect(Math.abs(turn)).toBeLessThan(0.02);
+      if (Math.abs(turn) > 0.0001) curves++;
     }
-    expect(headings.size).toBe(8);
+    expect(curves).toBeGreaterThan(20);
   });
   it("alterna fala e escuta com os dois em pé", () => {
     const first = sampleVisit(TALK_START + 1);

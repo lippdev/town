@@ -1,8 +1,9 @@
 import { create } from "zustand";
+import { VisitPath, STRIDE_LENGTH, type Footstep } from "./visitPath";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 
-export interface ActorPose { x: number; z: number; yaw: number; standing: number; walk: number; talk: number }
-interface Beat { label: string; duration: number; from: ActorPose; to: ActorPose; walking?: boolean; talking?: boolean }
+export interface ActorPose { x: number; z: number; yaw: number; standing: number; walk: number; talk: number; distance?: number; gaitPhase?: number; feet?: { L: Footstep; R: Footstep } }
+interface Beat { label: string; duration: number; from: ActorPose; to: ActorPose; walking?: boolean; path?: VisitPath; talking?: boolean }
 const smooth = (v: number) => v * v * (3 - 2 * v);
 const angle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 const home = OFFICE_SEATS_BY_ID["engenharia-0"]!;
@@ -25,20 +26,19 @@ const route = [
   [-5.65, 0], [-5.65, 1.0], [-6.0, 1.35], [-8.35, 1.35],
 ] as const;
 function walk(points: readonly (readonly [number, number])[], label: string) {
-  for (const [x, z] of points) {
-    const distance = Math.hypot(x - pose.x, z - pose.z);
-    if (distance < 0.01) continue;
-    beat(label, 0.4, { yaw: Math.atan2(x - pose.x, z - pose.z) });
-    beat(label, distance / 0.85, { x, z }, { walking: true });
-  }
+  const path = new VisitPath(points);
+  const end = path.at(path.length);
+  beat(label, path.length / 0.85, { ...end }, { walking: true, path });
 }
-beat("Pulse se levanta", 1.6, { standing: 1, x: route[0][0], z: route[0][1] });
-walk(route.slice(1), "Pulse vai à Pesquisa");
+const outward = new VisitPath(route);
+const inward = new VisitPath([...route].reverse());
+beat("Pulse se levanta", 1.6, { standing: 1, x: route[0][0], z: route[0][1], yaw: outward.at(0).yaw });
+walk(route, "Pulse vai à Pesquisa");
 beat("Scout recebe Pulse", 1.6, { yaw: -Math.PI / 2 });
 export const TALK_START = beats.reduce((sum, item) => sum + item.duration, 0);
 beat("Pulse e Scout conversam", 10, {}, { talking: true });
 export const TALK_END = TALK_START + 10;
-beat("Os dois se despedem", 1.6, {});
+beat("Os dois se despedem", 1.6, { yaw: inward.at(0).yaw });
 walk([...route].reverse(), "Pulse volta à Engenharia");
 beat("Pulse volta ao posto", 0.5, { yaw: home.yaw });
 beat("Pulse se senta", 1.6, origin);
@@ -56,11 +56,15 @@ export function sampleVisit(time: number): { visitor: ActorPose; host: ActorPose
   const t = current.walking ? linear : smooth(linear);
   const a = current.from, b = current.to;
   const speaking = Math.floor(Math.max(0, time - TALK_START) / 2) % 2 === 0;
-  const visitor = {
+  const distance = current.path ? linear * current.path.length : 0;
+  const frame = current.path?.at(distance);
+  const visitor: ActorPose = {
     x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t,
     yaw: a.yaw + angle(a.yaw, b.yaw) * t,
     standing: a.standing + (b.standing - a.standing) * t,
-    walk: current.walking ? Math.sin(Math.PI * linear) ** 0.2 : 0,
+    ...(frame ?? {}),
+    walk: current.walking ? Math.min(1, distance / (STRIDE_LENGTH / 2), (current.path!.length - distance) / (STRIDE_LENGTH / 2)) : 0,
+    ...(current.path ? { distance, gaitPhase: distance / current.path.stride * Math.PI * 2, feet: { L: current.path.foot(distance, "L"), R: current.path.foot(distance, "R") } } : {}),
     talk: current.talking ? (speaking ? 1 : 0.2) : 0,
   };
   const welcome = smooth(Math.max(0, Math.min(1, (time - TALK_START + 1.6) / 1.6)));

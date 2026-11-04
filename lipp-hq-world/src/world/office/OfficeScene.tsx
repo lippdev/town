@@ -357,7 +357,7 @@ function OfficeFigure({ bot, seat }: { bot: OfficeBot; seat: OfficeSeat }) {
     if (pose) {
       group.current?.position.set(pose.x, 0, pose.z);
       if (group.current) group.current.rotation.y = pose.yaw;
-      figure?.perform(pose.standing, pose.walk, pose.talk, useVisitStore.getState().time, reduced);
+      figure?.perform(pose.standing, pose.walk, pose.talk, useVisitStore.getState().time, reduced, pose);
     } else {
       group.current?.position.set(seat.x, 0, seat.z);
       if (group.current) group.current.rotation.y = seat.yaw;
