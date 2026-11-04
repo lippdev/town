@@ -98,6 +98,8 @@ export interface EndpointDiagnostic {
   status?: number;
   error?: string;
   latencyMs?: number;
+  /** Caminho realmente lido, quando difere do padrão (conexão salva: /api/status). */
+  path?: string;
 }
 
 export type EndpointId = "api" | "profiles" | "sessions" | "jobs";

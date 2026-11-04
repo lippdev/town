@@ -37,7 +37,7 @@ interface ProxyPayload {
   profiles?: HermesProfile[];
   sessions?: HermesSessionRow[];
   jobs?: HermesCronJob[];
-  blocks?: Record<string, { ok: boolean; status?: number; error?: string; ms?: number }>;
+  blocks?: Record<string, { ok: boolean; status?: number; error?: string; ms?: number; path?: string }>;
   fetchedAt?: number;
   error?: string;
 }
@@ -51,7 +51,7 @@ function endpointDiagnostics(
   for (const id of ["api", "profiles", "sessions", "jobs"] as const) {
     const block = blocks[id];
     if (!block) continue;
-    diagnostics[id] = { ok: block.ok, status: block.status, error: block.error, latencyMs: block.ms };
+    diagnostics[id] = { ok: block.ok, status: block.status, error: block.error, latencyMs: block.ms, path: block.path };
   }
   return diagnostics;
 }
