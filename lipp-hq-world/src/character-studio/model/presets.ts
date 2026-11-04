@@ -47,7 +47,7 @@ export const PRESETS: readonly CharacterPreset[] = [
     revision: 1,
     changelog: "Ponto de partida: mais alto e estreito, tons de oficina.",
     spec: {
-      colors: { skin: "#8d5a3c", hair: "#17120f", shirt: "#55664a", pants: "#3a3f46", belt: "#2b211a", face: "#ece7db" },
+      colors: { skin: "#8d5a3c", hair: "#17120f", shirt: "#55664a", pants: "#3a3f46", belt: "#2b211a", face: "#17120f" },
       proportions: { heightM: 1.9, width: 0.95, head: 0.95 },
       accessories: { glasses: false },
     },
@@ -58,7 +58,7 @@ export const PRESETS: readonly CharacterPreset[] = [
     revision: 1,
     changelog: "Ponto de partida: mais baixo e largo, com óculos.",
     spec: {
-      colors: { skin: "#e8bfa0", hair: "#8e4a24", shirt: "#c9b89a", pants: "#2f4256", belt: "#5a3d28", face: "#f2eee6" },
+      colors: { skin: "#e8bfa0", hair: "#8e4a24", shirt: "#c9b89a", pants: "#2f4256", belt: "#5a3d28", face: "#3b281d" },
       proportions: { heightM: 1.62, width: 1.1, head: 1.08 },
       accessories: { glasses: true },
     },
@@ -71,6 +71,7 @@ export const PALETTES: Partial<Record<ColorSlot, readonly string[]>> = {
   hair: ["#17120f", "#3b281d", "#6b4426", "#8e4a24", "#c49a5b", "#9a9a98"],
   shirt: ["#3b82f6", "#55664a", "#c9b89a", "#b4483c", "#e6e4df", "#2b2f36"],
   pants: ["#33363d", "#2f4256", "#4b4238", "#6d6f73", "#1d1f23", "#8a7a62"],
+  face: ["#ece7db", "#17120f", "#3b281d", "#2f4256"],
 };
 
 export function presetById(id: string | null | undefined): CharacterPreset | undefined {

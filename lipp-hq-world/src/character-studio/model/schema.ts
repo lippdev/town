@@ -21,9 +21,11 @@ export const SLOT_LABEL: Record<ColorSlot, string> = {
   skin: "Pele",
   hair: "Cabelo",
   shirt: "Camisa",
-  pants: "Calça",
+  // No arquivo o material chama Pants, mas a malha termina acima do joelho.
+  pants: "Bermuda",
   belt: "Cinto",
-  face: "Rosto",
+  // O material Face é só isto: não há boca nem nariz separados.
+  face: "Olhos e sobrancelhas",
 };
 
 export type ProportionKey = "heightM" | "width" | "head";
@@ -52,7 +54,7 @@ export const PROPORTIONS: Record<ProportionKey, ProportionRange> = {
     max: 2,
     step: 0.01,
     base: 1.76,
-    hint: "Escala a figura inteira, em pé, da sola ao topo do cabelo.",
+    hint: "Da sola ao topo do cabelo, em pé.",
     format: (value) => `${value.toFixed(2).replace(".", ",")} m`,
   },
   width: {
@@ -61,7 +63,7 @@ export const PROPORTIONS: Record<ProportionKey, ProportionRange> = {
     max: 1.2,
     step: 0.01,
     base: 1,
-    hint: "Alarga tronco e membros; a cabeça é compensada e não deforma.",
+    hint: "Tronco e membros; a cabeça não deforma.",
     format: percent,
   },
   head: {
@@ -70,7 +72,7 @@ export const PROPORTIONS: Record<ProportionKey, ProportionRange> = {
     max: 1.3,
     step: 0.01,
     base: 1,
-    hint: "100% é a cabeça do Pulse, que já tem 52% do tamanho do pack original.",
+    hint: "100% é a cabeça atual do Pulse.",
     format: percent,
   },
 };
