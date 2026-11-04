@@ -1,0 +1,12 @@
+{
+  "image": "walk.png",
+  "cell": { "width": 58, "height": 115 },
+  "soleRow": 112,
+  "visibleRows": 107,
+  "animations": {
+    "walk-front": { "row": 0, "frames": 4, "stepMeters": 0.2 },
+    "walk-back": { "row": 1, "frames": 4, "stepMeters": 0.2 },
+    "idle-front": { "row": 0, "firstColumn": 1, "frames": 1, "fps": 0 },
+    "idle-back": { "row": 1, "firstColumn": 1, "frames": 1, "fps": 0 }
+  }
+}
