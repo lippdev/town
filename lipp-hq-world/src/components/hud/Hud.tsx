@@ -48,9 +48,13 @@ import { activeSessionTotal, fleetSessions, sourceLabel, type FleetSession } fro
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
 import {
   connectHermes,
+  connectLocalHermes,
+  detectLocalHermes,
   disconnectHermes,
   useGatewayStatus,
+  type ConnectResult,
   type GatewayStatus,
+  type LocalDiscovery,
 } from "@/integrations/hermes/gatewayStatus";
 
 const SEVERITY_LABEL: Record<DiagnosticsSeverity, string> = {
@@ -99,6 +103,7 @@ function GatewayDiagnostics() {
             </span>
             <span className="gateway-latency">{status}</span>
             {diagnostic?.error && <span className="gateway-error">{diagnostic.error}</span>}
+            {diagnostic?.action && <span className="gateway-action">{diagnostic.action}</span>}
           </div>
         );
       })}
@@ -125,7 +130,9 @@ function GatewayDiagnostics() {
           <dd>
             {config
               ? config.source === "saved"
-                ? `session token ${config.tokenPreview ?? "vazio"}`
+                ? config.tokenSource === "served"
+                  ? `token do Hermes local ${config.tokenPreview ?? ""} (renova sozinho)`
+                  : `session token ${config.tokenPreview ?? "vazio"}`
                 : `${config.hasApiKey ? "chave ok" : "sem chave"} · ${config.hasDashboardToken ? "token ok" : "sem token"}`
               : "—"}
           </dd>
@@ -156,7 +163,39 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: "ok" | "fail"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "ok" | "fail"; text: string; action?: string } | null>(null);
+  const [local, setLocal] = useState<LocalDiscovery | null>(null);
+  const [detecting, setDetecting] = useState(false);
+
+  const detect = async () => {
+    setDetecting(true);
+    setLocal(await detectLocalHermes());
+    setDetecting(false);
+  };
+
+  // como o Claw3D faz com o gateway local: procura sozinho ao abrir a aba
+  useEffect(() => {
+    void detect();
+  }, []);
+
+  const report = (result: ConnectResult) => {
+    if (!result.ok) {
+      setMessage({ tone: "fail", text: result.error ?? "não foi possível conectar", action: result.action });
+      return false;
+    }
+    const version = result.version ? ` · Hermes ${result.version}` : "";
+    setMessage({ tone: "ok", text: `Conectado: ${result.profileCount ?? 0} perfis${version}` });
+    onConnected();
+    return true;
+  };
+
+  const connectLocal = async () => {
+    setBusy(true);
+    setMessage(null);
+    const result = await connectLocalHermes();
+    setBusy(false);
+    if (report(result)) setUrl(local?.url ?? "");
+  };
 
   // com conexão salva, o campo de link abre preenchido com ela
   useEffect(() => {
@@ -168,14 +207,7 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
     setMessage(null);
     const result = await connectHermes(url, token);
     setBusy(false);
-    if (!result.ok) {
-      setMessage({ tone: "fail", text: result.error ?? "não foi possível conectar" });
-      return;
-    }
-    setToken("");
-    const version = result.version ? ` · Hermes ${result.version}` : "";
-    setMessage({ tone: "ok", text: `Conectado: ${result.profileCount ?? 0} perfis${version}` });
-    onConnected();
+    if (report(result)) setToken("");
   };
 
   const disconnect = async () => {
@@ -186,6 +218,7 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
     setToken("");
     setMessage(result.ok ? { tone: "ok", text: "Desconectado." } : { tone: "fail", text: result.error ?? "falhou" });
     onConnected();
+    void detect();
   };
 
   return (
@@ -197,6 +230,15 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
       }}
     >
       <strong>Conectar ao Hermes</strong>
+      <LocalHermesBanner
+        local={local}
+        detecting={detecting}
+        connectedHere={saved && config?.tokenSource === "served"}
+        busy={busy}
+        onUse={() => void connectLocal()}
+        onRetry={() => void detect()}
+        onFillUrl={(value) => setUrl(value)}
+      />
       <label>
         <span>Link do dashboard</span>
         <input
@@ -231,8 +273,99 @@ function ConnectionForm({ config, onConnected }: { config: GatewayStatus | null;
           </button>
         )}
       </div>
-      {message && <span className={`connection-message ${message.tone}`}>{message.text}</span>}
+      {message && (
+        <span className={`connection-message ${message.tone}`}>
+          {message.text}
+          {message.action && <em className="connection-action">{message.action}</em>}
+        </span>
+      )}
     </form>
+  );
+}
+
+/**
+ * O que a detecção do Hermes local achou. Encontrado com token publicado:
+ * conecta num clique. Encontrado sem token: preenche o link e pede o token.
+ * Nada escutando: mostra o comando para subir o dashboard, com copiar.
+ */
+function LocalHermesBanner({
+  local,
+  detecting,
+  connectedHere,
+  busy,
+  onUse,
+  onRetry,
+  onFillUrl,
+}: {
+  local: LocalDiscovery | null;
+  detecting: boolean;
+  connectedHere: boolean;
+  busy: boolean;
+  onUse: () => void;
+  onRetry: () => void;
+  onFillUrl: (url: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  if (detecting && !local) return <div className="local-hermes">Procurando Hermes local…</div>;
+  if (!local) return null;
+
+  if (local.found && local.tokenServed && !local.error) {
+    const version = local.version ? ` · v${local.version}` : "";
+    return (
+      <div className="local-hermes found">
+        <span>
+          Hermes local em <code>{local.url}</code>
+          {version} · {local.profileCount ?? 0} perfis
+        </span>
+        {connectedHere ? (
+          <span className="local-hermes-tag">em uso</span>
+        ) : (
+          <button type="button" className="gateway-retry" onClick={onUse} disabled={busy}>
+            Usar Hermes local
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (local.found) {
+    return (
+      <div className="local-hermes partial">
+        <span>
+          Dashboard em <code>{local.url}</code>: {local.error}
+        </span>
+        {local.url && (
+          <button type="button" className="note-retry" onClick={() => onFillUrl(local.url ?? "")}>
+            usar este link
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const command = local.hint ?? "hermes dashboard --no-open";
+  return (
+    <div className="local-hermes missing">
+      <span>Nenhum Hermes local na {local.tried?.join(", ") ?? "9119"}. Para subir:</span>
+      <span className="local-hermes-command">
+        <code>{command}</code>
+        <button
+          type="button"
+          className="note-retry"
+          onClick={() => {
+            void navigator.clipboard?.writeText(command).then(
+              () => setCopied(true),
+              () => setCopied(false),
+            );
+          }}
+        >
+          {copied ? "copiado" : "copiar"}
+        </button>
+        <button type="button" className="note-retry" onClick={onRetry} disabled={detecting}>
+          {detecting ? "procurando…" : "procurar de novo"}
+        </button>
+      </span>
+    </div>
   );
 }
 

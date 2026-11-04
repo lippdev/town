@@ -188,6 +188,16 @@ const dashboardServer = http.createServer((request, response) => {
     });
     return;
   }
+  // página do dashboard: em loopback sem gate, o Hermes injeta o token nela
+  // (web_server_dashboard.py); HERMES_FIXTURE_WITHHOLD_TOKEN=1 imita o gate
+  if (url.pathname === "/") {
+    const withheld = process.env.HERMES_FIXTURE_WITHHOLD_TOKEN === "1";
+    const tokenJs = TOKEN && !withheld ? `window.__HERMES_SESSION_TOKEN__=${JSON.stringify(TOKEN)};` : "";
+    const html = `<!doctype html><html><head><script>${tokenJs}</script></head><body>fixture</body></html>`;
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+    response.end(html);
+    return;
+  }
   if (!authorized(request)) {
     send(response, 401, { detail: "Unauthorized" });
     return;

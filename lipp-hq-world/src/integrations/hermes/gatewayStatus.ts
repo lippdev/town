@@ -18,6 +18,8 @@ export interface GatewayStatus {
   hasDashboardToken?: boolean;
   /** Últimos caracteres do token (`...abc123`), nunca o valor. */
   tokenPreview?: string | null;
+  /** "served": token lido da página do Hermes local, renovado sozinho. */
+  tokenSource?: "typed" | "served";
 }
 
 let cached: GatewayStatus | null = null;
@@ -51,6 +53,8 @@ export function refreshGatewayStatus(): Promise<void> {
 export interface ConnectResult {
   ok: boolean;
   error?: string;
+  /** O que fazer para resolver, quando o proxy reconhece a causa. */
+  action?: string;
   version?: string;
   profileCount?: number;
 }
@@ -69,14 +73,61 @@ export async function connectHermes(url: string, token: string): Promise<Connect
     const payload = (await response.json().catch(() => ({}))) as {
       ok?: boolean;
       error?: string;
+      action?: string;
       probe?: { version?: string; profileCount?: number };
       status?: GatewayStatus;
     };
     if (payload.status) publish(payload.status);
     if (!response.ok || !payload.ok) {
-      return { ok: false, error: payload.error ?? `HTTP ${response.status}` };
+      return { ok: false, error: payload.error ?? `HTTP ${response.status}`, action: payload.action };
     }
     return { ok: true, version: payload.probe?.version, profileCount: payload.probe?.profileCount };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** Resultado da detecção do Hermes local (o token nunca vem junto). */
+export interface LocalDiscovery {
+  found: boolean;
+  url?: string;
+  version?: string;
+  tokenServed: boolean;
+  profileCount?: number;
+  error?: string;
+  hint?: string;
+  tried?: string[];
+}
+
+export async function detectLocalHermes(): Promise<LocalDiscovery | null> {
+  try {
+    const response = await fetch("/api/hq/connection/local");
+    return response.ok ? ((await response.json()) as LocalDiscovery) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "Usar Hermes local": o proxy detecta, lê o token da página e salva. */
+export async function connectLocalHermes(): Promise<ConnectResult> {
+  try {
+    const response = await fetch("/api/hq/connection/local", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      action?: string;
+      discovery?: LocalDiscovery;
+      status?: GatewayStatus;
+    };
+    if (payload.status) publish(payload.status);
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error ?? `HTTP ${response.status}`, action: payload.action };
+    }
+    return { ok: true, version: payload.discovery?.version, profileCount: payload.discovery?.profileCount };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

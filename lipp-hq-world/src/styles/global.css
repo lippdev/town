@@ -1012,3 +1012,63 @@ button.sidebar-row:focus-visible {
 .connection-message.fail {
   color: #fca5a5;
 }
+
+/* detecção do Hermes local (aba Integrações) */
+.local-hermes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--hq-panel-border);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.local-hermes code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.local-hermes.found {
+  border-color: rgba(134, 239, 172, 0.45);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.local-hermes.partial {
+  border-color: rgba(253, 224, 71, 0.4);
+  background: rgba(250, 204, 21, 0.07);
+}
+
+.local-hermes.missing {
+  background: rgba(148, 163, 184, 0.07);
+}
+
+.local-hermes-command {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.local-hermes .note-retry {
+  margin-top: 0;
+}
+
+.local-hermes-tag {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  font-size: 9.5px;
+}
+
+.connection-action,
+.gateway-action {
+  display: block;
+  margin-top: 2px;
+  color: #fde68a;
+  font-style: normal;
+  font-size: 10px;
+}

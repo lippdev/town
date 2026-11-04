@@ -68,7 +68,13 @@ describe("conexão salva", () => {
     expect(loadSavedConnection(file)).toBeNull();
     saveConnection({ url: "http://host:9119", token: "segredo", savedAt: 1 }, file);
     expect(statSync(file).mode & 0o777).toBe(0o600);
-    expect(loadSavedConnection(file)).toEqual({ url: "http://host:9119", token: "segredo", savedAt: 1 });
+    // arquivo sem tokenSource (gravado antes da detecção local) vale como colado
+    expect(loadSavedConnection(file)).toEqual({
+      url: "http://host:9119",
+      token: "segredo",
+      savedAt: 1,
+      tokenSource: "typed",
+    });
     clearConnection(file);
     expect(loadSavedConnection(file)).toBeNull();
   });
