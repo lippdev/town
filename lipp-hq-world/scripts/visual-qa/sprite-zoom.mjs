@@ -5,7 +5,7 @@
  * Roda também no código antigo (sem o gancho `sprite` do QA), para comparar antes e depois.
  *
  * Uso: node scripts/visual-qa/sprite-zoom.mjs [--url http://127.0.0.1:5181] [--rotulo depois]
- *        [--saida pasta] [--dpr 1,1.5,2] [--qualidade alta] [--escalas 0.55,1.5] [--rapido] [--arte-nova]
+ *        [--saida pasta] [--dpr 1,1.5,2] [--qualidade alta] [--escalas 0.55,1.5] [--rapido] [--so-zoom] [--so-custo] [--arte-nova]
  * Sem --url, sobe um vite numa porta livre. Saída padrão: qa/sprite-zoom/<rótulo>.
  *
  * Medidas:
@@ -36,6 +36,10 @@ const QUALITY = argOf("qualidade", "alta");
 const NEW_ART = process.argv.includes("--arte-nova");
 /** Só a folha de zoom e a de cena: para olhar um ajuste sem esperar as varreduras. */
 const QUICK = process.argv.includes("--rapido");
+/** Só o custo por quadro: para medir um build antigo sem refazer as folhas. */
+const COST_ONLY = process.argv.includes("--so-custo");
+/** Só o percurso de zoom e as folhas dele, sem as cenas: para iterar na redução e na cor. */
+const ZOOM_ONLY = process.argv.includes("--so-zoom");
 
 const DEMO = "/?escritorio=completo&modo=demonstracao";
 const VIEWPORT = { width: 1440, height: 900 };
@@ -191,6 +195,76 @@ function faceRect(feet, texel) {
 
 function bodyRect(feet, texel) {
   return { x: feet.x - 26 * texel, y: feet.y - CELL.visible * texel, width: 52 * texel, height: CELL.visible * texel };
+}
+
+/**
+ * Cor na cena contra a da arte. Cada texel interior do quadro parado cobre um pixel de tela;
+ * o espelhamento e o meio pixel do encaixe são achados pelo que mais correlaciona o luma. Razão 1
+ * em cada canal é a cor da arte; contraste 1 é o desvio do luma da arte. O cabelo é a faixa
+ * de cima da cabeça; a roupa, os texels escuros do resto.
+ */
+let atlasCache = null;
+async function colorMatch(image, feet, texel) {
+  atlasCache ??= decodePng(await readFile(path.join(ROOT, "public/characters/filipe/walk.png")));
+  const atlas = atlasCache;
+  const column = (x, mirrored) => CELL.width + (mirrored ? CELL.width - 1 - x : x);
+  const at = (x, y, mirrored) => (y * atlas.width + column(x, mirrored)) * 4;
+  const interior = (x, y) => {
+    if (x < 1 || y < 1 || x >= CELL.width - 1 || y >= CELL.height - 1 || atlas.data[at(x, y, false) + 3] !== 255) return false;
+    return [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => atlas.data[at(x + dx, y + dy, false) + 3] === 255);
+  };
+  const texels = [];
+  for (let y = 0; y < CELL.height; y += 1) for (let x = 0; x < CELL.width; x += 1) if (interior(x, y)) texels.push({ x, y });
+  const lumaOf = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const pairs = (mirrored, offset, every = 1) => {
+    const list = [];
+    for (let i = 0; i < texels.length; i += every) {
+      const { x, y } = texels[i];
+      const px = Math.floor(feet.x + offset.x + (x + 0.5 - CELL.width / 2) * texel);
+      const py = Math.floor(feet.y + offset.y + (y + 0.5 - CELL.sole) * texel);
+      if (px < 0 || py < 0 || px >= image.width || py >= image.height) continue;
+      const from = at(x, y, mirrored);
+      list.push({ y, art: [0, 1, 2].map((c) => atlas.data[from + c]), shot: [0, 1, 2].map((c) => image.data[(py * image.width + px) * 4 + c]) });
+    }
+    return list;
+  };
+  const correlation = (list) => {
+    const art = list.map((item) => lumaOf(item.art));
+    const shot = list.map((item) => lumaOf(item.shot));
+    const [ma, ms] = [mean(art), mean(shot)];
+    const cross = mean(art.map((value, i) => (value - ma) * (shot[i] - ms)));
+    return cross / Math.sqrt(mean(art.map((value) => (value - ma) ** 2)) * mean(shot.map((value) => (value - ms) ** 2)) || 1);
+  };
+  let best = { score: -Infinity, mirrored: false, offset: { x: 0, y: 0 } };
+  const reach = Math.ceil(texel * 0.75 + 1);
+  for (const mirrored of [false, true]) {
+    for (let dy = -reach; dy <= reach; dy += 0.5) {
+      for (let dx = -reach; dx <= reach; dx += 0.5) {
+        const list = pairs(mirrored, { x: dx, y: dy }, 3);
+        if (list.length < 50) continue;
+        const score = correlation(list);
+        if (score > best.score) best = { score, mirrored, offset: { x: dx, y: dy } };
+      }
+    }
+  }
+  const matched = pairs(best.mirrored, best.offset);
+  const spread = (list) => {
+    const values = list.map(lumaOf);
+    const average = mean(values);
+    return Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
+  };
+  const summary = (list) => ({
+    ratio: [0, 1, 2].map((c) => mean(list.map((item) => item.shot[c])) / mean(list.map((item) => item.art[c]))),
+    contrast: spread(list.map((item) => item.shot)) / spread(list.map((item) => item.art)),
+    count: list.length,
+  });
+  return {
+    all: summary(matched),
+    hair: summary(matched.filter((item) => item.y < 17)),
+    cloth: summary(matched.filter((item) => item.y >= 17 && lumaOf(item.art) < 60)),
+    match: best.score,
+    mirrored: best.mirrored,
+  };
 }
 
 /** O mesmo recorte no atlas original: a referência do que o rosto deveria mostrar. */
@@ -359,6 +433,7 @@ async function sweepZoom(browser, origin, dpr, reference, routes) {
     const texel = cssTexel * dpr;
     const errors = texel >= 1.2 ? blockErrors(shot.image, bodyRect(shot.feet, texel), texel) : [];
     const face = regionStats(shot.image, faceRect(shot.feet, texel));
+    const color = texel >= 1 ? await colorMatch(shot.image, shot.feet, texel) : null;
     const canvasTexel = cssTexel * info.pixelRatio;
     const entry = {
       dpr,
@@ -371,11 +446,16 @@ async function sweepZoom(browser, origin, dpr, reference, routes) {
       blockP95: percentile(errors, 0.95),
       blockCount: errors.length,
       face,
+      color,
       png: shot.png,
       image: shot.image,
       shotFeet: shot.feet,
     };
     results.push(entry);
+    if (color) {
+      const show = (group) => `${group.ratio.map((value) => value.toFixed(3)).join(" ")} (contraste ${group.contrast.toFixed(3)}, ${group.count} texels)`;
+      console.log(`        cor/arte R G B: corpo ${show(color.all)}; cabelo ${show(color.hair)}; roupa ${show(color.cloth)}; correlação ${color.match.toFixed(4)}${color.mirrored ? ", espelhado" : ""}`);
+    }
     console.log(
       `${scale.toFixed(2).padStart(7)} ${cssTexel.toFixed(2).padStart(7)} ${canvasTexel.toFixed(2).padStart(10)} ${errors.length ? entry.blockMean.toFixed(3).padStart(10) : "         —"} ${errors.length ? entry.blockP95.toFixed(3).padStart(10) : "         —"} ${String(errors.length).padStart(8)} ${face.deviation.toFixed(1).padStart(8)}`,
     );
@@ -502,6 +582,35 @@ async function shadowMatch(browser, origin) {
   return { furniture, own };
 }
 
+/** Tempo de quadro e chamadas de desenho, de longe e de perto, onde o sprite pesa mais. */
+async function frameCost(browser, origin) {
+  const page = await openPage(browser, origin, 1);
+  const results = [];
+  await centerFeet(page);
+  for (const scale of [0.39, 3.93]) {
+    await zoomTo(page, scale / SCREEN_METERS_PER_TEXEL);
+    await centerFeet(page);
+    await settled(page);
+    const ms = await page.evaluate(() => new Promise((resolve) => {
+      const times = [];
+      let last = performance.now();
+      const tick = (now) => {
+        times.push(now - last);
+        last = now;
+        if (times.length < 30) requestAnimationFrame(tick);
+        else resolve(times.slice(5).reduce((sum, value) => sum + value, 0) / (times.length - 5));
+      };
+      requestAnimationFrame(tick);
+    }));
+    const info = await page.evaluate(() => window.__HQ_OFFICE_QA__.renderInfo());
+    const buildMs = await page.evaluate(() => window.__HQ_OFFICE_QA__.sprite?.info().buildMs ?? null);
+    results.push({ scale, ms, calls: info.calls, triangles: info.triangles, programs: info.programs, buildMs });
+    console.log(`  ${scale} px/texel: ${ms.toFixed(0)} ms por quadro, ${info.calls} chamadas, ${info.triangles} triângulos, ${info.programs} programas${buildMs === null ? "" : `; reduções em ${buildMs.toFixed(1)} ms`}`);
+  }
+  await page.context().close();
+  return results;
+}
+
 /** Todas as direções e quadros: o espelhamento e o quadro precisam acompanhar sombra e luz. */
 async function posesSheet(browser, origin, rows) {
   const page = await openPage(browser, origin, 1);
@@ -602,6 +711,13 @@ async function main() {
   }
   const browser = await chromium.launch({ channel: "msedge", args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const routes = NEW_ART ? await newArtRoutes(browser) : null;
+  if (COST_ONLY) {
+    console.log(`Custo em ${origin}, qualidade ${QUALITY}`);
+    await frameCost(browser, origin);
+    await browser.close();
+    if (server) server.kill();
+    process.exit(0);
+  }
   const reference = await faceReference();
   console.log(`Saída: ${OUT}`);
   console.log(`Rosto no atlas original: desvio ${reference.deviation.toFixed(1)}, p5–p95 ${reference.p5.toFixed(0)}–${reference.p95.toFixed(0)}`);
@@ -613,7 +729,13 @@ async function main() {
     report.problems.push(...problems);
     report.dpr[dpr] = {
       renderInfo: info,
-      captures: results.map(({ png: _png, image: _image, shotFeet: _feet, face, ...entry }) => ({ ...entry, faceDeviation: face.deviation, faceP5: face.p5, faceP95: face.p95 })),
+      captures: results.map((entry) => {
+        const { face, ...rest } = entry;
+        delete rest.png;
+        delete rest.image;
+        delete rest.shotFeet;
+        return { ...rest, faceDeviation: face.deviation, faceP5: face.p5, faceP95: face.p95 };
+      }),
     };
     zoomRows.push({
       title: `DPR ${dpr} — canvas a ${info.pixelRatio}`,
@@ -629,7 +751,7 @@ async function main() {
   }
   await renderSheet(browser, path.join(OUT, "folha-zoom.png"), `Sprite por zoom — ${LABEL}${NEW_ART ? " (arte de prova)" : ""}, qualidade ${QUALITY}`, zoomRows);
   await renderSheet(browser, path.join(OUT, "folha-rosto.png"), `Rosto na vista do andar — ${LABEL}`, [{ title: "Aumento ×8, sem interpolar", items: faceItems }]);
-  if (!NEW_ART) {
+  if (!NEW_ART && !ZOOM_ONLY) {
     if (!QUICK) {
       console.log("\nSaltos de brilho");
       report.brightness = await brightnessJumps(browser, origin, routes);
@@ -637,6 +759,8 @@ async function main() {
       report.shimmer = await walkShimmer(browser, origin);
       console.log("\nSombra");
       report.shadow = await shadowMatch(browser, origin);
+      console.log("\nCusto");
+      report.cost = await frameCost(browser, origin);
     }
     const rows = [];
     await posesSheet(browser, origin, rows);
@@ -653,7 +777,7 @@ async function main() {
   }
   console.log(`\nFolhas: ${path.join(OUT, "folha-zoom.png")}`);
   console.log(`        ${path.join(OUT, "folha-rosto.png")}`);
-  if (!NEW_ART) console.log(`        ${path.join(OUT, "folha-cena.png")}`);
+  if (!NEW_ART && !ZOOM_ONLY) console.log(`        ${path.join(OUT, "folha-cena.png")}`);
   console.log(`Medidas: ${path.join(OUT, "medidas.json")}`);
   process.exit(0);
 }
