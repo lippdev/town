@@ -127,8 +127,9 @@ export class FigureRig {
   private running = false;
   private settle: (() => void) | null = null;
   /** Quanto o corpo recua ao sentar; compensado para a figura seguir no centro do palco. */
-  private readonly seatedCenterZ: number;
+  private seatedCenterZ = 0;
   private scaleZ = 1;
+  private active: AnimationAction | null = null;
 
   constructor(scene: Object3D, clips: AnimationClip[]) {
     this.root = cloneSkinned(scene);
@@ -269,12 +270,13 @@ export class FigureRig {
     action.timeScale = 1;
     action.paused = false;
     action.play();
+    this.active = action;
     this.mixer.update(0);
     this.syncSeatedShift();
   }
 
   private syncSeatedShift() {
-    const progress = this.sit.isRunning() || this.sit.paused ? this.sit.time / this.sit.getClip().duration : 0;
+    const progress = this.active === this.sit ? this.sit.time / this.sit.getClip().duration : 0;
     this.holder.position.z = -this.seatedCenterZ * progress * this.scaleZ;
   }
 
