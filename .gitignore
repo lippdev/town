@@ -29,3 +29,6 @@ logs/
 
 # Conexão local com o Hermes (link + session token) — nunca commitar
 .hq-connection.json
+
+# Saída de scripts/visual-qa/sprite-zoom.mjs: a evidência escolhida vai para docs
+lipp-hq-world/qa/sprite-zoom/
