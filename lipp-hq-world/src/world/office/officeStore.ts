@@ -11,6 +11,9 @@ export type LoadState = "loading" | "stalled" | "ready" | "failed";
 /** O andar enquadrado folga 4% de cada lado. */
 export const FLOOR_MARGIN = 0.04;
 
+/** Tamanhos do pixel no teste de pixel art do hall, em px de tela; 0 desliga. */
+export const PIXEL_ROOM_SIZES = [3, 4, 2, 0] as const;
+
 interface OfficeState {
   mode: OfficeMode;
   focusedRoomId: string | null;
@@ -24,6 +27,8 @@ interface OfficeState {
   load: LoadState;
   loadError: string | null;
   figuresError: string | null;
+  pixelRoomSize: number;
+  cyclePixelRoom: () => void;
   setMode: (mode: OfficeMode) => void;
   setRoster: (bots: OfficeBot[], seating: Seating) => void;
   setHovered: (roomId: string | null, botId: string | null) => void;
@@ -48,6 +53,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   load: "loading",
   loadError: null,
   figuresError: null,
+  pixelRoomSize: PIXEL_ROOM_SIZES[0],
+  cyclePixelRoom: () =>
+    set(({ pixelRoomSize }) => ({
+      pixelRoomSize: PIXEL_ROOM_SIZES[(PIXEL_ROOM_SIZES.indexOf(pixelRoomSize as (typeof PIXEL_ROOM_SIZES)[number]) + 1) % PIXEL_ROOM_SIZES.length]!,
+    })),
   setMode: (mode) => set({ mode }),
   setRoster: (bots, seating) => set({ bots, seating }),
   setHovered: (hoveredRoomId, hoveredBotId) => {

@@ -210,6 +210,7 @@ function FocusBar() {
 
 function CameraBar() {
   const framing = useOfficeStore((state) => state.framing);
+  const pixelRoomSize = useOfficeStore((state) => state.pixelRoomSize);
   const mode = useOfficeStore((state) => state.mode);
   const graphicsMode = useHQStore((state) => state.graphicsMode);
   const setGraphicsMode = useHQStore((state) => state.setGraphicsMode);
@@ -233,6 +234,11 @@ function CameraBar() {
         </button>
       </div>
       {mode === "demo" && <button type="button" className="office-button" onClick={() => useOfficeStore.getState().focusRoom("hall")}>Ver Filipe</button>}
+      {mode === "demo" && (
+        <button type="button" className="office-button" onClick={() => useOfficeStore.getState().cyclePixelRoom()}>
+          Pixel art no hall: {pixelRoomSize === 0 ? "desligado" : `${pixelRoomSize}×`}
+        </button>
+      )}
       <p className="office-hint">Clique numa sala para entrar · arraste para mover · role para aproximar · Esc volta</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>

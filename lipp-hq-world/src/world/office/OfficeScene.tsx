@@ -34,6 +34,7 @@ import type { OfficeBot } from "./officeRoster";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { FilipeDemoSprite } from "./FilipeDemoSprite";
+import { PixelRoomPass } from "./PixelRoomPass";
 import { SeatedFigure } from "./seatedFigure";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
@@ -468,6 +469,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
       )}
       <SeatMarker />
       <RoomGlow />
+      {mode === "demo" && <PixelRoomPass roomId="hall" />}
     </>
   );
 }
