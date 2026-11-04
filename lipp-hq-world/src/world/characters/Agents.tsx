@@ -8,6 +8,7 @@ import type { AgentAnimationState } from "@/types/hq";
 import { registerPickable } from "@/world/scene/Picking";
 import { AgentFigure, type AgentFigureHandle } from "@/world/characters/AgentFigure";
 import { resolveLook } from "@/world/characters/appearance";
+import { characterFor, characterUrl, poseForState, useCharacterManifest } from "@/world/characters/characterManifest";
 import { findPath, type NavPoint } from "@/world/navigation/navGrid";
 
 import { ROOMS_BY_ID, roomCenter } from "@/world/rooms/rooms";
@@ -66,7 +67,7 @@ export function demoWalkToHall(agentId: string) {
 /** Posição e estado atuais do personagem, para as esperas do harness. */
 export function getAgentRuntimeInfo(
   agentId: string,
-): { x: number; z: number; state: string; hipsY: number } | null {
+): { x: number; z: number; state: string; hipsY: number; model: boolean; pose: string | null } | null {
   const runtime = runtimes.get(agentId);
   if (!runtime?.figure?.group) return null;
   return {
@@ -75,6 +76,9 @@ export function getAgentRuntimeInfo(
     state: runtime.state,
     // altura do quadril: prova de que a pose sentada foi aplicada (-0.34)
     hipsY: Number(runtime.figure.hips?.position.y.toFixed(3) ?? 0),
+    // personagem GLB: qual animação está tocando
+    model: Boolean(runtime.figure.rig),
+    pose: runtime.figure.rig?.current() ?? null,
   };
 }
 
@@ -168,6 +172,7 @@ export function Agents() {
     const live = sceneAgentsFromFleet(fleet);
     return live;
   }, [fleet]);
+  const manifest = useCharacterManifest();
   const reducedMotion = useReducedMotion();
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
@@ -210,8 +215,8 @@ export function Agents() {
         }
       }
 
-      const { group, hips, leftLeg, rightLeg, leftArm, rightArm, torso, head, ring } = figure;
-      if (!group || !hips) continue;
+      const { group, hips, leftLeg, rightLeg, leftArm, rightArm, torso, head, ring, rig } = figure;
+      if (!group || (!hips && !rig)) continue;
 
       // ---- locomoção ----
       if (runtime.state === "walking" && runtime.path.length > 0) {
@@ -259,6 +264,18 @@ export function Agents() {
           ring.scale.set(1, 1, 1);
         }
       }
+
+      // ---- personagem GLB: a animação vem do arquivo ----
+      if (rig) {
+        if (runtime.state === "meeting") {
+          const target = runtime.seatHeading ?? 0;
+          runtime.heading += (target - runtime.heading) * Math.min(1, delta * 2);
+        }
+        rig.play(poseForState(runtime.state));
+        rig.update(delta);
+        continue;
+      }
+      if (!hips) continue;
 
       // ---- poses e micro-animações ----
       // em reunião o bot senta na cadeira do assento, como quem trabalha
@@ -312,11 +329,14 @@ export function Agents() {
           agent,
           agentLooks[agent.id] ?? (agent.presetId ? { presetId: agent.presetId } : null),
         );
+        const entry = characterFor(manifest, agent.id);
+        const url = entry ? characterUrl(entry) : null;
         return (
           <AgentFigure
             key={agent.id}
             agent={agent}
             appearance={appearance}
+            model={entry && url ? { url, entry } : null}
             selected={selectedAgentId === agent.id}
             figureRef={(handle) => {
               // refs de filhos chegam antes do grupo pai: só registre com grupo pronto.
