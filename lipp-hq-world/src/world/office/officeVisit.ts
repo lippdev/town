@@ -17,10 +17,12 @@ function beat(label: string, duration: number, change: Partial<ActorPose>, flags
   pose = next;
 }
 // Rota autoral desta visita: porta sul da Engenharia, corredor oeste e porta
-// leste da Pesquisa. O desvio ao sul deixa livre a mesa de mapas.
+// leste da Pesquisa. Diagonais de 45° suavizam as esquinas nas áreas livres;
+// as travessias das portas continuam retas. O desvio ao sul evita a mesa de mapas.
 const route = [
-  [home.x + 0.75, home.z + 0.35], [-6.7, -5.65], [-6.7, -3.45],
-  [-4.35, -3.45], [-4.35, 0], [-5.65, 0], [-5.65, 1.35], [-8.35, 1.35],
+  [-6.7, home.z + 0.35], [-6.7, -3.85], [-6.3, -3.45],
+  [-4.75, -3.45], [-4.35, -3.05], [-4.35, -0.4], [-4.75, 0],
+  [-5.65, 0], [-5.65, 1.0], [-6.0, 1.35], [-8.35, 1.35],
 ] as const;
 function walk(points: readonly (readonly [number, number])[], label: string) {
   for (const [x, z] of points) {
@@ -47,7 +49,7 @@ export function sampleVisit(time: number): { visitor: ActorPose; host: ActorPose
   let current = beats[beats.length - 1]!;
   for (const item of beats) {
     current = item;
-    if (remaining <= item.duration) break;
+    if (remaining <= item.duration || item === beats[beats.length - 1]) break;
     remaining -= item.duration;
   }
   const linear = Math.min(1, remaining / current.duration);
@@ -76,7 +78,7 @@ interface VisitState {
   setSpeed: (speed: number) => void; advance: (delta: number) => void;
 }
 export const useVisitStore = create<VisitState>((set, get) => ({
-  active: false, paused: false, time: 0, speed: 1, label: "Pulse visita Scout",
+  active: false, paused: false, time: 0, speed: 1.5, label: "Pulse visita Scout",
   start: () => set({ active: true, paused: false, time: 0, label: sampleVisit(0).label }),
   reset: () => set({ active: false, paused: false, time: 0, label: "Pulse visita Scout" }),
   togglePause: () => set({ paused: !get().paused }),

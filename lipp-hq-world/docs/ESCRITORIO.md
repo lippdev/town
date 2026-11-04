@@ -168,14 +168,14 @@ em `/tmp/hq-escritorio`. O harness não roda no CI: precisa de GPU real.
 
 No modo demonstração, o painel **Visita · Pulse → Scout** inicia a primeira coreografia:
 Pulse levanta, passa pela porta sul da Engenharia e pelo corredor oeste, entra na Pesquisa,
-desvia da mesa de mapas, conversa com Scout e volta à mesma cadeira. Scout levanta para
+usa as oito direções (incluindo diagonais de 45° nas áreas livres), desvia da mesa de mapas, conversa com Scout e volta à mesma cadeira. Scout levanta para
 recebê-lo, alterna fala e escuta e volta a sentar. O indicador sobre cada nome acompanha
 quem está falando. Nada chama o Hermes ou envia mensagens.
 
 - **Simular visita:** inicia o ensaio e enquadra o andar inteiro.
 - **Pausar / Continuar:** congela e retoma o relógio da coreografia, inclusive os gestos.
 - **Reiniciar:** retorna imediatamente ao início; este é um comando do laboratório.
-- **Ritmo:** 0,5×, 1×, 1,5× ou 2×. A aba oculta não avança a coreografia.
+- **Ritmo:** 1,5× por padrão; opções 0,5×, 1×, 1,5× ou 2×. A aba oculta não avança a coreografia.
 - Novas execuções ficam desabilitadas durante a visita; não há fila nesta primeira etapa.
 
 `officeVisit.ts` contém um roteiro determinístico, separado da renderização. A posição

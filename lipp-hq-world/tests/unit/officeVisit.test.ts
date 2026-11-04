@@ -18,6 +18,20 @@ describe("visita demonstrativa", () => {
       expect(current.x > -8.2 && current.x < -5.7 && current.z > -0.97 && current.z < 0.77).toBe(false);
     }
   });
+  it("percorre oito direções com a mesma velocidade nas diagonais", () => {
+    const headings = new Set<number>();
+    for (let time = 0; time < VISIT_DURATION; time += 0.01) {
+      const a = sampleVisit(time).visitor;
+      const b = sampleVisit(time + 0.001).visitor;
+      if (a.walk < 0.1 || b.walk < 0.1) continue;
+      const dx = b.x - a.x, dz = b.z - a.z;
+      const heading = Math.atan2(dx, dz) / (Math.PI / 4);
+      expect(heading).toBeCloseTo(Math.round(heading), 5);
+      expect(Math.hypot(dx, dz) / 0.001).toBeCloseTo(0.85, 5);
+      headings.add((Math.round(heading) + 8) % 8);
+    }
+    expect(headings.size).toBe(8);
+  });
   it("alterna fala e escuta com os dois em pé", () => {
     const first = sampleVisit(TALK_START + 1);
     const second = sampleVisit(TALK_START + 3);
