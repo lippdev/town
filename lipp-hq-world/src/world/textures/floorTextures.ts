@@ -1,4 +1,4 @@
-import { CanvasTexture, NearestFilter, RepeatWrapping, type Texture } from "three";
+import { CanvasTexture, RepeatWrapping, type Texture } from "three";
 
 /**
  * Texturas procedurais de piso, geradas em canvas no boot — nenhum asset
@@ -97,22 +97,30 @@ export function stoneFloorTexture(): Texture {
   return stoneTexture;
 }
 
-let skyTexture: Texture | null = null;
+let backdrop: Texture | null = null;
 
-/** Fundo em gradiente vertical: noite profunda em cima, azul de horizonte embaixo. */
-export function skyGradientTexture(): Texture {
-  if (skyTexture) return skyTexture;
-  const { canvas, ctx } = makeCanvas(64);
-  canvas.height = 256;
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#070c16");
-  gradient.addColorStop(0.55, "#0d1526");
-  gradient.addColorStop(1, "#1b2b47");
+/**
+ * Fundo de estúdio: um halo azulado atrás do prédio que cai para quase preto
+ * nas bordas. Separa o diorama do fundo sem competir com ele — o vazio chapado
+ * de antes fazia o prédio parecer recortado.
+ */
+export function backdropTexture(): Texture {
+  if (backdrop) return backdrop;
+  const { canvas, ctx } = makeCanvas(512);
+  const gradient = ctx.createRadialGradient(256, 230, 20, 256, 256, 380);
+  gradient.addColorStop(0, "#34476a");
+  gradient.addColorStop(0.5, "#1a2639");
+  gradient.addColorStop(1, "#070b14");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const texture = toTexture(canvas);
-  texture.minFilter = NearestFilter;
-  texture.magFilter = NearestFilter;
-  skyTexture = texture;
-  return skyTexture;
+  // grão leve para o gradiente não formar faixas em telas de 8 bits
+  const random = seeded(20261103);
+  for (let dot = 0; dot < 9000; dot += 1) {
+    ctx.fillStyle = random() > 0.5 ? "rgba(255,255,255,0.018)" : "rgba(0,0,0,0.03)";
+    ctx.fillRect(random() * 512, random() * 512, 1, 1);
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = "srgb";
+  backdrop = texture;
+  return backdrop;
 }

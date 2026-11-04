@@ -1,6 +1,7 @@
 import { PALETTE } from "@/config/constants";
 import { QaBridge } from "@/app/QaBridge";
 import { SceneLighting } from "@/world/lighting/SceneLighting";
+import { PostEffects } from "@/world/lighting/PostEffects";
 import { BaseSlab } from "@/world/scene/BaseSlab";
 import { FloorPlates } from "@/world/rooms/FloorPlates";
 import { RoomSigns } from "@/world/rooms/RoomSigns";
@@ -18,8 +19,7 @@ import { Picking } from "@/world/scene/Picking";
 export function HQScene() {
   return (
     <>
-      <color attach="background" args={[PALETTE.background]} />
-      <fog attach="fog" args={[PALETTE.background, 62, 168]} />
+      <fog attach="fog" args={[PALETTE.backgroundDeep, 70, 170]} />
       <SceneLighting />
       <BaseSlab />
       <FloorPlates />
@@ -31,6 +31,7 @@ export function HQScene() {
       <CameraRig />
       <Picking />
       <QaBridge />
+      <PostEffects />
     </>
   );
 }
