@@ -554,6 +554,34 @@ try {
       return rect.left < 0 || rect.right > window.innerWidth;
     }).length);
     check(`${label}: controles da câmera dentro da tela`, clipped === 0);
+    const [poseDock, viewDock] = await Promise.all([page.locator(".cs-dock--pose").boundingBox(), page.locator(".cs-dock--view").boundingBox()]);
+    const overlap = poseDock.x < viewDock.x + viewDock.width && viewDock.x < poseDock.x + poseDock.width && poseDock.y < viewDock.y + viewDock.height && viewDock.y < poseDock.y + poseDock.height;
+    check(`${label}: controles não se sobrepõem`, !overlap);
+    const cropped = await page.evaluate(() => [...document.querySelectorAll(".cs-panel__foot button, .cs-rail__actions button")].filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.right > window.innerWidth + 0.5 || rect.left < 0;
+    }).length);
+    check(`${label}: ações não ficam cortadas`, cropped === 0);
+    const figureClear = await page.evaluate(async () => {
+      // Pés acima dos controles: o pixel opaco mais baixo não pode cair na faixa dos docks.
+      const image = new Image();
+      image.src = window.__CHARACTER_STUDIO_QA__.capture();
+      await image.decode();
+      const canvas = Object.assign(document.createElement("canvas"), { width: image.width, height: image.height });
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0);
+      const { data } = context.getImageData(0, 0, image.width, image.height);
+      let lowest = 0;
+      for (let row = image.height - 1; row >= 0 && !lowest; row -= 1) {
+        for (let column = 0; column < image.width; column += 1) {
+          if (data[(row * image.width + column) * 4 + 3] > 230) { lowest = row; break; }
+        }
+      }
+      const stage = document.querySelector(".cs-canvas").getBoundingClientRect();
+      const top = Math.min(...[...document.querySelectorAll(".cs-dock")].map((dock) => dock.getBoundingClientRect().top));
+      return { feet: stage.top + (lowest / image.height) * stage.height, docks: top };
+    });
+    check(`${label}: corpo inteiro acima dos controles`, figureClear.feet <= figureClear.docks + 1, `pés ${Math.round(figureClear.feet)}, controles ${Math.round(figureClear.docks)}`);
     await shot(page, `15-${label}`);
     await context.close();
   }
@@ -572,6 +600,12 @@ try {
     await page.getByRole("button", { name: "Enquadrar o rosto" }).click();
     await settle(page);
     await shot(page, "18-oculos");
+    await page.getByRole("button", { name: "Frente", exact: true }).click();
+    await settle(page);
+    await shot(page, "18-oculos-frente");
+    await page.getByRole("button", { name: "Lado", exact: true }).click();
+    await settle(page);
+    await shot(page, "18-oculos-lado");
     await context.close();
   }
 
