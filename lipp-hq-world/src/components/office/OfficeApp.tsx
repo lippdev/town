@@ -8,6 +8,7 @@ import { effectiveQuality, pixelRatioFor } from "@/world/quality";
 import { OfficeScene } from "@/world/office/OfficeScene";
 import { OfficeQa } from "@/world/office/OfficeQa";
 import { AVATAR_STORAGE_KEY, browserStorage, loadAvatars } from "@/avatar/human/persistence";
+import { ROBOT_STORAGE_KEY, loadRobotLooks } from "@/avatar/robot/robotLook";
 import { placeHumans } from "@/world/office/officeHumans";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
@@ -56,6 +57,19 @@ function useHumans(mode: OfficeMode) {
   }, [mode, seating, version]);
 }
 
+/** Cor e expressão dos robôs: salvar no editor, em outra aba, já reflete aqui. */
+function useRobotLooks() {
+  useEffect(() => {
+    const read = () => useOfficeStore.getState().setRobotLooks(loadRobotLooks(browserStorage()));
+    read();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ROBOT_STORAGE_KEY || event.key === null) read();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+}
+
 /** Escritório completo: página própria, sem o HUD nem a cena antiga. */
 export function OfficeApp({ mode }: { mode: OfficeMode }) {
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
@@ -63,6 +77,7 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   useRoster(mode);
   useHumans(mode);
+  useRobotLooks();
   useEffect(() => useOfficeStore.getState().setMode(mode), [mode]);
 
   return (

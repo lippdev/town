@@ -3,7 +3,9 @@ import { useHQStore } from "@/state/useHQStore";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
+import type { RobotLooks } from "@/avatar/robot/robotLook";
 import type { HumanActor } from "./HumanActor";
+import type { RobotActor } from "./RobotActor";
 import type { HumanGoal, HumanPhase, OfficeHuman } from "./officeHumans";
 import { type OfficeBot, type Seating } from "./officeRoster";
 import type { OfficeMode } from "./officeRoute";
@@ -31,6 +33,9 @@ interface OfficeState {
   humanGoals: Record<string, HumanGoal>;
   humanPhases: Record<string, HumanPhase>;
   humansError: string | null;
+  /** Cor e expressão escolhidas no editor; quem não está aqui usa o padrão. */
+  robotLooks: RobotLooks;
+  setRobotLooks: (looks: RobotLooks) => void;
   /** Painéis fixos que cobrem a cena; a gaveta vem de `viewInsetRight`. */
   insets: Omit<Insets, "right">;
   load: LoadState;
@@ -69,6 +74,8 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   humanGoals: {},
   humanPhases: {},
   humansError: null,
+  robotLooks: {},
+  setRobotLooks: (robotLooks) => set({ robotLooks }),
   insets: { left: 0, top: 0, bottom: 0 },
   load: "loading",
   loadError: null,
@@ -131,6 +138,7 @@ export const officeRuntime = {
 /** Fora do estado do React: mudam a cada quadro. O clique e o QA leem daqui. */
 export const humanActors = new Map<string, HumanActor>();
 export const humanFigures = new Map<string, HumanFigure>();
+export const robotActors = new Map<string, RobotActor>();
 
 export function currentInsets(): Insets {
   const { insets } = useOfficeStore.getState();
