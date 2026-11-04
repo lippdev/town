@@ -14,6 +14,7 @@ const FIGURE_HEIGHT = 134.4;
 /** Acima disso a imagem não ganha detalhe, só gasta memória e GPU. */
 const MAX_PIXEL_RATIO = 2;
 const ZOOM_STEP = 1.25;
+const WHEEL_ZOOM_SPEED = 0.0015;
 /** Meia largura e meia altura da sombra no piso, em pixels do cenário. */
 const SHADOW = { width: 34, height: 12 };
 
@@ -153,6 +154,22 @@ export function PixelOfficeApp() {
     view.current = zoomAround(view.current, view.current.zoom * factor, middle, SCENE, space.current);
     setLevel(zoomLevel(view.current, SCENE, space.current));
   };
+
+  // o onWheel do React é passivo e não consegue impedir o zoom da própria página
+  useEffect(() => {
+    const element = stage.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (!view.current || !space.current) return;
+      const box = element.getBoundingClientRect();
+      const anchor = { x: event.clientX - box.left, y: event.clientY - box.top };
+      view.current = zoomAround(view.current, view.current.zoom * Math.exp(-event.deltaY * WHEEL_ZOOM_SPEED), anchor, SCENE, space.current);
+      setLevel(zoomLevel(view.current, SCENE, space.current));
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, []);
 
   const drag = useRef<{ x: number; y: number } | null>(null);
   return (
