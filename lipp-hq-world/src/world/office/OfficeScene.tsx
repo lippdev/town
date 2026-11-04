@@ -33,6 +33,7 @@ import { DESK_TOP, FIGURE_SCALE, buildOffice, type OfficeBuild } from "./officeR
 import type { OfficeBot } from "./officeRoster";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
+import { FilipeDemoSprite } from "./FilipeDemoSprite";
 import { SeatedFigure } from "./seatedFigure";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
@@ -441,6 +442,7 @@ function reportWorldFailure(message: string) {
 /** Tudo o que a cena desenha. */
 export function OfficeScene({ stage }: { stage: HTMLElement }) {
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
+  const mode = useOfficeStore((state) => state.mode);
   return (
     <>
       <OfficeCameraRig stage={stage} />
@@ -456,6 +458,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <OfficeFigures />
         </Suspense>
       </PartBoundary>
+      {mode === "demo" && <Suspense fallback={null}><FilipeDemoSprite /></Suspense>}
       <SeatMarker />
       <RoomGlow />
     </>

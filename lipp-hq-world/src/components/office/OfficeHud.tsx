@@ -210,6 +210,7 @@ function FocusBar() {
 
 function CameraBar() {
   const framing = useOfficeStore((state) => state.framing);
+  const mode = useOfficeStore((state) => state.mode);
   const graphicsMode = useHQStore((state) => state.graphicsMode);
   const setGraphicsMode = useHQStore((state) => state.setGraphicsMode);
   const autoQuality = useHQStore((state) => state.autoQuality);
@@ -231,6 +232,7 @@ function CameraBar() {
           <Maximize size={13} aria-hidden /> Ver o andar inteiro
         </button>
       </div>
+      {mode === "demo" && <button type="button" className="office-button" onClick={() => useOfficeStore.getState().focusRoom("hall")}>Ver Filipe</button>}
       <p className="office-hint">Clique numa sala para entrar · arraste para mover · role para aproximar · Esc volta</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>
