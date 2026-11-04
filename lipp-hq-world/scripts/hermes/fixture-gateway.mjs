@@ -6,7 +6,8 @@
  * MESMOS formatos documentados em docs/HERMES.md, para provar o Lipp HQ World
  * de ponta a ponta sem uma instalação real. Serve dois serviços:
  *
- *   :8642  API server do Hermes  → GET /health
+ *   :8642  API server do Hermes  → GET /health, GET /health/detailed (Bearer)
+ *                                  POST [/p/{perfil}]/api/sessions/{id}/chat
  *   :8000  Dashboard do Hermes   → GET /api/profiles
  *                                  GET /api/profiles/sessions
  *                                  GET /api/cron/jobs
@@ -32,6 +33,10 @@ const argValue = (flag, fallback) => {
 const API_PORT = Number(argValue("--api-port", process.env.HERMES_API_PORT ?? 8642));
 const DASHBOARD_PORT = Number(argValue("--dashboard-port", process.env.HERMES_DASHBOARD_PORT ?? 8000));
 const TOKEN = process.env.HERMES_FIXTURE_TOKEN ?? "";
+// API server tem credencial própria (API_SERVER_KEY); sem ela, vale o token
+const API_KEY = process.env.HERMES_FIXTURE_API_KEY ?? TOKEN;
+// HERMES_FIXTURE_CHAT_DELAY_MS imita o tempo de um turno do agente
+const CHAT_DELAY_MS = Number(process.env.HERMES_FIXTURE_CHAT_DELAY_MS ?? 1500);
 const STARTED_AT = Math.floor(Date.now() / 1000);
 
 const BOTS = [
@@ -196,14 +201,68 @@ function send(response, status, payload) {
   response.end(body);
 }
 
-const apiServer = http.createServer((request, response) => {
+function readJson(request) {
+  return new Promise((resolve) => {
+    let raw = "";
+    request.on("data", (chunk) => (raw += chunk));
+    request.on("end", () => {
+      try {
+        resolve(JSON.parse(raw || "{}"));
+      } catch {
+        resolve(null);
+      }
+    });
+  });
+}
+
+const apiServer = http.createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${API_PORT}`);
-  if (!authorized(request)) {
+  // /health é público no Hermes; o resto exige a chave
+  if (url.pathname === "/health" || url.pathname === "/v1/health") {
+    send(response, 200, { status: "ok", platform: "hermes-agent", version: "fixture-0.1.0" });
+    return;
+  }
+  if (API_KEY && (request.headers.authorization ?? "") !== `Bearer ${API_KEY}`) {
     send(response, 401, { error: { message: "Invalid gateway API key (API_SERVER_KEY)", type: "gateway_auth_error" } });
     return;
   }
-  if (url.pathname === "/health" || url.pathname === "/v1/health") {
-    send(response, 200, { status: "ok", platform: "hermes-agent", version: "fixture-0.1.0" });
+  if (url.pathname === "/health/detailed") {
+    send(response, 200, { status: "ok", platform: "hermes-agent", version: "fixture-0.1.0", gateway_state: "running" });
+    return;
+  }
+  // POST [/p/<perfil>]/api/sessions/{id}/chat — um turno síncrono, como o peer dm
+  const chat = url.pathname.match(/^(?:\/p\/([^/]+))?\/api\/sessions\/([^/]+)\/chat$/);
+  if (chat && request.method === "POST") {
+    const profile = chat[1] ? decodeURIComponent(chat[1]) : "default";
+    if (chat[1] && !BOTS.some((bot) => bot.name === profile)) {
+      send(response, 404, { error: "Unknown or unconfigured profile" });
+      return;
+    }
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const transcript = transcriptFor(decodeURIComponent(chat[2]), nowSeconds);
+    if (!transcript || (chat[1] && transcript.profile !== profile)) {
+      send(response, 404, { error: { message: `Session not found: ${chat[2]}`, code: "session_not_found" } });
+      return;
+    }
+    const body = await readJson(request);
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    if (!message) {
+      send(response, 400, { error: { message: "Missing 'message' field", code: "missing_message" } });
+      return;
+    }
+    // o Hermes grava a mensagem no começo do turno; a resposta, no fim
+    const nextId = () => transcript.messages.length + 1;
+    transcript.messages.push({ id: nextId(), session_id: chat[2], role: "user", content: message, timestamp: Date.now() / 1000 });
+    await new Promise((resolve) => setTimeout(resolve, CHAT_DELAY_MS));
+    const reply = `Recebi: "${message.slice(0, 80)}". Sigo com isso e te aviso aqui.`;
+    transcript.messages.push({ id: nextId(), session_id: chat[2], role: "assistant", content: reply, timestamp: Date.now() / 1000 });
+    send(response, 200, {
+      object: "hermes.session.chat.completion",
+      status: "completed",
+      session_id: chat[2],
+      message: { role: "assistant", content: reply },
+      usage: { input_tokens: 120, output_tokens: 24, total_tokens: 144 },
+    });
     return;
   }
   send(response, 404, { error: { message: `unknown route ${url.pathname}` } });

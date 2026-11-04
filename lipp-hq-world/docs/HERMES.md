@@ -91,6 +91,48 @@ fica recolhido e cortado em 280 caracteres. O proxy só repassa campos de
 exibição: argumentos de ferramenta e imagens inline (`inline_images=false`)
 não chegam ao navegador.
 
+### Conversar com um bot (envio)
+
+O chat da sessão também envia mensagens, pelo mesmo caminho do
+`hermes peer dm`: `POST /api/sessions/{id}/chat` no **API server** do Hermes
+(`:8642`), não no dashboard. O API server é outro serviço, com outra
+credencial (`API_SERVER_KEY`). O session token do dashboard não dispara turnos
+do agente.
+
+Para habilitar o envio:
+
+1. No `.env` do perfil que serve a API, defina `API_SERVER_ENABLED=true` e uma
+   chave forte: `API_SERVER_KEY=$(openssl rand -hex 32)`. O Hermes recusa
+   subir a API com chave curta ou de exemplo.
+2. Reinicie o gateway.
+3. Em **Integrações → API do Hermes (envio)**, informe a URL (padrão
+   `http://127.0.0.1:8642`) e a chave. O proxy testa em `/health/detailed`
+   (que exige Bearer; `/health` é público e não prova nada) e só salva se a
+   chave valer. A página só vê a prévia `...abc123`.
+
+Sem a API, o chat continua só lendo e diz onde habilitar.
+
+O perfil vai no caminho, como o API server espera
+(`api_server_profile_prefix.py`): o perfil `default` na raiz e os outros em
+`/p/<perfil>/api/sessions/{id}/chat`. Um gateway sem multiplexação serve só o
+próprio perfil e responde 404 para os outros. Nesse caso cada perfil sobe a
+sua API numa porta própria (`API_SERVER_PORT` no `.env` dele), e o erro na tela
+diz isso.
+
+O turno é síncrono: a chamada só volta quando o agente termina, com prazo de
+5 min no proxy. Como o Hermes grava a mensagem no começo do turno, a conversa
+aberta mostra a mensagem enviada na próxima releitura e "pensando…" até a
+resposta chegar. Mensagem que falhou fica marcada, com "tentar de novo".
+
+```text
+POST   /api/hq/hermes/sessions/{id}/chat?profile=<bot>  { message }  → { ok, reply }
+POST   /api/hq/connection/api   { url, key }  → testa /health/detailed e salva
+DELETE /api/hq/connection/api                 → desliga o envio (o dashboard fica)
+```
+
+Todas exigem JSON da mesma origem, como a conexão. A mensagem tem limite de
+8000 caracteres, e id e perfil são validados antes de sair do proxy.
+
 A origem usada pelo fixture segue `KNOWN_SOURCES`
 (`hermes_cli/session_lost_and_found.py`): `cli`, `telegram`, `dashboard`, `cron`.
 ## Abrir no dashboard
@@ -236,8 +278,9 @@ DELETE /api/hq/connection                   → apaga a conexão salva
 
 As duas rotas só aceitam JSON da mesma origem (`Origin` igual ao `Host`,
 `Sec-Fetch-Site: same-origin` quando presente). Assim, outro site aberto no
-navegador não consegue trocar a conexão. Essa escrita fica neste servidor: o
-Hermes continua recebendo só GET.
+navegador não consegue trocar a conexão. Essa escrita fica neste servidor. A
+única escrita que chega ao Hermes é a mensagem do chat (veja "Conversar com um
+bot").
 
 ### Só esta máquina
 
@@ -315,9 +358,9 @@ acaba.
 
 ## Limites honestos
 
-- **Somente leitura.** Não iniciamos turnos, não pausamos rotinas, não
-  aprovamos nada. O botão "abrir no Hermes" fica no backlog até existir uma
-  superfície de link estável.
+- **A única escrita é a mensagem do chat.** Um turno só começa quando você
+  envia uma mensagem a um bot. Não pausamos rotinas, não aprovamos ferramentas e
+  não criamos sessões novas: a conversa acontece numa sessão que já existe.
 - **Sem WebSocket.** O dashboard usa socket para eventos; aqui a leitura é
   polling (padrão 4 s). Latência de alguns segundos é esperada e declarada.
 - **Sem dashboard não há frota nomeada.** A UI mostra "gateway degradado" e a

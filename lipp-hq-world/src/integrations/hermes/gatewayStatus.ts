@@ -15,6 +15,10 @@ export interface GatewayStatus {
   apiUrl?: string;
   dashboardUrl?: string;
   hasApiKey?: boolean;
+  /** Últimos caracteres da API_SERVER_KEY, nunca o valor. */
+  apiKeyPreview?: string | null;
+  /** Envio de mensagens habilitado (API do Hermes com chave). */
+  canSend?: boolean;
   hasDashboardToken?: boolean;
   /** Últimos caracteres do token (`...abc123`), nunca o valor. */
   tokenPreview?: string | null;
@@ -160,4 +164,46 @@ export function useGatewayStatus(): GatewayStatus | null {
   }, []);
 
   return value;
+}
+
+/**
+ * Habilita o envio: URL + API_SERVER_KEY da API do Hermes vão ao proxy, que
+ * testa com /health/detailed e só salva se a chave valer.
+ */
+export async function connectHermesApi(url: string, key: string): Promise<ConnectResult> {
+  try {
+    const response = await fetch("/api/hq/connection/api", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, key }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      action?: string;
+      probe?: { version?: string };
+      status?: GatewayStatus;
+    };
+    if (payload.status) publish(payload.status);
+    if (!response.ok || !payload.ok) {
+      return { ok: false, error: payload.error ?? `HTTP ${response.status}`, action: payload.action };
+    }
+    return { ok: true, version: payload.probe?.version };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function disconnectHermesApi(): Promise<ConnectResult> {
+  try {
+    const response = await fetch("/api/hq/connection/api", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+    });
+    const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string; status?: GatewayStatus };
+    if (payload.status) publish(payload.status);
+    return response.ok ? { ok: true } : { ok: false, error: payload.error ?? `HTTP ${response.status}` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
