@@ -1,0 +1,1315 @@
+{
+ "timestamp": "2026-11-04T03:06:04.854Z",
+ "head": "073cdbeaf4bfa6488dfc85bcdbc132b120b70393",
+ "hardware": {
+  "os": "darwin",
+  "release": "27.0.0",
+  "arch": "arm64",
+  "cpu": "Apple M1",
+  "ramGB": 8
+ },
+ "browser": "156.0.8078.4",
+ "viewport": {
+  "width": 1728,
+  "height": 1000,
+  "deviceScaleFactor": 2
+ },
+ "runs": [
+  {
+   "mode": "alta",
+   "scenario": "andar parado (7 bots com respiração)",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "andar com câmera em movimento",
+   "samples": [
+    {
+     "frames": 296,
+     "fpsMean": 59.01,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 100,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 122,
+      "triangles": 928828,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 74,
+      "triangles": 471748,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 74,
+      "triangles": 471748,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "sala Engenharia em foco",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 554834,
+     "trianglesMax": 1095958,
+     "info": {
+      "calls": 70,
+      "triangles": 554834,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 554834,
+     "trianglesMax": 1095958,
+     "info": {
+      "calls": 70,
+      "triangles": 554834,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 554834,
+     "trianglesMax": 1095958,
+     "info": {
+      "calls": 121,
+      "triangles": 1095958,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "Hall em foco",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 554956,
+     "trianglesMax": 1096080,
+     "info": {
+      "calls": 70,
+      "triangles": 554956,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 554956,
+     "trianglesMax": 1096080,
+     "info": {
+      "calls": 70,
+      "triangles": 554956,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 554956,
+     "trianglesMax": 1096080,
+     "info": {
+      "calls": 70,
+      "triangles": 554956,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "andar parado (7 bots com respiração)",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 381242,
+     "trianglesMax": 747818,
+     "info": {
+      "calls": 73,
+      "triangles": 381242,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 381242,
+     "trianglesMax": 747818,
+     "info": {
+      "calls": 73,
+      "triangles": 381242,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 381242,
+     "trianglesMax": 747818,
+     "info": {
+      "calls": 73,
+      "triangles": 381242,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "andar com câmera em movimento",
+   "samples": [
+    {
+     "frames": 300,
+     "fpsMean": 59.8,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 33.3,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 381244,
+     "trianglesMax": 747820,
+     "info": {
+      "calls": 74,
+      "triangles": 381244,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 381244,
+     "trianglesMax": 747820,
+     "info": {
+      "calls": 74,
+      "triangles": 381244,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 381244,
+     "trianglesMax": 747820,
+     "info": {
+      "calls": 74,
+      "triangles": 381244,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "sala Engenharia em foco",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 479414,
+     "trianglesMax": 945118,
+     "info": {
+      "calls": 70,
+      "triangles": 479414,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 479414,
+     "trianglesMax": 945118,
+     "info": {
+      "calls": 70,
+      "triangles": 479414,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 121,
+     "trianglesMin": 479414,
+     "trianglesMax": 945118,
+     "info": {
+      "calls": 70,
+      "triangles": 479414,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "Hall em foco",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 479536,
+     "trianglesMax": 945240,
+     "info": {
+      "calls": 70,
+      "triangles": 479536,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 479536,
+     "trianglesMax": 945240,
+     "info": {
+      "calls": 70,
+      "triangles": 479536,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 479536,
+     "trianglesMax": 945240,
+     "info": {
+      "calls": 70,
+      "triangles": 479536,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "auto",
+   "scenario": "andar parado (7 bots com respiração)",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "auto",
+   "scenario": "andar com câmera em movimento",
+   "samples": [
+    {
+     "frames": 298,
+     "fpsMean": 59.4,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 66.7,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 74,
+      "triangles": 471748,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 74,
+      "triangles": 471748,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 74,
+     "callsMax": 122,
+     "trianglesMin": 471748,
+     "trianglesMax": 928828,
+     "info": {
+      "calls": 122,
+      "triangles": 928828,
+      "geometries": 50,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "auto",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "andar parado com 19 bots",
+   "samples": [
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 166,
+     "callsMax": 286,
+     "trianglesMin": 552518,
+     "trianglesMax": 1087502,
+     "info": {
+      "calls": 166,
+      "triangles": 552518,
+      "geometries": 73,
+      "textures": 146,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.8,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 166,
+     "callsMax": 286,
+     "trianglesMin": 552518,
+     "trianglesMax": 1087502,
+     "info": {
+      "calls": 166,
+      "triangles": 552518,
+      "geometries": 75,
+      "textures": 150,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 301,
+     "fpsMean": 60,
+     "frameMsP50": 16.7,
+     "frameMsP95": 16.7,
+     "frameMsP99": 16.8,
+     "frameMsMax": 16.8,
+     "callsMin": 166,
+     "callsMax": 286,
+     "trianglesMin": 552518,
+     "trianglesMax": 1087502,
+     "info": {
+      "calls": 166,
+      "triangles": 552518,
+      "geometries": 76,
+      "textures": 152,
+      "programs": 29,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "sem VSync · andar parado",
+   "samples": [
+    {
+     "frames": 452,
+     "fpsMean": 90.1,
+     "frameMsP50": 10.5,
+     "frameMsP95": 19.2,
+     "frameMsP99": 25,
+     "frameMsMax": 32.6,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 26,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 482,
+     "fpsMean": 96.27,
+     "frameMsP50": 9.6,
+     "frameMsP95": 20.9,
+     "frameMsP99": 29,
+     "frameMsMax": 36.4,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 471746,
+     "trianglesMax": 928826,
+     "info": {
+      "calls": 73,
+      "triangles": 471746,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 26,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "alta",
+   "scenario": "sem VSync · hall",
+   "samples": [
+    {
+     "frames": 385,
+     "fpsMean": 76.98,
+     "frameMsP50": 11.5,
+     "frameMsP95": 28.9,
+     "frameMsP99": 39.5,
+     "frameMsMax": 55.7,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 554956,
+     "trianglesMax": 1096080,
+     "info": {
+      "calls": 70,
+      "triangles": 554956,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 381,
+     "fpsMean": 76.08,
+     "frameMsP50": 12,
+     "frameMsP95": 30.5,
+     "frameMsP99": 38.7,
+     "frameMsMax": 57,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 554956,
+     "trianglesMax": 1096080,
+     "info": {
+      "calls": 70,
+      "triangles": 554956,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 28,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1.5,
+      "graphicsMode": "alta",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "sem VSync · andar parado",
+   "samples": [
+    {
+     "frames": 889,
+     "fpsMean": 177.62,
+     "frameMsP50": 5.2,
+     "frameMsP95": 11.9,
+     "frameMsP99": 16,
+     "frameMsMax": 22.2,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 381242,
+     "trianglesMax": 747818,
+     "info": {
+      "calls": 73,
+      "triangles": 381242,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 880,
+     "fpsMean": 175.95,
+     "frameMsP50": 5.2,
+     "frameMsP95": 12.2,
+     "frameMsP99": 17.5,
+     "frameMsMax": 44.8,
+     "callsMin": 73,
+     "callsMax": 121,
+     "trianglesMin": 381242,
+     "trianglesMax": 747818,
+     "info": {
+      "calls": 73,
+      "triangles": 381242,
+      "geometries": 49,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  },
+  {
+   "mode": "leve",
+   "scenario": "sem VSync · hall",
+   "samples": [
+    {
+     "frames": 592,
+     "fpsMean": 118.38,
+     "frameMsP50": 6.5,
+     "frameMsP95": 20.9,
+     "frameMsP99": 33.7,
+     "frameMsMax": 61.1,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 479536,
+     "trianglesMax": 945240,
+     "info": {
+      "calls": 70,
+      "triangles": 479536,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    },
+    {
+     "frames": 620,
+     "fpsMean": 123.75,
+     "frameMsP50": 7,
+     "frameMsP95": 17.2,
+     "frameMsP99": 25,
+     "frameMsMax": 54,
+     "callsMin": 70,
+     "callsMax": 120,
+     "trianglesMin": 479536,
+     "trianglesMax": 945240,
+     "info": {
+      "calls": 70,
+      "triangles": 479536,
+      "geometries": 52,
+      "textures": 68,
+      "programs": 27,
+      "lights": 3,
+      "shadowLights": 1,
+      "pixelRatio": 1,
+      "graphicsMode": "leve",
+      "autoQuality": "alta"
+     }
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "name": "rótulo Demonstração visível e sete bots nos sete departamentos",
+   "ok": true
+  },
+  {
+   "name": "demonstração não fala com o Hermes nem mostra estado",
+   "ok": true
+  },
+  {
+   "name": "no andar, o painel não cobre nenhum bot",
+   "ok": true
+  },
+  {
+   "name": "clique na figura abre o bot certo e foca a sala dele",
+   "ok": true
+  },
+  {
+   "name": "Esc fecha a gaveta primeiro e depois volta ao andar",
+   "ok": true
+  },
+  {
+   "name": "cada sala focada e o retorno funcionam",
+   "ok": true
+  },
+  {
+   "name": "clique no chão entra na sala certa; passar o mouse destaca",
+   "ok": true
+  },
+  {
+   "name": "parede alta da sala em foco não deixa clicar no que está atrás",
+   "ok": true
+  },
+  {
+   "name": "arrastar, zoom e os botões da câmera respondem; o andar inteiro volta ao enquadramento",
+   "ok": true
+  },
+  {
+   "name": "teclado: Tab chega na sala e Enter entra",
+   "ok": true
+  },
+  {
+   "name": "qualidade: os três botões trocam de verdade",
+   "ok": true
+  },
+  {
+   "name": "figura real sentada: pés no chão e nenhuma figura antiga",
+   "ok": true
+  },
+  {
+   "name": "1366x768: bots visíveis fora dos painéis e barra de baixo sem estourar",
+   "ok": true
+  },
+  {
+   "name": "1366x768: bot escolhido fica fora da gaveta",
+   "ok": true
+  },
+  {
+   "name": "1280x720: bots visíveis fora dos painéis e barra de baixo sem estourar",
+   "ok": true
+  },
+  {
+   "name": "1280x720: bot escolhido fica fora da gaveta",
+   "ok": true
+  },
+  {
+   "name": "1024x640: bots visíveis fora dos painéis e barra de baixo sem estourar",
+   "ok": true
+  },
+  {
+   "name": "1024x640: bot escolhido fica fora da gaveta",
+   "ok": true
+  },
+  {
+   "name": "redimensionar a janela reenquadra o andar",
+   "ok": true
+  },
+  {
+   "name": "identidade e estado vêm do fixture, sem rótulo de demonstração",
+   "ok": true
+  },
+  {
+   "name": "clique em cada figura abre a gaveta do bot certo, sem aba de personagem",
+   "ok": true
+  },
+  {
+   "name": "sessão real abre na conversa existente",
+   "ok": true
+  },
+  {
+   "name": "25 bots: 19 sentados sem repetir cadeira, 6 listados sem corpo",
+   "ok": true
+  },
+  {
+   "name": "bot no posto extra abre certo; bot sem posto abre pela lista",
+   "ok": true
+  },
+  {
+   "name": "a resposta em outra ordem não troca ninguém de lugar",
+   "ok": true
+  },
+  {
+   "name": "Hermes fora: avisa, não preenche e oferece a demonstração",
+   "ok": true
+  },
+  {
+   "name": "sem o GLB da figura: planta e lista seguem, com aviso e nova tentativa",
+   "ok": true
+  },
+  {
+   "name": "sem textura do piso: mensagem de falha, nada de carregamento eterno",
+   "ok": true
+  },
+  {
+   "name": "arquivo que nunca chega: em 20 s para de dizer que está carregando",
+   "ok": true
+  },
+  {
+   "name": "sem WebGL: explica em vez de mostrar tela preta",
+   "ok": true
+  },
+  {
+   "name": "cena antiga abre e tem o link para o escritório, sem baixar os assets dele",
+   "ok": true
+  },
+  {
+   "name": "sala isolada continua abrindo",
+   "ok": true
+  },
+  {
+   "name": "estúdio continua abrindo",
+   "ok": true
+  }
+ ],
+ "load": [
+  {
+   "name": "/assets/main-CbLq3iOm.js",
+   "bytes": 25657
+  },
+  {
+   "name": "/assets/jsx-runtime-B6iHN4Qb.js",
+   "bytes": 4937
+  },
+  {
+   "name": "/assets/main-Q9AvJv2_.css",
+   "bytes": 5172
+  },
+  {
+   "name": "/assets/x-Z2PdbE-a.js",
+   "bytes": 65617
+  },
+  {
+   "name": "/assets/OfficeApp-4HM5IMDe.js",
+   "bytes": 23896
+  },
+  {
+   "name": "/assets/figureRig-VvrRe8MU.js",
+   "bytes": 4550
+  },
+  {
+   "name": "/assets/SkeletonUtils-CQpLP9YY.js",
+   "bytes": 261467
+  },
+  {
+   "name": "/assets/ContactShadows-CHoRm6Fv.js",
+   "bytes": 3412
+  },
+  {
+   "name": "/assets/QualityController-DontmHes.js",
+   "bytes": 2194
+  },
+  {
+   "name": "/assets/OfficeApp-B9h3N_jD.css",
+   "bytes": 2252
+  },
+  {
+   "name": "/prototipo/pulse.glb",
+   "bytes": 148048
+  },
+  {
+   "name": "/prototipo/wood_floor_diff_1k.jpg",
+   "bytes": 734493
+  },
+  {
+   "name": "/prototipo/wood_floor_nor_gl_1k.jpg",
+   "bytes": 423303
+  },
+  {
+   "name": "/prototipo/wood_floor_arm_1k.jpg",
+   "bytes": 447855
+  },
+  {
+   "name": "/prototipo/floor_tiles_04_diff_1k.jpg",
+   "bytes": 315465
+  },
+  {
+   "name": "/prototipo/floor_tiles_04_nor_gl_1k.jpg",
+   "bytes": 155276
+  },
+  {
+   "name": "/prototipo/floor_tiles_04_arm_1k.jpg",
+   "bytes": 50020
+  },
+  {
+   "name": "/prototipo/fabric_pattern_07_nor_gl_1k.jpg",
+   "bytes": 828071
+  },
+  {
+   "name": "/prototipo/fabric_pattern_07_arm_1k.jpg",
+   "bytes": 227059
+  },
+  {
+   "name": "/prototipo/planta.glb",
+   "bytes": 888380
+  },
+  {
+   "name": "/prototipo/luminaria.glb",
+   "bytes": 502116
+  }
+ ],
+ "loadTotalBytes": 5119240,
+ "readyMsIncludingSettle": 3382
+}

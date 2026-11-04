@@ -164,6 +164,7 @@ tela mostrava.
 | [docs/VISUAL_QA.md](docs/VISUAL_QA.md)             | harness, rubrica e gates                                 |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | sintoma → causa → o que fazer quando algo não aparece    |
 | [docs/ESTUDIO-PERSONAGENS.md](docs/ESTUDIO-PERSONAGENS.md) | estúdio de personagens: uso prompt a prompt e limites |
+| [docs/ESCRITORIO.md](docs/ESCRITORIO.md) | escritório completo: URLs, planta, postos, demonstração e medições |
 
 ## Estado
 
