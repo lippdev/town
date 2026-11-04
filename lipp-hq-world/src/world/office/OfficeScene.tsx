@@ -37,6 +37,7 @@ import { FilipeDemoSprite } from "./FilipeDemoSprite";
 import { SeatedFigure } from "./seatedFigure";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
+import { ENVIRONMENT_INTENSITY, FILL, HEMISPHERE, SUN } from "./officeSun";
 
 export const FIGURE_URL = "/prototipo/pulse.glb";
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
@@ -246,7 +247,7 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
     const room = new RoomEnvironment();
     const target = generator.fromScene(room, 0.04);
     scene.environment = target.texture;
-    scene.environmentIntensity = 0.45;
+    scene.environmentIntensity = ENVIRONMENT_INTENSITY;
     return () => {
       scene.environment = null;
       target.dispose();
@@ -260,13 +261,13 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
       {/* Penumbra suave só na qualidade alta: o sombreador é o que mais pesa por pixel. */}
       {quality === "alta" && <SoftShadows size={7} samples={6} focus={0.5} />}
       <color attach="background" args={["#111828"]} />
-      <hemisphereLight args={["#cad9f5", "#5a4131", 0.55]} />
+      <hemisphereLight args={[HEMISPHERE.sky, HEMISPHERE.ground, HEMISPHERE.intensity]} />
       {/* Um sol e um preenchimento para o andar inteiro; nenhuma luz por sala. */}
       <directionalLight
         key={quality}
-        position={[9.6, 15, -15]}
-        intensity={3.3}
-        color="#ffd5a0"
+        position={[...SUN.position]}
+        intensity={SUN.intensity}
+        color={SUN.color}
         castShadow
         shadow-mapSize={quality === "alta" ? [4096, 4096] : [2048, 2048]}
         shadow-camera-left={-span}
@@ -278,7 +279,7 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
         shadow-normalBias={0.02}
         shadow-bias={-0.0002}
       />
-      <directionalLight position={[3, 18, 24]} intensity={0.8} color="#bccff2" />
+      <directionalLight position={[...FILL.position]} intensity={FILL.intensity} color={FILL.color} />
     </>
   );
 }
