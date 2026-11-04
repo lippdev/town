@@ -21,6 +21,13 @@ const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const SHIRT = "#22c55e";
 const HAIR = "#b4522e";
 const STORAGE_KEY = "lipp-hq-world:agent-looks:v2";
+const SUBJECT = "Pulse";
+
+/** O editor mora na aba Personagem da gaveta; o resumo é o que abre primeiro. */
+async function openCharacterTab(page) {
+  await page.locator(".drawer-tab", { hasText: "Personagem" }).click();
+  await page.waitForSelector(".character-editor", { timeout: 30000 });
+}
 
 function hex(value) {
   return String(value).replace("#", "").toLowerCase();
@@ -57,17 +64,22 @@ async function main() {
     await page.waitForSelector(".agent-row", { timeout: 60000 });
     await page.waitForTimeout(4000);
 
-    const row = page.locator(".agent-row").first();
+    // o primeiro da lista pode estar no briefing, andando até a sala de reuniões:
+    // o enquadramento precisa de um bot parado no posto
+    const row = page.locator(".agent-row", { hasText: SUBJECT });
     const botName = ((await row.textContent()) ?? "").trim();
     await row.click();
-    await page.waitForSelector(".character-editor", { timeout: 30000 });
+    await openCharacterTab(page);
     const selectedId = await page.evaluate(() => window.__HQ_QA__.getSelection().agentId);
     report.checks.bot = { name: botName, id: selectedId };
 
     // personagem enquadrado: a captura precisa mostrar o efeito da edição
+    await page.evaluate(() => window.__HQ_QA__.setWallMode("low"));
     const pose = await page.evaluate((id) => window.__HQ_QA__.getAgentPose(id), selectedId);
+    report.checks.pose = pose;
+    // a distância mínima da câmera é a dos controles de órbita: pedir menos não aproxima
     const view = await page.evaluate(
-      ({ x, z }) => window.__HQ_QA__.setView({ azimuthDeg: 12, elevationDeg: 9, distance: 5, target: [x, 1, z] }),
+      ({ x, z }) => window.__HQ_QA__.setView({ azimuthDeg: 12, elevationDeg: 24, distance: 14, target: [x, 1, z] }),
       { x: pose?.x ?? 0, z: pose?.z ?? 0 },
     );
     report.checks.view = view;
@@ -125,10 +137,19 @@ async function main() {
 
     await page.screenshot({ path: path.join(OUT, "editor-editado.png") });
     const point = await page.evaluate((id) => window.__HQ_QA__.getAgentScreenPoint(id), selectedId);
-    if (point) {
+    report.checks.subjectPoint = point;
+    // a gaveta cobre a direita da tela: o personagem precisa ficar na parte visível
+    const drawerLeft = (await page.locator(".drawer").boundingBox())?.x ?? 1440;
+    report.checks.subjectVisible = point !== null && point.x > 0 && point.x < drawerLeft && point.y > 0 && point.y < 900;
+    if (report.checks.subjectVisible) {
       await page.screenshot({
         path: path.join(OUT, "personagem-editado.png"),
-        clip: { x: Math.max(0, point.x - 150), y: Math.max(0, point.y - 190), width: 300, height: 330 },
+        clip: {
+          x: Math.min(Math.max(0, point.x - 150), 1140),
+          y: Math.min(Math.max(0, point.y - 190), 570),
+          width: 300,
+          height: 330,
+        },
       });
     }
 
@@ -137,8 +158,8 @@ async function main() {
     await page.waitForFunction(() => window.__HQ_QA__, null, { timeout: 90000 });
     await page.waitForSelector(".agent-row", { timeout: 60000 });
     await page.waitForTimeout(3500);
-    await page.locator(".agent-row").first().click();
-    await page.waitForSelector(".character-editor", { timeout: 30000 });
+    await page.locator(".agent-row", { hasText: SUBJECT }).click();
+    await openCharacterTab(page);
     await page.waitForTimeout(800);
     const reloaded = await page.evaluate((id) => window.__HQ_QA__.getAgentLook(id), selectedId);
     report.checks.reloaded = reloaded;
@@ -177,6 +198,7 @@ async function main() {
 
   report.ok =
     report.errors.length === 0 &&
+    report.checks.subjectVisible === true &&
     report.checks.meshGrew === true &&
     report.checks.shirtApplied === true &&
     report.checks.hairApplied === true &&
