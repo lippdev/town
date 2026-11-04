@@ -1,0 +1,376 @@
+{
+  "humano": {
+    "autor": "Wawa Sensei (wass08)",
+    "repositorio": "https://github.com/wass08/r3f-ultimate-character-configurator",
+    "commit": "802398d1a195a36c270ab451d883c128044e3177",
+    "pacote": "Assets.zip",
+    "sha256": "455fc3bf5e31877d5e672e5c2d34557e82d2fd049be6cc6e65aed7f3ba6914ec",
+    "licenca": "não identificada no repositório",
+    "autorizacao": "uso informado pelo Filipe Moreira em 2026-11-04",
+    "poses": {
+      "arquivo": "public/models/Poses.glb",
+      "sha256": "af0eeba7993784e4edc673e013dfe70527b79d4e40b4dd701cbe71d08cc3d422"
+    },
+    "ferramenta": "@gltf-transform/cli@4.5.1 optimize --compress meshopt --flatten false --join false --instance false --palette false --simplify false --texture-compress webp --texture-size 512",
+    "pecas": {
+      "Bottom.001.glb": {
+        "sha256Origem": "acabe7b0bb040a22a516be951631076c92f8ed9bd5e3ce8482c3be71bbf8af50",
+        "bytes": 103180
+      },
+      "Bottom.002.glb": {
+        "sha256Origem": "243d5f1772173682976f87d82f12da92bb51da081800112a2ccf3d3e3a776580",
+        "bytes": 76032
+      },
+      "Bottom.003.glb": {
+        "sha256Origem": "72fa140080d85fa018f719cdece5f59ef9d279220e2b0686f940b504760d4f0f",
+        "bytes": 80200
+      },
+      "Bow.001.glb": {
+        "sha256Origem": "28a84c1be6dbafa13239f92ff140b229a1f704287984365d6d318e7113a75d16",
+        "bytes": 63076
+      },
+      "Bow.002.glb": {
+        "sha256Origem": "99f617f436623ef1a91564c674248c797a1b587764f316ba59a253ac1d62e49b",
+        "bytes": 38204
+      },
+      "Earring.001.glb": {
+        "sha256Origem": "d929a23c48775ee6442a57370a8dd79268b753b772a901706cdeff024b4001d8",
+        "bytes": 24508
+      },
+      "Earring.002.glb": {
+        "sha256Origem": "a58733fe8bf0dc3e7857a62e890faff4e1e7fe1e1b70ce4f069c5d021ac2ffd8",
+        "bytes": 24532
+      },
+      "Earring.003.glb": {
+        "sha256Origem": "588b6df51a9b07efd2fdc06cb349e20ae6078d6b50c193ae8315f15a00a68071",
+        "bytes": 22832
+      },
+      "Earring.004.glb": {
+        "sha256Origem": "f61cd1d853749dd091578b05d4b970e3a80acfe13969ea8ee2ada55bf884e4ed",
+        "bytes": 23932
+      },
+      "Earring.005.glb": {
+        "sha256Origem": "488ee16f2de1eb668cfbff65e367d1fc6db83882edc92641ce958370dd855ad3",
+        "bytes": 23936
+      },
+      "Earring.006.glb": {
+        "sha256Origem": "42b29daff1726722b212df3d7636cfcb4fb821bee8f6f92a7eb944651b3e9ccd",
+        "bytes": 22828
+      },
+      "EyeBrow.001.glb": {
+        "sha256Origem": "34238fcc7c9c950ab4e0eb7201d2f4ba5274ca805eec63d38442155ded7fc240",
+        "bytes": 53548
+      },
+      "EyeBrow.002.glb": {
+        "sha256Origem": "d6fbaa91d144496203e2a9284194168a6b88196be5d8cb791d07b38da68758df",
+        "bytes": 53516
+      },
+      "EyeBrow.003.glb": {
+        "sha256Origem": "8bb03ef806e3cc3f79f1df9a7ccc1afc7070ef629c0f4fa3184460eb763a0e06",
+        "bytes": 53736
+      },
+      "EyeBrow.004.glb": {
+        "sha256Origem": "6d3e3fa53b93dc0c2824581dd33329ad1bc240827127eecdfd44ae089a187c77",
+        "bytes": 53096
+      },
+      "EyeBrow.005.glb": {
+        "sha256Origem": "ec5b64fd0c0ce28e38727d8b9cf67b0b9a9684baff97740ca8a3fc0af9afabef",
+        "bytes": 23972
+      },
+      "EyeBrow.006.glb": {
+        "sha256Origem": "048c95a392931f8427191b54e8c28d5237a4b2567f2334f362e2b1650a005560",
+        "bytes": 23952
+      },
+      "EyeBrow.007.glb": {
+        "sha256Origem": "59c501b6011943e6e8044185610ca45495dc05a2538636dd9d0a9f69d1bc6845",
+        "bytes": 23988
+      },
+      "EyeBrow.008.glb": {
+        "sha256Origem": "f4aedd5d0eff5e661d1179a8a5f8352350864a3fe02fbc14a07bceffbaa93cf4",
+        "bytes": 22228
+      },
+      "EyeBrow.009.glb": {
+        "sha256Origem": "fbe5bf7d4bec41233b4542a7bca04c9d1854624acd0520ed5021201879addefc",
+        "bytes": 22252
+      },
+      "EyeBrow.010.glb": {
+        "sha256Origem": "f202af47b7ebb3da9b772344d269b700024af5213951b20de6475c0d8bee9e31",
+        "bytes": 22248
+      },
+      "Eyes.001.glb": {
+        "sha256Origem": "0889ec3042d3a2807b5cbdbceba83606b9907ac8d09dfcdf92a96d6c84eee77c",
+        "bytes": 35532
+      },
+      "Eyes.002.glb": {
+        "sha256Origem": "31b7cc0617f9c1cba2a71b4a3e0d0b43a1ef052f45d9db8ef0ad34abf1b2c4c8",
+        "bytes": 40352
+      },
+      "Eyes.003.glb": {
+        "sha256Origem": "0698cf5c1e17810a776f2a7aa6884a464f4d1a015c71a70434318c1abaa39bd2",
+        "bytes": 36952
+      },
+      "Eyes.004.glb": {
+        "sha256Origem": "6c868609552a33d86b98f41a90ba4e30dae1bed7dc1fedd965936e601b058054",
+        "bytes": 42076
+      },
+      "Eyes.005.glb": {
+        "sha256Origem": "95288c0bff5061eb17d0cb84df7b60a7454cf3eb72feba7a4ba4e381a0601f61",
+        "bytes": 24352
+      },
+      "Eyes.006.glb": {
+        "sha256Origem": "73fb06b52963e1194382617a351b4da67e930a67fc5070f0f8a0135b03f7fddd",
+        "bytes": 24604
+      },
+      "Eyes.007.glb": {
+        "sha256Origem": "fae78371a901102c6da8e6d9ba756c399a5419db4d1977f601f27cd80312e452",
+        "bytes": 24596
+      },
+      "Eyes.008.glb": {
+        "sha256Origem": "499e268e55a04e527804a440215ca44f6862bbbda5a1d80930f837cc73c23aff",
+        "bytes": 26700
+      },
+      "Eyes.009.glb": {
+        "sha256Origem": "27465b17be45534ec61d40184f302dcefa02cda61f3f9c538b1e5d9a87dfcb09",
+        "bytes": 29540
+      },
+      "Eyes.010.glb": {
+        "sha256Origem": "b4a222c46231ea5146bfbb7a9ab30faa58c765438b9ff4b912e26eac6e8543cc",
+        "bytes": 27228
+      },
+      "Eyes.011.glb": {
+        "sha256Origem": "7397a2775b0635ade324c5e2b14d634d193d675d1c40b4c8e688d20d76b35739",
+        "bytes": 38244
+      },
+      "Eyes.012.glb": {
+        "sha256Origem": "134f65f9e189bd34046cccd8feb0137a3c3bf0098d9c3964f2dbca69d6ab17a0",
+        "bytes": 44480
+      },
+      "Face.001.glb": {
+        "sha256Origem": "938b2ae2de029a3e1e31967682ba070564123fa777e56bce27fb6774e0c8a1ed",
+        "bytes": 25320
+      },
+      "Face.002.glb": {
+        "sha256Origem": "1c29c5ed9df1fa5f774d09d1624a84922303df817c8214bf765dd946109f0471",
+        "bytes": 23732
+      },
+      "Face.003.glb": {
+        "sha256Origem": "36568172d03733e4798fa35a0bf8a6bd3a3f9918c4af4a6d5004cda2f6dbe3c8",
+        "bytes": 22796
+      },
+      "Face.004.glb": {
+        "sha256Origem": "fa122e0b1656badf28e137ef0446524a94c32b1b449c4544d431f6c8a4a55af1",
+        "bytes": 23256
+      },
+      "Face.005.glb": {
+        "sha256Origem": "4888558e33f602aceb160974bdda61fd1cb6802635bcf42663f0cb08ae8d928a",
+        "bytes": 23120
+      },
+      "Face.006.glb": {
+        "sha256Origem": "fc52de78b0ac02d0ed4f7a920a78d6063b08f306381c577a7ab6b08b08ca9715",
+        "bytes": 27844
+      },
+      "Face.007.glb": {
+        "sha256Origem": "6450f040dafb39e28a2dff41771c08bbb79a6fe98b316e20265470852350cd65",
+        "bytes": 35900
+      },
+      "FacialHair.001.glb": {
+        "sha256Origem": "7904f24f861d7bfda3f736cc209ab8223faf4831e383a9d9a957c4d1333acf13",
+        "bytes": 29680
+      },
+      "FacialHair.002.glb": {
+        "sha256Origem": "f33d8fb088c8d344f8f575e9d7803af5fd35481b939bbf176ac6394ab0fa0933",
+        "bytes": 29264
+      },
+      "FacialHair.003.glb": {
+        "sha256Origem": "b20b5093d8978c58c734bebb2fb29cea8a93d6fa59e3c1c415548858cfa83fdb",
+        "bytes": 39108
+      },
+      "FacialHair.004.glb": {
+        "sha256Origem": "259027cd28cf160b9914d95fbfd35c7c9a00a9060810fedf48b990b7cf88fdaa",
+        "bytes": 28916
+      },
+      "FacialHair.005.glb": {
+        "sha256Origem": "a94ab7f8cb01e135ae69c10fd8a05f2b3313dd6e135b6df3af19a2c45cfb015e",
+        "bytes": 28536
+      },
+      "FacialHair.006.glb": {
+        "sha256Origem": "9f6c271472b91449f381fc1c799348b9877f7407804ad15fe03b2571ee4ff632",
+        "bytes": 26968
+      },
+      "FacialHair.007.glb": {
+        "sha256Origem": "6fe88e535e6633ab079f552b71facc75ee24017d6f67147beefd433c771be493",
+        "bytes": 27876
+      },
+      "Glasses.001.glb": {
+        "sha256Origem": "a562887d9caa77d64656188780f8ff5182ad7024abea414f9384134ee670bbbe",
+        "bytes": 40728
+      },
+      "Glasses.002.glb": {
+        "sha256Origem": "04e344b30c27d71928d3f4bae7d3aa39ffd80e7ebc771b97bf88c27d7d765f11",
+        "bytes": 44116
+      },
+      "Glasses.003.glb": {
+        "sha256Origem": "e8e1d0220bc3b3c2ca4c9c18f3c650c3f9f8863d77091f836c44f7250931deb3",
+        "bytes": 46456
+      },
+      "Glasses.004.glb": {
+        "sha256Origem": "adf65b3bcff0010e59895d2a3f8ca1cb16e08337a46d7834c25320c156365fbe",
+        "bytes": 32640
+      },
+      "Hair.001.glb": {
+        "sha256Origem": "448f2a922b48c481f61727baf6147df9aa4d844b479d4900775c4d850b3f7ae0",
+        "bytes": 23328
+      },
+      "Hair.002.glb": {
+        "sha256Origem": "28aa901cd457073365cf34ff5cfd1f94c9e438da016a3621d26d7a76aa357f02",
+        "bytes": 42992
+      },
+      "Hair.003.glb": {
+        "sha256Origem": "1eb946956baf07807c574e0c03303af72268206f2123ff4853bcff4de6e37f87",
+        "bytes": 26096
+      },
+      "Hair.004.glb": {
+        "sha256Origem": "d642929077bfe02c4db4476d3f52b8aaa37c912092f4103c8b474490f5895cd5",
+        "bytes": 89060
+      },
+      "Hair.005.glb": {
+        "sha256Origem": "ea7acc9bd681381449434e1f92581b2705f287e2fa322cad1395b5ed7f0e37d6",
+        "bytes": 62984
+      },
+      "Hair.006.glb": {
+        "sha256Origem": "e04bdaf79fa65318dc9394d062cfb3fa526b52290243596e038bf2bde744ff43",
+        "bytes": 66212
+      },
+      "Hair.007.glb": {
+        "sha256Origem": "9a2214a8a275ee743816e461146f28dbfec4669d0a40b68e3512a301112e469c",
+        "bytes": 83028
+      },
+      "Hair.008.glb": {
+        "sha256Origem": "20a58593eba73e1c25dfd40a06d028fcc819f638df2457ebbb10523f998224a0",
+        "bytes": 87836
+      },
+      "Hair.009.glb": {
+        "sha256Origem": "b74e75f0ab49bdaca8a7c6746651d671e9254c5a2a0db42493438afbdc707923",
+        "bytes": 66304
+      },
+      "Hair.010.glb": {
+        "sha256Origem": "9dfadea90cd5dfd1486006fb96ecb53a7b0ed2aa826e56c3d2d7e249a50995c6",
+        "bytes": 98048
+      },
+      "Hair.011.glb": {
+        "sha256Origem": "847fba892a5c9d8837700b92aa6d43ef34c7e46518d4c229af4e35d3ed7868e3",
+        "bytes": 98024
+      },
+      "Hat.001.glb": {
+        "sha256Origem": "2310b6e5d060747eb77e6ba10ce35269583329a0ae5083928707cf1b50f1b148",
+        "bytes": 28516
+      },
+      "Hat.002.glb": {
+        "sha256Origem": "083ec33b6513001784af07da1a609cbdb38acecf419f2ef681bcb4a757155c30",
+        "bytes": 41364
+      },
+      "Hat.003.glb": {
+        "sha256Origem": "fb845fddc9a486971fd304d1f2e8267613d9bb56061215cb17cb28a1a634ff32",
+        "bytes": 39296
+      },
+      "Hat.004.glb": {
+        "sha256Origem": "191455832e544daf8770b5c90495b4828a21b4dcf76e56c8acd72f527c8197a5",
+        "bytes": 26908
+      },
+      "Hat.005.glb": {
+        "sha256Origem": "eee64cc260c359eea12330e92a0c089ff878d9611cffcbc6ca43558b63b39c52",
+        "bytes": 191156
+      },
+      "Hat.006.glb": {
+        "sha256Origem": "f28b16ae4e53cf9cb488b2e182187f2cb333aa42c9e2f66b5765242bd20295b6",
+        "bytes": 53756
+      },
+      "Hat.007.glb": {
+        "sha256Origem": "e055b98c59c48870cce9233b7e3f0819a6f207b239ce34b123235242ba4d3f3e",
+        "bytes": 57168
+      },
+      "Head.001.glb": {
+        "sha256Origem": "aa358583ca6293e76b1cce25ce3c24b600e12d26a0a9b6d6f6a898ff24f02732",
+        "bytes": 119120
+      },
+      "Head.002.glb": {
+        "sha256Origem": "eba5316f7ad4ee02aade6126dcea6411460d783dafa125b77cf320b844d72c15",
+        "bytes": 119252
+      },
+      "Head.003.glb": {
+        "sha256Origem": "838951ac499d65920c4fe671300e546177e60d6fbd73000c20449475d1da3080",
+        "bytes": 119108
+      },
+      "Head.004.glb": {
+        "sha256Origem": "7049c5354590383fa73c85ef265af4a40b55dfff727c9d15fff46d67db9f9e75",
+        "bytes": 119096
+      },
+      "Nose.001.glb": {
+        "sha256Origem": "fbcbf16b3bea8ee29eea6e6e9d388adccd60b0da9df85aaad38720539f000188",
+        "bytes": 38736
+      },
+      "Nose.002.glb": {
+        "sha256Origem": "1dd156c316cb4fb9ecd5341c6a05f60bac80dcf7db95166653f55bd26c822faf",
+        "bytes": 39192
+      },
+      "Nose.003.glb": {
+        "sha256Origem": "111d1ff62d2c7661a1445c1cbff935a6f41c0e8caf88e44cc6a80f2d12057527",
+        "bytes": 39060
+      },
+      "Nose.004.glb": {
+        "sha256Origem": "94dc79c41892c098fe7ec8bf31426e29ab3a8d411e477e0a5e60840206e1c1db",
+        "bytes": 39268
+      },
+      "Outfit.001.glb": {
+        "sha256Origem": "25f61f3ca19f4e1c72ea413f00d7d26cf119268b0364937d88a7fb9f27158539",
+        "bytes": 153188
+      },
+      "Outfit.003.glb": {
+        "sha256Origem": "a8df704fdc247ab502dba1944c68b65e7f1e0e5bc15501d2d377b756a8b57ce4",
+        "bytes": 158036
+      },
+      "Outfit.004.glb": {
+        "sha256Origem": "b6cbe30f5485828cf0ff651c90a680c45745e48ff05a1386b7f2458ce13ee92a",
+        "bytes": 188692
+      },
+      "PumpkinHead.glb": {
+        "sha256Origem": "6345fa19ce8f7d014b1d56940ee8c6bd62f098e7cc1d9814b3a27411c25b9d4c",
+        "bytes": 53988
+      },
+      "Shoes.001.glb": {
+        "sha256Origem": "66335196b3e45d2406abaa6a82f1c23e2c8e5c1817dd9f70e9f5119f4790b295",
+        "bytes": 240276
+      },
+      "Shoes.002.glb": {
+        "sha256Origem": "6ffbc019537a32ba3d179d987f28cd914e51841a9ff5b3c8564f293aacc9aa85",
+        "bytes": 99984
+      },
+      "Shoes.003.glb": {
+        "sha256Origem": "5ac17db914d0306906bb8309e6f500944ca1eece93513fc25d5835f30defaebf",
+        "bytes": 42316
+      },
+      "Top.001.glb": {
+        "sha256Origem": "27b12fc9e4fef8c401e2dbe588fd951aaf3f1b78e5b1d45260a559728425fbba",
+        "bytes": 152072
+      },
+      "Top.002.glb": {
+        "sha256Origem": "5e05c06eec801ce44c7a6ed50eae4a4faa4d13b2da8a01b50d19742ff2852cfa",
+        "bytes": 103668
+      },
+      "Top.003.glb": {
+        "sha256Origem": "2c7a3771242c58957d3d5d01fd5bf3d54d85c2ba943fbb80a5d7d4c835449639",
+        "bytes": 273548
+      },
+      "WawaDress.glb": {
+        "sha256Origem": "7bda3ed4ff5d56baee515b6333c719fed4ebd405b238956513ec0fcffb5c48d8",
+        "bytes": 72504
+      }
+    }
+  },
+  "robo": {
+    "autor": "Tomás Laulhé (modelo), Don McCurdy (modificações)",
+    "licenca": "CC0 1.0",
+    "origem": "https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive",
+    "sha256": "047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319"
+  }
+}
