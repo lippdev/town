@@ -5,7 +5,7 @@ import { Armchair, CircleUserRound, Footprints, PersonStanding, ScanFace } from 
 import { NeutralToneMapping, PCFShadowMap, Vector3 } from "three";
 import { HumanFigure, loadHumanBase, type HumanBase, type HumanMotion } from "@/avatar/human/HumanFigure";
 import { PHOTO_POSES } from "@/avatar/human/humanClips";
-import { CHAIR, HUMAN_SCALE, SIT } from "@/avatar/human/seatFit";
+import { CHAIR, DESK, HUMAN_SCALE, SIT } from "@/avatar/human/seatFit";
 import type { ResolvedHuman } from "@/avatar/human/preset";
 
 export type PreviewMotion = Exclude<HumanMotion, "stand">;
@@ -57,6 +57,11 @@ function Stool() {
       </mesh>
       <mesh position={[0, BAR_Y, BAR_Z]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[inFile(CHAIR.footBar.radius), inFile(CHAIR.footBar.radius), inFile(CHAIR.footBar.halfWidth * 2), 10]} />
+        <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
+      </mesh>
+      {/* Só a faixa em que as mãos pousam: um tampo inteiro taparia a roupa que se está montando. */}
+      <mesh position={[0, inFile(DESK.top) - 0.015, inFile(SIT.deskEdge + 0.14)]} castShadow>
+        <boxGeometry args={[inFile(0.84), 0.03, inFile(0.28)]} />
         <meshStandardMaterial color="#a9a7a1" roughness={0.75} />
       </mesh>
     </group>
