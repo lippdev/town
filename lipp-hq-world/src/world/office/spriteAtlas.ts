@@ -22,7 +22,7 @@ export interface SpriteAtlas {
   /** PNG, relativo ao JSON. */
   image: string;
   cell: { width: number; height: number };
-  /** Linha da célula onde a sola encosta no chão. */
+  /** Linha do chão sob o quadril. Na caminhada em diagonal, o pé da frente fica abaixo dela. */
   soleRow: number;
   /** Linhas ocupadas pela figura: elas medem a altura em pé, em qualquer resolução. */
   visibleRows: number;
@@ -37,7 +37,7 @@ export function parseSpriteAtlas(raw: unknown): SpriteAtlas {
   if (typeof image !== "string" || image === "") throw new Error("Atlas sem o campo image.");
   if (!cell || !isCount(cell.width, 1) || !isCount(cell.height, 1)) throw new Error("Atlas sem cell.width e cell.height inteiros.");
   if (!isCount(soleRow, 1) || soleRow > cell.height) throw new Error("soleRow do atlas fora da célula.");
-  if (!isCount(visibleRows, 1) || visibleRows > soleRow) throw new Error("visibleRows do atlas não cabe acima da sola.");
+  if (!isCount(visibleRows, 1) || visibleRows > cell.height) throw new Error("visibleRows do atlas não cabe na célula.");
   const parsed = {} as Record<SpriteAnimationName, SpriteAnimation>;
   for (const name of ANIMATION_NAMES) {
     const animation = animations?.[name];

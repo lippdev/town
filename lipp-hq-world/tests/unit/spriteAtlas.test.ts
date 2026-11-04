@@ -21,21 +21,22 @@ const newArt = {
 describe("atlas por metadados", () => {
   it("lê o JSON do Filipe com as medidas do PNG", () => {
     const atlas = parseSpriteAtlas(current());
-    expect(atlas.cell).toEqual({ width: 58, height: 115 });
-    expect(atlasGrid(atlas, 232, 230)).toEqual({ columns: 4, rows: 2 });
+    expect(atlas.cell).toEqual({ width: 127, height: 248 });
+    expect(atlasGrid(atlas, 1524, 992)).toEqual({ columns: 12, rows: 4 });
   });
 
-  it("mantém a pose parada de sempre: o quadro de pernas juntas", () => {
+  it("o parado respira pelo tempo, sem depender da distância andada", () => {
     const atlas = parseSpriteAtlas(current());
-    expect(animationCell(atlas.animations["idle-front"], { distance: 3, time: 5 })).toEqual({ row: 0, column: 1 });
-    expect(animationCell(atlas.animations["idle-back"], { distance: 3, time: 5 })).toEqual({ row: 1, column: 1 });
+    expect(animationCell(atlas.animations["idle-front"], { distance: 3, time: 0.4 })).toEqual({ row: 2, column: 2 });
+    expect(animationCell(atlas.animations["idle-back"], { distance: 9, time: 0.4 })).toEqual({ row: 3, column: 2 });
   });
 
   it("anda um quadro por passo em metros, sem depender do tempo", () => {
     const atlas = parseSpriteAtlas(current());
     const walk = atlas.animations["walk-front"];
-    expect(animationCell(walk, { distance: 0.5, time: 99 }).column).toBe(2);
-    expect(animationCell(walk, { distance: 0.8, time: 0 }).column).toBe(0);
+    expect(animationCell(walk, { distance: 0.5, time: 99 }).column).toBe(4);
+    // um ciclo tem 1,36 m: depois dele, o quadro volta ao começo
+    expect(animationCell(walk, { distance: 1.4, time: 0 }).column).toBe(0);
   });
 
   it("aceita a arte nova sem nada no código", () => {
@@ -52,13 +53,25 @@ describe("atlas por metadados", () => {
 
   it("o tamanho em metros não muda com a resolução da arte", () => {
     const foreshortening = Math.cos(Math.PI / 6);
-    const a = spriteQuad(parseSpriteAtlas(current()), 1.8, foreshortening);
-    const b = spriteQuad(parseSpriteAtlas(newArt), 1.8, foreshortening);
+    const a = spriteQuad(parseSpriteAtlas(newArt), 1.8, foreshortening);
+    const doubled = {
+      ...newArt,
+      cell: { width: newArt.cell.width * 2, height: newArt.cell.height * 2 },
+      soleRow: newArt.soleRow * 2,
+      visibleRows: newArt.visibleRows * 2,
+    };
+    const b = spriteQuad(parseSpriteAtlas(doubled), 1.8, foreshortening);
     expect(b.width).toBeCloseTo(a.width, 6);
     expect(b.top).toBeCloseTo(a.top, 6);
     expect(b.bottom).toBeCloseTo(a.bottom, 6);
     // o texel é quadrado na tela: o vertical encurta com a câmera, o horizontal não
     expect(a.texelMeters * foreshortening).toBeCloseTo(a.texelWidth, 6);
+  });
+
+  it("aceita pés abaixo da linha do chão: na caminhada em diagonal, o pé da frente desce na tela", () => {
+    const atlas = parseSpriteAtlas(current());
+    expect(atlas.visibleRows).toBeGreaterThan(atlas.soleRow);
+    expect(() => parseSpriteAtlas({ ...current(), visibleRows: atlas.cell.height + 1 })).toThrow(/visibleRows/);
   });
 
   it("escolhe a animação pela direção e por estar andando", () => {
@@ -69,7 +82,7 @@ describe("atlas por metadados", () => {
   it("recusa arte que não fecha, dizendo o que há de errado", () => {
     const atlas = parseSpriteAtlas(current());
     expect(() => atlasGrid(atlas, 230, 230)).toThrow(/não divide/);
-    expect(() => atlasGrid(atlas, 58, 230)).toThrow(/sai do PNG/);
+    expect(() => atlasGrid(atlas, 127, 992)).toThrow(/sai do PNG/);
     expect(() => parseSpriteAtlas({ ...current(), soleRow: 900 })).toThrow(/soleRow/);
     expect(() => parseSpriteAtlas({ ...current(), animations: {} })).toThrow(/walk-front/);
     expect(() =>
