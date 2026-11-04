@@ -1,13 +1,15 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
-import {
-  BufferGeometry,
-  Euler,
+import type {
   Group,
   InstancedMesh,
+  Mesh} from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Euler,
   Matrix4,
-  Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   PMREMGenerator,
@@ -32,6 +34,7 @@ import type { OfficeBot } from "./officeRoster";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { SeatedFigure } from "./seatedFigure";
+import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
 
 export const FIGURE_URL = "/prototipo/pulse.glb";
@@ -141,16 +144,15 @@ function RaisedWalls({ build, materials }: { build: OfficeBuild; materials: Reco
   );
 }
 
-const LOD_RATIO: Record<GraphicsQuality, number> = { alta: 0.42, leve: 0.2 };
-/** Primitiva acima disto (triângulos) ganha versão reduzida fora da sala em foco. */
-const LOD_MIN_TRIANGLES = 8000;
+/** Fração das ilhas menores que fica fora da sala em foco. */
+const LOD_KEEP: Record<GraphicsQuality, number> = { alta: 0.22, leve: 0.08 };
+/** Só a primitiva realmente cara (o vaso com a terra) ganha versão reduzida. */
+const LOD_MIN_TRIANGLES = 30000;
 
-function reducedGeometry(source: BufferGeometry, ratio: number) {
+function reducedGeometry(source: BufferGeometry, keep: number) {
   const geometry = new BufferGeometry();
   for (const [name, attribute] of Object.entries(source.attributes)) geometry.setAttribute(name, attribute);
-  geometry.setIndex(source.index);
-  const count = source.index?.count ?? source.attributes.position!.count;
-  geometry.setDrawRange(0, Math.floor((count * ratio) / 3) * 3);
+  geometry.setIndex(new BufferAttribute(thinIslands(source.index!, source.attributes.position!, keep), 1));
   geometry.boundingSphere = source.boundingSphere;
   return geometry;
 }
@@ -162,9 +164,8 @@ const euler = new Euler();
 const unit = new Vector3(1, 1, 1);
 
 /**
- * GLBs caros (a planta tem 69 mil triângulos) entram por instância. Fora da sala em
- * foco, as folhas usam uma fração dos índices: as ilhas de folha ficam em sequência no
- * arquivo, então o desenho perde folhas, não deforma.
+ * GLBs caros (a planta tem 69 mil triângulos) entram por instância e dividem a mesma
+ * geometria. Fora da sala em foco, a planta usa a versão sem a maior parte da terra.
  */
 function InstancedProp({ url, placements, quality }: { url: string; placements: PropPlacement[]; quality: GraphicsQuality }) {
   const { scene } = useGLTF(url);
@@ -187,7 +188,7 @@ function InstancedProp({ url, placements, quality }: { url: string; placements: 
   const lods = useMemo(
     () => parts.map((part) => {
       const triangles = (part.geometry.index?.count ?? 0) / 3;
-      return triangles > LOD_MIN_TRIANGLES ? reducedGeometry(part.geometry, LOD_RATIO[quality]) : part.geometry;
+      return triangles > LOD_MIN_TRIANGLES ? reducedGeometry(part.geometry, LOD_KEEP[quality]) : part.geometry;
     }),
     [parts, quality],
   );

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { Box3, Vector3, type AnimationClip, type Object3D, type SkinnedMesh } from "three";
+import { Box3, BufferAttribute, Vector3, type AnimationClip, type Object3D, type SkinnedMesh } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -33,6 +33,7 @@ import {
   zoomViewAt,
 } from "@/world/office/officeCamera";
 import { SeatedFigure } from "@/world/office/seatedFigure";
+import { thinIslands } from "@/world/office/thinIslands";
 import { DESK_REACH } from "@/world/office/officeLayout";
 
 const overlaps = (a: OfficeBounds, b: OfficeBounds) => a.minX < b.maxX - 1e-6 && a.maxX > b.minX + 1e-6 && a.minZ < b.maxZ - 1e-6 && a.maxZ > b.minZ + 1e-6;
@@ -132,6 +133,31 @@ describe("mobília compartilhada", () => {
         }
       }
     }
+  });
+});
+
+describe("redução da planta", () => {
+  it("mantém a maior ilha inteira e tira uma fração das pequenas, sem quebrar triângulo", () => {
+    // Uma ilha grande de 4 triângulos e 10 ilhas de 1 triângulo, sem vértice em comum.
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const quad = () => {
+      const base = positions.length / 3;
+      positions.push(0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0.5, 0.5, 1);
+      indices.push(base, base + 1, base + 4, base + 1, base + 2, base + 4, base + 2, base + 3, base + 4, base + 3, base, base + 4);
+    };
+    quad();
+    for (let i = 0; i < 10; i += 1) {
+      const base = positions.length / 3;
+      positions.push(10, 0, i, 11, 0, i, 10, 1, i);
+      indices.push(base, base + 1, base + 2);
+    }
+    const kept = thinIslands(new BufferAttribute(new Uint32Array(indices), 1), new BufferAttribute(new Float32Array(positions), 3), 0.3);
+    expect(kept.length % 3).toBe(0);
+    expect([...kept.slice(0, 12)]).toEqual(indices.slice(0, 12));
+    const small = (kept.length - 12) / 3;
+    expect(small).toBeGreaterThanOrEqual(2);
+    expect(small).toBeLessThanOrEqual(4);
   });
 });
 
