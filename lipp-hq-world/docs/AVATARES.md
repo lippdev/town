@@ -126,7 +126,7 @@ Salvar em outra aba já atualiza o escritório aberto.
   contra os `footprints` que `buildOffice()` gera. Pessoas não desviam umas das outras.
 - **Movimento reduzido.** O comando vai direto ao fim, sem andar e sem piscar.
 - **Capacidade.** Seis no hall, uma para cada cadeira da bancada. Além disso, a pessoa segue
-  salva e listada, sem corpo na cena, porque cada uma soma entre 30 e 70 mil triângulos.
+  salva e listada, sem corpo na cena, porque cada uma soma de 30 a 100 mil triângulos, conforme a roupa.
 - **Escala.** O arquivo tem 2,05 m, e metade é cabeça: no tamanho original ela cobria quem
   estava atrás. No escritório a pessoa fica com 1,48 m. Sentada, os pés ficam soltos: o
   assento é alto para estas pernas.
