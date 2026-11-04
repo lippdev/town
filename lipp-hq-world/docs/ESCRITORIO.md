@@ -187,7 +187,41 @@ no mundo durante o apoio e só avança durante a fase elevada. As pegadas conver
 a postura de repouso no fim do trajeto. A preferência por
 movimento reduzido remove a passada e gesticulação secundária, mantendo o percurso.
 
-Limites desta entrega: somente Pulse → Scout, com rota autoral; sem navegação genérica,
-fila de visitas, reunião coletiva ou vínculo com a automação das 17h30. Caminhada e gestos
+A visita individual continua sendo Pulse → Scout, com rota autoral. As simulações
+coletivas estão descritas abaixo; ainda não há navegação genérica, fila de eventos
+ou vínculo com a automação das 17h30. Caminhada e gestos
 são uma primeira interpretação procedural para refinar visualmente; não são clipes novos
 no GLB. Compilação e testes da sequência não substituem a avaliação visual do movimento.
+
+
+## Simulações coletivas
+
+O seletor **Cena**, no painel **Simulações do escritório**, oferece:
+
+- **Visita · Pulse → Scout:** a conversa individual já existente.
+- **Conversa a três:** Pulse, Scout e Atlas vão à sala de reunião.
+- **Briefing · equipe completa:** os sete bots vão à sala de reunião.
+
+Regra visual inicial: duas pessoas usam a sala de quem recebe; três ou mais usam a
+sala de reunião. Nesta versão são roteiros fixos, não uma decisão inferida do Hermes.
+O briefing pode ser iniciado a qualquer hora, sem esperar as 17h30. Não dispara a
+automação real nem envia mensagens.
+
+Cada participante levanta, percorre uma rota pelas portas e corredores, ocupa uma
+cadeira reservada e aguarda os demais. A conversa começa com todos sentados, alterna
+fala e escuta e termina com o retorno aos postos. A cabeceira acrescenta a sétima
+cadeira, ocupada pelo Forge no briefing; ela não aumenta os 19 postos atribuíveis da
+frota. A reserva temporal dos trajetos espaça as partidas, evitando sobreposição dos
+centros dos personagens e mantendo a caminhada contínua durante o percurso.
+
+O ensaio usa o mesmo relógio, pausa e ritmo padrão de 1,5× da visita. **Reiniciar**
+retorna ao começo; **Encerrar ensaio** devolve imediatamente todos aos postos para
+permitir a escolha de outra cena. Esses dois comandos de laboratório interrompem a
+coreografia deliberadamente. As novas cenas mantêm o andar inteiro enquadrado ao
+iniciar; é possível focar a sala de reunião manualmente.
+
+Implementação em `officeMeeting.ts`: rotas autorais, cadeiras fixas, horários de ida e
+volta e gestos sentados. Não há desvio reativo de obstáculos nem reuniões simultâneas.
+Os testes específicos verificam reunião e retorno, separação dos participantes, vãos
+das portas e folga de 20 cm dos volumes de móveis registrados na planta. Esses volumes
+não cobrem cada detalhe decorativo; a naturalidade visual continua sendo refinada no demo.
