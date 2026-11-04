@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FORWARD, RIGHT, UP, worldToScreen } from "@/world/office/officeCamera";
-import { floorShadowFactor, screenGroundAxes, shadowAxes, SUN, towardCamera } from "@/world/office/officeSun";
+import { cameraFacingLight, floorShadowFactor, screenGroundAxes, shadowAxes, SUN, towardCamera } from "@/world/office/officeSun";
 import { pixelSnapOffset } from "@/world/office/spriteSnap";
 
 const dot = (a: readonly number[], b: readonly number[]) => a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
@@ -82,6 +82,17 @@ describe("encaixe na grade de pixels", () => {
         expect(Math.abs(after.x - before.x) * scale).toBeLessThanOrEqual(0.5 + 1e-6);
         expect(Math.abs(after.y - before.y) * scale).toBeLessThanOrEqual(0.5 + 1e-6);
       }
+    }
+  });
+});
+
+describe("luz de referência do personagem", () => {
+  it("é uma luz positiva e neutra o bastante para a arte: nenhum canal foge da média por mais de 40%", () => {
+    const light = cameraFacingLight();
+    const average = (light[0] + light[1] + light[2]) / 3;
+    for (const channel of light) {
+      expect(channel).toBeGreaterThan(0);
+      expect(Math.abs(channel - average) / average).toBeLessThan(0.4);
     }
   });
 });

@@ -11,7 +11,7 @@ export const SUN = { position: [9.6, 15, -15] as Position, intensity: 3.3, color
 export const FILL = { position: [3, 18, 24] as Position, intensity: 0.8, color: "#bccff2" };
 export const HEMISPHERE = { sky: "#cad9f5", ground: "#5a4131", intensity: 0.55 };
 export const ENVIRONMENT_INTENSITY = 0.45;
-/** Quanto o ambiente entrega ao chão; ele vem de textura, então é medido, não calculado. */
+/** Quanto o ambiente entrega ao chão. Ele vem de textura: este valor é uma estimativa, não uma medida, e a sombra do personagem depende dele. */
 export const ENVIRONMENT_ON_FLOOR: Position = [0.2, 0.2, 0.2];
 
 export interface GroundVector {
@@ -42,6 +42,36 @@ export function floorShadowFactor(): [number, number, number] {
     const others = fill[channel] + sky[channel] + ENVIRONMENT_ON_FLOOR[index]!;
     return others / (others + sun[channel]);
   });
+  return [r!, g!, b!];
+}
+
+/** Normal na beira do quadro do personagem, para o lado da tela: um cilindro bem aberto, de luz leve. */
+export const CYLINDER_EDGE = 0.62;
+
+/**
+ * A luz difusa que a arte do personagem supõe: a média, ao longo da largura do quadro, do que
+ * chega a uma superfície em pé virada para a câmera e curvada como um cilindro (a normal abre
+ * até `CYLINDER_EDGE` nas bordas), com a sombra do sol fora. Em linear, já dividida por π,
+ * como o material a soma. O ambiente vem de textura, então entra pela mesma medida do chão.
+ */
+export function cameraFacingLight(): [number, number, number] {
+  const length = Math.hypot(FORWARD[0], FORWARD[2]);
+  const front: Position = [-FORWARD[0] / length, 0, -FORWARD[2] / length];
+  const front2 = Math.sqrt(1 - CYLINDER_EDGE * CYLINDER_EDGE);
+  const total = new Color(0, 0, 0);
+  const samples = 9;
+  for (let i = 0; i < samples; i += 1) {
+    const side = (i / (samples - 1)) * 2 - 1;
+    const normal: Position = [front[0] * front2 + RIGHT[0] * side * CYLINDER_EDGE, 0, front[2] * front2 + RIGHT[2] * side * CYLINDER_EDGE];
+    const norm = Math.hypot(normal[0], normal[2]);
+    const facing = (position: Position) => Math.max(0, (normal[0] * position[0] + normal[2] * position[2]) / (norm * Math.hypot(position[0], position[1], position[2])));
+    total.add(new Color(SUN.color).multiplyScalar((SUN.intensity * facing(SUN.position)) / Math.PI / samples));
+    total.add(new Color(FILL.color).multiplyScalar((FILL.intensity * facing(FILL.position)) / Math.PI / samples));
+  }
+  // numa parede em pé, o hemisfério é a meia-soma do céu e do chão
+  const hemisphere = new Color(HEMISPHERE.sky).lerp(new Color(HEMISPHERE.ground), 0.5).multiplyScalar(HEMISPHERE.intensity / Math.PI);
+  const channels = ["r", "g", "b"] as const;
+  const [r, g, b] = channels.map((channel, index) => total[channel] + hemisphere[channel] + ENVIRONMENT_ON_FLOOR[index]!);
   return [r!, g!, b!];
 }
 
