@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advancePixelWalk, fitScale, initialPixelWalk, PIXEL_ROUTE, pixelPose } from "@/pixel-office/pixelWalk";
+import { advancePixelWalk, initialPixelWalk, PIXEL_ROUTE, pixelPose } from "@/pixel-office/pixelWalk";
 
 describe("passeio em pixel art", () => {
   it("começa parado na primeira parada", () => {
@@ -42,13 +42,5 @@ describe("passeio em pixel art", () => {
     const state = advancePixelWalk(initialPixelWalk(), 500);
     expect(state.leg).toBeLessThan(PIXEL_ROUTE.length);
     expect(Number.isFinite(state.meters)).toBe(true);
-  });
-});
-
-describe("escala do cenário", () => {
-  it("é sempre inteira, para todos os blocos saírem iguais", () => {
-    expect(fitScale(1440, 860, 640, 427)).toBe(2);
-    expect(fitScale(2880, 1720, 640, 427)).toBe(4);
-    expect(fitScale(500, 300, 640, 427)).toBe(1);
   });
 });

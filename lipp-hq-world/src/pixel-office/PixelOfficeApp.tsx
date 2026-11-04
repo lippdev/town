@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { animationCell, animationNameFor, parseSpriteAtlas, type SpriteAtlas } from "@/world/office/spriteAtlas";
-import { advancePixelWalk, fitScale, initialPixelWalk, pixelPose } from "./pixelWalk";
+import { clampView, MAX_ZOOM_OVER_FIT, resizeView, zoomAround, zoomLevel, type OfficeView, type Size } from "./officeView";
+import { advancePixelWalk, initialPixelWalk, pixelPose } from "./pixelWalk";
 import "./pixelOffice.css";
 
-const SCENE = { width: 640, height: 427 };
-const SCENE_URL = "/escritorio/cenario.png";
-const ATLAS_URL = "/characters/filipe/pixel/walk.json";
-const ATLAS_IMAGE_URL = "/characters/filipe/pixel/walk.png";
-const MAX_EXTRA_ZOOM = 3;
-const SHADOW_ROWS = [6, 9, 10, 9, 6];
+/** Tamanho lógico do cenário: a rota e a escala do Filipe são medidas nele. */
+const SCENE: Size = { width: 1536, height: 1024 };
+const SCENE_URL = "/escritorio/cenario-fonte.png";
+const ATLAS_URL = "/characters/filipe/walk.json";
+const ATLAS_IMAGE_URL = "/characters/filipe/walk.png";
+/** Altura do Filipe em pé, em pixels do cenário: a proporção certa com os móveis. */
+const FIGURE_HEIGHT = 134.4;
+/** Acima disso a imagem não ganha detalhe, só gasta memória e GPU. */
+const MAX_PIXEL_RATIO = 2;
+const ZOOM_STEP = 1.25;
+const SHADOW_ROWS = [14, 22, 24, 22, 14];
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -25,34 +31,36 @@ interface Art {
   atlas: SpriteAtlas;
 }
 
-function draw(context: CanvasRenderingContext2D, art: Art, walk: ReturnType<typeof initialPixelWalk>) {
+function draw(context: CanvasRenderingContext2D, art: Art, walk: ReturnType<typeof initialPixelWalk>, view: OfficeView, ratio: number) {
   const pose = pixelPose(walk);
   const { atlas, figure } = art;
   const animation = atlas.animations[animationNameFor(pose.walking, pose.facing)];
   const cell = animationCell(animation, { distance: walk.meters, time: walk.time });
-  const x = Math.round(pose.x);
-  const y = Math.round(pose.y);
-  context.drawImage(art.scene, 0, 0);
-  context.fillStyle = "rgba(38, 24, 26, 0.32)";
-  SHADOW_ROWS.forEach((width, row) => context.fillRect(x - width, y - 2 + row, width * 2, 1));
   const { width, height } = atlas.cell;
-  const left = x - Math.floor(width / 2);
-  const top = y - atlas.soleRow;
-  context.save();
-  if (pose.mirrored) {
-    context.translate(left * 2 + width, 0);
-    context.scale(-1, 1);
-  }
-  context.drawImage(figure, cell.column * width, cell.row * height, width, height, left, top, width, height);
-  context.restore();
+  const scale = FIGURE_HEIGHT / atlas.visibleRows;
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+  context.setTransform(view.zoom * ratio, 0, 0, view.zoom * ratio, view.x * ratio, view.y * ratio);
+  // redimensionar o canvas zera o contexto: a suavização é ligada a cada desenho
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(art.scene, 0, 0, SCENE.width, SCENE.height);
+  context.translate(pose.x, pose.y);
+  context.fillStyle = "rgba(38, 24, 26, 0.32)";
+  SHADOW_ROWS.forEach((half, row) => context.fillRect(-half, (row - 2) * 2.4, half * 2, 2.4));
+  if (pose.mirrored) context.scale(-1, 1);
+  context.drawImage(figure, cell.column * width, cell.row * height, width, height, (-width / 2) * scale, -atlas.soleRow * scale, width * scale, height * scale);
 }
 
-/** Escritório em pixel art: um canvas 2D ampliado por fator inteiro, sem 3D. */
+/** Escritório em canvas 2D, sem 3D: as artes originais, com suavização e zoom contínuo. */
 export function PixelOfficeApp() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState({ scale: 1, fit: 1, x: 0, y: 0 });
+  // arrastar e dar zoom só mexem nestes dois: o React só redesenha o rótulo do zoom
+  const view = useRef<OfficeView | null>(null);
+  const space = useRef<Size | null>(null);
+  const [level, setLevel] = useState(1);
 
   useEffect(() => {
     let alive = true;
@@ -67,9 +75,9 @@ export function PixelOfficeApp() {
       }),
     ])
       .then(([scene, figure, raw]) => {
-        const context = canvas.current?.getContext("2d");
-        if (!alive || !context) return;
-        context.imageSmoothingEnabled = false;
+        const element = canvas.current;
+        const context = element?.getContext("2d");
+        if (!alive || !element || !context) return;
         const art = { scene, figure, atlas: parseSpriteAtlas(raw) };
         let walk = initialPixelWalk();
         let last = performance.now();
@@ -78,16 +86,23 @@ export function PixelOfficeApp() {
           // aba em segundo plano devolve um intervalo enorme: não vale como caminhada
           if (!reduced) walk = advancePixelWalk(walk, Math.min((now - last) / 1000, 0.1));
           last = now;
+          frame = requestAnimationFrame(tick);
+          if (!view.current || !space.current) return;
+          const ratio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+          const width = Math.round(space.current.width * ratio);
+          const height = Math.round(space.current.height * ratio);
+          if (element.width !== width) element.width = width;
+          if (element.height !== height) element.height = height;
           const pose = pixelPose(walk);
           const animation = art.atlas.animations[animationNameFor(pose.walking, pose.facing)];
           const cell = animationCell(animation, { distance: walk.meters, time: walk.time });
           // só redesenha quando algo muda: parado, quase não gasta CPU
-          const key = `${Math.round(pose.x)},${Math.round(pose.y)},${cell.row},${cell.column},${pose.mirrored}`;
+          const { zoom, x, y } = view.current;
+          const key = `${pose.x},${pose.y},${cell.row},${cell.column},${pose.mirrored},${zoom},${x},${y},${width},${height}`;
           if (key !== drawn) {
-            draw(context, art, walk);
+            draw(context, art, walk, view.current, width / space.current.width);
             drawn = key;
           }
-          frame = requestAnimationFrame(tick);
         };
         frame = requestAnimationFrame(tick);
       })
@@ -104,9 +119,11 @@ export function PixelOfficeApp() {
     const element = stage.current;
     if (!element) return;
     const place = () => {
-      const ratio = window.devicePixelRatio;
-      const fit = fitScale(element.clientWidth * ratio, element.clientHeight * ratio, SCENE.width, SCENE.height);
-      setView((current) => clampView({ ...current, fit, scale: Math.max(fit, Math.min(current.scale, fit + MAX_EXTRA_ZOOM)) }, element));
+      const next = { width: element.clientWidth, height: element.clientHeight };
+      if (next.width === 0 || next.height === 0) return;
+      view.current = resizeView(view.current, SCENE, space.current, next);
+      space.current = next;
+      setLevel(zoomLevel(view.current, SCENE, next));
     };
     place();
     const observer = new ResizeObserver(place);
@@ -114,25 +131,19 @@ export function PixelOfficeApp() {
     return () => observer.disconnect();
   }, []);
 
-  const zoom = (change: number) => {
-    const element = stage.current;
-    if (!element) return;
-    setView((current) => {
-      const scale = Math.max(current.fit, Math.min(current.scale + change, current.fit + MAX_EXTRA_ZOOM));
-      const ratio = scale / current.scale;
-      const middleX = element.clientWidth / 2;
-      const middleY = element.clientHeight / 2;
-      return clampView({ ...current, scale, x: middleX - (middleX - current.x) * ratio, y: middleY - (middleY - current.y) * ratio }, element);
-    });
+  const zoom = (factor: number) => {
+    if (!view.current || !space.current) return;
+    const middle = { x: space.current.width / 2, y: space.current.height / 2 };
+    view.current = zoomAround(view.current, view.current.zoom * factor, middle, SCENE, space.current);
+    setLevel(zoomLevel(view.current, SCENE, space.current));
   };
 
   const drag = useRef<{ x: number; y: number } | null>(null);
-  const ratio = window.devicePixelRatio;
   return (
     <div className="pixel-office">
       <header className="pixel-office-bar">
         <strong>Lipp HQ</strong>
-        <span>Escritório em pixel art: teste, só com o Filipe</span>
+        <span>Escritório: teste, só com o Filipe</span>
       </header>
       <div
         className="pixel-office-stage"
@@ -142,44 +153,26 @@ export function PixelOfficeApp() {
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
-          if (!drag.current || !stage.current) return;
-          const dx = event.clientX - drag.current.x;
-          const dy = event.clientY - drag.current.y;
+          if (!drag.current || !view.current || !space.current) return;
+          const { zoom: current, x, y } = view.current;
+          view.current = clampView({ zoom: current, x: x + event.clientX - drag.current.x, y: y + event.clientY - drag.current.y }, SCENE, space.current);
           drag.current = { x: event.clientX, y: event.clientY };
-          const element = stage.current;
-          setView((current) => clampView({ ...current, x: current.x + dx, y: current.y + dy }, element));
         }}
         onPointerUp={() => {
           drag.current = null;
         }}
+        onPointerCancel={() => {
+          drag.current = null;
+        }}
       >
-        <canvas
-          ref={canvas}
-          width={SCENE.width}
-          height={SCENE.height}
-          style={{
-            width: (SCENE.width * view.scale) / ratio,
-            height: (SCENE.height * view.scale) / ratio,
-            transform: `translate(${Math.round(view.x * ratio) / ratio}px, ${Math.round(view.y * ratio) / ratio}px)`,
-          }}
-        />
+        <canvas ref={canvas} />
         {error && <p className="pixel-office-error">{error}</p>}
       </div>
       <div className="pixel-office-zoom" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Afastar" disabled={view.scale <= view.fit} onClick={() => zoom(-1)}>−</button>
-        <span>{view.scale}×</span>
-        <button type="button" aria-label="Aproximar" disabled={view.scale >= view.fit + MAX_EXTRA_ZOOM} onClick={() => zoom(1)}>+</button>
+        <button type="button" aria-label="Afastar" disabled={level <= 1.001} onClick={() => zoom(1 / ZOOM_STEP)}>−</button>
+        <span>{Math.round(level * 100)}%</span>
+        <button type="button" aria-label="Aproximar" disabled={level >= MAX_ZOOM_OVER_FIT - 0.001} onClick={() => zoom(ZOOM_STEP)}>+</button>
       </div>
     </div>
   );
-}
-
-/** Menor que a tela, centraliza; maior, não deixa arrastar para fora do cenário. */
-function clampView<T extends { scale: number; x: number; y: number }>(view: T, element: HTMLElement): T {
-  const ratio = window.devicePixelRatio;
-  const axis = (position: number, scene: number, space: number) => {
-    const size = (scene * view.scale) / ratio;
-    return size <= space ? (space - size) / 2 : Math.min(0, Math.max(space - size, position));
-  };
-  return { ...view, x: axis(view.x, SCENE.width, element.clientWidth), y: axis(view.y, SCENE.height, element.clientHeight) };
 }

@@ -1,5 +1,5 @@
 /**
- * Passeio do Filipe no escritório em pixel art, em pixels do cenário. Sem DOM, para ser
+ * Passeio do Filipe no escritório, em pixels da imagem do cenário. Sem DOM, para ser
  * testado sozinho. Vai e volta pelo mesmo caminho, em diagonais 2:1 sobre o piso livre: pontos
  * à frente dos móveis, então ele nunca precisa ficar atrás de nada.
  */
@@ -12,17 +12,17 @@ export interface PixelStop {
 }
 
 const OUTWARD: readonly PixelStop[] = [
-  { x: 333.3, y: 195.8, pause: 1.6 },
-  { x: 354.2, y: 206.2, pause: 0 },
-  { x: 320.8, y: 222.9, pause: 0.8 },
-  { x: 391.7, y: 258.3, pause: 0 },
-  { x: 420.8, y: 243.8, pause: 1.6 },
+  { x: 800, y: 470, pause: 1.6 },
+  { x: 850, y: 495, pause: 0 },
+  { x: 770, y: 535, pause: 0.8 },
+  { x: 940, y: 620, pause: 0 },
+  { x: 1010, y: 585, pause: 1.6 },
 ];
 
 export const PIXEL_ROUTE: readonly PixelStop[] = [...OUTWARD, ...OUTWARD.slice(1, -1).reverse()];
 
-/** A caminhada avança 1,98 pixel na horizontal por quadro: é o que mantém o pé parado no chão. */
-const METERS_PER_PIXEL = 0.1133 / 1.98 / Math.hypot(1, 0.5);
+/** A caminhada avança 4,75 pixels na horizontal por quadro: é o que mantém o pé parado no chão. */
+const METERS_PER_PIXEL = 0.1133 / 4.75 / Math.hypot(1, 0.5);
 const SPEED_PIXELS = 1.2 / METERS_PER_PIXEL;
 
 export interface PixelWalkState {
@@ -90,9 +90,4 @@ export function pixelPose(state: PixelWalkState): PixelPose {
     facing: heading.to.y > heading.from.y ? "front" : "back",
     mirrored: heading.to.x < heading.from.x,
   };
-}
-
-/** Pixels físicos por pixel do cenário: sempre inteiro, é o que deixa todos os blocos iguais. */
-export function fitScale(viewWidth: number, viewHeight: number, sceneWidth: number, sceneHeight: number): number {
-  return Math.max(1, Math.floor(Math.min(viewWidth / sceneWidth, viewHeight / sceneHeight)));
 }
