@@ -7,6 +7,8 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, pixelRatioFor } from "@/world/quality";
 import { OfficeScene } from "@/world/office/OfficeScene";
 import { OfficeQa } from "@/world/office/OfficeQa";
+import { AVATAR_STORAGE_KEY, browserStorage, loadAvatars } from "@/avatar/human/persistence";
+import { placeHumans } from "@/world/office/officeHumans";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
@@ -29,12 +31,38 @@ function useRoster(mode: OfficeMode) {
   }, [mode, fleet]);
 }
 
+/**
+ * Pessoas salvas no editor. Só na demonstração: a frota real é do Hermes, e gente criada à
+ * mão no meio dela confundiria quem lê o estado. Salvar em outra aba já reflete aqui.
+ */
+function useHumans(mode: OfficeMode) {
+  const seating = useOfficeStore((state) => state.seating);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === AVATAR_STORAGE_KEY || event.key === null) setVersion((value) => value + 1);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  useEffect(() => {
+    const store = useOfficeStore.getState();
+    if (mode !== "demo") {
+      store.setHumans([], []);
+      return;
+    }
+    const { placed, waiting } = placeHumans(loadAvatars(browserStorage()).doc.presets, Object.values(seating.seats));
+    store.setHumans(placed, waiting.map(({ id, name }) => ({ id, name })));
+  }, [mode, seating, version]);
+}
+
 /** Escritório completo: página própria, sem o HUD nem a cena antiga. */
 export function OfficeApp({ mode }: { mode: OfficeMode }) {
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   const dpr = pixelRatioFor(quality, window.devicePixelRatio);
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   useRoster(mode);
+  useHumans(mode);
   useEffect(() => useOfficeStore.getState().setMode(mode), [mode]);
 
   return (

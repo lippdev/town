@@ -33,6 +33,7 @@ import { DESK_TOP, FIGURE_SCALE, buildOffice, type OfficeBuild } from "./officeR
 import type { OfficeBot } from "./officeRoster";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
+import { OfficeHumans } from "./HumanBodies";
 import { SeatedFigure } from "./seatedFigure";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
@@ -455,6 +456,9 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
         <Suspense fallback={null}>
           <OfficeFigures />
         </Suspense>
+      </PartBoundary>
+      <PartBoundary onError={(message) => useOfficeStore.getState().setHumansError(message)}>
+        <OfficeHumans />
       </PartBoundary>
       <SeatMarker />
       <RoomGlow />

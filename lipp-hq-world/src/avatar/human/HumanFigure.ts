@@ -47,6 +47,7 @@ export function loadHumanBase(): Promise<HumanBase> {
 
 export type HumanMotion = "idle" | "walk" | "sit" | "stand" | PhotoPose;
 
+const SHADOWLESS: ReadonlySet<CategoryId> = new Set(["eyes", "eyebrow", "nose", "face", "earring", "glasses", "facialHair"]);
 const FADE = 0.25;
 const BLINK_EVERY = 4.1;
 const BLINK_LENGTH = 0.14;
@@ -172,7 +173,9 @@ export class HumanFigure {
       }
       const mesh = new SkinnedMesh(source.geometry, material);
       mesh.name = source.name;
-      mesh.castShadow = true;
+      // Peça miúda não aparece na sombra e custaria uma chamada de desenho a mais.
+      mesh.castShadow = !SHADOWLESS.has(part.category);
+      mesh.userData.keepShadow = true;
       mesh.receiveShadow = true;
       // A caixa de repouso não acompanha a pose, e refazê-la pelos vértices custa caro.
       mesh.frustumCulled = false;

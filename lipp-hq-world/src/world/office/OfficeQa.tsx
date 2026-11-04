@@ -4,7 +4,7 @@ import { Vector3, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
-import { officeRuntime, useOfficeStore } from "./officeStore";
+import { humanActors, humanFigures, officeRuntime, useOfficeStore } from "./officeStore";
 import { seatedFigures } from "./OfficeScene";
 
 declare global {
@@ -54,7 +54,23 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         seats: store.seating.seats,
         unseated: store.seating.unseated,
         rigs: [...seatedFigures.keys()].sort(),
+        humans: store.humans.map((human) => ({
+          id: human.id,
+          name: human.name,
+          phase: store.humanPhases[human.id] ?? null,
+          position: humanActors.get(human.id)?.position ?? null,
+          heading: humanActors.get(human.id)?.heading ?? null,
+          worn: humanFigures.get(human.id)?.snapshot() ?? null,
+        })),
+        humansWaiting: store.humansWaiting,
+        humansError: store.humansError,
+        selectedHumanId: store.selectedHumanId,
       };
+    },
+    /** Pixel do meio da pessoa, onde ela estiver agora. */
+    humanPoint: (id: string) => {
+      const position = humanActors.get(id)?.position;
+      return position ? worldToScreen([position.x, position.y + 0.7, position.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
     /** Pixel do meio da figura na tela, para o harness clicar nela. */
     botPoint: (botId: string) => {

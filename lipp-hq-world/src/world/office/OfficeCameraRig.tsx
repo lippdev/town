@@ -14,7 +14,7 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { FLOOR_MARGIN, currentInsets, floorFit, officeRuntime, useOfficeStore, zoomStep } from "./officeStore";
+import { FLOOR_MARGIN, currentInsets, floorFit, humanActors, officeRuntime, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 const DISTANCE = 45;
@@ -33,11 +33,26 @@ function botBoxes(onlyRoom?: string): PickBox[] {
   });
 }
 
+/** Pessoa anda: a caixa dela sai de onde ela está agora. */
+function humanBoxes(onlyRoom?: string): PickBox[] {
+  if (onlyRoom && onlyRoom !== "hall") return [];
+  return [...humanActors].map(([id, actor]) => {
+    const { x, z } = actor.position;
+    return { id, minX: x - 0.3, maxX: x + 0.3, minY: 0, maxY: 1.55, minZ: z - 0.3, maxZ: z + 0.3 };
+  });
+}
+
+/** Separa a resposta do clique: a mesma lista de caixas serve para bot e pessoa. */
+function who(id: string | null): { botId: string | null; humanId: string | null } {
+  if (id && humanActors.has(id)) return { botId: null, humanId: id };
+  return { botId: id, humanId: null };
+}
+
 /**
  * O que está sob o pixel. A parede alta da sala em foco é sólida: o que aparece nela é a
  * própria sala, nunca a sala ou o bot escondidos atrás.
  */
-function pickAt(px: number, py: number): { botId: string | null; roomId: string | null } {
+function pickAt(px: number, py: number): { botId: string | null; humanId: string | null; roomId: string | null } {
   const { view, viewport } = officeRuntime;
   const focused = useOfficeStore.getState().focusedRoomId;
   if (focused) {
@@ -46,10 +61,10 @@ function pickAt(px: number, py: number): { botId: string | null; roomId: string 
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.maxX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.minZ },
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.minX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.maxZ },
     ]);
-    if (wall) return { botId: pickBoxAt(px, py, view, viewport, botBoxes(focused)), roomId: wall };
+    if (wall) return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(focused), ...humanBoxes(focused)])), roomId: wall };
   }
   const ground = screenToGround(px, py, view, viewport);
-  return { botId: pickBoxAt(px, py, view, viewport, botBoxes()), roomId: roomAt(ground.x, ground.z)?.id ?? null };
+  return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(), ...humanBoxes()])), roomId: roomAt(ground.x, ground.z)?.id ?? null };
 }
 
 /**
@@ -124,9 +139,9 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const hover = (point: { x: number; y: number }) => {
-      const { botId, roomId } = pickAt(point.x, point.y);
-      useOfficeStore.getState().setHovered(roomId, botId);
-      stage.style.cursor = botId || roomId ? "pointer" : "grab";
+      const { botId, humanId, roomId } = pickAt(point.x, point.y);
+      useOfficeStore.getState().setHovered(roomId, botId, humanId);
+      stage.style.cursor = botId || humanId || roomId ? "pointer" : "grab";
     };
 
     const onMove = (event: PointerEvent) => {
@@ -164,16 +179,24 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (dragged || pointers.size > 0) return;
       const point = local(event);
       const store = useOfficeStore.getState();
-      const { botId, roomId } = pickAt(point.x, point.y);
+      const { botId, humanId, roomId } = pickAt(point.x, point.y);
       if (botId) {
         store.selectBot(botId);
         return;
       }
+      if (humanId) {
+        store.selectHuman(humanId);
+        return;
+      }
       if (roomId) {
-        if (roomId !== store.focusedRoomId) useHQStore.getState().clearSelection();
+        if (roomId !== store.focusedRoomId) {
+          useHQStore.getState().clearSelection();
+          store.clearHuman();
+        }
         store.focusRoom(roomId);
       } else {
         useHQStore.getState().clearSelection();
+        store.clearHuman();
       }
     };
 
@@ -200,6 +223,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (event.key === "Escape") {
         // Primeiro fecha a gaveta; só depois volta ao andar.
         if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
+        else if (store.selectedHumanId) store.clearHuman();
         else store.backToFloor();
         return;
       }
