@@ -6,6 +6,7 @@ import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
 import { officeRuntime, useOfficeStore } from "./officeStore";
 import { seatedFigures } from "./OfficeScene";
+import { filipeSpriteQa, type ForcedSpritePose } from "./FilipeDemoSprite";
 
 declare global {
   interface Window {
@@ -66,6 +67,16 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       const room = OFFICE_ROOMS_BY_ID[roomId]!;
       return worldToScreen([room.center.x + localX, 0, room.center.z + localZ], officeRuntime.view, officeRuntime.viewport);
     },
+    /** Sprite do Filipe: para fixar pose e encaixe, e saber onde ele caiu na tela. */
+    sprite: {
+      info: () => ({ ready: filipeSpriteQa.ready, screen: { ...filipeSpriteQa.screen }, buildMs: filipeSpriteQa.buildMs }),
+      force: (pose: ForcedSpritePose | null) => {
+        filipeSpriteQa.forced = pose;
+      },
+      snap: (value: boolean) => {
+        filipeSpriteQa.snap = value;
+      },
+    },
     /** Medidas da figura sentada: pés, quadril e altura, em metros de cena. */
     figureInfo: (botId: string) => {
       const figure = seatedFigures.get(botId);
@@ -87,7 +98,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
   };
 }
 
-/** Só leitura: nada aqui muda a cena. */
+/** Só leitura, fora a pose de teste do sprite. */
 export function OfficeQa() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);

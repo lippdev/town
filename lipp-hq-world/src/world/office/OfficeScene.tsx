@@ -459,7 +459,13 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <OfficeFigures />
         </Suspense>
       </PartBoundary>
-      {mode === "demo" && <Suspense fallback={null}><FilipeDemoSprite /></Suspense>}
+      {mode === "demo" && (
+        <PartBoundary onError={(message) => console.warn("[escritório] Filipe fora da cena:", message)}>
+          <Suspense fallback={null}>
+            <FilipeDemoSprite />
+          </Suspense>
+        </PartBoundary>
+      )}
       <SeatMarker />
       <RoomGlow />
     </>

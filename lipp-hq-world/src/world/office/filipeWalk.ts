@@ -1,6 +1,8 @@
+import type { SpriteFacing } from "./spriteAtlas";
+
 /**
- * Passeio do Filipe no hall da demonstração: pontos de parada e qual quadro do atlas
- * mostrar. Sem Three.js, para ser testado sozinho.
+ * Passeio do Filipe no hall da demonstração: pontos de parada e para onde ele olha.
+ * Os quadros vêm do JSON do atlas. Sem Three.js, para ser testado sozinho.
  */
 
 export interface WalkStop {
@@ -21,11 +23,6 @@ export const WALK_ROUTE: readonly WalkStop[] = [
 ];
 
 export const WALK_SPEED = 1.2;
-/** Metros por quadro: o passo acompanha a distância, então o pé não desliza. */
-export const STEP_LENGTH = 0.2;
-/** Quadro de passagem, com as pernas juntas: é a pose de parado. */
-const STANDING_FRAME = 1;
-const FRAMES = 4;
 
 export interface WalkState {
   /** Parada de onde ele saiu. */
@@ -75,11 +72,10 @@ export function advanceWalk(state: WalkState, delta: number): WalkState {
 export interface WalkPose {
   x: number;
   z: number;
-  /** Linha do atlas: 0 de frente, 1 de costas. */
-  row: 0 | 1;
+  /** Qual arte mostrar; os quadros de cada uma vêm do JSON do atlas. */
+  facing: SpriteFacing;
   /** A arte olha para a direita da tela; para a esquerda, ela é espelhada. */
   mirrored: boolean;
-  frame: number;
   walking: boolean;
 }
 
@@ -91,19 +87,18 @@ export function walkPose(state: WalkState): WalkPose {
   const { from, to, length } = legOf(state);
   const walking = state.waiting <= 0;
   // parado, ele continua olhando para onde vinha andando
-  const facing = walking ? { from, to } : legOf({ ...state, leg: (state.leg + WALK_ROUTE.length - 1) % WALK_ROUTE.length });
-  const dx = facing.to.x - facing.from.x;
-  const dz = facing.to.z - facing.from.z;
+  const heading = walking ? { from, to } : legOf({ ...state, leg: (state.leg + WALK_ROUTE.length - 1) % WALK_ROUTE.length });
+  const dx = heading.to.x - heading.from.x;
+  const dz = heading.to.z - heading.from.z;
   const alongX = Math.abs(dx) >= Math.abs(dz);
-  const row = (alongX ? dx > 0 : dz > 0) ? 0 : 1;
+  const facing = (alongX ? dx > 0 : dz > 0) ? "front" : "back";
   const mirrored = alongX ? dx < 0 : dz > 0;
   const k = state.travelled / length;
   return {
     x: from.x + (to.x - from.x) * k,
     z: from.z + (to.z - from.z) * k,
-    row,
+    facing,
     mirrored,
-    frame: walking ? Math.floor(state.distance / STEP_LENGTH) % FRAMES : STANDING_FRAME,
     walking,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceWalk, initialWalk, STEP_LENGTH, WALK_ROUTE, WALK_SPEED, walkPose } from "@/world/office/filipeWalk";
+import { advanceWalk, initialWalk, WALK_ROUTE, WALK_SPEED, walkPose } from "@/world/office/filipeWalk";
 
 function run(seconds: number, dt = 1 / 60) {
   let state = initialWalk();
@@ -15,9 +15,9 @@ const lap = WALK_ROUTE.reduce((sum, stop, i) => {
 }, 0);
 
 describe("passeio do Filipe", () => {
-  it("começa parado na primeira parada, na pose de pernas juntas", () => {
+  it("começa parado na primeira parada", () => {
     const pose = walkPose(initialWalk());
-    expect(pose).toMatchObject({ x: WALK_ROUTE[0]!.x, z: WALK_ROUTE[0]!.z, walking: false, frame: 1 });
+    expect(pose).toMatchObject({ x: WALK_ROUTE[0]!.x, z: WALK_ROUTE[0]!.z, walking: false });
   });
 
   it("escolhe a arte certa para cada diagonal da tela", () => {
@@ -35,18 +35,16 @@ describe("passeio do Filipe", () => {
       const right = dx - dz > 0;
       const down = dx + dz > 0;
       expect(pose.mirrored).toBe(!right);
-      expect(pose.row).toBe(down ? 0 : 1);
-      seen.add(`${pose.row}${pose.mirrored}`);
+      expect(pose.facing).toBe(down ? "front" : "back");
+      seen.add(`${pose.facing}${pose.mirrored}`);
     }
     expect(seen.size).toBe(4);
   });
 
-  it("dá um quadro a cada passo, sem depender da taxa de quadros", () => {
+  it("anda a mesma distância, sem depender da taxa de quadros", () => {
     const slow = run(5, 1 / 20);
     const fast = run(5, 1 / 120);
     expect(slow.distance).toBeCloseTo(fast.distance, 1);
-    const state = { ...initialWalk(), waiting: 0, distance: STEP_LENGTH * 2.5 };
-    expect(walkPose(state).frame).toBe(2);
   });
 
   it("não para nem descontrola com um quadro muito longo", () => {
