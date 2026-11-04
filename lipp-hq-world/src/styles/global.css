@@ -251,8 +251,8 @@ button.sidebar-row:hover {
 }
 
 .panel-sessions {
-  margin-top: 10px;
-  padding-top: 9px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--hq-panel-border);
 }
 
@@ -260,7 +260,7 @@ button.sidebar-row:hover {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-weight: 600;
   color: #b8c4d8;
 }
@@ -273,46 +273,81 @@ button.sidebar-row:hover {
 .panel-sessions ul {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.panel-sessions li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 6px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.025);
+/* duas linhas fixas: título + origem, depois quando + mensagens */
+.session-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
 }
 
 /* sessão ativa: barra discreta à esquerda, sem inventar estado */
-.panel-sessions li.active {
+.session-item.active {
   box-shadow: inset 2px 0 0 #4ade80;
 }
 
-.panel-sessions .session-source {
-  grid-row: span 1;
+.session-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .panel-sessions .session-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--hq-text);
+  font-weight: 500;
+}
+
+.panel-sessions .session-source {
+  grid-area: auto;
+  flex: 0 0 auto;
 }
 
 .panel-sessions .session-meta {
-  grid-column: 2;
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--hq-text-dim);
+  white-space: nowrap;
 }
 
+.session-live {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.drawer-more {
+  margin-top: 8px;
+  width: 100%;
+  padding: 7px;
+  border-radius: 8px;
+  border: 1px dashed var(--hq-panel-border);
+  background: transparent;
+  color: var(--hq-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.drawer-more:hover { background: rgba(56, 189, 248, 0.08); }
+
 .panel-sessions-empty {
-  margin-top: 10px;
-  font-size: 11px;
+  margin-top: 12px;
+  font-size: 12px;
   color: var(--hq-text-dim);
   font-style: italic;
 }
@@ -457,50 +492,142 @@ button.sidebar-row:hover {
 .feed-summary { color: var(--hq-text-dim); }
 .feed-empty { font-style: italic; }
 
-.panel {
-  width: 250px;
-  background: var(--hq-panel);
+/* ---- Gaveta do bot (lado direito) ---- */
+.drawer {
+  --drawer-width: min(400px, calc(100vw - 32px));
+  position: absolute;
+  z-index: 20;
+  top: 68px;
+  right: 16px;
+  bottom: 16px;
+  width: var(--drawer-width);
+  display: flex;
+  flex-direction: column;
+  background: rgba(11, 18, 31, 0.94);
   border: 1px solid var(--hq-panel-border);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
   pointer-events: auto;
-  backdrop-filter: blur(8px);
-  font-size: 12px;
+  white-space: normal;
+  font-size: 13px;
+  overflow: hidden;
+  animation: drawer-in 180ms ease-out;
 }
 
-.panel-head {
+@keyframes drawer-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer { animation: none; }
+}
+
+/* a dica da câmera sai de baixo da gaveta */
+.hud-layer:has(.drawer) .hud-bottom {
+  right: calc(min(400px, 100vw - 32px) + 28px);
+}
+
+.drawer-head {
+  padding: 14px 16px 0;
+  border-bottom: 1px solid var(--hq-panel-border);
+}
+
+.drawer-head:only-child { padding-bottom: 14px; border-bottom: 0; }
+
+.drawer-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: 16px;
 }
 
-.panel-head strong { color: var(--hq-text); }
+.drawer-title strong { color: var(--hq-text); }
 
-.panel-close {
-  margin-left: auto;
+.drawer-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.drawer-tabs {
+  display: flex;
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.drawer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
   border: 0;
+  border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--hq-text-dim);
-  font-size: 16px;
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
-  line-height: 1;
-  padding: 2px 6px;
 }
 
-.panel-role { color: var(--hq-text-dim); margin-bottom: 6px; }
+.drawer-tab:hover { color: var(--hq-text); }
 
-.panel-state { color: var(--hq-text-dim); display: flex; align-items: center; gap: 6px; }
+.drawer-tab.active {
+  color: var(--hq-text);
+  border-bottom-color: var(--hq-accent);
+}
+
+.drawer-tab-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.14);
+  color: #bae6fd;
+  font-size: 10px;
+}
+
+.drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 16px;
+  overscroll-behavior: contain;
+}
+
+.panel-close {
+  display: inline-flex;
+  margin-left: auto;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hq-text-dim);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.panel-close:hover { background: rgba(255, 255, 255, 0.06); color: var(--hq-text); }
+
+.panel-role { color: var(--hq-text-dim); }
+
+.panel-state { color: var(--hq-text-dim); display: inline-flex; align-items: center; gap: 6px; }
 .panel-state em { color: var(--hq-accent); font-style: normal; font-weight: 600; }
 
-.panel p {
-  margin: 7px 0 0;
+.drawer p {
+  margin: 10px 0 0;
   color: var(--hq-text-dim);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
-.panel-resp { font-size: 11px; }
+.panel-resp { font-size: 12px; }
+
+.panel-stats dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .camera-hint {
   position: absolute;
@@ -554,9 +681,7 @@ button.sidebar-row:hover {
 
 /* ---- Editor de personagem (painel do agente) ---- */
 .character-editor {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--hq-panel-border);
+  margin-top: 12px;
 }
 
 .editor-actions {
@@ -1071,4 +1196,11 @@ button.sidebar-row:focus-visible {
   color: #fde68a;
   font-style: normal;
   font-size: 10px;
+}
+
+/* na aba Sessões a lista é o conteúdo inteiro: sem divisória no topo */
+.drawer-body > .panel-sessions:first-child {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
 }

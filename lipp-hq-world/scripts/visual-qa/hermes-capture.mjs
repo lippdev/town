@@ -86,7 +86,7 @@ async function main() {
     await page.locator(".agent-row").first().click();
     await page.waitForSelector(".panel-stats", { timeout: 30000 });
     report.checks.panel = await page.evaluate(() => {
-      const panel = document.querySelector(".panel");
+      const panel = document.querySelector(".drawer");
       return {
         name: panel?.querySelector("strong")?.textContent ?? null,
         stats: Array.from(panel?.querySelectorAll(".panel-stats div") ?? []).map((row) => (row.textContent ?? "").trim()),
@@ -121,7 +121,7 @@ async function main() {
     await page.locator(".session-row").first().click();
     await page.waitForSelector(".panel-sessions", { timeout: 30000 });
     report.checks.panelSessions = await page.evaluate(() => {
-      const panel = document.querySelector(".panel");
+      const panel = document.querySelector(".drawer");
       return {
         bot: panel?.querySelector("strong")?.textContent ?? null,
         head: panel?.querySelector(".panel-sessions-head")?.textContent ?? null,
@@ -188,9 +188,9 @@ async function main() {
     // selecionar o bot da rotina com falha mostra o aviso no painel
     await page.locator(".sidebar-item", { hasText: "Bots" }).click();
     await page.locator(".agent-row", { hasText: "Forge" }).first().click();
-    await page.waitForSelector(".panel", { timeout: 30000 });
+    await page.waitForSelector(".drawer", { timeout: 30000 });
     report.checks.panelRoutineWarning = await page.evaluate(
-      () => document.querySelector(".panel .panel-warn")?.textContent ?? null,
+      () => document.querySelector(".drawer .panel-warn")?.textContent ?? null,
     );
     await page.screenshot({ path: path.join(OUT, "bot-panel-routine.png") });
     await page.locator(".panel-close").first().click();

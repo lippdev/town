@@ -50,3 +50,8 @@ export function fleetSessions(
 export function activeSessionTotal(bots: BotSnapshot[]): number {
   return bots.reduce((total, bot) => total + bot.activeSessions, 0);
 }
+
+/** Título legível de uma sessão: título, senão a prévia da primeira mensagem. */
+export function sessionTitle(session: SessionSnapshot): string {
+  return session.title ?? session.preview ?? "sem título";
+}
