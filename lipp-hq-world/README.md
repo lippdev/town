@@ -163,6 +163,7 @@ tela mostrava.
 | [docs/ASSETS.md](docs/ASSETS.md)                   | avaliação de assets e decisão procedural                 |
 | [docs/VISUAL_QA.md](docs/VISUAL_QA.md)             | harness, rubrica e gates                                 |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | sintoma → causa → o que fazer quando algo não aparece    |
+| [docs/ESTUDIO-PERSONAGENS.md](docs/ESTUDIO-PERSONAGENS.md) | estúdio de personagens: uso prompt a prompt e limites |
 
 ## Estado
 
