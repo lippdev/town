@@ -88,7 +88,7 @@ a { color: var(--cs-accent); }
 .cs-icon:disabled { opacity: 0.28; }
 
 /* Palco */
-.cs-main { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.cs-main { position: relative; min-width: 0; min-height: 0; overflow: hidden; container-type: inline-size; }
 .cs-stage { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 34%, #f5f4f1 0%, #e7e5e1 58%, #d6d4cf 100%); }
 .cs-canvas { position: absolute; inset: 0; touch-action: none; cursor: grab; outline-offset: -3px; }
 .cs-canvas:active { cursor: grabbing; }
@@ -215,10 +215,23 @@ textarea[aria-invalid="true"] { border-color: var(--cs-danger); }
 .cs-spacer { flex: 1; }
 .cs-errors { margin-top: 8px; padding: 8px 10px; background: #f9e9e6; border: 1px solid #e0b1aa; border-radius: 6px; font-size: 12.5px; color: #7f2a20; display: grid; gap: 3px; }
 
+/* Palco estreito: os controles empilham. A largura é a mesma de STACKED_BELOW na câmera. */
+@container (max-width: 719px) {
+  .cs-dock--pose { left: 8px; bottom: 54px; }
+  .cs-dock--view { right: 8px; bottom: 8px; left: 8px; justify-content: space-between; }
+  .cs-dock--view .cs-tool { padding: 0 6px; min-width: 28px; }
+  .cs-dock--view .cs-tool--icon { width: 28px; padding: 0; }
+  .cs-dock__rule { margin: 0 1px; }
+  .cs-toast-slot { bottom: 100px; }
+  /* O "salvo" some por falta de espaço; aviso de que não está salvando, nunca. */
+  .cs-save:not(.cs-save--warn) { display: none; }
+}
+
 /* Larguras menores: o palco ganha prioridade e o elenco encolhe. */
 @media (max-width: 1180px) {
   .cs-app { grid-template-columns: 196px minmax(0, 1fr) 332px; }
-  .cs-save { display: none; }
+  .cs-panel__foot { grid-template-columns: 1fr 1fr; }
+  .cs-panel__foot .cs-button--primary { grid-column: 1 / -1; }
 }
 
 @media (max-width: 880px) {
@@ -231,16 +244,11 @@ textarea[aria-invalid="true"] { border-color: var(--cs-danger); }
   .cs-rail__scroll > section { flex: none; max-width: 100%; }
   .cs-rail .cs-cast { display: flex; gap: 4px; }
   .cs-cast__item { width: 172px; }
-  .cs-main { order: 1; height: 62vh; min-height: 400px; position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--cs-line); }
+  .cs-main { order: 1; height: 52vh; min-height: 360px; position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--cs-line); }
   .cs-panel { order: 3; border: 0; }
   .cs-panel__scroll { overflow: visible; }
-  .cs-panel__foot { position: sticky; bottom: 0; z-index: 3; }
-  .cs-dock--pose { left: 8px; bottom: 54px; }
-  .cs-dock--view { right: 8px; bottom: 8px; left: 8px; justify-content: space-between; }
-  .cs-dock--view .cs-tool { padding: 0 6px; min-width: 28px; }
-  .cs-dock--view .cs-tool--icon { width: 28px; padding: 0; }
-  .cs-dock__rule { margin: 0 1px; }
-  .cs-toast-slot { bottom: 100px; }
+  .cs-panel__foot { position: sticky; bottom: 0; z-index: 3; grid-template-columns: 1fr auto auto; }
+  .cs-panel__foot .cs-button--primary { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

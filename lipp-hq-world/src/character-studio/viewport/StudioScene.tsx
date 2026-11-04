@@ -17,8 +17,14 @@ const VIEW_AZIMUTH: Record<CameraView, number> = {
 const NEUTRAL_POLAR = Math.PI / 2 - 0.05;
 const FOV = 26;
 /** Enquadra a maior altura permitida: trocar de variação mostra a diferença real de altura. */
-const FRAME_HEIGHT = 2.28;
+const FRAME_HEIGHT = 2.15;
 const FRAME_WIDTH = 1.5;
+const FRAME_FLOOR_Y = -0.03;
+/** Faixa inferior ocupada pelos controles da câmera; o corpo inteiro fica acima dela. */
+const DOCK_INSET = 62;
+const DOCK_INSET_STACKED = 106;
+/** Igual à largura do @container em studio.css, onde os controles empilham. */
+const STACKED_BELOW = 720;
 const BODY_TARGET_Y = 1;
 const TWEEN_SECONDS = 0.34;
 
@@ -122,9 +128,15 @@ function CameraDirector({ apiRef, heightM }: { apiRef: { current: CameraApi | nu
   const touched = useRef(false);
   const tween = useRef<{ elapsed: number; from: number[]; to: number[] } | null>(null);
 
-  const fitDistance = () => {
+  const bodyFrame = () => {
     const halfTan = Math.tan(MathUtils.degToRad(FOV / 2));
-    return Math.max(FRAME_HEIGHT / 2 / halfTan, FRAME_WIDTH / 2 / (halfTan * Math.max(camera.aspect, 0.1)));
+    const height = Math.max(size.height, 1);
+    const inset = Math.min(size.width < STACKED_BELOW ? DOCK_INSET_STACKED : DOCK_INSET, height * 0.4);
+    const visible = (FRAME_HEIGHT * height) / (height - inset);
+    const aspect = Math.max(size.width, 1) / height;
+    const distance = Math.max(visible / 2 / halfTan, FRAME_WIDTH / 2 / (halfTan * aspect));
+    const actual = 2 * distance * halfTan;
+    return { distance, targetY: FRAME_FLOOR_Y - (inset / height) * actual + actual / 2 };
   };
 
   const place = (azimuth: number, polar: number, distance: number, targetY: number) => {
@@ -156,8 +168,6 @@ function CameraDirector({ apiRef, heightM }: { apiRef: { current: CameraApi | nu
     invalidate();
   };
 
-  const body = () => ({ distance: fitDistance(), targetY: BODY_TARGET_Y });
-
   useImperativeHandle(apiRef, () => ({
     view: (view) => {
       touched.current = true;
@@ -165,12 +175,12 @@ function CameraDirector({ apiRef, heightM }: { apiRef: { current: CameraApi | nu
     },
     frame: (framing) => {
       touched.current = true;
-      if (framing === "body") go(body());
-      else go({ distance: fitDistance() * 0.3, targetY: heightRef.current * 0.88 });
+      if (framing === "body") go(bodyFrame());
+      else go({ distance: bodyFrame().distance * 0.3, targetY: heightRef.current * 0.88 });
     },
     reset: () => {
       touched.current = false;
-      go({ azimuth: VIEW_AZIMUTH.threeQuarter * 0.5, polar: NEUTRAL_POLAR, ...body() });
+      go({ azimuth: VIEW_AZIMUTH.threeQuarter * 0.5, polar: NEUTRAL_POLAR, ...bodyFrame() });
     },
     zoom: (factor) => {
       touched.current = true;
@@ -185,7 +195,7 @@ function CameraDirector({ apiRef, heightM }: { apiRef: { current: CameraApi | nu
 
   useLayoutEffect(() => {
     if (touched.current) return;
-    go({ azimuth: VIEW_AZIMUTH.threeQuarter * 0.5, polar: NEUTRAL_POLAR, ...body() }, true);
+    go({ azimuth: VIEW_AZIMUTH.threeQuarter * 0.5, polar: NEUTRAL_POLAR, ...bodyFrame() }, true);
   }, [size.width, size.height]);
 
   useFrame((_, delta) => {
