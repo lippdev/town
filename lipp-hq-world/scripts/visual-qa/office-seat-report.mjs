@@ -11,7 +11,7 @@ import { chromium } from "playwright";
 
 const [dir, prefix, flag, sheetOut, ...photos] = process.argv.slice(2);
 
-const { seats } = JSON.parse(readFileSync(path.join(dir, `${prefix}-coordenadas.json`), "utf8"));
+const { seats, allSeated = [] } = JSON.parse(readFileSync(path.join(dir, `${prefix}-coordenadas.json`), "utf8"));
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 const local = (point, chair) => {
   const dx = point.x - chair.x;
@@ -52,7 +52,10 @@ const summary = seats.map(({ name, seat, joints, frames }) => {
   const lastSitting = sitting.at(-1);
   // Depois de pousar (1,16 s), a bacia não sai do lugar em cima do assento.
   const start = sitting[0]?.time ?? 0;
-  const landed = sitting.filter((frame) => frame.phase === "sitting" && (frame.time - start) / 1000 > 1.25);
+  const landed = sitting.filter((frame) => frame.chair && frame.phase === "sitting" && (frame.time - start) / 1000 > 1.25);
+  // Deslocamento de lado: quanto a pessoa anda no eixo X (as cadeiras olham para Z) enquanto senta.
+  const moving = sitting.filter((frame) => frame.phase === "sitting").map((frame) => frame.position.x);
+  const sideways = moving.length ? Math.max(...moving) - Math.min(...moving) : 0;
   const hipsOnSeat = landed.map((frame) => local(frame.joints.hips, frame.chair));
   const slideX = hipsOnSeat.length ? Math.max(...hipsOnSeat.map((point) => Math.abs(point.x))) : null;
   const slideZ = hipsOnSeat.length ? Math.max(...hipsOnSeat.map((point) => point.z)) - Math.min(...hipsOnSeat.map((point) => point.z)) : null;
@@ -66,6 +69,7 @@ const summary = seats.map(({ name, seat, joints, frames }) => {
     fastest: `${fixed(fastest, 2)} m/s (${fastestBone}, ${fastestPhase}, ${fixed(fastestDt * 1000, 0)} ms)`,
     chairTopSpeed: `${fixed(chairJump, 2)} m/s`,
     chairTopSpin: `${fixed(spin, 2)} rad/s`,
+    sidewaysWhileSitting: `${fixed(sideways)} m`,
     hipsOffAxis: slideX === null ? null : fixed(slideX),
     hipsSlideAlongSeat: slideZ === null ? null : fixed(slideZ),
     seated: {
@@ -78,8 +82,9 @@ const summary = seats.map(({ name, seat, joints, frames }) => {
     backHome: last.chair ? `${fixed(last.chair.x - seat.x)}, ${fixed(last.chair.z - seat.z)}` : null,
   };
 });
+const seatedTogether = allSeated.map(({ name, seat, chair, joints }) => ({ name, seat, leftHandY: fixed(joints.leftHand.y), rightHandY: fixed(joints.rightHand.y), leftFootY: fixed(joints.leftFoot.y), hipsInChair: [fixed(local(joints.hips, chair).x), fixed(local(joints.hips, chair).z)] }));
 const out = path.join(dir, `${prefix}-medidas.json`);
-writeFileSync(out, `${JSON.stringify(summary, null, 2)}\n`);
+writeFileSync(out, `${JSON.stringify({ seats: summary, seatedTogether }, null, 2)}\n`);
 for (const line of summary) console.log(JSON.stringify(line));
 
 if (flag === "--sheet") {

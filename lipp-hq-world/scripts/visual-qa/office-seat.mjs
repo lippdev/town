@@ -15,7 +15,8 @@ import { chromium } from "playwright";
 const BASE = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const OUT = process.argv[2] ?? "qa/office-seat";
 const PREFIX = process.argv[3] ?? "depois";
-const STEPS = (process.env.HQ_SEAT_STEPS ?? "0.4,0.8,1.2,1.7,2.3,2.8,3.3").split(",").map(Number);
+const STEPS = (process.env.HQ_SEAT_STEPS ?? "0.45,0.75,1.05,1.3,2.15,3.05,3.55").split(",").map(Number);
+const EXIT_STEPS = (process.env.HQ_SEAT_EXIT_STEPS ?? "0.5,1.5,2.6,3.2").split(",").map(Number);
 const DEMO = "/?escritorio=completo&modo=demonstracao";
 // X4000/X4122 são avisos do compilador HLSL do Windows (ANGLE/D3D11), sem relação com a cena.
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log:[^]*warning X\d+/];
@@ -118,10 +119,40 @@ for (const [index, human] of initial.humans.entries()) {
   if (index < 2) await page.screenshot({ path: path.join(OUT, `${PREFIX}-${label}-sentada-cena.png`) });
   const joints = await page.evaluate((id) => window.__HQ_OFFICE_QA__.humanJoints(id), human.id);
   await page.click("[data-human-stand]");
+  await phaseIs(human.id, "rising", 5000);
+  if (index < 2) {
+    const rising = Date.now();
+    for (const [at, stamp] of EXIT_STEPS.entries()) {
+      await page.waitForTimeout(Math.max(0, stamp * 1000 - (Date.now() - rising)));
+      if ((await state()).humans[index].phase === "rising") await closeups(human.seat, `${label}-saindo-${at}`);
+    }
+  }
   await phaseIs(human.id, "standing");
   report.seats.push({ name: human.name, seat: human.seat, joints, frames: await stopTape() });
   await page.keyboard.press("Escape");
   await page.waitForTimeout(150);
+}
+
+// As seis juntas: cada corpo na própria cadeira, sem encostar na vizinha.
+for (const human of initial.humans) {
+  await page.click(`[data-person-row="${human.id}"]`);
+  await page.waitForSelector(`[data-human-panel="${human.id}"]`);
+  await page.click("[data-human-sit]");
+  await phaseIs(human.id, "seated");
+  await page.keyboard.press("Escape");
+}
+await page.waitForTimeout(400);
+report.allSeated = await page.evaluate(() => {
+  const qa = window.__HQ_OFFICE_QA__;
+  return qa.state().humans.map((human) => ({ name: human.name, seat: human.seat.id, chair: human.chairPose, joints: qa.humanJoints(human.id) }));
+});
+await page.screenshot({ path: path.join(OUT, `${PREFIX}-seis-sentadas-cena.png`) });
+const bench = initial.humans.find((human) => human.seat.id === "hall-2")?.seat ?? initial.humans[0].seat;
+// De frente, o corte começa depois da fileira oposta, que taparia a foto.
+for (const [view, near] of [["frente", 2.15], ["costas", 2.3]]) {
+  const toDesk = view === "frente" ? -1 : 1;
+  const data = await page.evaluate((options) => window.__HQ_OFFICE_QA__.closeup(options), { eye: [bench.x, 1.15, bench.z + toDesk * 3], target: [bench.x, 0.72, bench.z], height: 2.1, near });
+  writeFileSync(path.join(OUT, `${PREFIX}-seis-sentadas-${view}.png`), Buffer.from(data.split(",")[1], "base64"));
 }
 
 writeFileSync(path.join(OUT, `${PREFIX}-coordenadas.json`), JSON.stringify(report));

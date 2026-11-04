@@ -17,6 +17,7 @@
     "qa:avatar": "node scripts/visual-qa/avatar.mjs",
     "qa:pessoas": "node scripts/visual-qa/office-people.mjs",
     "qa:robos": "node scripts/visual-qa/office-robots.mjs",
+    "qa:assento": "node scripts/visual-qa/office-seat.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
   },
