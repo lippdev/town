@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas do Filipe</title>
+<style>
+  :root { --piso: #C9A36F; --fundo: #1d1b1a; --texto: #f3ece2; --suave: #b9ad9d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--fundo); color: var(--texto); font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.nota { color: var(--suave); margin: 0 0 14px; max-width: 70ch; }
+  .barra { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  button { background: #3a3532; color: var(--texto); border: 1px solid #5a514b; border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { background: #4a423d; }
+  table { border-collapse: separate; border-spacing: 10px; }
+  th { text-align: left; font-weight: 600; color: var(--suave); font-size: 12px; }
+  td { vertical-align: bottom; }
+  canvas { background: var(--piso); image-rendering: pixelated; display: block; border-radius: 4px; }
+  .info { font: 12px ui-monospace, monospace; color: var(--suave); margin-top: 3px; }
+  h2 { font-size: 15px; margin: 22px 0 6px; }
+</style>
+</head>
+<body>
+<h1>Atlas do Filipe</h1>
+<p class="nota">Caminhadas a 10,6 fps (12 quadros em 1,133 s), parado a 5 fps. Cada animacao aparece normal e espelhada, em 1× e 2×,
+sem suavizacao. A segunda secao anda o personagem sobre o chao com marcas fixas: o pe de apoio nao pode deslizar sobre elas.</p>
+<div class="barra">
+  <button id="pausa">Pausar</button>
+  <button id="passo">Quadro a quadro</button>
+  <label style="align-self:center"><input type="checkbox" id="linhas" checked> linha do chao e coluna da ancora</label>
+</div>
+<table id="grade"></table>
+<h2>Andando sobre o chao (exibido em 2×, marcas fixas a cada 16 texels)</h2>
+<table id="chao"></table>
+<script>
+const CFG = __CONFIG__;
+const PASSO = __STEP__;           // texels por quadro da caminhada, direcao de cada eixo (x, y)
+const IMG = new Image();
+IMG.src = "data:image/png;base64,__ATLAS_B64__";
+const CW = CFG.cell.width, CH = CFG.cell.height, SOLE = CFG.soleRow, FPS_WALK = 12 / 1.1333333333;
+const ANIMS = Object.entries(CFG.animations).map(([nome, a]) => ({ nome, ...a, fps: a.fps || FPS_WALK }));
+let pausado = false, tempo = 0, avanco = 0, ultimo = performance.now();
+const vistas = [];
+function criar(canvas, anim, esc, espelho) { canvas.width = CW * esc; canvas.height = CH * esc; vistas.push({ canvas, anim, esc, espelho }); }
+
+const grade = document.getElementById("grade");
+{
+  const cab = document.createElement("tr");
+  for (const t of ["", "1×", "1× espelhado", "2×", "2× espelhado"]) { const th = document.createElement("th"); th.textContent = t; cab.appendChild(th); }
+  grade.appendChild(cab);
+  for (const a of ANIMS) {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th"); th.innerHTML = a.nome + "<div class='info' id='i_" + a.nome + "'></div>"; tr.appendChild(th);
+    for (const [esc, esp] of [[1, false], [1, true], [2, false], [2, true]]) {
+      const td = document.createElement("td"); const c = document.createElement("canvas"); td.appendChild(c); tr.appendChild(td); criar(c, a, esc, esp);
+    }
+    grade.appendChild(tr);
+  }
+}
+const chao = document.getElementById("chao");
+const passeio = [];
+for (const nome of ["walk-front", "walk-back"]) {
+  const a = ANIMS.find(x => x.nome === nome), tr = document.createElement("tr");
+  const th = document.createElement("th"); th.textContent = nome; tr.appendChild(th);
+  const td = document.createElement("td"); const c = document.createElement("canvas");
+  c.width = 380; c.height = 380; c.style.width = '760px'; c.style.height = '760px'; td.appendChild(c); tr.appendChild(td); chao.appendChild(tr);
+  passeio.push({ c, a, dir: nome.endsWith("front") ? "front" : "back" });
+}
+
+function desenhaQuadro(ctx, anim, k, x, y, esc, espelho, linhas) {
+  ctx.save();
+  if (espelho) { ctx.translate(x + CW * esc, y); ctx.scale(-1, 1); } else ctx.translate(x, y);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(IMG, k * CW, anim.row * CH, CW, CH, 0, 0, CW * esc, CH * esc);
+  if (linhas) {
+    ctx.fillStyle = "rgba(200,40,40,.55)"; ctx.fillRect(0, SOLE * esc, CW * esc, 1);
+    ctx.fillStyle = "rgba(40,40,200,.45)"; ctx.fillRect(((CW - 1) / 2) * esc, 0, 1, CH * esc);
+  }
+  ctx.restore();
+}
+
+function quadro(a, t) { return Math.floor(t * a.fps) % a.frames; }
+
+function desenha() {
+  const linhas = document.getElementById("linhas").checked;
+  for (const v of vistas) {
+    const ctx = v.canvas.getContext("2d"); ctx.clearRect(0, 0, v.canvas.width, v.canvas.height);
+    desenhaQuadro(ctx, v.anim, quadro(v.anim, tempo), 0, 0, v.esc, v.espelho, linhas);
+  }
+  for (const a of ANIMS) document.getElementById("i_" + a.nome).textContent = "quadro " + String(quadro(a, tempo)).padStart(2, "0") + " / " + a.frames + " · " + a.fps.toFixed(2) + " fps";
+  for (const p of passeio) {
+    const ctx = p.c.getContext("2d"); ctx.clearRect(0, 0, p.c.width, p.c.height);
+    const esc = 1, f = tempo * p.a.fps, st = PASSO[p.dir], FR = 24;
+    const mod = f % FR, n = Math.hypot(st[0], st[1]);
+    const ux = st[0] / n, uy = st[1] / n;                       // eixo de marcha na tela
+    const ox = 60, oy = p.dir === "front" ? 225 : 330;          // raiz no inicio do percurso (texels)
+    ctx.fillStyle = "rgba(60,40,20,.7)";
+    for (let a = -2; a < 40; a++) for (let b = -8; b <= 8; b++) {   // marcas de chao fixas a cada 16 texels
+      const gx = ox + a * 16 * ux - b * 16 * uy, gy = oy + a * 16 * uy + b * 16 * ux;
+      if (gx > 0 && gx < p.c.width - 2 && gy > 0 && gy < p.c.height - 2) ctx.fillRect(Math.round(gx), Math.round(gy), 2, 2);
+    }
+    const rx = Math.round(ox + st[0] * mod), ry = Math.round(oy + st[1] * mod);   // raiz no chao (texels)
+    desenhaQuadro(ctx, p.a, Math.floor(f) % p.a.frames, rx - (CW - 1) / 2, ry - SOLE, esc, false, false);
+  }
+}
+
+function laco(agora) {
+  const dt = (agora - ultimo) / 1000; ultimo = agora;
+  if (!pausado) tempo += dt;
+  desenha(); requestAnimationFrame(laco);
+}
+IMG.onload = () => requestAnimationFrame(laco);
+document.getElementById("pausa").onclick = (e) => { pausado = !pausado; e.target.textContent = pausado ? "Continuar" : "Pausar"; };
+document.getElementById("passo").onclick = () => { pausado = true; document.getElementById("pausa").textContent = "Continuar"; tempo += 1 / FPS_WALK; };
+</script>
+</body>
+</html>

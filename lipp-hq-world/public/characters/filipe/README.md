@@ -71,3 +71,16 @@ blender --background --factory-startup --python scripts/characters/pixelize-spri
 ```
 
 Se a célula ou a sola mudarem, atualize `walk.json`: o script imprime os valores.
+
+## Atlas de 12 quadros
+
+`walk.png` passou a ter caminhada de 12 quadros e parado de 8, com célula de 127×248 px e 56 cores.
+As artes-mestras ficam em `docs/characters/filipe/master-*.png`. Os quadros de caminhada foram pintados
+sobre guias de pose (`scripts/characters/pose_guides.py`, no Blender), e o parado é uma deformação sutil da
+arte-mestra. O processamento está em `scripts/characters/atlas-filipe/`.
+
+Os 24 quadros brutos (33 MB) não estão no repositório, e os scripts apontam para a pasta de trabalho onde
+foram gerados; para refazer o atlas é preciso gerar os quadros de novo e ajustar esse caminho.
+
+Defeitos conhecidos: as poses dos quadros 02, 09, 10 e 11 de frente e 07, 09 e 10 de costas ficaram longe do
+guia, e a caminhada é cerca de 8% mais baixa que o parado, o que dá um pequeno pulo de tamanho ao parar.
