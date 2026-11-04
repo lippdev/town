@@ -46,9 +46,10 @@ const phaseIs = (id, phase, timeout = 60000) => page.waitForFunction(([who, want
 async function closeups(seat, name) {
   const toDesk = seat.yaw === 0 ? 1 : -1;
   const views = {
-    lado: { eye: [seat.x - 0.47, 0.72, seat.z], target: [seat.x, 0.72, seat.z], height: 1.9, near: 0.01 },
+    lado: { eye: [seat.x - 0.47, 0.82, seat.z], target: [seat.x, 0.82, seat.z], height: 2.0, near: 0.01 },
     frente: { eye: [seat.x, 1.15, seat.z + toDesk * 3], target: [seat.x, 0.72, seat.z], height: 1.9, near: 1.4 },
-    costas: { eye: [seat.x, 1.15, seat.z - toDesk * 3], target: [seat.x, 0.72, seat.z], height: 1.9, near: 1.4 },
+    // O corte começa logo atrás da cadeira: tira a parede e quem estiver em pé no caminho.
+    costas: { eye: [seat.x, 1.15, seat.z - toDesk * 3], target: [seat.x, 0.72, seat.z], height: 1.9, near: 2.3 },
   };
   for (const [view, camera] of Object.entries(views)) {
     const data = await page.evaluate((options) => window.__HQ_OFFICE_QA__.closeup(options), camera);
