@@ -31,6 +31,7 @@ import { sparklinePath, trend, type FleetSample } from "@/integrations/hermes/fl
 import { routineHealth, routineStatusText, routineTotals, routinesByBot } from "@/components/hud/routines";
 import { activeSessionTotal, fleetSessions, sessionTitle, sourceLabel } from "@/components/hud/sessions";
 import { botRoomId } from "@/components/hud/selection";
+import { OFFICE_LIVE_URL } from "@/world/office/officeRoute";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
 import { diagnosticsSummary, endpointRows, latencyText, type DiagnosticsSeverity } from "@/components/hud/diagnostics";
@@ -476,6 +477,10 @@ function Sidebar() {
         <strong>Lipp HQ</strong>
         <span className="sidebar-mode">{dataSource === "live" ? "Hermes" : "Aguardando Hermes"}</span>
       </div>
+      <a className="sidebar-office-link" href={OFFICE_LIVE_URL}>
+        <Boxes size={14} aria-hidden />
+        Escritório completo
+      </a>
       <nav>
         {items.map((item) => (
           <button

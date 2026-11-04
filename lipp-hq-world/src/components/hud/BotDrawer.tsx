@@ -25,7 +25,7 @@ const SUMMARY_SESSIONS = 3;
  * ao store, e a câmera desloca o centro da projeção para o foco cair na área
  * que continua visível.
  */
-export function BotDrawer() {
+export function BotDrawer({ characterTab = true }: { characterTab?: boolean } = {}) {
   const fleet = useHQStore((state) => state.fleet);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const selectedRoomId = useHQStore((state) => state.selectedRoomId);
@@ -71,7 +71,7 @@ export function BotDrawer() {
       aria-label={subject.kind === "bot" ? `Bot ${subject.bot.name}` : `Sala ${subject.room.name}`}
     >
       {subject.kind === "bot" ? (
-        <BotContent key={subject.bot.id} bot={subject.bot} onClose={clearSelection} />
+        <BotContent key={subject.bot.id} bot={subject.bot} onClose={clearSelection} characterTab={characterTab} />
       ) : (
         <RoomContent room={subject.room} onClose={clearSelection} />
       )}
@@ -87,7 +87,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
-function BotContent({ bot, onClose }: { bot: BotSnapshot; onClose: () => void }) {
+function BotContent({ bot, onClose, characterTab }: { bot: BotSnapshot; onClose: () => void; characterTab: boolean }) {
   const [tab, setTab] = useState<DrawerTab>("resumo");
   const fleet = useHQStore((state) => state.fleet);
   const openSessionId = useHQStore((state) => state.openSessionId);
@@ -101,7 +101,8 @@ function BotContent({ bot, onClose }: { bot: BotSnapshot; onClose: () => void })
   const tabs: Array<{ id: DrawerTab; label: string; count?: number }> = [
     { id: "resumo", label: "Resumo" },
     { id: "sessoes", label: "Sessões", count: bot.sessionCount },
-    { id: "personagem", label: "Personagem" },
+    // O editor mexe nas figuras da cena antiga; onde a figura é outra, a aba não faria nada.
+    ...(characterTab ? [{ id: "personagem" as const, label: "Personagem" }] : []),
   ];
 
   return (

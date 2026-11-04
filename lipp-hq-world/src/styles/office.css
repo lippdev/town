@@ -1,0 +1,642 @@
+/* Escritório completo: a mesma linguagem do HUD, com painéis fora do alvo. */
+.office-shell {
+  overflow: hidden;
+  background: #111828;
+}
+
+.office-stage {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.office-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.office-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 13, 24, 0.62);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.office-shade.on {
+  opacity: 1;
+}
+
+.office-room-tag,
+.office-bot-tag,
+.office-entrance-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.office-room-tag {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 3px 9px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--tag-color);
+  background: rgba(15, 21, 34, 0.82);
+  color: var(--hq-text);
+  cursor: pointer;
+  line-height: 1.25;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.office-room-tag strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.office-room-tag span {
+  font-size: 10.5px;
+  color: var(--hq-text-dim);
+}
+
+.office-room-tag:hover,
+.office-room-tag.hovered {
+  background: rgba(27, 37, 58, 0.95);
+  border-color: color-mix(in srgb, var(--tag-color) 55%, transparent);
+  border-left-color: var(--tag-color);
+}
+
+.office-room-tag.focused {
+  display: none;
+}
+
+.office-room-tag:focus-visible,
+.office-bot-tag:focus-visible,
+.office-roster button:focus-visible,
+.office-hud a:focus-visible,
+.office-hud button:focus-visible {
+  outline: 2px solid var(--hq-accent);
+  outline-offset: 2px;
+}
+
+.office-bot-tag {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 60%, transparent);
+  background: rgba(12, 18, 30, 0.86);
+  color: #f2f5fa;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.office-bot-tag strong {
+  font-weight: 600;
+}
+
+.office-bot-tag em {
+  font-style: normal;
+  color: var(--hq-text-dim);
+}
+
+.office-bot-tag.active {
+  background: var(--tag-color);
+  border-color: transparent;
+  color: #fff;
+  z-index: 3;
+}
+
+.office-bot-tag.active em {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* De longe os postos extras ficam próximos demais: o nome só aparece ao apontar. */
+.office-labels[data-far="true"] .office-bot-tag.extra:not(.active) {
+  display: none;
+}
+
+.office-entrance-tag {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: rgba(15, 21, 34, 0.7);
+  color: #d4c7b0;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.office-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.office-hud > * {
+  pointer-events: auto;
+}
+
+.office-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgb(12, 18, 31);
+  border-bottom: 1px solid var(--hq-panel-border);
+}
+
+.office-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.office-brand span:last-child {
+  color: var(--hq-text-dim);
+}
+
+.office-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.office-chip.demo {
+  background: #e8b23a;
+  color: #241a05;
+}
+
+.office-chip.live {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
+.office-chip.wait {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+}
+
+.office-chip.off {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fca5a5;
+}
+
+.office-demo-note {
+  font-size: 11.5px;
+  color: var(--hq-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.office-nav {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.office-nav a {
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--hq-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.office-nav a:hover {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.office-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(30, 41, 59, 0.75);
+  color: var(--hq-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.office-button:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.office-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.office-button.primary {
+  background: #2f6fd8;
+  border-color: transparent;
+  color: #fff;
+}
+
+.office-button.primary:hover {
+  background: #3c7de6;
+}
+
+.office-roster,
+.office-roster-toggle {
+  position: absolute;
+  top: 64px;
+  left: 12px;
+  background: rgb(14, 21, 35);
+  border: 1px solid var(--hq-panel-border);
+  border-radius: 12px;
+  color: var(--hq-text);
+}
+
+.office-roster {
+  max-height: calc(100% - 132px);
+  width: 232px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  min-height: 0;
+}
+
+.office-roster-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.office-roster-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.office-capacity {
+  margin: 2px 0 8px;
+  font-size: 11px;
+  color: var(--hq-text-dim);
+}
+
+.office-roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.office-roster-list li {
+  padding: 3px 0 5px;
+  border-top: 1px solid rgba(120, 148, 190, 0.1);
+}
+
+.office-roster-list li.focused .office-roster-room {
+  color: #fff;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.office-roster-room {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--hq-text-dim);
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.office-roster-room.static {
+  cursor: default;
+  color: #fcd34d;
+}
+
+.office-roster-room em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+button.office-roster-room:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--hq-text);
+}
+
+.office-room-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.office-roster-bot {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 4px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--hq-text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.office-roster-bot:hover,
+.office-roster-bot.active {
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.office-roster-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.office-roster-state {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--hq-text-dim);
+  white-space: nowrap;
+}
+
+.office-roster-empty {
+  display: block;
+  padding: 2px 6px 2px 14px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--hq-text-dim);
+}
+
+.office-unseated p {
+  margin: 2px 6px 4px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--hq-text-dim);
+}
+
+.office-focus {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+  max-width: calc(100vw - 32px);
+  background: rgba(11, 18, 31, 0.94);
+  border: 1px solid var(--hq-panel-border);
+  border-radius: 12px;
+}
+
+/* A faixa de foco não cruza a lista nem a gaveta. */
+.office-hud:has(.office-roster) .office-focus {
+  left: 252px;
+  transform: none;
+  max-width: calc(100vw - 268px);
+}
+
+.office-hud:has(.office-roster):has(.drawer) .office-focus {
+  max-width: calc(100vw - 268px - min(400px, 100vw - 32px) - 16px);
+}
+
+.office-hud:not(:has(.office-roster)) .office-focus {
+  left: 136px;
+  transform: none;
+  max-width: calc(100vw - 152px);
+}
+
+.office-hud:not(:has(.office-roster)):has(.drawer) .office-focus {
+  max-width: calc(100vw - 152px - min(400px, 100vw - 32px) - 16px);
+}
+
+.office-focus-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--hq-text-dim);
+}
+
+.office-focus-text strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--hq-text);
+  white-space: nowrap;
+}
+
+.office-focus-text span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.office-focus-bots {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1320px) {
+  .office-focus-text span:last-child,
+  .office-hint {
+    display: none;
+  }
+}
+
+.office-notice {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: min(520px, calc(100vw - 32px));
+  padding: 12px 12px 12px 14px;
+  background: rgba(30, 24, 12, 0.96);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: #f8e7c4;
+  z-index: 6;
+}
+
+.office-notice > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #fbbf24;
+}
+
+.office-notice p {
+  margin: 4px 0 9px;
+  line-height: 1.45;
+  color: #e5d5b4;
+}
+
+.office-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.office-notice.slim {
+  align-items: center;
+  width: auto;
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 7px 12px;
+}
+
+.office-notice.figures {
+  top: auto;
+  bottom: 72px;
+}
+
+.office-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  pointer-events: none;
+}
+
+.office-bottom > * {
+  pointer-events: auto;
+}
+
+/* Com a gaveta aberta, a barra de baixo termina antes dela. */
+.office-hud:has(.drawer) .office-bottom {
+  right: calc(min(400px, 100vw - 32px) + 16px);
+}
+
+.office-camera,
+.office-quality {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  background: rgba(11, 18, 31, 0.92);
+  border: 1px solid var(--hq-panel-border);
+  border-radius: 11px;
+}
+
+.office-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--hq-panel-border);
+  background: rgba(30, 41, 59, 0.75);
+  color: var(--hq-text);
+  cursor: pointer;
+}
+
+.office-icon:hover {
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.office-hint {
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(11, 18, 31, 0.7);
+  font-size: 11.5px;
+  color: var(--hq-text-dim);
+  white-space: nowrap;
+  pointer-events: none !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.office-quality {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--hq-text-dim);
+  padding-left: 10px;
+  flex-shrink: 0;
+}
+
+.office-quality button {
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 0;
+  background: none;
+  color: var(--hq-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.office-quality button:hover {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.office-quality button.active {
+  background: rgba(56, 189, 248, 0.2);
+  color: #d6f1ff;
+}
+
+.office-hud .drawer {
+  top: 64px;
+  right: 12px;
+  bottom: 12px;
+}
+
+.office-hud .boot-label,
+.office-hud .boot-error {
+  pointer-events: auto;
+}
