@@ -426,7 +426,7 @@ function furnishComando(b: KitBuilder, room: OfficeRoom) {
   b.at([room.center.x, 0, room.center.z], 0, () => {
     rug(b, -0.7, 0.2, 3.4, 2.4, "#6e6a6b");
     for (const x of [-1.25, -0.15]) b.at([x, 0, 0.92], Math.PI, () => chair(b, "#4a4038"));
-    b.at([-3.32, 0, -1.2], 0, () => bookshelf(b, 1.65, 1.3, [0.12, 0.67, 1.22, 1.62]));
+    b.at([-3.32, 0, -1.2], 0, () => bookshelf(b, 1.27, 1.3, [0.12, 0.67, 1.22]));
     b.at([1.85, 0, 0.75], Math.PI, () => cabinet(b, 2.0));
     for (const [x, variant] of [[1.3, 3], [2.4, 2]] as const) {
       b.box([x, 0.88, 0.75], [0.3, 0.04, 0.22], { color: "#c9b89a", cast: false });
@@ -518,7 +518,7 @@ function furnishConteudo(b: KitBuilder, room: OfficeRoom) {
 function furnishOperacoes(b: KitBuilder, room: OfficeRoom) {
   workstation(b, seatOfRoom(room.id), { width: 3.6, depth: 0.95, monitors: [[-0.98, 2], [0, 0], [0.98, 1]] });
   b.at([room.center.x, 0, room.center.z], 0, () => {
-    for (const z of [0.55, 1.25, 1.95]) b.at([-3.25, 0, z], 0, () => rack(b, 1.55));
+    for (const z of [0.55, 1.25, 1.95]) b.at([-3.25, 0, z], 0, () => rack(b, 1.15));
     rug(b, 0.7, 0.75, 3.8, 2.2, "#6f7176");
     b.at([1.9, 0, 1.3], 0, () => {
       lowTable(b, 1.1, 0.6);
@@ -589,13 +589,15 @@ const FURNISH: Record<string, (b: KitBuilder, room: OfficeRoom) => void> = {
 
 /** O que a parede de trás mostra com a sala em foco. */
 function decorateRaised(raised: KitBuilder, room: OfficeRoom) {
-  if (room.row !== 0) signOn(raised, room, room.id === "operacoes" ? 2.45 : -1.0);
+  // Fora da verga das portas e dos quadros.
+  const signAt: Record<string, number> = { operacoes: 2.45, conteudo: 1.5, produto: -1.35, hall: -2.35, reunioes: 0.2, pesquisa: -1.0 };
+  if (room.row !== 0) signOn(raised, room, signAt[room.id] ?? -1.0);
   if (room.id === "produto") {
     wallFrame(raised, room, "north")(() => raised.at([1.1, 1.85, 0.12], 0, () => whiteboard(raised, 2.4, 1.3, ["#c9b48e", "#d3a860", "#a39b8c", "#8a9b8a"])));
   } else if (room.id === "reunioes") {
-    wallFrame(raised, room, "north")(() => raised.at([-0.8, 1.75, 0.12], 0, () => {
-      raised.box([0, 0, 0], [2.3, 1.3, 0.05], { color: "#1f2329", cast: false });
-      raised.plane([0, 0, 0.03], 2.2, 1.2, screenUv(1), "screen");
+    wallFrame(raised, room, "north")(() => raised.at([0.2, 1.42, 0.12], 0, () => {
+      raised.box([0, 0, 0], [2.0, 1.1, 0.05], { color: "#1f2329", cast: false });
+      raised.plane([0, 0, 0.03], 1.9, 1.0, screenUv(1), "screen");
     }));
   } else if (room.id === "operacoes") {
     wallFrame(raised, room, "north")(() => raised.at([-0.1, 1.85, 0.12], 0, () => {
@@ -605,7 +607,7 @@ function decorateRaised(raised: KitBuilder, room: OfficeRoom) {
       }
     }));
   } else if (room.id === "pesquisa" || room.id === "conteudo") {
-    wallFrame(raised, room, "north")(() => raised.at([1.5, 1.8, 0.12], 0, () => whiteboard(raised, 1.8, 1.0, ["#a9b89a", "#c7b693", "#b49f90"])));
+    wallFrame(raised, room, "north")(() => raised.at([1.5, 1.42, 0.12], 0, () => whiteboard(raised, 1.8, 1.0, ["#a9b89a", "#c7b693", "#b49f90"])));
   }
 }
 

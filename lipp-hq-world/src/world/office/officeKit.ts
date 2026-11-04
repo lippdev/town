@@ -1,7 +1,8 @@
+import type {
+  BufferGeometry} from "three";
 import {
   BoxGeometry,
   BufferAttribute,
-  BufferGeometry,
   Color,
   CylinderGeometry,
   Matrix4,

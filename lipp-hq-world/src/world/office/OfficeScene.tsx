@@ -432,7 +432,13 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   );
 }
 
-/** Tudo o que a cena desenha. O erro de material sobe para a tela de falha do app. */
+/** Sem os materiais não há andar: a interface segue de pé e explica o que faltou. */
+function reportWorldFailure(message: string) {
+  const file = /\/prototipo\/[^\s:]+/.exec(message)?.[0];
+  useOfficeStore.getState().setLoad("failed", file ? `Não consegui baixar ${file}.` : message);
+}
+
+/** Tudo o que a cena desenha. */
 export function OfficeScene({ stage }: { stage: HTMLElement }) {
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   return (
@@ -440,9 +446,11 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
       <OfficeCameraRig stage={stage} />
       <Lighting quality={quality} />
       <QualityController shadowEvery={SHADOW_EVERY} />
-      <Suspense fallback={<LoadWatch />}>
-        <OfficeWorld quality={quality} />
-      </Suspense>
+      <PartBoundary onError={reportWorldFailure}>
+        <Suspense fallback={<LoadWatch />}>
+          <OfficeWorld quality={quality} />
+        </Suspense>
+      </PartBoundary>
       <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
         <Suspense fallback={null}>
           <OfficeFigures />

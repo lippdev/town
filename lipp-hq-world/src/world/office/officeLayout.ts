@@ -160,10 +160,10 @@ function seat(roomId: string, kind: SeatKind, index: number, localX: number, loc
 export const DESK_REACH = 0.33;
 
 /** Tampos compartilhados, em coordenadas locais da sala. */
-export const BENCH = { x: 2.2, z: -1.0, width: 2.45, depth: 0.9 } as const;
-export const BENCH_XS = [1.4, 2.2, 3.0] as const;
-export const MEETING = { x: 0, z: -0.05, width: 3.1, depth: 1.0 } as const;
-export const MEETING_XS = [-0.85, 0, 0.85] as const;
+export const BENCH = { x: 2.15, z: -0.7, width: 2.85, depth: 0.9 } as const;
+export const BENCH_XS = [1.15, 2.15, 3.15] as const;
+export const MEETING = { x: 0, z: -0.05, width: 3.5, depth: 1.0 } as const;
+export const MEETING_XS = [-1.1, 0, 1.1] as const;
 
 /**
  * Postos em ordem de preenchimento: primeiro o posto de cada departamento, depois a

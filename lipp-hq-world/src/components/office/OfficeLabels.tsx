@@ -119,9 +119,11 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      <span className="office-entrance-tag" ref={place([ENTRANCE.x - 0.1, 0.1, ENTRANCE.z + 1.5])}>
-        Entrada
-      </span>
+      {!focusedRoomId && (
+        <span className="office-entrance-tag" ref={place([ENTRANCE.x + 0.95, 0.1, ENTRANCE.z + 0.55])}>
+          Entrada
+        </span>
+      )}
     </div>
   );
 }
