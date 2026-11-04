@@ -1,0 +1,70 @@
+.pixel-office {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0e1428;
+  color: #e6e8ef;
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.pixel-office-bar {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 16px;
+}
+
+.pixel-office-bar span {
+  color: #9aa3b8;
+}
+
+.pixel-office-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pixel-office-stage canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  image-rendering: pixelated;
+}
+
+.pixel-office-zoom {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgb(14 20 40 / 85%);
+}
+
+.pixel-office-zoom button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #39425c;
+  border-radius: 6px;
+  background: #1b2238;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pixel-office-zoom button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pixel-office-error {
+  position: absolute;
+  inset: auto 16px 16px;
+  color: #fca5a5;
+}

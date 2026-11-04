@@ -7,6 +7,7 @@ import { parseOfficeRoute } from "@/world/office/officeRoute";
 // da casca (HUD, boot e estados de erro).
 const WorldCanvas = lazy(() => import("@/world/scene/WorldCanvas").then((m) => ({ default: m.WorldCanvas })));
 // O escritório completo é outra página: não carrega a cena antiga, nem ela carrega ele.
+const PixelOfficeApp = lazy(() => import("@/pixel-office/PixelOfficeApp").then((m) => ({ default: m.PixelOfficeApp })));
 const OfficeApp = lazy(() => import("@/components/office/OfficeApp").then((m) => ({ default: m.OfficeApp })));
 
 function detectWebGL(): boolean {
@@ -59,6 +60,14 @@ export function App() {
   const [webgl] = useState(detectWebGL);
   const [officeMode] = useState(() => parseOfficeRoute(window.location.search));
 
+  // 2D puro: não depende de WebGL.
+  if (new URLSearchParams(window.location.search).get("escritorio") === "pixel") {
+    return (
+      <Suspense fallback={<BootLabel text="Carregando o escritório…" />}>
+        <PixelOfficeApp />
+      </Suspense>
+    );
+  }
   if (!webgl) {
     return (
       <div className="app-shell">
