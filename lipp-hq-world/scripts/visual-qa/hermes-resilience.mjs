@@ -6,33 +6,19 @@
  * idade real do dado, que o botão "tentar de novo" funciona quando o serviço
  * volta, e que nada disso gera erro de console.
  */
-import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
-import { freePort, waitForUrl } from "./ports.mjs";
+import { outputDir, startHermesStack } from "./hermes-stack.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../..");
-const OUT = path.join(ROOT, "qa/screenshots/hermes");
-const previewPort = await freePort();
-const apiPort = await freePort();
-const dashboardPort = await freePort();
+const OUT = outputDir("qa/screenshots/hermes");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   await fs.mkdir(OUT, { recursive: true });
-  let fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs", "--api-port", String(apiPort), "--dashboard-port", String(dashboardPort)], { cwd: ROOT, stdio: "ignore" });
-  const preview = spawn("pnpm", ["preview", "--port", String(previewPort), "--strictPort"], {
-    cwd: ROOT,
-    stdio: "ignore",
-    env: {
-      ...process.env,
-      HERMES_API_URL: `http://127.0.0.1:${apiPort}`,
-      HERMES_DASHBOARD_URL: `http://127.0.0.1:${dashboardPort}`,
-    },
-  });
+  const stack = await startHermesStack();
 
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
@@ -42,21 +28,19 @@ async function main() {
 
   const report = { checks: {}, errors: [] };
   try {
-    await waitForUrl(`http://127.0.0.1:${previewPort}/api/hq/hermes/snapshot`, 60000, "preview com proxy");
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on("console", (message) => {
       if (message.type() === "error") report.errors.push(message.text());
     });
 
-    await page.goto(`http://127.0.0.1:${previewPort}`, { waitUntil: "domcontentloaded" });
+    await page.goto(stack.url, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".agent-row", { timeout: 90000 });
     await sleep(3000);
 
     report.checks.botsBefore = await page.locator(".agent-row").count();
 
     // derruba o gateway e espera o próximo poll falhar
-    fixture.kill("SIGTERM");
-    fixture = null;
+    stack.stopFixture();
     await page.waitForSelector(".connection-stale", { timeout: 60000 });
     report.checks.staleBadge = (await page.locator(".connection-stale").textContent())?.trim() ?? null;
     report.checks.botsWhileStale = await page.locator(".agent-row").count();
@@ -68,8 +52,7 @@ async function main() {
     report.checks.panelWarn = (await page.locator(".panel-warn").first().textContent())?.trim() ?? null;
 
     // sobe o gateway de novo e usa "tentar de novo" pelo roster
-    fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs", "--api-port", String(apiPort), "--dashboard-port", String(dashboardPort)], { cwd: ROOT, stdio: "ignore" });
-    await waitForUrl(`http://127.0.0.1:${apiPort}/health`, 30000, "API server de volta");
+    await stack.restartFixture();
     await page.locator(".note-retry").click({ timeout: 5000 }).catch(async () => {
       await page.evaluate(() => window.__HQ_QA__ && null);
     });
@@ -78,8 +61,7 @@ async function main() {
     report.checks.botsAfterRecovery = await page.locator(".agent-row").count();
   } finally {
     await browser.close();
-    preview.kill("SIGTERM");
-    fixture?.kill("SIGTERM");
+    await stack.stop();
   }
 
   report.ok =

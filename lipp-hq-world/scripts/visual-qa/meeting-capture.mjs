@@ -6,32 +6,18 @@
  * verifica: os três bots do briefing ficaram com estado "meeting", eles saíram
  * do posto e estão DENTRO da sala de reuniões, e o HUD mostra o briefing.
  */
-import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
-import { freePort, waitForUrl } from "./ports.mjs";
+import { outputDir, startHermesStack } from "./hermes-stack.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../..");
-const OUT = path.join(ROOT, "qa/screenshots/hermes");
-const previewPort = await freePort();
-const apiPort = await freePort();
-const dashboardPort = await freePort();
+const OUT = outputDir("qa/screenshots/hermes");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   await fs.mkdir(OUT, { recursive: true });
-  const fixture = spawn("node", ["scripts/hermes/fixture-gateway.mjs", "--api-port", String(apiPort), "--dashboard-port", String(dashboardPort)], { cwd: ROOT, stdio: "ignore" });
-  const preview = spawn("pnpm", ["preview", "--port", String(previewPort), "--strictPort"], {
-    cwd: ROOT,
-    stdio: "ignore",
-    env: {
-      ...process.env,
-      HERMES_API_URL: `http://127.0.0.1:${apiPort}`,
-      HERMES_DASHBOARD_URL: `http://127.0.0.1:${dashboardPort}`,
-    },
-  });
+  const stack = await startHermesStack();
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
     headless: true,
@@ -40,13 +26,12 @@ async function main() {
 
   const report = { checks: {}, errors: [] };
   try {
-    await waitForUrl(`http://127.0.0.1:${previewPort}/api/hq/hermes/snapshot`, 60000, "preview com proxy");
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.on("console", (message) => {
       if (message.type() === "error") report.errors.push(message.text());
     });
 
-    await page.goto(`http://127.0.0.1:${previewPort}`, { waitUntil: "domcontentloaded" });
+    await page.goto(stack.url, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".agent-row", { timeout: 90000 });
     await sleep(3000);
 
@@ -99,8 +84,7 @@ async function main() {
     report.checks.boardPresent = await page.evaluate(() => Boolean(document.querySelector("canvas")));
   } finally {
     await browser.close();
-    preview.kill("SIGTERM");
-    fixture.kill("SIGTERM");
+    await stack.stop();
   }
 
   report.ok =

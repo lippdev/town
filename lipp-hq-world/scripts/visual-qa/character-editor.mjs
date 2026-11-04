@@ -9,27 +9,18 @@
  *
  * Uso: node scripts/visual-qa/character-editor.mjs [--out qa/screenshots/character]
  */
-import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { chromium } from "playwright";
-import { freePort, waitForUrl } from "./ports.mjs";
+import { outputDir, startHermesStack } from "./hermes-stack.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../..");
-const OUT = path.join(ROOT, "qa/screenshots/character");
+const OUT = outputDir("qa/screenshots/character");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
-const previewPort = await freePort();
-const apiPort = await freePort();
-const dashboardPort = await freePort();
 
 const SHIRT = "#22c55e";
 const HAIR = "#b4522e";
 const STORAGE_KEY = "lipp-hq-world:agent-looks:v2";
-
-function run(command, args, options = {}) {
-  return spawn(command, args, { cwd: ROOT, stdio: "ignore", ...options });
-}
 
 function hex(value) {
   return String(value).replace("#", "").toLowerCase();
@@ -37,20 +28,7 @@ function hex(value) {
 
 async function main() {
   await fs.mkdir(OUT, { recursive: true });
-  const fixture = run("node", [
-    "scripts/hermes/fixture-gateway.mjs",
-    "--api-port",
-    String(apiPort),
-    "--dashboard-port",
-    String(dashboardPort),
-  ]);
-  const preview = run("pnpm", ["preview", "--port", String(previewPort), "--strictPort"], {
-    env: {
-      ...process.env,
-      HERMES_API_URL: `http://127.0.0.1:${apiPort}`,
-      HERMES_DASHBOARD_URL: `http://127.0.0.1:${dashboardPort}`,
-    },
-  });
+  const stack = await startHermesStack();
 
   const browser = await chromium.launch({
     executablePath: CHROME,
@@ -68,14 +46,13 @@ async function main() {
 
   const report = { shots: [], errors: [], checks: {} };
   try {
-    await waitForUrl(`http://127.0.0.1:${previewPort}/api/hq/hermes/snapshot`, 60000, "preview com proxy");
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     page.setDefaultTimeout(60000);
     page.on("console", (message) => {
       if (message.type() === "error") report.errors.push(message.text());
     });
 
-    await page.goto(`http://127.0.0.1:${previewPort}`, { waitUntil: "domcontentloaded" });
+    await page.goto(stack.url, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__HQ_QA__, null, { timeout: 90000 });
     await page.waitForSelector(".agent-row", { timeout: 60000 });
     await page.waitForTimeout(4000);
@@ -195,8 +172,7 @@ async function main() {
     await page.screenshot({ path: path.join(OUT, "editor-restaurado.png") });
   } finally {
     await browser.close();
-    preview.kill("SIGTERM");
-    fixture.kill("SIGTERM");
+    await stack.stop();
   }
 
   report.ok =
