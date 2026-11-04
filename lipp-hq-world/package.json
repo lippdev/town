@@ -14,6 +14,7 @@
     "qa:all": "node scripts/visual-qa/hermes-capture.mjs && node scripts/visual-qa/hermes-resilience.mjs && node scripts/visual-qa/meeting-capture.mjs && node scripts/visual-qa/character-editor.mjs",
     "qa:personagens": "node scripts/visual-qa/character-studio.mjs",
     "qa:escritorio": "node scripts/visual-qa/office.mjs",
+    "qa:avatar": "node scripts/visual-qa/avatar.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
   },
