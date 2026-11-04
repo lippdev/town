@@ -49,11 +49,12 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
-    // Duas páginas independentes: o estúdio de personagens não carrega o mundo nem o Hermes.
+    // Páginas independentes: estúdio e editor de pessoas não carregam o mundo nem o Hermes.
     rolldownOptions: {
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         personagens: fileURLToPath(new URL("./personagens.html", import.meta.url)),
+        avatares: fileURLToPath(new URL("./avatares.html", import.meta.url)),
       },
     },
   },
