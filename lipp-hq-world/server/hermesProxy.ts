@@ -3,6 +3,7 @@ import {
   classifyFailure,
   clearConnection,
   discoverLocalDashboard,
+  isLoopbackAddress,
   loadSavedConnection,
   normalizeDashboardUrl,
   probeConnection,
@@ -214,6 +215,15 @@ export async function hermesProxyMiddleware(
   const url = request.url ?? "";
   if (!isHermesProxyPath(url)) {
     next();
+    return;
+  }
+
+  // o proxy lê o Hermes com o token salvo: quem fala com ele precisa estar
+  // nesta máquina, mesmo que o Vite tenha sido aberto com --host 0.0.0.0
+  if (!isLoopbackAddress(request.socket?.remoteAddress)) {
+    sendJson(response, 403, {
+      error: "O proxy do Hermes só atende esta máquina (loopback). Abra o Lipp HQ localmente ou por túnel SSH.",
+    });
     return;
   }
 

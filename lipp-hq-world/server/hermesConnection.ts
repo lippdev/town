@@ -1,5 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 
 /**
  * Conexão com o dashboard do Hermes no mesmo formato do Hermes Desktop
@@ -9,7 +10,9 @@ import { dirname, resolve } from "node:path";
  * - o session token do dashboard, enviado no header `X-Hermes-Session-Token`;
  * - `/api/status` é público e diz se o gateway usa OAuth (`auth_required`).
  *
- * O token é salvo só no servidor, num arquivo local com permissão 0600. O
+ * O token é salvo só no servidor, em `~/.lipp-hq/connection.json` (0600, fora
+ * do repositório, como o Claw3D guarda as configurações do Studio em
+ * `~/.openclaw/claw3d/`). O
  * navegador manda o token uma vez e nunca o lê de volta: recebe só a prévia
  * `...abc123`, igual ao Desktop.
  */
@@ -95,11 +98,31 @@ export function sessionHeaders(token: string | undefined): Record<string, string
   return token ? { [SESSION_HEADER_NAME]: token } : {};
 }
 
+/**
+ * Fora do repositório por padrão: um zip, uma cópia ou um `git add -f` do
+ * projeto não leva o token junto. `HQ_CONNECTION_FILE` troca o caminho.
+ */
 export function connectionFilePath(env: NodeJS.ProcessEnv = process.env): string {
-  return resolve(env.HQ_CONNECTION_FILE ?? ".hq-connection.json");
+  return env.HQ_CONNECTION_FILE ? resolve(env.HQ_CONNECTION_FILE) : join(homedir(), ".lipp-hq", "connection.json");
 }
 
-export function loadSavedConnection(file: string = connectionFilePath()): SavedConnection | null {
+/** Onde a primeira versão salvava (diretório do app); lido só para migrar. */
+export function legacyConnectionFilePath(): string {
+  return resolve(".hq-connection.json");
+}
+
+/** Sem caminho explícito nem `HQ_CONNECTION_FILE`, o arquivo antigo também conta. */
+function usesDefaultPath(file: string | undefined): boolean {
+  return file === undefined && !process.env.HQ_CONNECTION_FILE;
+}
+
+export function loadSavedConnection(file?: string): SavedConnection | null {
+  const current = readConnectionFile(file ?? connectionFilePath());
+  if (current || !usesDefaultPath(file)) return current;
+  return readConnectionFile(legacyConnectionFilePath());
+}
+
+function readConnectionFile(file: string): SavedConnection | null {
   try {
     if (!existsSync(file)) return null;
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<SavedConnection>;
@@ -116,15 +139,19 @@ export function loadSavedConnection(file: string = connectionFilePath()): SavedC
   }
 }
 
-export function saveConnection(connection: SavedConnection, file: string = connectionFilePath()): void {
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(connection, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+export function saveConnection(connection: SavedConnection, file?: string): void {
+  const target = file ?? connectionFilePath();
+  mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
+  writeFileSync(target, `${JSON.stringify(connection, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   // writeFileSync só aplica o mode ao criar; um arquivo antigo pode ter outro
-  chmodSync(file, 0o600);
+  chmodSync(target, 0o600);
+  // migração: salvo no lugar novo, a cópia antiga dentro do app sai
+  if (usesDefaultPath(file)) rmSync(legacyConnectionFilePath(), { force: true });
 }
 
-export function clearConnection(file: string = connectionFilePath()): void {
-  rmSync(file, { force: true });
+export function clearConnection(file?: string): void {
+  rmSync(file ?? connectionFilePath(), { force: true });
+  if (usesDefaultPath(file)) rmSync(legacyConnectionFilePath(), { force: true });
 }
 
 export interface ProbeResult {
@@ -359,4 +386,17 @@ export function classifyFailure(message: string | undefined): FailureClass | nul
     return { code: "NOT_HERMES", label: "Não é o dashboard", action: "O link aponta para outro serviço; o dashboard sobe na 9119." };
   }
   return null;
+}
+
+/**
+ * Endereço do cliente é desta máquina? O proxy carrega o token do Hermes, então
+ * só atende loopback — como o `network-policy.js` do Claw3D, que recusa expor o
+ * Studio na rede sem token de acesso. Cobre IPv4, IPv6 e IPv4 mapeado em IPv6.
+ */
+export function isLoopbackAddress(address: string | undefined): boolean {
+  const value = String(address ?? "").trim().toLowerCase();
+  if (!value) return false;
+  if (value === "::1" || value === "0:0:0:0:0:0:0:1") return true;
+  const ipv4 = value.startsWith("::ffff:") ? value.slice("::ffff:".length) : value;
+  return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ipv4);
 }
