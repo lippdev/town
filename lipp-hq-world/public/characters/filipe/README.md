@@ -4,8 +4,54 @@
 costas em 3/4 embaixo, com células de 58×115 px e 32 cores. Cada eixo do andar vira uma
 diagonal da tela, então as outras duas direções são as mesmas artes espelhadas.
 
-O passo acompanha a distância percorrida (`src/world/office/filipeWalk.ts`), e a sola fica no
-ponto do chão. A luz está desenhada na arte: ela não responde às luzes do cenário.
+`walk.json` descreve o PNG, e o código não conhece mais nenhuma dessas medidas:
+
+| Campo | O que é |
+| - | - |
+| `image` | PNG, relativo ao JSON |
+| `cell` | Largura e altura da célula, em pixels |
+| `soleRow` | Linha da célula onde a sola encosta no chão |
+| `visibleRows` | Linhas ocupadas pela figura; elas valem 1,8 m, em qualquer resolução |
+| `animations` | `walk-front`, `walk-back`, `idle-front` e `idle-back` |
+
+Cada animação tem `row`, `frames` e, se não começar na primeira coluna, `firstColumn`. Quem anda
+tem `stepMeters`, em metros por quadro: é o que impede o pé de deslizar. Quem anima parado tem
+`fps`; zero é pose fixa. Com movimento reduzido, fica no primeiro quadro. A arte de hoje tem o
+parado no quadro de pernas juntas da caminhada, por isso `firstColumn: 1` e `frames: 1`.
+
+## Arte nova
+
+Troque os dois arquivos. Para 12 quadros de caminhada, 8 de parado e o dobro da resolução:
+
+```json
+{
+  "image": "walk.png",
+  "cell": { "width": 116, "height": 230 },
+  "soleRow": 224,
+  "visibleRows": 214,
+  "animations": {
+    "walk-front": { "row": 0, "frames": 12, "stepMeters": 0.0667 },
+    "walk-back": { "row": 1, "frames": 12, "stepMeters": 0.0667 },
+    "idle-front": { "row": 2, "frames": 8, "fps": 6 },
+    "idle-back": { "row": 3, "frames": 8, "fps": 6 }
+  }
+}
+```
+
+`node scripts/visual-qa/sprite-zoom.mjs --arte-nova` prova esse caminho com um atlas de teste
+montado a partir do atual. Se o JSON não fechar com o PNG, o console diz o que há de errado e a
+cena segue sem ele. Mantenha a célula com folga transparente: a sombra e o rosto vêm do alfa.
+
+A luz está desenhada na arte: o sprite sai com a cor do atlas sob a luz de referência da cena
+(`cameraFacingLight`, em `officeSun.ts`) e só a modula em torno dela, com cor, brilho e a sombra
+do sol sobre ele. Ele não passa pelo tone mapping do resto da cena (`toneMapped: false`): a curva
+do PBR escurece o preto e satura o laranja da arte. A razão cena/arte, medida pelo harness de zoom,
+fica perto de 1 (`LIGHT_CALIBRATION`, em `spriteMaterials.ts`, foi ajustado nela). Prefira arte
+com luz neutra e sem sombra no chão: a sombra vem da cena, e parte da sola de cada quadro
+(`soleCenters` mede onde estão os pés).
+
+A textura na GPU dá a cada célula uma folga e arredonda para múltiplo de 32 px: 12 quadros de
+116 px viram 1536 px de largura. Se passar do limite da GPU, o console avisa e a cena segue sem ele.
 
 `demo-isometric.png` é a pose parada em 53×132 px. O escritório não a usa mais, porque parado
 ele mostra o quadro de pernas juntas da caminhada; ela fica para quando houver uma pose ociosa.
@@ -24,5 +70,4 @@ blender --background --factory-startup --python scripts/characters/pixelize-spri
   docs/characters/filipe/isometrico-fonte.png public/characters/filipe/demo-isometric.png
 ```
 
-Se a célula ou a sola mudarem, atualize as medidas em `src/world/office/FilipeDemoSprite.tsx`:
-o script imprime os valores.
+Se a célula ou a sola mudarem, atualize `walk.json`: o script imprime os valores.
