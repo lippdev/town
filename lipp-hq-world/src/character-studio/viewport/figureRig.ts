@@ -237,9 +237,23 @@ export class FigureRig {
     const size = faceBox.getSize(new Vector3()).divideScalar(headScale);
     const front = toLocal(faceBox.max.clone()).z;
 
-    const radius = size.x * 0.25;
-    const tube = radius * 0.11;
-    const spacing = size.x * 0.27;
+    // Largura real da cabeça na altura dos olhos, para as hastes encostarem nela.
+    let halfWidth = size.x / 2;
+    const skinPoint = new Vector3();
+    source.traverse((node) => {
+      const mesh = node as SkinnedMesh;
+      if (!mesh.isSkinnedMesh || (mesh.material as MeshStandardMaterial).name !== SLOT_MATERIAL.skin) return;
+      const count = mesh.geometry.attributes.position!.count;
+      for (let index = 0; index < count; index += 1) {
+        mesh.getVertexPosition(index, skinPoint);
+        mesh.localToWorld(skinPoint);
+        if (skinPoint.y >= faceBox.min.y && skinPoint.y <= faceBox.max.y) halfWidth = Math.max(halfWidth, Math.abs(toLocal(skinPoint).x));
+      }
+    });
+
+    const radius = size.x * 0.185;
+    const tube = radius * 0.1;
+    const spacing = size.x * 0.33;
     const material = new MeshStandardMaterial({ color: "#23252a", roughness: 0.45, name: "Oculos" });
     this.disposables.push(material);
     const add = (geometry: BufferGeometry, x: number, y: number, z: number) => {
@@ -248,15 +262,20 @@ export class FigureRig {
       mesh.castShadow = true;
       this.disposables.push(geometry);
       this.glasses.add(mesh);
-      return mesh;
     };
     const z = front + tube * 2;
-    add(new TorusGeometry(radius, tube, 8, 28), -spacing, center.y, z);
-    add(new TorusGeometry(radius, tube, 8, 28), spacing, center.y, z);
-    add(new BoxGeometry(spacing * 2 - radius * 2, tube * 1.6, tube * 1.6), 0, center.y + radius * 0.2, z);
+    const y = center.y;
+    const bar = tube * 1.5;
+    add(new TorusGeometry(radius, tube, 8, 28), -spacing, y, z);
+    add(new TorusGeometry(radius, tube, 8, 28), spacing, y, z);
+    add(new BoxGeometry((spacing - radius) * 2, bar, bar), 0, y + radius * 0.25, z);
+    const armLength = front * 1.1;
+    const hingeStart = spacing + radius;
+    // Um pouco para dentro: a haste entra sob o cabelo em vez de sobrar para fora dele.
+    const armX = halfWidth * 0.97;
     for (const side of [-1, 1]) {
-      const arm = new BoxGeometry(tube * 1.4, tube * 1.4, front * 1.05);
-      add(arm, side * (spacing + radius), center.y + radius * 0.2, z - front * 0.525);
+      add(new BoxGeometry(armX - hingeStart + bar, bar, bar), (side * (armX + hingeStart)) / 2, y + radius * 0.25, z);
+      add(new BoxGeometry(bar, bar, armLength), side * armX, y + radius * 0.25, z - armLength / 2);
     }
     this.glasses.name = "oculos";
     this.glasses.visible = false;
@@ -358,7 +377,8 @@ export class FigureRig {
   }
 
   snapshot(): FigureSnapshot {
-    this.holder.updateWorldMatrix(true, true);
+    // updateMatrixWorld, não updateWorldMatrix: só ele renova o bindMatrixInverse das malhas.
+    this.holder.updateMatrixWorld(true);
     const materials = {} as FigureSnapshot["materials"];
     const slotBounds = {} as FigureSnapshot["slotBounds"];
     for (const slot of COLOR_SLOTS) {

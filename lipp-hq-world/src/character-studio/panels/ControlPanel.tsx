@@ -42,7 +42,10 @@ function OriginNotice({ variant, onRestore, onKeep }: { variant: Variant; onRest
   if (drift.status === "revised") {
     return (
       <div className="cs-notice" role="status">
-        <p><strong>{drift.preset.name}</strong> mudou na fonte (revisão {drift.fromRevision} → {drift.preset.revision}). {drift.preset.changelog}</p>
+        <p>
+          <strong>{drift.preset.name}</strong> mudou na fonte
+          {drift.fromRevision !== drift.preset.revision && ` (revisão ${drift.fromRevision} → ${drift.preset.revision})`}. {drift.preset.changelog}
+        </p>
         <div className="cs-notice__actions">
           <button type="button" className="cs-button cs-button--small" onClick={onRestore}>Usar a revisão</button>
           <button type="button" className="cs-button cs-button--small" onClick={onKeep}>Manter a minha</button>

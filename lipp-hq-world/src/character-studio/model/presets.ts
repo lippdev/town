@@ -71,7 +71,7 @@ export const PALETTES: Partial<Record<ColorSlot, readonly string[]>> = {
   hair: ["#17120f", "#3b281d", "#6b4426", "#8e4a24", "#c49a5b", "#9a9a98"],
   shirt: ["#3b82f6", "#55664a", "#c9b89a", "#b4483c", "#e6e4df", "#2b2f36"],
   pants: ["#33363d", "#2f4256", "#4b4238", "#6d6f73", "#1d1f23", "#8a7a62"],
-  face: ["#ece7db", "#17120f", "#3b281d", "#2f4256"],
+  face: ["#ece7db", "#17120f", "#3b281d", "#6b4426", "#2f4256", "#55664a"],
 };
 
 export function presetById(id: string | null | undefined): CharacterPreset | undefined {
