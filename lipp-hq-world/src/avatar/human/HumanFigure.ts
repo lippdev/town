@@ -20,8 +20,6 @@ import { ARMATURE_URL, POSES_URL, ROBOT_URL, loadGltf, loadPart, releasePart, ty
 import type { CategoryId } from "./catalog";
 import type { Expression, ResolvedHuman, ResolvedPart } from "./preset";
 
-const PULSE_URL = "/prototipo/pulse.glb";
-
 export interface HumanBase {
   armature: Object3D;
   clips: HumanClips;
@@ -31,13 +29,12 @@ let base: Promise<HumanBase> | null = null;
 
 /** O esqueleto e as animações, uma vez por página. As peças vêm depois, sob demanda. */
 export function loadHumanBase(): Promise<HumanBase> {
-  base ??= Promise.all([loadGltf(ARMATURE_URL), loadGltf(POSES_URL), loadGltf(ROBOT_URL), loadGltf(PULSE_URL)]).then(([armature, poses, robot, pulse]) => ({
+  base ??= Promise.all([loadGltf(ARMATURE_URL), loadGltf(POSES_URL), loadGltf(ROBOT_URL)]).then(([armature, poses, robot]) => ({
     armature: armature.scene,
     clips: buildHumanClips({
       armature: armature.scene,
       poses: poses.animations,
       robot: { scene: robot.scene, clips: robot.animations },
-      pulse: { scene: pulse.scene, clips: pulse.animations },
     }),
   }));
   base.catch(() => {

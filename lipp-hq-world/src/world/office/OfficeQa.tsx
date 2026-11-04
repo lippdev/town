@@ -61,6 +61,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
           position: humanActors.get(human.id)?.position ?? null,
           heading: humanActors.get(human.id)?.heading ?? null,
           seat: human.chair,
+          chairPose: humanActors.get(human.id)?.chair ?? null,
           worn: humanFigures.get(human.id)?.snapshot() ?? null,
         })),
         humansWaiting: store.humansWaiting,

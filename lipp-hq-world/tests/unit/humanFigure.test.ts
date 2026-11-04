@@ -47,10 +47,10 @@ describe("figura humana", () => {
   let base: ConstructorParameters<typeof HumanFigure>[0];
 
   beforeAll(async () => {
-    const [armature, poses, robot, pulse] = await Promise.all([parse("public/avatares/humano/armature.glb"), parse("public/avatares/humano/poses.glb"), parse("public/avatares/robo/RobotExpressive.glb"), parse("public/prototipo/pulse.glb")]);
+    const [armature, poses, robot] = await Promise.all([parse("public/avatares/humano/armature.glb"), parse("public/avatares/humano/poses.glb"), parse("public/avatares/robo/RobotExpressive.glb")]);
     base = {
       armature: armature.scene,
-      clips: buildHumanClips({ armature: armature.scene, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations }, pulse: { scene: pulse.scene, clips: pulse.animations } }),
+      clips: buildHumanClips({ armature: armature.scene, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations } }),
     };
   }, 60000);
 

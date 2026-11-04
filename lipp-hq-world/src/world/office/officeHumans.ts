@@ -1,4 +1,5 @@
 import type { HumanPreset } from "@/avatar/human/preset";
+import { HUMAN_SCALE, SIT, SIT_TIMELINE } from "@/avatar/human/seatFit";
 import { FACING, OFFICE_ROOMS_BY_ID, OFFICE_SEATS, type OfficeSeat } from "./officeLayout";
 
 /**
@@ -18,13 +19,7 @@ export const HUMAN_PHASE_LABEL: Record<HumanPhase, string> = {
   toSpot: "Voltando",
 };
 
-/**
- * O arquivo tem cerca de 2,05 m até o alto da cabeça, e a cabeça é metade disso: no tamanho
- * do arquivo ela cobre quem está atrás. Esta escala deixa a pessoa com 1,48 m.
- */
-export const HUMAN_SCALE = 0.72;
-/** O assento é alto para estas pernas: a pessoa senta nele com os pés soltos, como criança. */
-export const HUMAN_SEAT_LIFT = 0.14;
+export { HUMAN_SCALE };
 
 export interface Point {
   x: number;
@@ -87,20 +82,37 @@ export function placeHumans(presets: readonly HumanPreset[], occupiedSeats: Iter
   return { placed, waiting: presets.slice(HUMAN_CAPACITY) };
 }
 
-/** Quanto ao lado da cadeira a pessoa para: o vão entre uma cadeira e a seguinte. */
-const SIDE_STEP = 0.5;
+/**
+ * Atrás da fileira de cadeiras: a pessoa é mais larga que o vão entre duas delas e nunca passa
+ * por ali. Por esta faixa, ela cruza as costas das vizinhas sem encostar.
+ */
+const LANE = 0.8;
+/** A que distância do eixo da cadeira ela sai da faixa e vem até o lugar de sentar. */
+const LANE_EXIT = 0.3;
+
+const forwardOf = (yaw: number): Point => ({ x: Math.sin(yaw), z: Math.cos(yaw) });
+
+/** Onde a pessoa fica em pé, de costas para a cadeira já virada para ela. */
+export function standPoint(seat: OfficeSeat): Point {
+  const back = forwardOf(seat.yaw);
+  const distance = SIT.swivelClear + SIT.standOff;
+  return { x: seat.x - back.x * distance, z: seat.z - back.z * distance };
+}
 
 /**
- * O caminho do lugar até o lado da cadeira, sem cruzar móvel. Ela entra de lado: por trás
- * atravessaria o encosto. Cadeira virada para o sul fica atrás da bancada, e o caminho
- * contorna a ponta dela.
+ * O caminho do lugar até a frente da cadeira, pelo lado de trás da fileira. Cadeira virada
+ * para o sul fica atrás da bancada, e o caminho contorna a ponta dela.
  */
 export function chairRoute(spot: Point, seat: OfficeSeat): Point[] {
   const hall = OFFICE_ROOMS_BY_ID.hall!.center;
   const local = (x: number, z: number) => ({ x: hall.x + x, z: hall.z + z });
-  const side = { x: seat.x - SIDE_STEP, z: seat.z };
-  if (seat.yaw === FACING.north) return [spot, { x: side.x, z: hall.z + 0.62 }, side];
-  return [spot, local(0.35, 0.62), local(0.35, -2.1), { x: side.x, z: hall.z - 2.1 }, side];
+  const stand = standPoint(seat);
+  if (seat.yaw === FACING.north) {
+    const side = spot.x >= seat.x ? 1 : -1;
+    return [spot, { x: seat.x + side * LANE_EXIT, z: seat.z + LANE }, stand];
+  }
+  const lane = seat.z - LANE;
+  return [spot, local(0.3, 0.95), local(0.3, lane - hall.z), { x: seat.x - LANE_EXIT, z: lane }, stand];
 }
 
 export function pathLength(path: readonly Point[]): number {
@@ -136,8 +148,60 @@ export function turnToward(current: number, goal: number, maxStep: number): numb
   return current + Math.sign(difference) * Math.min(Math.abs(difference), maxStep);
 }
 
-/** Onde o quadril assenta: a pose recua o corpo, então a figura compensa. */
-export function seatedRoot(seat: OfficeSeat, hipsZ: number, scale = HUMAN_SCALE): Point {
-  const back = hipsZ * scale;
-  return { x: seat.x - Math.sin(seat.yaw) * back, z: seat.z - Math.cos(seat.yaw) * back };
+/** Onde a cadeira está e para onde o assento olha. */
+export interface ChairPose extends Point {
+  yaw: number;
+}
+
+export function chairAtHome(seat: OfficeSeat): ChairPose {
+  return { x: seat.x, z: seat.z, yaw: seat.yaw };
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+
+/** A cadeira se prepara: recua da mesa e dá meia-volta. `amount` vai de 0 a 1. */
+export function chairReady(seat: OfficeSeat, amount: number): ChairPose {
+  const k = smooth(clamp01(amount));
+  const forward = forwardOf(seat.yaw);
+  return { x: seat.x - forward.x * SIT.swivelClear * k, z: seat.z - forward.z * SIT.swivelClear * k, yaw: seat.yaw + Math.PI * k };
+}
+
+/**
+ * A que distância do lugar de sentar a cadeira começa e termina de se preparar. Quando termina,
+ * a pessoa ainda está fora do alcance do encosto, que gira a até 45 cm do eixo.
+ */
+export const CHAIR_READY_FROM = 1.67;
+const CHAIR_READY_TO = 0.62;
+
+/** Quanto a cadeira já se preparou com a pessoa a `remaining` metros do lugar de sentar. */
+export function chairReadiness(remaining: number): number {
+  return clamp01((CHAIR_READY_FROM - remaining) / (CHAIR_READY_FROM - CHAIR_READY_TO));
+}
+
+export interface SeatMoment {
+  chair: ChairPose;
+  /** Onde estão os pés da figura, que é a origem dela. */
+  root: Point;
+  yaw: number;
+  /** Quanto a bacia já recuou dos pés, em metros. */
+  hipsBack: number;
+}
+
+/**
+ * Cadeira e pessoa num instante do clipe de sentar. Quem chama anda o tempo: levantar é o mesmo
+ * caminho, de trás para a frente. Primeiro ela sobe com a cadeira parada; depois o assento gira
+ * com ela em cima, com os pés no apoio da própria cadeira; por fim, a cadeira rola até a mesa.
+ */
+export function seatMoment(seat: OfficeSeat, time: number): SeatMoment {
+  const { climbEnd, swivelEnd, tuckEnd } = SIT_TIMELINE;
+  const forward = forwardOf(seat.yaw);
+  const ready = chairReady(seat, 1);
+  const spin = smooth(clamp01((time - climbEnd) / (swivelEnd - climbEnd)));
+  const roll = smooth(clamp01((time - swivelEnd) / (tuckEnd - swivelEnd)));
+  const distance = -SIT.swivelClear + (SIT.swivelClear + SIT.tuck) * roll;
+  const chair: ChairPose = { x: seat.x + forward.x * distance, z: seat.z + forward.z * distance, yaw: ready.yaw + Math.PI * spin };
+  const facing = forwardOf(chair.yaw);
+  const root = { x: chair.x + facing.x * SIT.standOff, z: chair.z + facing.z * SIT.standOff };
+  return { chair, root, yaw: chair.yaw, hipsBack: (SIT.standOff - SIT.hipsZ) * smooth(clamp01(time / climbEnd)) };
 }

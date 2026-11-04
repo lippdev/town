@@ -21,10 +21,11 @@ import {
   type OfficeSeat,
 } from "./officeLayout";
 import { screenUv, signUv } from "./officeTextures";
+import { CHAIR as HUMAN_CHAIR, DESK } from "@/avatar/human/seatFit";
 
 /** A mobília foi medida para figuras de pernas curtas: assento e mesa são baixos. */
-export const SEAT_TOP = 0.33;
-export const DESK_TOP = 0.72;
+export const SEAT_TOP = HUMAN_CHAIR.seatTop;
+export const DESK_TOP = DESK.top;
 
 const WALL_WEST = "#8e8478";
 const WALL_NORTH = "#9a9083";
@@ -44,6 +45,32 @@ function chair(b: KitBuilder, color = CHAIR) {
   b.box([0, 0.07, 0], [0.62, 0.05, 0.06], { color: "#343943", cast: false });
   b.box([0, 0.07, 0], [0.06, 0.05, 0.62], { color: "#343943", cast: false });
   b.solid("cadeira", 0, 0, 0.62, 0.62);
+}
+
+/**
+ * A cadeira do hall, a única em que alguém senta de verdade. Encosto e altura são os das outras;
+ * o assento é mais curto, a base é um X e há um apoio para os pés, como em banqueta de balcão.
+ */
+function humanChair(b: KitBuilder, color: string) {
+  const { seatTop, seatBottom, seatWidth, seatFront, seatRear, backFront, backRear, backBottom, backTop, footBar, baseReach } = HUMAN_CHAIR;
+  const back = { color: "#353c47" };
+  const metal = { color: "#6a7178" };
+  b.box([0, (seatTop + seatBottom) / 2, (seatFront + seatRear) / 2], [seatWidth, seatTop - seatBottom, seatFront - seatRear], { color });
+  b.box([0, (backTop + backBottom) / 2, (backFront + backRear) / 2], [seatWidth, backTop - backBottom, backFront - backRear], back);
+  b.box([0, (backBottom + seatTop) / 2, (backFront + backRear) / 2], [0.1, backBottom - seatTop, backFront - backRear], back);
+  b.box([0, 0.16, 0], [0.055, 0.24, 0.055], { color: "#565d63" });
+  for (const yaw of [Math.PI / 4, -Math.PI / 4]) {
+    b.at([0, 0, 0], yaw, () => b.box([0, 0.07, 0], [0.06, 0.05, baseReach * 2], { color: "#343943" }));
+  }
+  b.box([0, footBar.y, footBar.z], [footBar.halfWidth * 2, footBar.radius * 2, footBar.radius * 2], metal);
+  for (const side of [-1, 1]) b.box([side * 0.05, footBar.y - 0.006, footBar.z / 2], [0.016, footBar.radius, footBar.z], metal);
+}
+
+/** Uma cadeira do hall, com o eixo na origem, para desenhar várias e mover cada uma. */
+export function humanChairGeometry(color = "#4d5159") {
+  const b = new KitBuilder();
+  humanChair(b, color);
+  return b.build().values().next().value!;
 }
 
 function deskTop(b: KitBuilder, x: number, z: number, width: number, depth: number, pedestal: -1 | 0 | 1 = 0) {
@@ -549,9 +576,10 @@ function furnishHall(b: KitBuilder, room: OfficeRoom) {
     b.prop("planta", [3.2, 0.02, 2.3], 0.85);
     b.prop("planta", [-3.25, 0.02, -1.15], 0.72, 1.2);
   });
+  // A cadeira da bancada é desenhada à parte, porque se move: aqui fica só o lugar dela.
   OFFICE_SEATS.filter((seat) => seat.roomId === room.id).forEach((seat, index) => {
     b.at([seat.x, 0, seat.z], seat.yaw, () => {
-      chair(b, "#4d5159");
+      b.solid("cadeira", 0, 0, 0.62, 0.62);
       laptop(b, 0, DESK_REACH + 0.17, index % 4);
     });
   });

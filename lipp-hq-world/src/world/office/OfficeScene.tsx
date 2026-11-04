@@ -29,6 +29,7 @@ import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
 import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt } from "./officeLayout";
 import { buildOffice, type OfficeBuild } from "./officeRooms";
+import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
@@ -343,6 +344,7 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
       <group name="office-fixed">
         <BatchMeshes batch={build.fixed} materials={materials} />
       </group>
+      <HumanChairs material={materials.matte} />
       <RaisedWalls build={build} materials={materials} />
       <PartBoundary onError={(message) => console.warn("[escritório] planta/luminária fora da cena:", message)}>
         <Suspense fallback={null}>
