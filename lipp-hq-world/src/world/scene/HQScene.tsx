@@ -7,7 +7,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality } from "@/world/quality";
 import { BaseSlab } from "@/world/scene/BaseSlab";
 import { FloorPlates } from "@/world/rooms/FloorPlates";
-import { RoomSigns } from "@/world/rooms/RoomSigns";
+import { RoomIndicator } from "@/world/rooms/RoomIndicator";
 import { Furniture } from "@/world/furniture/Furnishing";
 import { BriefingBoard } from "@/world/furniture/BriefingBoard";
 import { Agents } from "@/world/characters/Agents";
@@ -33,7 +33,7 @@ export function HQScene() {
       <Furniture />
       <BriefingBoard />
       <Agents />
-      <RoomSigns />
+      <RoomIndicator />
       <CameraRig />
       <ViewportInset />
       <Picking />
