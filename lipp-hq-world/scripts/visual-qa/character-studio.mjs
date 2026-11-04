@@ -540,6 +540,26 @@ try {
     await context.close();
   }
 
+  // Outra aba atualiza o formato enquanto esta já está aberta.
+  {
+    const { context, page } = await open();
+    await ready(page);
+    await setHex(page, "Camisa", "#123456");
+    await settle(page);
+    const sibling = await context.newPage();
+    await sibling.goto(url);
+    await ready(sibling);
+    const future = JSON.stringify({ schema: 99, variants: [{ privateFutureData: "preservar" }] });
+    await sibling.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: STORAGE_KEY, value: future });
+    await page.getByText("versão mais nova").waitFor();
+    await setHex(page, "Camisa", "#654321");
+    await settle(page);
+    check("outra aba: versão futura não é sobrescrita", await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY) === future);
+    check("outra aba: salvamento bloqueado fica visível", await page.getByText("Sem salvamento local").isVisible());
+    check("outra aba: figura continua disponível para exportar", (await snapshot(page)).materials.shirt.hex === "#654321");
+    await context.close();
+  }
+
   // ── Larguras ──────────────────────────────────────────────────────────────
   for (const [label, viewport] of [["notebook", { width: 1100, height: 700 }], ["tablet", { width: 820, height: 1100 }], ["celular", { width: 390, height: 844 }]]) {
     const { context, page } = await open({ viewport });

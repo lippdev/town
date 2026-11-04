@@ -36,7 +36,7 @@ export function StudioApp() {
   const [importing, setImporting] = useState(false);
   const [manualCopy, setManualCopy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [warnings, setWarnings] = useState(studio.loadWarnings);
+  const warnings = studio.loadWarnings;
 
   useEffect(() => {
     if (!notice) return;
@@ -145,7 +145,7 @@ export function StudioApp() {
         {warnings.length > 0 && (
           <div className="cs-banner" role="alert">
             <div>{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div>
-            <button type="button" className="cs-icon" aria-label="Dispensar aviso" onClick={() => setWarnings([])}><X size={14} aria-hidden="true" /></button>
+            <button type="button" className="cs-icon" aria-label="Dispensar aviso" onClick={studio.dismissWarnings}><X size={14} aria-hidden="true" /></button>
           </div>
         )}
         <div className="cs-toast-slot" aria-live="polite">

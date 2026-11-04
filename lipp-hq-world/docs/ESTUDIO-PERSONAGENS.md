@@ -82,7 +82,10 @@ certa é dizer isso e propor outro caminho, não fingir que deu.
 
 - Só variações e seleção vão para `hq.personagens.v1`, neste navegador.
 - Dado corrompido ou variação inválida vai para `hq.personagens.backup`, com aviso.
+- Se o backup falhar, o original é preservado e o salvamento fica bloqueado; novas
+  variações ainda podem ser exportadas.
 - Dado salvo por uma versão futura não é sobrescrito: a aba avisa e não grava.
+- Essa proteção também vale quando outra aba salva uma versão futura com o estúdio já aberto.
 - O desfazer vale para a sessão e cobre edição, exclusão, importação e restauração. Não
   sobrevive a recarregar.
 - Para guardar de verdade ou levar a outro lugar, exporte a ficha.

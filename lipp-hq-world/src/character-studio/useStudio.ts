@@ -27,7 +27,7 @@ function newId(): string {
 /** Estado do estúdio mais o salvamento local. Aviso de falha fica visível, nunca só no console. */
 export function useStudio() {
   const storage = useRef(browserStorage());
-  const [loaded] = useState(() => loadStudio(storage.current));
+  const [loaded, setLoaded] = useState(() => loadStudio(storage.current));
   const [state, dispatch] = useReducer(studioReducer, loaded.doc, initialState);
   const [saveFailed, setSaveFailed] = useState(false);
   const lastSaved = useRef(loaded.writable ? serializeStudio(loaded.doc) : "");
@@ -60,7 +60,12 @@ export function useStudio() {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY || event.newValue === null || event.newValue === lastSaved.current) return;
       const next = loadStudio(storage.current);
-      lastSaved.current = event.newValue;
+      writable.current = next.writable;
+      setLoaded(next);
+      // Uma versão que não entendemos bloqueia também o timer já agendado.
+      // Mantém a figura atual para o usuário ainda poder exportá-la.
+      if (!next.writable) return;
+      lastSaved.current = serializeStudio(next.doc);
       dispatch({ type: "hydrate", doc: next.doc });
     };
     window.addEventListener("storage", onStorage);
@@ -92,6 +97,7 @@ export function useStudio() {
     canRedo: state.future.length > 0,
     actions,
     loadWarnings: loaded.warnings,
+    dismissWarnings: () => setLoaded((current) => ({ ...current, warnings: [] })),
     saveFailed,
     persistent: loaded.writable,
   };

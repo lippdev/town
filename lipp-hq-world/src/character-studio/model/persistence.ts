@@ -18,9 +18,20 @@ export interface LoadResult {
 function keepBackup(storage: StorageLike, raw: string) {
   try {
     storage.setItem(STORAGE_BACKUP_KEY, raw);
+    return true;
   } catch {
-    // sem espaço para o backup: o original segue intacto até o próximo salvamento
+    return false;
   }
+}
+
+function backupRecovery(storage: StorageLike, raw: string, message: string) {
+  const writable = keepBackup(storage, raw);
+  return {
+    writable,
+    warnings: [writable
+      ? `${message} A cópia completa está em ${STORAGE_BACKUP_KEY}.`
+      : `${message} Não consegui guardar uma cópia. O original será preservado; exporte suas novas variações antes de fechar a aba.`],
+  };
 }
 
 export function loadStudio(storage: StorageLike | null): LoadResult {
@@ -39,8 +50,7 @@ export function loadStudio(storage: StorageLike | null): LoadResult {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    keepBackup(storage, raw);
-    return { doc: emptyDoc(), writable: true, warnings: [`O dado salvo estava corrompido. Comecei do zero e guardei uma cópia em ${STORAGE_BACKUP_KEY}.`] };
+    return { doc: emptyDoc(), ...backupRecovery(storage, raw, "O dado salvo estava corrompido. Comecei do zero.") };
   }
 
   const envelope = (typeof parsed === "object" && parsed !== null ? parsed : {}) as { schema?: unknown; variants?: unknown; selectedId?: unknown };
@@ -48,8 +58,7 @@ export function loadStudio(storage: StorageLike | null): LoadResult {
     return { doc: emptyDoc(), writable: false, warnings: ["Estas variações foram salvas por uma versão mais nova do estúdio. Nada será gravado por cima; atualize a página ou o checkout."] };
   }
   if (envelope.schema !== SCHEMA || !Array.isArray(envelope.variants)) {
-    keepBackup(storage, raw);
-    return { doc: emptyDoc(), writable: true, warnings: [`O dado salvo não tem o formato esperado. Comecei do zero e guardei uma cópia em ${STORAGE_BACKUP_KEY}.`] };
+    return { doc: emptyDoc(), ...backupRecovery(storage, raw, "O dado salvo não tem o formato esperado. Comecei do zero.") };
   }
 
   const variants: Variant[] = [];
@@ -64,14 +73,13 @@ export function loadStudio(storage: StorageLike | null): LoadResult {
       dropped += 1;
     }
   });
-  const warnings: string[] = [];
+  let recovery = { warnings: [] as string[], writable: true };
   if (dropped) {
-    keepBackup(storage, raw);
-    warnings.push(`${dropped} variação(ões) inválida(s) ficaram de fora. A cópia completa está em ${STORAGE_BACKUP_KEY}.`);
+    recovery = backupRecovery(storage, raw, `${dropped} variação(ões) inválida(s) ficaram de fora.`);
   }
   const wanted = typeof envelope.selectedId === "string" ? envelope.selectedId : "";
   const selectedId = seen.has(wanted) || presetById(wanted) ? wanted : emptyDoc().selectedId;
-  return { doc: { variants, selectedId }, warnings, writable: true };
+  return { doc: { variants, selectedId }, ...recovery };
 }
 
 /** Só variações e seleção: os presets moram no arquivo-fonte e nunca são copiados para cá. */

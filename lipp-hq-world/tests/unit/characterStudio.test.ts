@@ -297,6 +297,21 @@ describe("persistência", () => {
     const blocked: StorageLike = { getItem: () => { throw new Error("SecurityError"); }, setItem: () => undefined };
     expect(loadStudio(blocked).writable).toBe(false);
   });
+
+  it.each(["{quebrado", JSON.stringify({ schema: 1 }), JSON.stringify({ schema: 1, variants: [variantWith(), {}] })])(
+    "não autoriza sobrescrever dados se o backup falhar: %s", (raw) => {
+      const storage = memoryStorage({ [STORAGE_KEY]: raw });
+      const originalSet = storage.setItem;
+      storage.setItem = (key, value) => {
+        if (key === STORAGE_BACKUP_KEY) throw new Error("QuotaExceededError");
+        originalSet(key, value);
+      };
+      const loaded = loadStudio(storage);
+      expect(loaded.writable).toBe(false);
+      expect(storage.data[STORAGE_KEY]).toBe(raw);
+      expect(loaded.warnings.join()).toContain("Não consegui guardar uma cópia");
+    },
+  );
 });
 
 describe("ficha", () => {
