@@ -19,10 +19,14 @@ export interface SpriteTexels {
   pitch: { width: number; height: number };
   /** Onde a arte começa dentro do espaço da célula. */
   inset: { x: number; y: number };
+  /** Por célula (linha a linha), onde os pés estão em x, em texels a partir do meio da célula. */
+  soles: number[];
 }
 
 /** Cinco reduções bastam para a sombra e o zoom mínimo, mesmo com arte no dobro da resolução. */
 export const MIP_REDUCTIONS = 5;
+/** Faixa acima da sola, em metros de arte (texels / altura), que conta como pé. */
+const SOLE_BAND = 0.05;
 /** Folga mínima por lado, para o filtro da GPU nunca encontrar arte na beira. */
 const MIN_PADDING = 2;
 /** Nitidez leve de cada nível: devolve o contorno que a média tira. */
@@ -52,6 +56,42 @@ export function spriteLayout(cell: { width: number; height: number }) {
 }
 
 /**
+ * Onde os pés estão, em x, em cada célula: o meio das colunas opacas na faixa logo acima da
+ * sola. A sombra projetada parte daí, e não do meio da célula, que no passo fica entre os pés.
+ */
+export function soleCenters(
+  source: { data: ArrayLike<number>; width: number; height: number },
+  cell: { width: number; height: number },
+  sole?: { row: number; visibleRows: number },
+): number[] {
+  const columns = source.width / cell.width;
+  const rows = source.height / cell.height;
+  const centers: number[] = [];
+  const band = sole ? Math.max(2, Math.round(sole.visibleRows * SOLE_BAND)) : 0;
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      let weight = 0;
+      let moment = 0;
+      for (let y = sole ? Math.max(0, sole.row - band) : 0; y < (sole ? Math.min(cell.height, sole.row) : 0); y += 1) {
+        for (let x = 0; x < cell.width; x += 1) {
+          const alpha = source.data[((row * cell.height + y) * source.width + column * cell.width + x) * 4 + 3]! / 255;
+          weight += alpha;
+          moment += alpha * (x + 0.5 - cell.width / 2);
+        }
+      }
+      centers.push(weight > 0 ? moment / weight : 0);
+    }
+  }
+  return centers;
+}
+
+/** Tamanho da textura do atlas na GPU, com a folga de cada célula: o que o limite do hardware vê. */
+export function spriteTextureSize(cell: { width: number; height: number }, columns: number, rows: number) {
+  const { pitch } = spriteLayout(cell);
+  return { width: columns * pitch.width, height: rows * pitch.height };
+}
+
+/**
  * Monta os níveis a partir de um PNG RGBA. A média é feita em gama, ponderada pelo alfa:
  * em linear, um olho escuro some contra a pele clara, e é isso que fazia o rosto lavar.
  * Dentro de cada bloco, quem destoa da vizinhança pesa mais (como em "detail-preserving
@@ -61,6 +101,8 @@ export function spriteLayout(cell: { width: number; height: number }) {
 export function buildSpriteTexels(
   source: { data: ArrayLike<number>; width: number; height: number },
   cell: { width: number; height: number },
+  /** Linha da célula onde a sola encosta; sem ela, os pés não são medidos. */
+  sole?: { row: number; visibleRows: number },
 ): SpriteTexels {
   const columns = source.width / cell.width;
   const rows = source.height / cell.height;
@@ -164,5 +206,5 @@ export function buildSpriteTexels(
     }
     levels.push({ width, height, data });
   }
-  return { levels, pitch, inset };
+  return { levels, pitch, inset, soles: soleCenters(source, cell, sole) };
 }

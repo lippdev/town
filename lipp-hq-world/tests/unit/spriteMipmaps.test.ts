@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSpriteTexels, MIP_REDUCTIONS, spriteLayout } from "@/world/office/spriteMipmaps";
+import { buildSpriteTexels, MIP_REDUCTIONS, soleCenters, spriteLayout, spriteTextureSize } from "@/world/office/spriteMipmaps";
 
 const CELL = { width: 58, height: 115 };
 
@@ -104,5 +104,28 @@ describe("níveis de redução por célula", () => {
     expect(eye).toBeLessThan(100);
     expect(skin).toBeGreaterThan(170);
     expect(skin).toBeLessThan(195);
+  });
+});
+
+describe("pés e tamanho da textura", () => {
+  const source = (cell: { width: number; height: number }, feet: number[]) => {
+    const data = new Uint8ClampedArray(cell.width * cell.height * 4);
+    for (const x of feet) for (let y = cell.height - 8; y < cell.height - 3; y += 1) data[(y * cell.width + x) * 4 + 3] = 255;
+    return { data, width: cell.width, height: cell.height };
+  };
+
+  it("acha os pés em x a partir do meio da célula, só acima da sola", () => {
+    const cell = { width: 20, height: 40 };
+    // pés nas colunas 4 e 8: o meio fica em 6,5 − 10 = −3,5
+    const art = source(cell, [4, 8]);
+    expect(soleCenters(art, cell, { row: 36, visibleRows: 30 })[0]).toBeCloseTo(-3.5, 6);
+    // sem a sola descrita, nada é medido
+    expect(soleCenters(art, cell)[0]).toBe(0);
+  });
+
+  it("dá o tamanho do atlas na GPU com a folga de cada célula: 12 quadros de 116 px cabem", () => {
+    const size = spriteTextureSize({ width: 116, height: 230 }, 12, 4);
+    expect(size).toEqual({ width: 12 * 128, height: 4 * 256 });
+    expect(size.width).toBeLessThanOrEqual(4096);
   });
 });
