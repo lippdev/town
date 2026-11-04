@@ -5,10 +5,10 @@ import { AZIMUTH, ELEVATION, worldToScreen } from "./officeCamera";
 import { advanceWalk, initialWalk, walkPose } from "./filipeWalk";
 import { OFFICE_ROOMS_BY_ID } from "./officeLayout";
 import { officeRuntime } from "./officeStore";
-import { shadowAxes, towardCamera } from "./officeSun";
+import { CYLINDER_EDGE, shadowAxes, towardCamera } from "./officeSun";
 import { animationCell, animationNameFor, atlasGrid, parseSpriteAtlas, spriteQuad, type SpriteAnimationName, type SpriteQuad } from "./spriteAtlas";
 import { createSpriteMaterial, createSpriteShadowMaterial, selectCell, spriteTexture, spriteUniforms } from "./spriteMaterials";
-import { buildSpriteTexels } from "./spriteMipmaps";
+import { buildSpriteTexels, spriteTextureSize } from "./spriteMipmaps";
 import { pixelSnapOffset } from "./spriteSnap";
 
 const ATLAS_URL = "/characters/filipe/walk.json";
@@ -19,8 +19,6 @@ const FLOOR_TOP = 0.015;
 const SHADOW_LIFT = 0.04;
 /** A figura tem volume: o plano dela fica um pouco à frente do centro dos pés. */
 const BODY_DEPTH = 0.12;
-/** Normal na beira do quadro, para o lado da tela: um cilindro bem aberto, de luz leve. */
-const CYLINDER_EDGE = 0.62;
 
 export interface ForcedSpritePose {
   x: number;
@@ -98,8 +96,12 @@ export function FilipeDemoSprite() {
 
   const parts = useMemo(() => {
     const started = performance.now();
-    atlasGrid(atlas, image.width, image.height);
-    const texels = buildSpriteTexels(readPixels(image), atlas.cell);
+    const { columns, rows } = atlasGrid(atlas, image.width, image.height);
+    // 12 quadros de 116 px já passam de 1500 px de largura: arte mais larga ainda pode não caber
+    const size = spriteTextureSize(atlas.cell, columns, rows);
+    const limit = gl.capabilities.maxTextureSize;
+    if (size.width > limit || size.height > limit) throw new Error(`Atlas de ${size.width}×${size.height} px na GPU passa do limite de ${limit} px da textura.`);
+    const texels = buildSpriteTexels(readPixels(image), atlas.cell, { row: atlas.soleRow, visibleRows: atlas.visibleRows });
     filipeSpriteQa.buildMs = performance.now() - started;
     const quad = spriteQuad(atlas, STANDING_HEIGHT, Math.cos(ELEVATION));
     const texture = spriteTexture(texels);
@@ -113,7 +115,7 @@ export function FilipeDemoSprite() {
       material: createSpriteMaterial(uniforms),
       shadowMaterial: createSpriteShadowMaterial(uniforms, atlas, quad, hall.bounds),
     };
-  }, [atlas, image, hall.bounds]);
+  }, [atlas, image, gl, hall.bounds]);
 
   useEffect(() => {
     filipeSpriteQa.ready = true;
@@ -138,7 +140,8 @@ export function FilipeDemoSprite() {
     const forced = filipeSpriteQa.forced;
     const animation = atlas.animations[forced?.animation ?? animationNameFor(pose.walking, pose.facing)];
     const cell = forced ? { row: animation.row, column: forced.column } : animationCell(animation, { distance: walk.current.distance, time: time.current });
-    selectCell(parts.uniforms, parts.texels, cell.column, cell.row, forced?.mirrored ?? pose.mirrored);
+    const columns = parts.texels.levels[0]!.width / parts.texels.pitch.width;
+    selectCell(parts.uniforms, parts.texels, cell.column, cell.row, forced?.mirrored ?? pose.mirrored, parts.texels.soles[cell.row * columns + cell.column]);
 
     const feet: [number, number, number] = [hall.center.x + (forced?.x ?? pose.x), FLOOR_TOP, hall.center.z + (forced?.z ?? pose.z)];
     const { view, viewport } = officeRuntime;

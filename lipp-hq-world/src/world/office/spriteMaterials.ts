@@ -15,28 +15,43 @@ import {
   Vector3,
   Vector4,
 } from "three";
-import { floorShadowFactor, screenGroundAxes, shadowAxes } from "./officeSun";
+import { cameraFacingLight, floorShadowFactor, screenGroundAxes, shadowAxes } from "./officeSun";
 import type { SpriteAtlas, SpriteQuad } from "./spriteAtlas";
-import type { SpriteTexels } from "./spriteMipmaps";
+import { MIP_REDUCTIONS, type SpriteTexels } from "./spriteMipmaps";
 
-/** Empurra a redução um pouco para o nível mais nítido: de longe vale mais o rosto. */
-const LOD_BIAS = -0.2;
-/** Abre a mistura entre dois níveis só perto da metade: menos tempo com as duas imagens juntas. */
-const LOD_BLEND = [0.2, 0.8] as const;
-/** Luz que deixa a arte como foi desenhada: a do meio do corpo, de frente, na cena atual. */
-const LIGHT_REFERENCE = 0.4;
+/** Grade de amostras por pixel na redução (N × N), cada uma no texel exato: média de caixa. */
+const DOWNSCALE_TAPS = 3;
+/** Texels por pixel onde o bilinear nítido dá lugar à média de caixa. */
+const DOWNSCALE_FROM = [1.0, 1.3] as const;
+/** Quanto do detalhe do pixel volta à redução na cor, e na borda da silhueta. */
+const DOWNSCALE_SHARPEN = 0.6;
+const DOWNSCALE_EDGE = 0.35;
 /** Quanto da variação de luz chega à arte; a luz já está pintada nela. */
-const LIGHT_RESPONSE = 0.55;
+const LIGHT_RESPONSE = 0.4;
+/**
+ * O ambiente vem de textura e a conta o subestima: medido na cena (razão cena/arte do harness
+ * de zoom, 1,12 com a conta crua), a luz de referência sobe até o sprite sair com a cor do atlas.
+ */
+const LIGHT_CALIBRATION = 2.5;
+/** Limites do fator de exposição: a cena modula a arte, não a refaz. */
+const LIGHT_RANGE = [0.45, 1.25] as const;
 /** Quanto da cor da luz tinge a arte. */
-const LIGHT_TINT = 0.2;
+const LIGHT_TINT = 0.25;
 /** Sombra do sol sobre ele: escurece pouco, a roupa já é quase preta. */
 const SHADED_SPRITE = 0.82;
 /** Penumbra da silhueta no chão, em metros, junto ao pé e na ponta da cabeça. */
-const PENUMBRA = { near: 0.02, far: 0.09 };
-/** Sombra de contato: raios no chão (metros) e força. */
-const CONTACT = { across: 0.2, depth: 0.11, strength: 0.5 };
+const PENUMBRA = { near: 0.03, far: 0.11 };
+/** Quanto do alcance que o sol daria a sombra projetada mantém: mais curta, o contato faz o resto. */
+const SHADOW_REACH = 0.8;
 /** O sol vê o corpo mais de lado do que a câmera: a silhueta fica um pouco mais estreita. */
 const SHADOW_WIDTH = 0.9;
+/**
+ * Sombra dos pés: a projeção exata vale até a altura `to` (m), o corpo entra a partir de
+ * `from`, e cada ponto engorda por `width` e `depth` (m) para ter a espessura de um tênis.
+ */
+const SOLE_SHADOW = { from: 0.12, to: 0.4, width: 0.025, depth: 0.045 };
+/** Sombra de contato: profundidade no chão (metros), altura da sola que ela lê, e força. */
+const CONTACT = { depth: 0.1, sole: 0.04, strength: 0.55 };
 
 export function spriteTexture(texels: SpriteTexels): DataTexture {
   const base = texels.levels[0]!;
@@ -61,15 +76,20 @@ export function spriteUniforms(atlas: SpriteAtlas, texels: SpriteTexels, texture
     spriteInset: { value: new Vector2(texels.inset.x, texels.inset.y) },
     spriteContent: { value: new Vector2(atlas.cell.width, atlas.cell.height) },
     spriteMirrored: { value: 0 },
+    /** Onde os pés do quadro estão em x, em texels a partir do meio da célula, já espelhado. */
+    spriteSoleCenter: { value: 0 },
+    /** A luz que a arte supõe: com ela, o sprite sai exatamente como o atlas. */
+    spriteLightReference: { value: new Vector3(...cameraFacingLight()).multiplyScalar(LIGHT_CALIBRATION) },
   };
 }
 
 export type SpriteUniforms = ReturnType<typeof spriteUniforms>;
 
 /** Põe o quadro nos uniforms; a arte espelhada lê a célula ao contrário. */
-export function selectCell(uniforms: SpriteUniforms, texels: SpriteTexels, column: number, row: number, mirrored: boolean) {
+export function selectCell(uniforms: SpriteUniforms, texels: SpriteTexels, column: number, row: number, mirrored: boolean, soleCenter = 0) {
   uniforms.spriteBounds.value.setX(column * texels.pitch.width).setY(row * texels.pitch.height);
   uniforms.spriteMirrored.value = mirrored ? 1 : 0;
+  uniforms.spriteSoleCenter.value = mirrored ? -soleCenter : soleCenter;
 }
 
 const SAMPLING = /* glsl */ `
@@ -79,6 +99,8 @@ uniform vec4 spriteBounds;
 uniform vec2 spriteInset;
 uniform vec2 spriteContent;
 uniform float spriteMirrored;
+uniform vec3 spriteLightReference;
+uniform float spriteSoleCenter;
 
 /* Da célula para o atlas, em texels do nível 0, já com o espelhamento. */
 vec2 spriteToAtlas( vec2 cellTexel ) {
@@ -110,29 +132,79 @@ float spriteAlpha( vec2 cellTexel, float lod ) {
   float scale = exp2( lod );
   return textureLod( spriteAtlas, spriteClampUv( spriteToAtlas( cellTexel ) / scale, scale ), lod ).a;
 }
+
+/* O texel inteiro, sem interpolar: um ponto da grade da média de caixa. */
+vec4 spriteTexelAt( vec2 atlasTexel, float level ) {
+  float scale = exp2( level );
+  return textureLod( spriteAtlas, spriteClampUv( floor( atlasTexel / scale ) + 0.5, scale ), level );
+}
+
+/*
+ * Média de caixa do pixel de tela: uma grade de amostras de texel, em gama e pesada pelo alfa.
+ * Em gama, um olho escuro não lava contra a pele; pelo alfa, o vazio não puxa franja escura.
+ * O nível é o que deixa as amostras mais próximas que um texel dele: nada some entre elas.
+ */
+void spriteBox( vec2 atlasTexel, vec2 footprint, float level, out vec3 gamma, out float coverage ) {
+  vec3 sum = vec3( 0.0 );
+  float alpha = 0.0;
+  for ( int i = 0; i < ${DOWNSCALE_TAPS}; i ++ ) {
+    for ( int j = 0; j < ${DOWNSCALE_TAPS}; j ++ ) {
+      vec2 offset = ( vec2( float( i ), float( j ) ) + 0.5 ) / ${DOWNSCALE_TAPS}.0 - 0.5;
+      vec4 tap = spriteTexelAt( atlasTexel + offset * footprint, level );
+      if ( tap.a > 0.0 ) {
+        sum += tap.a * pow( tap.rgb / tap.a, vec3( 1.0 / 2.2 ) );
+        alpha += tap.a;
+      }
+    }
+  }
+  gamma = alpha > 0.0 ? sum / alpha : vec3( 0.0 );
+  coverage = alpha / ${DOWNSCALE_TAPS * DOWNSCALE_TAPS}.0;
+}
+
+/*
+ * A média de caixa devolve o que a redução tira: contorno. A diferença para a mesma média
+ * com o dobro de largura é o detalhe do pixel (olho, sobrancelha, cordão), e volta somada.
+ */
+vec4 spriteDownscale( vec2 atlasTexel, vec2 footprint, float level ) {
+  vec3 near;
+  vec3 wide;
+  float nearCoverage;
+  float wideCoverage;
+  spriteBox( atlasTexel, footprint, level, near, nearCoverage );
+  spriteBox( atlasTexel, footprint * 2.0, min( level + 1.0, ${MIP_REDUCTIONS}.0 ), wide, wideCoverage );
+  if ( nearCoverage <= 0.0 ) return vec4( 0.0 );
+  vec3 gamma = wideCoverage > 0.0 ? clamp( near + ${DOWNSCALE_SHARPEN.toFixed(2)} * ( near - wide ), 0.0, 1.0 ) : near;
+  float coverage = clamp( nearCoverage + ${DOWNSCALE_EDGE.toFixed(2)} * ( nearCoverage - wideCoverage ), 0.0, 1.0 );
+  return vec4( pow( gamma, vec3( 2.2 ) ) * coverage, coverage );
+}
 `;
 
 const SPRITE_SAMPLE = /* glsl */ `
 vec4 spriteSample( vec2 cellTexel ) {
   vec2 footprint = fwidth( cellTexel );
+  float size = max( max( footprint.x, footprint.y ), 1e-4 );
   vec2 atlasTexel = spriteToAtlas( cellTexel );
-  float lod = max( 0.0, log2( max( max( footprint.x, footprint.y ), 1e-4 ) ) + ${LOD_BIAS.toFixed(2)} );
-  float base = floor( lod );
-  float blend = smoothstep( ${LOD_BLEND[0].toFixed(2)}, ${LOD_BLEND[1].toFixed(2)}, lod - base );
-  vec4 color = spriteSharpLevel( atlasTexel, footprint, base );
-  if ( blend > 0.0 ) color = mix( color, spriteSharpLevel( atlasTexel, footprint, base + 1.0 ), blend );
+  // Perto de um texel por pixel, o bilinear nítido; mais longe, a média de caixa.
+  float box = smoothstep( ${DOWNSCALE_FROM[0].toFixed(2)}, ${DOWNSCALE_FROM[1].toFixed(2)}, size );
+  vec4 color = vec4( 0.0 );
+  if ( box < 1.0 ) color = spriteSharpLevel( atlasTexel, footprint, 0.0 );
+  if ( box > 0.0 ) {
+    float level = clamp( floor( log2( size / 2.0 ) ), 0.0, ${MIP_REDUCTIONS}.0 );
+    color = mix( color, spriteDownscale( atlasTexel, footprint, level ), box );
+  }
   return color;
 }
 `;
 
 /**
- * A figura usa o material dos móveis, com as mesmas luzes, ambiente, sombra, tone mapping
- * e espaço de cor, e troca só o que ele faz com a luz: a arte já vem com a luz pintada,
- * então a variação chega atenuada. O escritório não tem composer e a saída vai direto
- * para a tela; num alvo intermediário, o próprio Three pula tone mapping e sRGB.
+ * A figura usa o material dos móveis, com as mesmas luzes, ambiente e sombra, e troca o que
+ * ele faz com a luz: a arte já vem com a luz pintada, então a cena só a modula, em relação à
+ * luz de referência (`spriteLightReference`). Sob essa luz o resultado é a cor do atlas. Sem
+ * tone mapping: ele comprime e satura, e a arte de pixel não quer a curva de um PBR. O
+ * escritório não tem composer e a saída vai direto para a tela, só com a codificação sRGB.
  */
 export function createSpriteMaterial(uniforms: SpriteUniforms): MeshStandardMaterial {
-  const material = new MeshStandardMaterial({ roughness: 1, metalness: 0, transparent: true, premultipliedAlpha: true, depthWrite: false });
+  const material = new MeshStandardMaterial({ roughness: 1, metalness: 0, transparent: true, premultipliedAlpha: true, depthWrite: false, toneMapped: false });
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -155,9 +227,12 @@ export function createSpriteMaterial(uniforms: SpriteUniforms): MeshStandardMate
         /* glsl */ `
         // Com a cor branca, a parte difusa é só a luz que chega: atenua, e aplica na arte.
         vec3 spriteLight = max( reflectedLight.directDiffuse + reflectedLight.indirectDiffuse, vec3( 1e-3 ) );
-        float spriteLuma = dot( spriteLight, vec3( 0.2126, 0.7152, 0.0722 ) );
-        vec3 spriteTint = mix( vec3( 1.0 ), spriteLight / spriteLuma, ${LIGHT_TINT.toFixed(2)} );
-        float spriteExposure = pow( spriteLuma / ${LIGHT_REFERENCE.toFixed(2)}, ${LIGHT_RESPONSE.toFixed(2)} );
+        vec3 spriteWeights = vec3( 0.2126, 0.7152, 0.0722 );
+        float spriteLuma = dot( spriteLight, spriteWeights );
+        float spriteReferenceLuma = dot( spriteLightReference, spriteWeights );
+        // Cor e brilho só pelo que a luz tem de diferente da referência.
+        vec3 spriteTint = mix( vec3( 1.0 ), ( spriteLight / spriteLuma ) / ( spriteLightReference / spriteReferenceLuma ), ${LIGHT_TINT.toFixed(2)} );
+        float spriteExposure = clamp( pow( spriteLuma / spriteReferenceLuma, ${LIGHT_RESPONSE.toFixed(2)} ), ${LIGHT_RANGE[0].toFixed(2)}, ${LIGHT_RANGE[1].toFixed(2)} );
         float spriteShade = mix( ${SHADED_SPRITE.toFixed(2)}, 1.0, getShadowMask() );
         vec3 outgoingLight = spriteAlbedo * spriteTint * spriteExposure * spriteShade;
         `,
@@ -214,8 +289,8 @@ export function createSpriteShadowMaterial(
       ${SAMPLING}
       uniform vec2 shadowAlong;
       uniform vec2 shadowAcross;
-      uniform float shadowLength;
-      uniform float shadowWidth;
+      uniform vec2 shadowRun;
+      uniform float shadowReach;
       uniform float spriteTexelMeters;
       uniform float spriteTexelWidth;
       uniform float spriteSoleRow;
@@ -227,11 +302,16 @@ export function createSpriteShadowMaterial(
       varying vec2 vGround;
       varying vec2 vWorldGround;
 
-      /* A figura como o sol a vê: largura atravessada, altura ao longo da sombra. */
-      float silhouette() {
-        float height = dot( vGround, shadowAlong ) / shadowLength;
+      /*
+       * O corpo visto do sol: largura atravessada na sombra, altura ao longo dela. É o que dá
+       * volume à sombra, e ele parte do ponto médio dos pés.
+       */
+      float body( vec2 world ) {
+        // O corpo parte de onde os pés estão neste quadro, não do meio da célula.
+        vec2 ground = world - groundRight * spriteSoleCenter * spriteTexelWidth;
+        float height = dot( ground, shadowAlong ) / shadowReach;
         vec2 cellTexel = vec2(
-          spriteContent.x * 0.5 + dot( vGround, shadowAcross ) / ( spriteTexelWidth * shadowWidth ),
+          spriteContent.x * 0.5 + spriteSoleCenter + dot( ground, shadowAcross ) / ( spriteTexelWidth * ${SHADOW_WIDTH.toFixed(2)} ),
           spriteSoleRow - height / spriteTexelMeters
         );
         // A penumbra abre com a altura, como a dos móveis: quanto mais longe do que projeta.
@@ -244,22 +324,51 @@ export function createSpriteShadowMaterial(
         sum += spriteAlpha( cellTexel + vec2( 0.5, -0.5 ) * radius, lod );
         sum += spriteAlpha( cellTexel + vec2( -0.5, 0.5 ) * radius, lod );
         sum += spriteAlpha( cellTexel + vec2( 0.5, 0.5 ) * radius, lod );
+        // Embaixo, quem manda é a projeção dos pés: o corpo entra só acima deles.
+        return sum * 0.25 * smoothstep( ${SOLE_SHADOW.from.toFixed(2)}, ${SOLE_SHADOW.to.toFixed(2)}, height );
+      }
+
+      /*
+       * A figura em pé projetada pelo sol: um ponto a "a" metros do centro, no plano dela, e a
+       * "h" de altura, cai no chão em a · direita + h · shadowRun. O inverso devolve o texel de
+       * cada ponto do chão, e a sola (h = 0) fica sob si mesma em qualquer quadro: a sombra
+       * dos tênis nasce nos tênis e sai deles. Só o pedaço de baixo, onde isto vale: o sol
+       * quase de lado da câmera faz do plano uma fatia, e a fatia inteira seria uma risca.
+       */
+      float soleAt( vec2 ground ) {
+        float det = groundRight.x * shadowRun.y - groundRight.y * shadowRun.x;
+        float across = ( ground.x * shadowRun.y - ground.y * shadowRun.x ) / det;
+        float height = ( groundRight.x * ground.y - groundRight.y * ground.x ) / det;
+        if ( height < -0.03 || height > ${SOLE_SHADOW.to.toFixed(2)} ) return 0.0;
+        vec2 cellTexel = vec2( spriteContent.x * 0.5 + across / spriteTexelWidth, spriteSoleRow - height / spriteTexelMeters );
+        float lod = max( 0.0, log2( ${PENUMBRA.near.toFixed(3)} / spriteTexelMeters ) );
+        return spriteAlpha( cellTexel, lod ) * ( 1.0 - smoothstep( ${(SOLE_SHADOW.to * 0.5).toFixed(2)}, ${SOLE_SHADOW.to.toFixed(2)}, height ) );
+      }
+
+      /* A mesma projeção com a espessura de um pé: a risca de um plano vira a sombra de um tênis. */
+      float soles() {
+        vec2 side = groundRight * ${SOLE_SHADOW.width.toFixed(3)};
+        vec2 depth = groundToCamera * ${SOLE_SHADOW.depth.toFixed(3)};
+        float sum = 0.0;
+        sum += soleAt( vGround + side + depth );
+        sum += soleAt( vGround - side + depth );
+        sum += soleAt( vGround + side - depth );
+        sum += soleAt( vGround - side - depth );
         return sum * 0.25;
       }
 
-      /* Mancha escura sob os pés, mais forte onde o quadro atual tem pé no chão. */
+      /* Mancha escura sob os pés, no que o quadro atual tem de sola: só onde há pé no chão. */
       float contact() {
         vec2 local = vec2( dot( vGround, groundRight ), dot( vGround, groundToCamera ) );
-        vec2 scaled = local / vec2( ${CONTACT.across.toFixed(3)}, ${CONTACT.depth.toFixed(3)} );
-        float blob = exp( -dot( scaled, scaled ) );
-        float lod = max( 0.0, log2( 0.05 / spriteTexelMeters ) );
-        vec2 foot = vec2( spriteContent.x * 0.5 + local.x / spriteTexelWidth, spriteSoleRow - 0.05 / spriteTexelMeters );
-        return blob * ( 0.4 + 0.6 * clamp( spriteAlpha( foot, lod ) * 1.6, 0.0, 1.0 ) );
+        float depth = exp( -pow( local.y / ${CONTACT.depth.toFixed(3)}, 2.0 ) );
+        float lod = max( 0.0, log2( 0.07 / spriteTexelMeters ) );
+        vec2 sole = vec2( spriteContent.x * 0.5 + local.x / spriteTexelWidth, spriteSoleRow - ${CONTACT.sole.toFixed(3)} / spriteTexelMeters );
+        return depth * clamp( spriteAlpha( sole, lod ) * 1.5, 0.0, 1.0 );
       }
 
       void main() {
         bool inside = vWorldGround.x >= shadowClip.x && vWorldGround.x <= shadowClip.y && vWorldGround.y >= shadowClip.z && vWorldGround.y <= shadowClip.w;
-        float shadow = inside ? silhouette() * getShadowMask() : 0.0;
+        float shadow = inside ? max( body( vGround ), soles() ) * getShadowMask() : 0.0;
         vec3 factor = mix( vec3( 1.0 ), shadowTint, shadow ) * ( 1.0 - ${CONTACT.strength.toFixed(2)} * contact() );
         gl_FragColor = vec4( factor, 1.0 );
         #include <colorspace_fragment>
@@ -270,8 +379,8 @@ export function createSpriteShadowMaterial(
   Object.assign(material.uniforms, uniforms, {
     shadowAlong: { value: new Vector2(axes.along.x, axes.along.z) },
     shadowAcross: { value: new Vector2(axes.across.x, axes.across.z) },
-    shadowLength: { value: axes.length },
-    shadowWidth: { value: SHADOW_WIDTH },
+    shadowReach: { value: axes.length * SHADOW_REACH },
+    shadowRun: { value: new Vector2(axes.along.x * axes.length * SHADOW_REACH, axes.along.z * axes.length * SHADOW_REACH) },
     spriteTexelMeters: { value: quad.texelMeters },
     spriteTexelWidth: { value: quad.texelWidth },
     spriteSoleRow: { value: atlas.soleRow },
