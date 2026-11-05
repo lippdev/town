@@ -8,17 +8,17 @@ import { pathLength, pathPose, type Point } from "./officeHumans";
  * Na frota real, o robô flutua no posto e não sai dali.
  */
 
-/** Altura da ponta do pé: passa por cima do encosto da cadeira (1,03 m) e por baixo da verga. */
-export const HOVER_Y = 1.08;
+/** Altura da ponta do pé: rente ao chão, para o robô nunca parecer estar em cima de um móvel. */
+export const HOVER_Y = 0.12;
+/** Em assento com cadeira (bancada e reunião, só com a frota cheia), o robô fica acima do encosto de 1,03 m. */
+export const HOVER_OVER_CHAIR_Y = 1.08;
 export const FLIGHT_SPEED = 0.9;
 export const FLIGHT_HOLD = 2.5;
 export const FLIGHT_PERIOD = 56;
 /** Distância mínima de parede e móvel: o robô tem cerca de 0,6 m de lado a lado. */
 export const FLIGHT_CLEARANCE = 0.3;
 const CELL = 0.1;
-const CHAIR_HALF = 0.31;
-/** A cadeira fica abaixo do voo e é de onde o robô sai. */
-const FLOWN_OVER = new Set(["cadeira"]);
+const POST_HALF = 0.31;
 
 export interface FlightPlan {
   botId: string;
@@ -76,11 +76,11 @@ export function flightAllowed(room: OfficeRoom, x: number, z: number, slack = 0)
   return inCorridorLane(x, z, slack);
 }
 
-/** Móvel em que o robô bateria. Cadeira fica de fora: o voo passa por cima dela. */
+/** Móvel em que o robô bateria. Voando rente ao chão, ele contorna todos, cadeiras inclusive. */
 export function solidsOf(world: FlightWorld): OfficeBounds[] {
   const solids: OfficeBounds[] = [];
   for (const items of Object.values(world.footprints)) {
-    for (const item of items) if (!FLOWN_OVER.has(item.label)) solids.push(item);
+    solids.push(...items);
   }
   for (const prop of world.props) {
     if (prop.kind !== "planta") continue;
@@ -118,10 +118,10 @@ class FlightGrid {
 /** A* em 8 direções sobre a grade. Empates decididos pela ordem das células: sempre igual. */
 function findPath(grid: FlightGrid, room: OfficeRoom, from: Point, to: Point): Point[] | null {
   const { columns, rows, blocked } = grid;
-  // A cadeira é a saída: a folga da mesa, que fica colada nela, não pode prender o robô ali.
-  const onOwnChair = (column: number, row: number) => Math.abs(grid.x(column) - from.x) <= CHAIR_HALF && Math.abs(grid.z(row) - from.z) <= CHAIR_HALF;
+  // O posto é a saída: a folga da mesa, que fica colada nele, não pode prender o robô ali.
+  const onOwnPost = (column: number, row: number) => Math.abs(grid.x(column) - from.x) <= POST_HALF && Math.abs(grid.z(row) - from.z) <= POST_HALF;
   const free = (column: number, row: number) =>
-    column >= 0 && row >= 0 && column < columns && row < rows && (onOwnChair(column, row) || !blocked[row * columns + column]) && flightAllowed(room, grid.x(column), grid.z(row));
+    column >= 0 && row >= 0 && column < columns && row < rows && (onOwnPost(column, row) || !blocked[row * columns + column]) && flightAllowed(room, grid.x(column), grid.z(row));
   const startColumn = grid.column(from.x);
   const startRow = grid.row(from.z);
   const endColumn = grid.column(to.x);
