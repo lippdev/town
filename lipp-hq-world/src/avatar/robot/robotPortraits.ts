@@ -1,16 +1,16 @@
 import { AmbientLight, DirectionalLight, OrthographicCamera, Scene, Vector3, WebGLRenderer, NeutralToneMapping, SRGBColorSpace } from "three";
 import { loadGltf, ROBOT_URL } from "@/avatar/human/humanAssets";
 import { sharedCrop, solidBounds, type PixelBounds } from "./portraitFrame";
-import { robotReactionFor } from "./robotMotion";
+import { REACTION_FRAMES, REST_FRAME, YAW_FRAMES, robotReactionFor } from "./robotMotion";
 import { RobotRig } from "./RobotRig";
-import type { RobotExpression, RobotLook } from "./robotLook";
+import type { RobotLook } from "./robotLook";
 
 /** Lado do retrato em pixels de arte, com folga para a cabeça não encostar na borda. */
 const PORTRAIT_SIZE = 32;
 const PORTRAIT_MARGIN = 2;
 /** Dobro da arte: fica nítido em 32 px de CSS numa tela de densidade 2. */
 const PORTRAIT_OUTPUT = PORTRAIT_SIZE * 2;
-const RENDER_SIZE = 256;
+const RENDER_SIZE = 128;
 /** Folga do enquadramento 3D. O centro exato sai do recorte, em pixels. */
 const HEAD_FRAME_PADDING = 1.4;
 /** Quanto a cabeça vira para cada lado ao olhar em volta, em radianos. */
@@ -22,7 +22,7 @@ const PORTRAIT_MIN_LEVEL = 64;
 export interface RobotPortrait {
   /** O retrato parado, igual ao primeiro quadro da tira. */
   still: string;
-  /** Tira horizontal: centro, olhando para um lado, para o outro e reagindo. */
+  /** Tira horizontal: a cabeça virando de um lado ao outro, depois o rosto mudando. */
   sheet: string;
 }
 
@@ -100,6 +100,7 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
     for (const [id, look] of Object.entries(looks)) {
       const rig = new RobotRig(gltf.scene, gltf.animations, { reduced: true });
       try {
+        rig.apply(look);
         scene.add(rig.root);
         const { box, forward } = rig.isolateHead();
         const center = box.getCenter(new Vector3());
@@ -108,8 +109,7 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
         camera.left = camera.bottom = -half;
         camera.right = camera.top = half;
         camera.updateProjectionMatrix();
-        const shoot = (yaw: number, expression: RobotExpression) => {
-          rig.apply({ ...look, expression });
+        const shoot = (yaw: number) => {
           // De frente para o rosto: a simetria é o que faz a cabeça parecer centrada.
           const view = forward.clone().applyAxisAngle(UP, yaw);
           camera.position.copy(center).addScaledVector(view, 3);
@@ -117,14 +117,21 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
           renderer.render(scene, camera);
           return captureFrame(renderer.domElement);
         };
-        const shots = [shoot(0, look.expression), shoot(LOOK_YAW, look.expression), shoot(-LOOK_YAW, look.expression), shoot(0, robotReactionFor(id, look.expression))];
-        const crop = sharedCrop(shots[0]!.bounds, shots.map((shot) => shot.bounds));
+        const shots = Array.from({ length: YAW_FRAMES }, (_, index) => shoot(((index - REST_FRAME) / REST_FRAME) * LOOK_YAW));
+        const reaction = robotReactionFor(id, look.expression);
+        for (let index = 1; index <= REACTION_FRAMES; index++) {
+          rig.mixExpression(look.expression, reaction, index / REACTION_FRAMES);
+          shots.push(shoot(0));
+        }
+        const crop = sharedCrop(shots[REST_FRAME]!.bounds, shots.map((shot) => shot.bounds));
         const frames = shots.map((shot) => pixelFrame(shot.canvas, crop));
-        result[id] = { still: stripImage(frames.slice(0, 1)), sheet: stripImage(frames) };
+        result[id] = { still: stripImage([frames[REST_FRAME]!]), sheet: stripImage(frames) };
       } finally {
         scene.remove(rig.root);
         rig.dispose();
       }
+      // Devolve o controle entre um robô e outro: o lote não pode travar a cena.
+      await new Promise((resolve) => window.setTimeout(resolve));
     }
     return result;
   } finally {
