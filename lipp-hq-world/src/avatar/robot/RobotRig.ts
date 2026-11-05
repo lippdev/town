@@ -147,6 +147,23 @@ export class RobotRig {
     }
   }
 
+  /**
+   * Deixa só a cabeça visível, para retratos. Devolve a caixa dela em metros de cena e
+   * para onde o rosto aponta na pose atual: o Idle deixa a cabeça levemente virada.
+   */
+  isolateHead(): { box: Box3; forward: Vector3 } {
+    const head = this.faces[0]!.parent!;
+    const parts = new Set<Object3D>();
+    head.traverse((node) => parts.add(node));
+    this.model.traverse((node) => {
+      if ((node as Mesh).isMesh) node.visible = parts.has(node);
+    });
+    this.root.updateMatrixWorld(true);
+    // No GLB, o rosto da cabeça fica no -Y local dela.
+    const forward = new Vector3(0, -1, 0).applyQuaternion(head.getWorldQuaternion(new Quaternion())).normalize();
+    return { box: new Box3().setFromObject(head), forward };
+  }
+
   /** Um gesto curto em cima do Idle. Só responde a quem clicou: não diz o que o bot faz. */
   play(name: RobotGesture) {
     const action = this.gestures[name];
