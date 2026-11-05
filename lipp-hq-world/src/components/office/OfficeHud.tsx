@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { House, Columns3, MessagesSquare, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { lookFor } from "@/avatar/robot/robotLook";
+import { robotMotionFor } from "@/avatar/robot/robotMotion";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
@@ -226,9 +227,10 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
               <span
                 className="office-agent-avatar"
                 style={{ "--agent-color": bot.color } as React.CSSProperties}
+                data-motion={robotMotionFor(bot.id)}
                 data-reacting={reacting === bot.id || undefined}
                 aria-hidden
-                onAnimationEnd={(event) => { if (event.animationName === "agent-hop") setReacting(null); }}
+                onAnimationEnd={(event) => { if (event.animationName.startsWith("agent-click-")) setReacting(null); }}
               >
                 {sheets[bot.id] ? <span className="agent-sprite" data-agent-sprite={bot.id} style={{ backgroundImage: `url(${sheets[bot.id]})` }} /> : <span>{bot.name.slice(0, 2)}</span>}
               </span>
