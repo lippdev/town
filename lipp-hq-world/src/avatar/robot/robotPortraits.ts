@@ -5,11 +5,13 @@ import { REACTION_FRAMES, REST_FRAME, YAW_FRAMES, robotReactionFor } from "./rob
 import { RobotRig } from "./RobotRig";
 import type { RobotLook } from "./robotLook";
 
-/** Lado do retrato em pixels de arte, com folga para a cabeça não encostar na borda. */
-const PORTRAIT_SIZE = 32;
-const PORTRAIT_MARGIN = 2;
-/** Dobro da arte: fica nítido em 32 px de CSS numa tela de densidade 2. */
-const PORTRAIT_OUTPUT = PORTRAIT_SIZE * 2;
+/**
+ * Resolução da arte: o quadro é desenhado no tamanho em que aparece. Assim, numa tela de
+ * densidade 2, cada pixel da arte vira exatamente dois, sem linhas perdidas na redução.
+ */
+const STILL_ART = { size: 32, margin: 2 };
+const SPRITE_ART = { size: 24, margin: 1 };
+const OUTPUT_SCALE = 2;
 const RENDER_SIZE = 128;
 /** Folga do enquadramento 3D. O centro exato sai do recorte, em pixels. */
 const HEAD_FRAME_PADDING = 1.4;
@@ -38,13 +40,12 @@ function captureFrame(source: HTMLCanvasElement): { canvas: HTMLCanvasElement; b
 }
 
 /** Pixel art com dithering ordenado, a partir do recorte comum aos quadros. */
-function pixelFrame(source: HTMLCanvasElement, crop: PixelBounds): HTMLCanvasElement {
-  const size = PORTRAIT_SIZE;
-  const room = size - PORTRAIT_MARGIN * 2;
+function pixelFrame(source: HTMLCanvasElement, crop: PixelBounds, { size, margin }: { size: number; margin: number }): HTMLCanvasElement {
+  const room = size - margin * 2;
   const sample = document.createElement("canvas");
   sample.width = sample.height = size;
   const context = sample.getContext("2d")!;
-  context.drawImage(source, crop.x, crop.y, crop.width, crop.height, PORTRAIT_MARGIN, PORTRAIT_MARGIN, room, room);
+  context.drawImage(source, crop.x, crop.y, crop.width, crop.height, margin, margin, room, room);
   const pixels = context.getImageData(0, 0, size, size);
   const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   for (let y = 0; y < size; y++) {
@@ -69,12 +70,13 @@ function pixelFrame(source: HTMLCanvasElement, crop: PixelBounds): HTMLCanvasEle
 
 /** Amplia os quadros lado a lado, sem suavizar, numa imagem só. */
 function stripImage(frames: readonly HTMLCanvasElement[]): string {
+  const side = frames[0]!.width * OUTPUT_SCALE;
   const output = document.createElement("canvas");
-  output.width = PORTRAIT_OUTPUT * frames.length;
-  output.height = PORTRAIT_OUTPUT;
+  output.width = side * frames.length;
+  output.height = side;
   const ink = output.getContext("2d")!;
   ink.imageSmoothingEnabled = false;
-  frames.forEach((frame, index) => ink.drawImage(frame, index * PORTRAIT_OUTPUT, 0, PORTRAIT_OUTPUT, PORTRAIT_OUTPUT));
+  frames.forEach((frame, index) => ink.drawImage(frame, index * side, 0, side, side));
   return output.toDataURL("image/png");
 }
 
@@ -124,8 +126,10 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
           shots.push(shoot(0));
         }
         const crop = sharedCrop(shots[REST_FRAME]!.bounds, shots.map((shot) => shot.bounds));
-        const frames = shots.map((shot) => pixelFrame(shot.canvas, crop));
-        result[id] = { still: stripImage([frames[REST_FRAME]!]), sheet: stripImage(frames) };
+        result[id] = {
+          still: stripImage([pixelFrame(shots[REST_FRAME]!.canvas, crop, STILL_ART)]),
+          sheet: stripImage(shots.map((shot) => pixelFrame(shot.canvas, crop, SPRITE_ART))),
+        };
       } finally {
         scene.remove(rig.root);
         rig.dispose();
