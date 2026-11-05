@@ -33,8 +33,8 @@ export function OfficeKanban({ onClose, embedded = false }: { onClose: () => voi
     <div className={embedded ? "kanban embedded" : "kanban"} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : true} aria-label="Quadro de tarefas" data-kanban>
       <header className="kanban-head">
         <div>
-          <h2>Quadro de tarefas</h2>
-          <p>Exemplo: salvo só neste navegador. Ainda não envia nada aos bots.</p>
+          <h2>Kanban</h2>
+          <p>Exemplo salvo só neste navegador. Ainda não envia nada aos bots.</p>
         </div>
         <button type="button" className="panel-close" onClick={onClose} aria-label="Fechar (Esc)" title="Fechar (Esc)">
           <X size={18} aria-hidden />
@@ -48,7 +48,7 @@ export function OfficeKanban({ onClose, embedded = false }: { onClose: () => voi
           setTitle("");
         }}
       >
-        <input value={title} maxLength={TITLE_MAX} placeholder="Nova tarefa" aria-label="Nova tarefa" onChange={(event) => setTitle(event.target.value)} />
+        <input value={title} maxLength={TITLE_MAX} placeholder="Escreva uma nova tarefa…" aria-label="Nova tarefa" onChange={(event) => setTitle(event.target.value)} />
         <select value={owner} aria-label="Responsável" onChange={(event) => setOwner(event.target.value)}>
           {owners.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>{candidate.name}</option>

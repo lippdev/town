@@ -235,7 +235,7 @@ function DemoConversation({ bot, botsById, portraits, demo }: { bot: OfficeBot; 
   };
   return (
     <>
-      <Header bot={bot} portrait={portraits[bot.id]}><span className="conv-tag">Exemplo · nada aqui é real</span></Header>
+      <Header bot={bot} portrait={portraits[bot.id]}><span className="conv-tag">Conversa de exemplo</span></Header>
       <ConversationLog followKey={`${items.length}:${typing}`} pinKey={pin} label={`Conversa com ${bot.name}`}>
         {items.length === 0 && <p className="conv-empty">Ainda não há nada nesta conversa de exemplo.</p>}
         {items.map((item) => (
