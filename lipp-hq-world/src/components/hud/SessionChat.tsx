@@ -2,42 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw, SendHorizontal, Wrench } from "lucide-react";
 import type { SessionSnapshot } from "@/integrations/hq/types";
 import type { ChatMessage } from "@/integrations/hermes/chatMessages";
-import { useSessionMessages } from "@/integrations/hermes/useSessionMessages";
-import { MAX_CHAT_CHARS, sendSessionMessage } from "@/integrations/hermes/sendMessage";
+import { MAX_CHAT_CHARS } from "@/integrations/hermes/sendMessage";
+import { useSessionConversation } from "@/integrations/hermes/useSessionConversation";
 import { useGatewayStatus } from "@/integrations/hermes/gatewayStatus";
 import { sessionTitle, sourceLabel } from "@/components/hud/sessions";
 import { relativeTime } from "@/components/hud/fleetView";
 
 /** Distância do fim (px) em que a conversa ainda acompanha mensagens novas. */
 const STICK_TO_BOTTOM_PX = 80;
-/** Folga de relógio entre esta máquina e o Hermes ao casar a mensagem enviada. */
-const ECHO_SLACK_MS = 15_000;
-/** Quanto a cópia local de uma mensagem entregue espera pela releitura. */
-const SENT_LINGER_MS = 10_000;
-
-/** Mensagem enviada daqui que o Hermes ainda não devolveu na releitura. */
-interface Outgoing {
-  id: string;
-  text: string;
-  at: number;
-  state: "sending" | "sent" | "failed";
-  error?: string;
-  action?: string;
-}
-
-/**
- * Some da lista local quando a releitura já traz a mesma mensagem do usuário
- * — o Hermes grava no começo do turno, então isso acontece antes da resposta.
- */
-export function echoed(outgoing: Pick<Outgoing, "text" | "at">, messages: ChatMessage[]): boolean {
-  return messages.some(
-    (message) =>
-      message.role === "user" &&
-      message.text.trim() === outgoing.text.trim() &&
-      (message.at === undefined || message.at >= outgoing.at - ECHO_SLACK_MS),
-  );
-}
-
 function clock(at: number | undefined): string {
   if (!at) return "";
   return new Date(at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -92,15 +64,12 @@ export function SessionChat({
   session: SessionSnapshot;
   onBack: () => void;
 }) {
-  const { messages, loading, error, action, refresh } = useSessionMessages(botId, session.id);
+  const { messages, loading, error, action, refresh, outgoing: visibleOutgoing, thinking, send, retry, discard } = useSessionConversation(botId, session.id);
   const status = useGatewayStatus();
   const [draft, setDraft] = useState("");
-  const [outgoing, setOutgoing] = useState<Outgoing[]>([]);
   const scroller = useRef<HTMLDivElement | null>(null);
   const atBottom = useRef(true);
   const lastId = messages.length ? messages[messages.length - 1].id : null;
-  const visibleOutgoing = outgoing.filter((entry) => entry.state === "failed" || !echoed(entry, messages));
-  const thinking = outgoing.some((entry) => entry.state === "sending");
 
   useLayoutEffect(() => {
     const node = scroller.current;
@@ -109,42 +78,11 @@ export function SessionChat({
 
   useEffect(() => {
     atBottom.current = true;
-    setOutgoing([]);
   }, [session.id]);
 
-  // depois que a releitura trouxe a mensagem e o turno acabou, a cópia local sai
-  useEffect(() => {
-    setOutgoing((list) => {
-      const kept = list.filter((entry) => entry.state !== "sent" || !echoed(entry, messages));
-      return kept.length === list.length ? list : kept;
-    });
-  }, [messages]);
-
-  const deliver = async (entry: Outgoing) => {
-    atBottom.current = true;
-    setOutgoing((list) => [...list.filter((item) => item.id !== entry.id), { ...entry, state: "sending" }]);
-    const result = await sendSessionMessage(botId, session.id, entry.text);
-    setOutgoing((list) =>
-      list.map((item) =>
-        item.id !== entry.id
-          ? item
-          : result.ok
-            ? { ...item, state: "sent" }
-            : { ...item, state: "failed", error: result.error, action: result.action },
-      ),
-    );
-    refresh();
-    // se o Hermes gravar a mensagem com outro texto, a cópia local não fica para sempre
-    if (result.ok) {
-      window.setTimeout(() => setOutgoing((list) => list.filter((item) => item.id !== entry.id)), SENT_LINGER_MS);
-    }
-  };
-
   const submit = () => {
-    const text = draft.trim();
-    if (!text || text.length > MAX_CHAT_CHARS) return;
-    setDraft("");
-    void deliver({ id: `out-${Date.now()}`, text, at: Date.now(), state: "sending" });
+    atBottom.current = true;
+    if (send(draft)) setDraft("");
   };
 
   return (
@@ -191,10 +129,10 @@ export function SessionChat({
                 Não enviada: {entry.error}
                 {entry.action && <em> {entry.action}</em>}
                 <span className="chat-failed-actions">
-                  <button type="button" onClick={() => void deliver(entry)}>
+                  <button type="button" onClick={() => { atBottom.current = true; retry(entry); }}>
                     tentar de novo
                   </button>
-                  <button type="button" onClick={() => setOutgoing((list) => list.filter((item) => item.id !== entry.id))}>
+                  <button type="button" onClick={() => discard(entry.id)}>
                     descartar
                   </button>
                 </span>

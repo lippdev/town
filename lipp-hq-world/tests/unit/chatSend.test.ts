@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiProfilePrefix, clearConnection, loadSavedConnection, probeApi, saveConnection } from "../../server/hermesConnection";
-import { echoed } from "@/components/hud/SessionChat";
+import { echoed } from "@/integrations/hermes/useSessionConversation";
 import { callProxy } from "../helpers/proxy";
 
 const KEY = "chave-da-api-0123456789abcdef";
