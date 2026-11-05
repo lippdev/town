@@ -217,7 +217,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
           {filtered.map((bot) => {
             const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
             const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
-            return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
+            return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} title={bot.role} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
               if (view === "conversas") { onConversation(bot.id); return; }
               onView("escritorio");
               useOfficeStore.getState().selectBot(bot.id);
@@ -225,7 +225,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
               <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
                 {sheets[bot.id] ? <AgentPortrait botId={bot.id} sheet={sheets[bot.id]!} /> : <span>{bot.name.slice(0, 2)}</span>}
               </span>
-              <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
+              <span className="office-roster-name">{bot.name}{mode === "demo" && <small>{bot.role}</small>}</span>
               {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
               {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
               {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
