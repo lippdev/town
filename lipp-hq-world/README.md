@@ -147,9 +147,9 @@ câmera por uma ponte de QA determinística (incluindo arrastos reais com o bot�
 direito) e reprova captura chapada, enquadramento fora do centro, capturas
 idênticas e erro de console. O resultado fica em `qa/screenshots/manifest.json`.
 
-**Tudo isso roda em CI** (`.github/workflows/qa.yml`, job `visual`) em todo PR.
-Não é ritual manual: lint, tipos e build passaram por três bugs reais que só a
-tela mostrava.
+Esses roteiros rodam localmente: o job automático foi removido porque falhava sem bloquear merge. A CI (`.github/workflows/ci.yml`) roda lint, typecheck, testes e build.
+Vale rodá-los à mão em mudanças de tela: lint, tipos e build já deixaram passar
+três bugs reais que só a tela mostrava.
 
 ## Documentação
 
