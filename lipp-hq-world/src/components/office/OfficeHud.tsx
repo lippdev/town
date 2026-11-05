@@ -275,7 +275,7 @@ function CameraBar() {
           <Maximize size={13} aria-hidden /> Ver o andar inteiro
         </button>
       </div>
-      <p className="office-hint">Clique numa sala para entrar · arraste para mover · role para aproximar · Esc volta</p>
+      <p className="office-hint">Selecione um personagem na cena ou em Salas e bots · arraste para mover · role para aproximar · Esc volta</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>
         {GRAPHICS_MODES.map((mode) => (

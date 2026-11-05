@@ -430,7 +430,8 @@ function buildShell(b: KitBuilder) {
 /** Quadro, tela ou placa que só faz sentido com a parede inteira. */
 function signOn(builder: KitBuilder, room: OfficeRoom, x: number) {
   wallFrame(builder, room, "north")(() => {
-    builder.plane([x, 2.35, 0.11], 2.05, 0.53, signUv(room.id), "sign");
+    builder.box([x, 2.35, 0.09], [2.15, 0.63, 0.06], { color: FRAME, cast: false });
+    builder.plane([x, 2.35, 0.13], 2.05, 0.53, signUv(room.id), "sign");
   });
 }
 

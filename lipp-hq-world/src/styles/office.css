@@ -43,7 +43,8 @@
 }
 
 .office-room-tag {
-  pointer-events: auto;
+  opacity: 0;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -52,7 +53,8 @@
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 3px solid var(--tag-color);
-  background: rgba(15, 21, 34, 0.82);
+  background: rgba(15, 35, 48, 0.78);
+  backdrop-filter: blur(8px);
   color: var(--hq-text);
   cursor: pointer;
   line-height: 1.25;
@@ -69,15 +71,16 @@
   color: var(--hq-text-dim);
 }
 
-.office-room-tag:hover,
+.office-room-tag:focus-visible,
 .office-room-tag.hovered {
+  opacity: 1;
   background: rgba(27, 37, 58, 0.95);
   border-color: color-mix(in srgb, var(--tag-color) 55%, transparent);
   border-left-color: var(--tag-color);
 }
 
-.office-room-tag.focused {
-  display: none;
+.office-room-tag:focus-visible {
+  pointer-events: auto;
 }
 
 .office-room-tag:focus-visible,
@@ -90,7 +93,8 @@
 }
 
 .office-bot-tag {
-  pointer-events: auto;
+  opacity: 0;
+  pointer-events: none;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -123,16 +127,20 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* De longe os postos extras ficam próximos demais: o nome só aparece ao apontar. */
-.office-labels[data-far="true"] .office-bot-tag.extra:not(.active) {
-  display: none;
+/* A lista mantém todos acessíveis; na cena, só a interação revela o nome.
+   Opacidade preserva o foco por teclado sem criar alvos invisíveis ao mouse. */
+.office-bot-tag.active,
+.office-bot-tag:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.office-bot-tag.elsewhere {
-  display: none;
+.office-bot-tag.elsewhere:not(.active):not(:focus-visible) {
+  opacity: 0;
 }
 
 .office-entrance-tag {
+  display: none;
   padding: 1px 8px;
   border-radius: 6px;
   background: rgba(15, 21, 34, 0.7);

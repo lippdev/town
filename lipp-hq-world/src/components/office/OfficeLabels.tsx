@@ -2,10 +2,9 @@ import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
 import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
-import { CORRIDOR, ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
-import { botsInRoom } from "@/world/office/officeRoster";
 
 type Anchor = readonly [number, number, number];
 
@@ -72,8 +71,7 @@ export function OfficeLabels() {
       }
       for (const [node, anchor] of nodes.current) {
         const point = worldToScreen(anchor, view, viewport);
-        // A etiqueta da sala fica no cruzamento dos corredores, sem cobrir sala nenhuma;
-        // a do bot fica acima da cabeça.
+        // O holograma identifica o centro da sala; o nome do bot fica acima da cabeça.
         const centered = node.dataset.bot === undefined;
         node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, ${centered ? "-50%" : "-100%"})`;
       }
@@ -90,24 +88,20 @@ export function OfficeLabels() {
     <div className="office-labels" ref={layer}>
       <div className={focusedRoomId ? "office-shade on" : "office-shade"} ref={shade} aria-hidden />
       {OFFICE_ROOMS.map((room) => {
-        const occupants = botsInRoom(seating, room.id);
-        const names = occupants.map((id) => bots.find((bot) => bot.id === id)?.name ?? id);
-        const owner = room.kind === "department" ? (names[0] ?? "posto vazio") : occupants.length > 0 ? `${occupants.length} em posto` : "área comum";
-        // Em foco, a parede alta pode esconder os vizinhos: etiqueta deles só atrapalharia.
-        const classes = ["office-room-tag", room.id === hoveredRoomId ? "hovered" : "", focusedRoomId ? "focused" : ""].filter(Boolean).join(" ");
+        // Só o local apontado revela a identificação sobre a cena.
+        const classes = room.id === hoveredRoomId ? "office-room-tag hovered" : "office-room-tag";
         return (
           <button
             key={room.id}
             type="button"
-            ref={place([room.bounds.maxX + CORRIDOR / 2, 0.02, room.bounds.maxZ + CORRIDOR / 2])}
+            ref={place([room.center.x, 1.5, room.center.z])}
             className={classes}
             style={{ "--tag-color": room.color } as React.CSSProperties}
             data-room={room.id}
             onClick={() => useOfficeStore.getState().focusRoom(room.id)}
-            onPointerEnter={() => useOfficeStore.getState().setHovered(room.id, null)}
           >
             <strong>{room.name}</strong>
-            <span>{owner}</span>
+            <span>Explorar sala</span>
           </button>
         );
       })}
