@@ -8,6 +8,7 @@ import { OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_CAPACITY, SE
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
+import { OfficeKanban } from "./OfficeKanban";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
@@ -45,8 +46,10 @@ function ModeChip({ connection }: { connection: OfficeConnection | null }) {
 }
 
 function TopBar({ connection }: { connection: OfficeConnection | null }) {
+  const [kanbanOpen, setKanbanOpen] = useState(false);
   const demo = connection === null;
   return (
+    <>
     <header className="office-top" data-office-inset="top">
       <div className="office-brand">
         <span className="sidebar-dot" aria-hidden />
@@ -62,8 +65,11 @@ function TopBar({ connection }: { connection: OfficeConnection | null }) {
         <a href="/personagens.html">Estúdio</a>
         <a href="/avatares.html">Criar pessoa</a>
         <a href="/avatares.html?aba=robos">Robôs</a>
+        {demo && <button type="button" className="office-nav-button" onClick={() => setKanbanOpen(true)}>Kanban</button>}
       </nav>
     </header>
+      {kanbanOpen && <OfficeKanban onClose={() => setKanbanOpen(false)} />}
+    </>
   );
 }
 
