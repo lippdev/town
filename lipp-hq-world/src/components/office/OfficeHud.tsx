@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { House, Columns3, MessagesSquare, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { lookFor } from "@/avatar/robot/robotLook";
-import { robotMotionFor } from "@/avatar/robot/robotMotion";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
@@ -11,6 +10,7 @@ import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
+import { AgentPortrait } from "./AgentPortrait";
 import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
@@ -183,7 +183,6 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   sheets: Record<string, string>;
   demo: DemoConversations;
 }) {
-  const [reacting, setReacting] = useState<string | null>(null);
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
@@ -219,20 +218,12 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
             const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
             const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
             return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
-              setReacting(bot.id);
               if (view === "conversas") { onConversation(bot.id); return; }
               onView("escritorio");
               useOfficeStore.getState().selectBot(bot.id);
             }}>
-              <span
-                className="office-agent-avatar"
-                style={{ "--agent-color": bot.color } as React.CSSProperties}
-                data-motion={robotMotionFor(bot.id)}
-                data-reacting={reacting === bot.id || undefined}
-                aria-hidden
-                onAnimationEnd={(event) => { if (event.animationName.startsWith("agent-click-")) setReacting(null); }}
-              >
-                {sheets[bot.id] ? <span className="agent-sprite" data-agent-sprite={bot.id} style={{ backgroundImage: `url(${sheets[bot.id]})` }} /> : <span>{bot.name.slice(0, 2)}</span>}
+              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
+                {sheets[bot.id] ? <AgentPortrait botId={bot.id} sheet={sheets[bot.id]!} /> : <span>{bot.name.slice(0, 2)}</span>}
               </span>
               <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
               {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
