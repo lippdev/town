@@ -10,7 +10,8 @@ import { humanActors, humanFigures, officeRuntime, useOfficeStore } from "./offi
 /** Quantos quadros entre um mapa de sombra e outro enquanto alguém anda. */
 const WALKING_SHADOW_EVERY = 6;
 const TAG_HEIGHT = 2.2 * HUMAN_SCALE;
-const SEATED_DROP = 0.3;
+/** Sentada, a cabeça fica mais alta que em pé: as pernas são mais curtas que o assento é alto. */
+const SEATED_RISE = 0.1;
 
 function OfficeHumanBody({ human, base, reduced }: { human: OfficeHuman; base: HumanBase; reduced: boolean }) {
   const gl = useThree((state) => state.gl);
@@ -28,7 +29,7 @@ function OfficeHumanBody({ human, base, reduced }: { human: OfficeHuman; base: H
     const created = new HumanActor(
       figure,
       useOfficeStore.getState().humans.find((candidate) => candidate.id === id) ?? human,
-      { walkSpeed: base.clips.walkSpeed, sitDuration: base.clips.sit.duration, seatedHipsZ: base.clips.seatedHipsZ },
+      { walkSpeed: base.clips.walkSpeed },
       reduced,
     );
     humanActors.set(id, created);
@@ -62,10 +63,14 @@ function OfficeHumanBody({ human, base, reduced }: { human: OfficeHuman; base: H
     const store = useOfficeStore.getState();
     actor.command(store.humanGoals[id] ?? "standing");
     actor.update(delta);
-    if (store.humanPhases[id] !== actor.phase) store.setHumanPhase(id, actor.phase);
+    if (store.humanPhases[id] !== actor.phase) {
+      store.setHumanPhase(id, actor.phase);
+      // A última posição da cadeira e da pessoa precisa entrar na sombra, fora da cadência.
+      gl.shadowMap.needsUpdate = true;
+    }
     const { x, y, z } = actor.position;
-    const seated = actor.phase === "seated" || actor.phase === "sitting" ? SEATED_DROP : 0;
-    officeRuntime.liveAnchors.set(id, [x, y + TAG_HEIGHT - seated, z]);
+    const seated = actor.phase === "seated" ? SEATED_RISE : 0;
+    officeRuntime.liveAnchors.set(id, [x, y + TAG_HEIGHT + seated, z]);
     frame.current = (frame.current + 1) % WALKING_SHADOW_EVERY;
     if (frame.current === 0 && actor.phase !== "standing" && actor.phase !== "seated") gl.shadowMap.needsUpdate = true;
   });

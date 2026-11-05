@@ -7,6 +7,7 @@ import {
   LoopRepeat,
   MeshStandardMaterial,
   SkinnedMesh,
+  Vector3,
   type AnimationAction,
   type AnimationClip,
   type Material,
@@ -19,8 +20,6 @@ import { ARMATURE_URL, POSES_URL, ROBOT_URL, loadGltf, loadPart, releasePart, ty
 import type { CategoryId } from "./catalog";
 import type { Expression, ResolvedHuman, ResolvedPart } from "./preset";
 
-const PULSE_URL = "/prototipo/pulse.glb";
-
 export interface HumanBase {
   armature: Object3D;
   clips: HumanClips;
@@ -30,13 +29,12 @@ let base: Promise<HumanBase> | null = null;
 
 /** O esqueleto e as animações, uma vez por página. As peças vêm depois, sob demanda. */
 export function loadHumanBase(): Promise<HumanBase> {
-  base ??= Promise.all([loadGltf(ARMATURE_URL), loadGltf(POSES_URL), loadGltf(ROBOT_URL), loadGltf(PULSE_URL)]).then(([armature, poses, robot, pulse]) => ({
+  base ??= Promise.all([loadGltf(ARMATURE_URL), loadGltf(POSES_URL), loadGltf(ROBOT_URL)]).then(([armature, poses, robot]) => ({
     armature: armature.scene,
     clips: buildHumanClips({
       armature: armature.scene,
       poses: poses.animations,
       robot: { scene: robot.scene, clips: robot.animations },
-      pulse: { scene: pulse.scene, clips: pulse.animations },
     }),
   }));
   base.catch(() => {
@@ -270,6 +268,27 @@ export class HumanFigure {
         if (index !== undefined) mesh.morphTargetInfluences![index] = amount;
       }
     }
+  }
+
+  /** Onde estão os ossos que encostam nos móveis, em coordenadas do mundo. */
+  joints() {
+    this.root.updateWorldMatrix(true, true);
+    const at = (name: string) => {
+      const { x, y, z } = this.skeleton.getBoneByName(`mixamorig${name}`)!.getWorldPosition(new Vector3());
+      return { x, y, z };
+    };
+    return {
+      hips: at("Hips"),
+      head: at("Head"),
+      leftHand: at("LeftHand"),
+      rightHand: at("RightHand"),
+      leftFinger: at("LeftHandMiddle4"),
+      rightFinger: at("RightHandMiddle4"),
+      leftFoot: at("LeftFoot"),
+      rightFoot: at("RightFoot"),
+      leftToe: at("LeftToeBase"),
+      rightToe: at("RightToeBase"),
+    };
   }
 
   /** Para o QA conferir o que está vestido de verdade, não o que o estado pediu. */

@@ -1,0 +1,306 @@
+{
+  "seats": [
+    {
+      "name": "Ana",
+      "seat": "hall-1",
+      "frames": 1282,
+      "fastest": "3.37 m/s (rightFoot, rising, 16 ms)",
+      "chairTopSpeed": "0.46 m/s",
+      "chairTopSpin": "5.57 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    },
+    {
+      "name": "Bia",
+      "seat": "hall-3",
+      "frames": 1299,
+      "fastest": "3.39 m/s (rightFoot, rising, 17 ms)",
+      "chairTopSpeed": "0.37 m/s",
+      "chairTopSpin": "4.78 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    },
+    {
+      "name": "Caio",
+      "seat": "hall-5",
+      "frames": 1663,
+      "fastest": "3.40 m/s (rightFoot, sitting, 16 ms)",
+      "chairTopSpeed": "0.37 m/s",
+      "chairTopSpin": "3.77 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    },
+    {
+      "name": "Dora",
+      "seat": "hall-0",
+      "frames": 813,
+      "fastest": "3.41 m/s (rightFoot, sitting, 16 ms)",
+      "chairTopSpeed": "0.37 m/s",
+      "chairTopSpin": "3.72 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    },
+    {
+      "name": "Enzo",
+      "seat": "hall-2",
+      "frames": 788,
+      "fastest": "3.38 m/s (rightFoot, sitting, 16 ms)",
+      "chairTopSpeed": "0.37 m/s",
+      "chairTopSpin": "3.73 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    },
+    {
+      "name": "Fred",
+      "seat": "hall-4",
+      "frames": 916,
+      "fastest": "3.31 m/s (rightFoot, sitting, 16 ms)",
+      "chairTopSpeed": "0.37 m/s",
+      "chairTopSpin": "3.77 rad/s",
+      "sidewaysWhileSitting": "0.000 m",
+      "hipsOffAxis": "0.000",
+      "hipsSlideAlongSeat": "0.000",
+      "seated": {
+        "hips": [
+          "-0.000",
+          "0.513",
+          "-0.000"
+        ],
+        "leftHand": [
+          "0.295",
+          "0.797",
+          "0.285"
+        ],
+        "rightHand": [
+          "-0.295",
+          "0.797",
+          "0.285"
+        ],
+        "leftFoot": [
+          "0.150",
+          "0.300",
+          "0.180"
+        ],
+        "rightFoot": [
+          "-0.150",
+          "0.300",
+          "0.180"
+        ]
+      },
+      "backHome": "0.000, 0.000"
+    }
+  ],
+  "seatedTogether": [
+    {
+      "name": "Ana",
+      "seat": "hall-1",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    },
+    {
+      "name": "Bia",
+      "seat": "hall-3",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    },
+    {
+      "name": "Caio",
+      "seat": "hall-5",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    },
+    {
+      "name": "Dora",
+      "seat": "hall-0",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    },
+    {
+      "name": "Enzo",
+      "seat": "hall-2",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    },
+    {
+      "name": "Fred",
+      "seat": "hall-4",
+      "leftHandY": "0.797",
+      "rightHandY": "0.797",
+      "leftFootY": "0.300",
+      "hipsInChair": [
+        "-0.000",
+        "-0.000"
+      ]
+    }
+  ]
+}

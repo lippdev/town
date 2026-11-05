@@ -1,10 +1,10 @@
 import type { Quaternion} from "three";
 import { AnimationClip, AnimationMixer, Vector3, type Object3D, type SkinnedMesh } from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { retargetBodyTracks } from "@/character-studio/viewport/figureRig";
 import { retargetClip, type BoneLink } from "./retarget";
+import { bakeSitClip, readRestPose } from "./seatedPose";
 
-/** O pacote só traz o Idle e fotos paradas; andar e sentar vêm de outros modelos do projeto. */
+/** O pacote só traz o Idle e fotos paradas; andar vem do robô e sentar é montado aqui. */
 export const PHOTO_POSES = ["Chill", "Cool", "Dram", "King", "Ninja", "Busy", "Punch"] as const;
 export type PhotoPose = (typeof PHOTO_POSES)[number];
 
@@ -15,8 +15,6 @@ export interface HumanClips {
   poses: Record<PhotoPose, AnimationClip>;
   /** Metros por segundo, na escala do arquivo, em que o pé de apoio não escorrega. */
   walkSpeed: number;
-  /** Onde o quadril fica na pose sentada, em Z, na escala do arquivo. */
-  seatedHipsZ: number;
 }
 
 const m = (bone: string) => `mixamorig${bone}`;
@@ -45,24 +43,6 @@ const ROBOT_WALK_LINKS: BoneLink[] = [
   delta("RightFoot", "FootR"),
 ];
 
-const PULSE_SIT_LINKS: BoneLink[] = [
-  delta("Hips", "Hips"),
-  delta("Spine", "Abdomen"),
-  delta("Spine2", "Torso"),
-  delta("Neck", "Neck"),
-  delta("Head", "Head"),
-  aim("LeftArm", "LeftForeArm", "UpperArmL", "LowerArmL"),
-  aim("LeftForeArm", "LeftHand", "LowerArmL", "FistL"),
-  aim("RightArm", "RightForeArm", "UpperArmR", "LowerArmR"),
-  aim("RightForeArm", "RightHand", "LowerArmR", "FistR"),
-  aim("LeftUpLeg", "LeftLeg", "UpperLegL", "LowerLegL"),
-  aim("LeftLeg", "LeftFoot", "LowerLegL", "FootL"),
-  delta("LeftFoot", "FootL"),
-  aim("RightUpLeg", "RightLeg", "UpperLegR", "LowerLegR"),
-  aim("RightLeg", "RightFoot", "LowerLegR", "FootR"),
-  delta("RightFoot", "FootR"),
-];
-
 /**
  * O arquivo de poses tem ossos auxiliares do Blender e trilhas de escala que o avatar não
  * usa. Sem isto, o three avisa no console por trilha sem alvo e calcula o que não importa.
@@ -84,14 +64,13 @@ export interface ClipSources {
   armature: Object3D;
   poses: AnimationClip[];
   robot: { scene: Object3D; clips: AnimationClip[] };
-  pulse: { scene: Object3D; clips: AnimationClip[] };
 }
 
 /**
  * Monta as animações do avatar. Lança erro se faltar um clipe: quem chama decide o que
  * mostrar, em vez de a figura aparecer em pose de T.
  */
-export function buildHumanClips({ armature, poses, robot, pulse }: ClipSources): HumanClips {
+export function buildHumanClips({ armature, poses, robot }: ClipSources): HumanClips {
   const posed = cloneSkinned(armature);
   const named = (name: string) => {
     const clip = poses.find((candidate) => candidate.name === name);
@@ -99,6 +78,7 @@ export function buildHumanClips({ armature, poses, robot, pulse }: ClipSources):
     return cleanPoseClip(clip, posed);
   };
   const idle = named("Idle");
+  const rest = readRestPose(posed);
 
   // Tudo parte do primeiro quadro do Idle: dedos e ombros ficam relaxados, não em T.
   holdFirstFrame(posed, idle);
@@ -128,22 +108,9 @@ export function buildHumanClips({ armature, poses, robot, pulse }: ClipSources):
     plant: { feet: [m("LeftToeBase"), m("RightToeBase")], groundY: toeY },
   });
 
-  const sitSource = pulse.clips.find((clip) => clip.name === "CharacterArmature|SitDown");
-  if (!sitSource) throw new Error("O Pulse não tem o clipe SitDown.");
-  const pulseScene = cloneSkinned(pulse.scene);
-  const sit = retargetClip({
-    name: "Sentar",
-    source: pulseScene,
-    clip: retargetBodyTracks(sitSource, pulseScene),
-    target: posed,
-    links: PULSE_SIT_LINKS,
-    hips: { source: "Hips", target: m("Hips") },
-    keep: unlinked(PULSE_SIT_LINKS),
-    plant: { feet: [m("LeftToeBase"), m("RightToeBase")], groundY: toeY },
-  });
+  const sit = bakeSitClip(posed, rest, unlinked([]));
 
   disposeClone(robotScene);
-  disposeClone(pulseScene);
   disposeClone(posed);
 
   return {
@@ -151,7 +118,6 @@ export function buildHumanClips({ armature, poses, robot, pulse }: ClipSources):
     walk,
     sit,
     walkSpeed: measureWalkSpeed(armature, walk),
-    seatedHipsZ: sampleBones(armature, sit, [sit.duration], [m("Hips")])[0]![m("Hips")]!.z,
     poses: Object.fromEntries(PHOTO_POSES.map((pose) => [pose, named(pose)])) as Record<PhotoPose, AnimationClip>,
   };
 }

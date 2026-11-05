@@ -333,7 +333,7 @@ function PeopleEditor({ tabs }: { tabs: ReactNode }) {
             </section>
           )}
           <section className="cs-credits" aria-label="Créditos">
-            <span><strong>Pessoas:</strong> pacote de avatar do Wawa Sensei. Sem licença declarada no repositório; uso autorizado pelo Filipe.</span>
+            <span><strong>Pessoas:</strong> pacote de avatar do Wawa Sensei. <a href="/avatares/CREDITOS.md" target="_blank" rel="noreferrer">Créditos</a></span>
           </section>
         </div>
         <footer className="cs-panel__foot av-foot">

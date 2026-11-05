@@ -106,10 +106,10 @@ describe("animações do avatar", () => {
   let posesRaw: GLTF;
 
   beforeAll(async () => {
-    const [arm, poses, robot, pulse] = await Promise.all([load(`${ROOT}/armature.glb`), load(`${ROOT}/poses.glb`), load("public/avatares/robo/RobotExpressive.glb"), load("public/prototipo/pulse.glb")]);
+    const [arm, poses, robot] = await Promise.all([load(`${ROOT}/armature.glb`), load(`${ROOT}/poses.glb`), load("public/avatares/robo/RobotExpressive.glb")]);
     armature = arm.scene;
     posesRaw = poses;
-    clips = buildHumanClips({ armature, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations }, pulse: { scene: pulse.scene, clips: pulse.animations } });
+    clips = buildHumanClips({ armature, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations } });
   }, 60000);
 
   it("o pacote só tem o Idle animado: as demais são fotos de um quadro", () => {
@@ -161,10 +161,13 @@ describe("animações do avatar", () => {
     expect(Math.min(...ahead)).toBeLessThan(-0.1);
   });
 
-  it("sentada, a bacia desce e os pés ficam no chão", () => {
+  it("sentada, a bacia sobe ao assento e os dois pés saem do chão", () => {
     const standing = sample(clips.idle, 0);
     const seated = sample(clips.sit, clips.sit.duration);
-    expect(seated.hips.y).toBeLessThan(standing.hips.y - 0.12);
-    expect(Math.min(seated.toeL.y, seated.toeR.y)).toBeCloseTo(standing.toeL.y, 2);
+    // As pernas têm 36 cm e o assento fica a 33 cm: quem senta sobe.
+    expect(seated.hips.y).toBeGreaterThan(standing.hips.y + 0.1);
+    expect(seated.hips.z).toBeLessThan(standing.hips.z - 0.4);
+    expect(Math.min(seated.toeL.y, seated.toeR.y)).toBeGreaterThan(standing.toeL.y + 0.2);
+    expect(seated.toeL.y).toBeCloseTo(seated.toeR.y, 2);
   });
 });

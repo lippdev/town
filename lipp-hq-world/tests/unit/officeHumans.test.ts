@@ -5,7 +5,8 @@ import { buildHumanClips } from "@/avatar/human/humanClips";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
 import { FACING, OFFICE_ROOMS_BY_ID, OFFICE_SEATS } from "@/world/office/officeLayout";
 import { buildOffice } from "@/world/office/officeRooms";
-import { HUMAN_CAPACITY, HUMAN_SEAT_LIFT, chairRoute, pathLength, pathPose, placeHumans, seatedRoot, turnToward } from "@/world/office/officeHumans";
+import { HUMAN_CAPACITY, chairRoute, pathLength, pathPose, placeHumans, seatMoment, standPoint, turnToward } from "@/world/office/officeHumans";
+import { SIT_TIMELINE } from "@/avatar/human/seatFit";
 import { demoBots } from "@/world/office/officeRoster";
 import { parseGlb } from "../helpers/gltf";
 
@@ -84,11 +85,13 @@ describe("caminhos das pessoas contra a mobília real", () => {
     }
   });
 
-  it("o caminho termina ao lado da cadeira", () => {
+  it("o caminho termina no eixo da cadeira, do lado de trás dela", () => {
     for (const seat of OFFICE_SEATS.filter((item) => item.roomId === "hall")) {
       const end = chairRoute({ x: hall.center.x, z: hall.center.z + 1 }, seat).at(-1)!;
-      expect(end.z).toBeCloseTo(seat.z);
-      expect(Math.abs(end.x - seat.x)).toBeCloseTo(0.5);
+      expect(end).toEqual(standPoint(seat));
+      expect(end.x).toBeCloseTo(seat.x);
+      const behind = Math.cos(seat.yaw) * (seat.z - end.z) + Math.sin(seat.yaw) * (seat.x - end.x);
+      expect(behind).toBeGreaterThan(0.31);
     }
   });
 });
@@ -131,7 +134,7 @@ function fakeFigure() {
   return figure;
 }
 
-const CLIPS = { walkSpeed: 1, sitDuration: 1, seatedHipsZ: -0.2 };
+const CLIPS = { walkSpeed: 1 };
 
 function run(actor: HumanActor, seconds: number, step = 1 / 30) {
   const seen = new Set<string>();
@@ -163,18 +166,22 @@ describe("ator de uma pessoa", () => {
     const seen = run(actor, 30);
     expect([...seen]).toEqual(["toChair", "sitting", "seated"]);
     expect(figure.played).toEqual(["walk", "sit"]);
-    const target = seatedRoot(chair, CLIPS.seatedHipsZ);
-    expect(actor.position.x).toBeCloseTo(target.x);
-    expect(actor.position.z).toBeCloseTo(target.z);
-    expect(actor.position.y).toBeCloseTo(HUMAN_SEAT_LIFT);
+    const end = seatMoment(chair, SIT_TIMELINE.duration);
+    // A posição é a da bacia, sobre o eixo da cadeira: é onde ficam etiqueta e anel.
+    expect(actor.position.x).toBeCloseTo(end.chair.x);
+    expect(actor.position.z).toBeCloseTo(end.chair.z);
+    expect(actor.position.y).toBe(0);
+    expect(actor.chair).toEqual(end.chair);
     expect(Math.atan2(Math.sin(actor.heading - chair.yaw), Math.cos(actor.heading - chair.yaw))).toBeCloseTo(0);
   });
 
-  it("o quadril assenta no centro da cadeira", () => {
-    const south = seatedRoot({ ...chair, yaw: FACING.south }, -0.2, 1);
-    expect(south.z).toBeCloseTo(chair.z + 0.2);
-    const north = seatedRoot({ ...chair, yaw: FACING.north }, -0.2, 1);
-    expect(north.z).toBeCloseTo(chair.z - 0.2);
+  it("a cadeira puxada fica mais perto da mesa e olhando para ela, nas duas fileiras", () => {
+    const south = seatMoment({ ...chair, yaw: FACING.south }, SIT_TIMELINE.duration);
+    expect(south.chair.z).toBeCloseTo(chair.z + 0.03);
+    expect(south.root.z).toBeGreaterThan(south.chair.z);
+    const north = seatMoment({ ...chair, yaw: FACING.north }, SIT_TIMELINE.duration);
+    expect(north.chair.z).toBeCloseTo(chair.z - 0.03);
+    expect(north.root.z).toBeLessThan(north.chair.z);
   });
 
   it("levantar refaz o caminho e volta exatamente ao lugar", () => {
@@ -225,10 +232,11 @@ describe("ator de uma pessoa", () => {
     actor.command("seated");
     expect(actor.phase).toBe("seated");
     expect(figure.played).toEqual(["sit"]);
-    expect(actor.position.y).toBeCloseTo(HUMAN_SEAT_LIFT);
+    expect(actor.chair).toEqual(seatMoment(chair, SIT_TIMELINE.duration).chair);
     actor.command("standing");
     expect(actor.phase).toBe("standing");
     expect(actor.position.x).toBeCloseTo(human.spot.x);
+    expect(actor.chair).toEqual({ x: chair.x, z: chair.z, yaw: chair.yaw });
   });
 
   it("sem cadeira, o comando de sentar não faz nada", () => {
@@ -243,10 +251,10 @@ describe("ator de uma pessoa", () => {
 
 describe("velocidade de andar", () => {
   it("sai do clipe e é a de uma pessoa andando", async () => {
-    const [armature, poses, robot, pulse] = await Promise.all([parseGlb("public/avatares/humano/armature.glb"), parseGlb("public/avatares/humano/poses.glb"), parseGlb("public/avatares/robo/RobotExpressive.glb"), parseGlb("public/prototipo/pulse.glb")]);
-    const clips = buildHumanClips({ armature: armature.scene, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations }, pulse: { scene: pulse.scene, clips: pulse.animations } });
+    const [armature, poses, robot] = await Promise.all([parseGlb("public/avatares/humano/armature.glb"), parseGlb("public/avatares/humano/poses.glb"), parseGlb("public/avatares/robo/RobotExpressive.glb")]);
+    const clips = buildHumanClips({ armature: armature.scene, poses: poses.animations, robot: { scene: robot.scene, clips: robot.animations } });
     expect(clips.walkSpeed).toBeGreaterThan(0.3);
     expect(clips.walkSpeed).toBeLessThan(2);
-    expect(clips.seatedHipsZ).toBeLessThan(0);
+    expect(clips.sit.duration).toBeCloseTo(SIT_TIMELINE.duration);
   });
 });

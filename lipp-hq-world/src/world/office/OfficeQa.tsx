@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import type { Scene, WebGLRenderer } from "three";
+import { OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
@@ -60,12 +60,31 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
           phase: store.humanPhases[human.id] ?? null,
           position: humanActors.get(human.id)?.position ?? null,
           heading: humanActors.get(human.id)?.heading ?? null,
+          seat: human.chair,
+          chairPose: humanActors.get(human.id)?.chair ?? null,
           worn: humanFigures.get(human.id)?.snapshot() ?? null,
         })),
         humansWaiting: store.humansWaiting,
         humansError: store.humansError,
         selectedHumanId: store.selectedHumanId,
       };
+    },
+    /** Ossos que encostam nos móveis, em metros do andar, lidos do esqueleto vivo. */
+    humanJoints: (id: string) => humanFigures.get(id)?.joints() ?? null,
+    /**
+     * Foto de perto, com câmera própria: corte ortográfico que só enxerga depois de `near`,
+     * para o móvel vizinho não tapar a cadeira. A câmera da cena fica como está.
+     */
+    closeup: ({ eye, target, height = 1.8, near = 0.01, far = 12 }: { eye: [number, number, number]; target: [number, number, number]; height?: number; near?: number; far?: number }) => {
+      const { width, height: pixels } = gl.domElement;
+      const half = height / 2;
+      const aspect = width / pixels;
+      const camera = new OrthographicCamera(-half * aspect, half * aspect, half, -half, near, far);
+      camera.position.set(...eye);
+      camera.lookAt(...target);
+      camera.updateMatrixWorld();
+      gl.render(scene, camera);
+      return gl.domElement.toDataURL("image/png");
     },
     /** Pixel do meio da pessoa, onde ela estiver agora. */
     humanPoint: (id: string) => {
@@ -87,7 +106,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
   };
 }
 
-/** Só leitura: nada aqui muda a cena. */
+/** Só leitura: nada aqui muda a cena. A foto de perto desenha um quadro a mais, e só. */
 export function OfficeQa() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);

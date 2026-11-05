@@ -36,7 +36,7 @@ const scratchR = new Quaternion();
 const fromDirection = new Vector3();
 const toDirection = new Vector3();
 
-function bone(root: Object3D, name: string): Object3D {
+export function boneNamed(root: Object3D, name: string): Object3D {
   const found = root.getObjectByName(name);
   if (!found) throw new Error(`Osso ausente: ${name}`);
   return found;
@@ -46,7 +46,7 @@ const worldPosition = (node: Object3D, into = new Vector3()) => node.getWorldPos
 const worldQuaternion = (node: Object3D, into = new Quaternion()) => node.getWorldQuaternion(into);
 
 /** Põe a rotação de mundo no osso, levando em conta a do pai. */
-function setWorldQuaternion(node: Object3D, world: Quaternion) {
+export function setWorldQuaternion(node: Object3D, world: Quaternion) {
   worldQuaternion(node.parent!, scratchQ).invert();
   node.quaternion.copy(scratchQ).multiply(world);
   node.updateWorldMatrix(false, true);
@@ -61,12 +61,12 @@ export function retargetClip(options: RetargetOptions): AnimationClip {
   source.updateMatrixWorld(true);
   target.updateMatrixWorld(true);
 
-  const sourceBones = new Map(links.flatMap((link) => (link.kind === "aim" ? [link.source, link.sourceEnd] : [link.source])).map((id) => [id, bone(source, id)]));
-  const targetBones = new Map(links.flatMap((link) => (link.kind === "aim" ? [link.target, link.targetEnd] : [link.target])).map((id) => [id, bone(target, id)]));
-  const sourceHips = bone(source, hips.source);
-  const targetHips = bone(target, hips.target);
-  const kept = keep.map((id) => bone(target, id));
-  const feet = (plant?.feet ?? []).map((id) => bone(target, id));
+  const sourceBones = new Map(links.flatMap((link) => (link.kind === "aim" ? [link.source, link.sourceEnd] : [link.source])).map((id) => [id, boneNamed(source, id)]));
+  const targetBones = new Map(links.flatMap((link) => (link.kind === "aim" ? [link.target, link.targetEnd] : [link.target])).map((id) => [id, boneNamed(target, id)]));
+  const sourceHips = boneNamed(source, hips.source);
+  const targetHips = boneNamed(target, hips.target);
+  const kept = keep.map((id) => boneNamed(target, id));
+  const feet = (plant?.feet ?? []).map((id) => boneNamed(target, id));
 
   // O repouso da origem é lido antes do mixer tocar nela.
   const sourceRest = new Map(links.filter((link) => link.kind === "delta").map((link) => [link.source, worldQuaternion(sourceBones.get(link.source)!)]));
