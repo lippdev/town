@@ -4,13 +4,19 @@ import { stateLabel } from "@/components/hud/fleetView";
 import type { OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
 
-function AgentNode({ bot, sheet, onOpen }: { bot: OfficeBot; sheet?: string; onOpen: (botId: string) => void }) {
+function AgentNode({ bot, sheet, showRole = true, onOpen }: {
+  bot: OfficeBot;
+  sheet?: string;
+  /** Dentro de um subgrupo o título já diz a função. */
+  showRole?: boolean;
+  onOpen: (botId: string) => void;
+}) {
   return (
     <button type="button" className="org-node" data-org-node={bot.id} title={`Conversar com ${bot.name}`} onClick={() => onOpen(bot.id)}>
       <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as CSSProperties} aria-hidden>
         {sheet ? <AgentPortrait botId={bot.id} sheet={sheet} /> : <span>{bot.name.slice(0, 2)}</span>}
       </span>
-      <span className="org-node-text"><strong>{bot.name}</strong><small>{bot.role}</small></span>
+      <span className="org-node-text"><strong>{bot.name}</strong>{showRole && <small>{bot.role}</small>}</span>
       {bot.live && bot.state && <span className="org-node-state">{stateLabel(bot.state)}</span>}
     </button>
   );
@@ -39,22 +45,26 @@ export function OfficeOrgChart({ bots, sheets, onOpen }: {
           {leadership.map((bot) => (
             <div key={bot.id} className="org-tier"><span className="org-link" aria-hidden />{node(bot)}</div>
           ))}
-          {teams.length > 0 && <span className="org-link" aria-hidden />}
-          {teams.length > 0 && (
-            <div className="org-teams" data-count={teams.length}>
-              {teams.map((team) => (
-                <div key={team.id} className="org-branch">
-                  <section className="org-team" aria-label={`Equipe ${team.name}`} data-org-team={team.id}>
-                    <header>
-                      <h3>{team.name} <span>{team.members.length}</span></h3>
-                      <p>{team.purpose}</p>
-                    </header>
-                    <div className="org-members">{team.members.map(node)}</div>
-                  </section>
+          {teams.map((team) => (
+            <div key={team.id} className="org-tier org-team-tier">
+              <span className="org-link" aria-hidden />
+              <section className="org-team" aria-label={`Equipe ${team.name}`} data-org-team={team.id}>
+                <h3>{team.name} <span>{team.size}</span></h3>
+                <div className="org-groups">
+                  {team.groups.map((group) => (
+                    <section key={group.id} className="org-group" aria-label={group.name} data-org-group={group.id}>
+                      <h4>{group.name}</h4>
+                      <div className="org-members">
+                        {group.members.map((bot) => (
+                          <AgentNode key={bot.id} bot={bot} sheet={sheets[bot.id]} showRole={false} onOpen={onOpen} />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
                 </div>
-              ))}
+              </section>
             </div>
-          )}
+          ))}
         </div>
         {unassigned.length > 0 && (
           <section className="org-team org-unassigned" aria-label="Sem equipe definida" data-org-unassigned>
