@@ -148,8 +148,8 @@ direito) e reprova captura chapada, enquadramento fora do centro, capturas
 idênticas e erro de console. O resultado fica em `qa/screenshots/manifest.json`.
 
 Esses roteiros rodam localmente: o job automático foi removido porque falhava sem bloquear merge. A CI (`.github/workflows/ci.yml`) roda lint, typecheck, testes e build.
-Não é ritual manual: lint, tipos e build passaram por três bugs reais que só a
-tela mostrava.
+Vale rodá-los à mão em mudanças de tela: lint, tipos e build já deixaram passar
+três bugs reais que só a tela mostrava.
 
 ## Documentação
 
