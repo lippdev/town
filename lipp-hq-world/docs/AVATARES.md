@@ -130,6 +130,8 @@ Salvar em outra aba já atualiza o escritório aberto.
 - **Pessoa não é bot.** Fica em `humans` no store, separada de `bots`: não ocupa posto, não
   vem do Hermes, não tem sessão nem estado. No modo ao vivo nenhuma pessoa aparece, para não
   se misturar com a frota real.
+- **O chefe.** Na demonstração há sempre uma pessoa a mais, o Chefe (`officeChief.ts`), sem precisar
+  de editor. Ainda é igual às outras: o comportamento próprio dele está em discussão.
 - **Só se mexe quando mandam.** O painel tem "Sentar na bancada" e "Levantar e voltar". Não
   há rotina própria, para não parecer que a pessoa está trabalhando. Parada, ela só toca o
   `Idle` e pisca.

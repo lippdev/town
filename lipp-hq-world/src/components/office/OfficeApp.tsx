@@ -9,6 +9,7 @@ import { OfficeScene } from "@/world/office/OfficeScene";
 import { OfficeQa } from "@/world/office/OfficeQa";
 import { AVATAR_STORAGE_KEY, browserStorage, loadAvatars } from "@/avatar/human/persistence";
 import { ROBOT_STORAGE_KEY, loadRobotLooks } from "@/avatar/robot/robotLook";
+import { withChief } from "@/world/office/officeChief";
 import { placeHumans } from "@/world/office/officeHumans";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
@@ -52,7 +53,7 @@ function useHumans(mode: OfficeMode) {
       store.setHumans([], []);
       return;
     }
-    const { placed, waiting } = placeHumans(loadAvatars(browserStorage()).doc.presets, Object.values(seating.seats));
+    const { placed, waiting } = placeHumans(withChief(loadAvatars(browserStorage()).doc.presets), Object.values(seating.seats));
     store.setHumans(placed, waiting.map(({ id, name }) => ({ id, name })));
   }, [mode, seating, version]);
 }
