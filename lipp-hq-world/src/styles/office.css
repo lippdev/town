@@ -1240,3 +1240,42 @@ button.office-roster-room:hover {
 .kanban-card button { color: var(--ui-dim); }
 .kanban-card button:hover { color: var(--ui-text); }
 .office-demo-panel [data-open-conversation] { margin-top: 8px; }
+
+/* Equipe: organograma de cima para baixo, com as equipes lado a lado. */
+.office-hud:has(.org) > .office-top,
+.office-hud:has(.org) > .office-focus,
+.office-hud:has(.org) > .office-bottom,
+.office-hud:has(.org) > .office-notice,
+.office-hud:has(.org) > .drawer { visibility: hidden; }
+.org { position: fixed; inset: 0 0 0 var(--sidebar-width); z-index: 40; display: flex; flex-direction: column; min-width: 0; background: var(--ui-bg); color: var(--ui-text); font-size: 14px; }
+.org-head { flex-shrink: 0; padding: 16px 20px; border-bottom: 1px solid var(--ui-line); }
+.office-hud[data-sidebar-open="false"] .org-head { padding-left: 52px; }
+.org-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.org-head p { margin: 2px 0 0; color: var(--ui-dim); font-size: 12px; }
+.org-scroll { flex: 1; min-height: 0; overflow: auto; padding: 28px 20px 40px; scrollbar-width: thin; }
+.org-chart { display: flex; flex-direction: column; align-items: center; width: min(100%, 860px); margin: 0 auto; }
+.org-tier { display: flex; flex-direction: column; align-items: center; }
+.org-link { display: block; flex-shrink: 0; width: 1px; height: 24px; background: #3a3a37; }
+.org-node { display: flex; align-items: center; gap: 10px; width: 264px; min-height: 56px; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--ui-line); border-radius: 12px; background: var(--ui-raised); color: inherit; font: inherit; text-align: left; }
+button.org-node { cursor: pointer; }
+button.org-node:hover { border-color: #4a4a47; background: #262625; }
+.org-node:focus-visible { outline: 2px solid var(--ui-text); outline-offset: 2px; }
+.org-node.owner { background: transparent; }
+.org-node-text { display: flex; flex: 1; flex-direction: column; gap: 1px; min-width: 0; }
+.org-node-text strong { font-size: 14px; font-weight: 550; }
+.org-node-text small { overflow: hidden; color: var(--ui-dim); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.org-node-state { flex-shrink: 0; color: var(--ui-dim); font-size: 11px; }
+.org-team-tier { width: 100%; }
+.org-team { width: 100%; box-sizing: border-box; padding: 14px; border: 1px solid var(--ui-line); border-radius: 14px; background: #1a1a19; }
+.org-team h3 { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: 13px; font-weight: 650; }
+.org-team h3 span { color: var(--ui-dim); font-weight: 400; }
+.org-team > h3 { margin-bottom: 14px; }
+.org-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.org-group { min-width: 0; }
+.org-group h4 { margin: 0 0 6px; overflow: hidden; color: var(--ui-dim); font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.org-team header p { margin: 3px 0 12px; color: var(--ui-dim); font-size: 12px; line-height: 1.45; }
+.org-members { display: grid; gap: 8px; }
+.org-members .org-node { width: 100%; }
+.org-unassigned { width: min(100%, 860px); max-width: none; margin: 28px auto 0; }
+.org-unassigned .org-members { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+@media (max-width: 600px) { .org { left: 0; } .org-scroll { padding-inline: 14px; } }

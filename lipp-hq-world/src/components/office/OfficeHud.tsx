@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { House, Columns3, MessagesSquare, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { lookFor } from "@/avatar/robot/robotLook";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
@@ -14,6 +14,7 @@ import { AgentPortrait } from "./AgentPortrait";
 import { OfficeAccountMenu } from "./OfficeAccountMenu";
 import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
+import { OfficeOrgChart } from "./OfficeOrgChart";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
@@ -25,9 +26,9 @@ const CONNECT_WAIT_MS = 6000;
 /** Nesta largura a sidebar cobre a tela: escolher uma conversa precisa revelá-la. */
 const SIDEBAR_OVERLAY_WIDTH = 600;
 
-type WorkspaceView = "escritorio" | "conversas" | "kanban";
+type WorkspaceView = "escritorio" | "conversas" | "equipe" | "kanban";
 
-const VIEW_TITLE: Record<WorkspaceView, string> = { escritorio: "Escritório", conversas: "Conversas", kanban: "Kanban" };
+const VIEW_TITLE: Record<WorkspaceView, string> = { escritorio: "Escritório", conversas: "Conversas", equipe: "Equipe", kanban: "Kanban" };
 const SEARCH_KEY = /mac|iphone|ipad/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
 
 /** Retratos dos robôs, compartilhados pela sidebar e pela conversa. */
@@ -203,6 +204,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
           <MessagesSquare size={18} aria-hidden /> Conversas
           {pending > 0 && <span className="office-nav-count" aria-label={`${pending} ${pending === 1 ? "aprovação pendente" : "aprovações pendentes"}`}>{pending}</span>}
         </button>
+        <button type="button" data-nav-equipe aria-current={view === "equipe" ? "page" : undefined} onClick={() => onView("equipe")}><Network size={18} aria-hidden /> Equipe</button>
         {mode === "demo" && <button type="button" aria-current={view === "kanban" ? "page" : undefined} onClick={() => onView("kanban")}><Columns3 size={18} aria-hidden /> Kanban</button>}
       </nav>
       <div className="office-directory">
@@ -521,6 +523,11 @@ export function OfficeHud({ live }: { live: boolean }) {
   };
   const changeView = (next: WorkspaceView) => {
     if (next !== "conversas") {
+      if (next === "equipe") {
+        useHQStore.getState().clearSelection();
+        useOfficeStore.getState().clearHuman();
+        if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) setRosterOpen(false);
+      }
       setView(next);
       return;
     }
@@ -579,6 +586,7 @@ export function OfficeHud({ live }: { live: boolean }) {
         demo={demo}
       />
       {view === "kanban" && <OfficeKanban embedded onClose={() => setView("escritorio")} />}
+      {view === "equipe" && <OfficeOrgChart bots={bots} sheets={sheets} onOpen={openConversation} />}
       {view === "conversas" && <OfficeConversations bot={conversationBot} bots={bots} live={live} portraits={portraits} demo={demo} />}
       <FocusBar />
       <OfflineNotice connection={shown} />
