@@ -225,7 +225,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
 
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea")) return;
+      if (target?.closest("input, textarea, [data-scene-keys-off]")) return;
       const store = useOfficeStore.getState();
       if (event.key === "Escape") {
         // Primeiro fecha a gaveta; só depois volta ao andar.
