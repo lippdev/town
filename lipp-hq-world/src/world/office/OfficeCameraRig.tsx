@@ -6,6 +6,7 @@ import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
 import {
   FORWARD,
   clampView,
+  keepGroundInside,
   fitView,
   panView,
   pickBoxAt,
@@ -14,10 +15,12 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
+import { CITY_BOUNDS } from "./officeCity";
 import { FLOOR_MARGIN, currentInsets, floorFit, panBounds, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
-const DISTANCE = 45;
+/** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
+const DISTANCE = 200;
 const EASE_PER_SECOND = 7;
 /** Arrastar menos que isto ainda é clique. */
 const CLICK_SLOP = 5;
@@ -94,6 +97,8 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const room = store.focusedRoomId ? OFFICE_ROOMS_BY_ID[store.focusedRoomId] : null;
     if (store.framing === "floor") runtime.goal = floor;
     else if (store.framing === "room" && room) runtime.goal = fitView(room.bounds, runtime.viewport, insets, { margin: FLOOR_MARGIN });
+
+    if (store.mode === "demo") runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, CITY_BOUNDS);
 
     const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
     runtime.placed = true;
