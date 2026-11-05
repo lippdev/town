@@ -113,7 +113,7 @@ function OfflineNotice({ connection }: { connection: OfficeConnection | null }) 
 }
 
 /** Pessoas à parte dos bots: não têm sala nem estado, e são criadas por você. */
-function PeopleList() {
+function PeopleList({ matches }: { matches: (text: string) => boolean }) {
   const humans = useOfficeStore((state) => state.humans);
   const waiting = useOfficeStore((state) => state.humansWaiting);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
@@ -124,7 +124,7 @@ function PeopleList() {
         <a href="/avatares.html">Criar pessoa</a>
       </div>
       {humans.length === 0 && <p className="office-roster-empty">Ninguém ainda. Quem você criar e salvar aparece no hall.</p>}
-      {humans.map((human) => (
+      {humans.filter((human) => matches(human.name)).map((human) => (
         <button
           key={human.id}
           type="button"
@@ -151,6 +151,9 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
+  const [section, setSection] = useState<"rooms" | "team">("rooms");
+  const [query, setQuery] = useState("");
+  const matches = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().includes(query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim());
   const byId = new Map(bots.map((bot) => [bot.id, bot]));
   const seated = Object.keys(seating.seats).length;
 
@@ -170,7 +173,7 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
       onClick={() => useOfficeStore.getState().selectBot(bot.id)}
     >
       <span className="agent-dot" style={{ background: bot.color }} aria-hidden />
-      <span className="office-roster-name">{bot.name}</span>
+      <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
       {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
     </button>
   );
@@ -178,7 +181,7 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <aside className="office-roster" data-office-inset="left" aria-label="Salas e bots">
       <div className="office-roster-head">
-        <strong>Salas e bots</strong>
+        <div className="office-workspace-title"><strong>Lipp HQ</strong><span>Seu espaço de trabalho</span></div>
         <button type="button" className="panel-close" onClick={onToggle} aria-expanded aria-label="Recolher salas e bots">
           <PanelLeftClose size={16} aria-hidden />
         </button>
@@ -187,9 +190,24 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
         {seated} de {SEAT_CAPACITY} postos ocupados
         {seating.unseated.length > 0 ? ` · ${seating.unseated.length} sem posto` : ""}
       </p>
-      {mode === "demo" && <PeopleList />}
-      <ul className="office-roster-list">
-        {OFFICE_ROOMS.map((room) => {
+      <button type="button" className="office-overview" onClick={() => useOfficeStore.getState().backToFloor()}>
+        <Maximize size={15} aria-hidden /> Visão geral
+      </button>
+      <input className="office-roster-search" type="search" aria-label="Buscar salas ou equipe" placeholder="Buscar salas ou equipe…" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <div className="office-roster-sections" aria-label="Organizar painel">
+        <button type="button" aria-pressed={section === "rooms"} onClick={() => setSection("rooms")}>Salas <span>{OFFICE_ROOMS.length}</span></button>
+        <button type="button" aria-pressed={section === "team"} onClick={() => setSection("team")}>Equipe <span>{bots.length}</span></button>
+      </div>
+      <div className="office-directory">
+      {section === "team" && <>
+        <div className="office-team-list">
+          {bots.filter((bot) => matches(`${bot.name} ${bot.role}`)).map(row)}
+          {!bots.some((bot) => matches(`${bot.name} ${bot.role}`)) && <p className="office-roster-empty">Nenhum bot encontrado.</p>}
+        </div>
+        {mode === "demo" && <PeopleList matches={matches} />}
+      </>}
+      {section === "rooms" && <ul className="office-roster-list">
+        {OFFICE_ROOMS.filter((room) => matches(room.name) || botsInRoom(seating, room.id).some((id) => matches(byId.get(id)?.name ?? ""))).map((room) => {
           const here = botsInRoom(seating, room.id).map((id) => byId.get(id)).filter((bot): bot is OfficeBot => Boolean(bot));
           return (
             <li key={room.id} className={room.id === focusedRoomId ? "focused" : undefined}>
@@ -198,8 +216,7 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
                 {room.name}
                 {room.kind === "common" && <em>área comum</em>}
               </button>
-              {here.map(row)}
-              {here.length === 0 && room.kind === "department" && <span className="office-roster-empty">posto vazio</span>}
+              <span className="office-room-summary">{here.length ? here.map((bot) => bot.name).join(" · ") : room.kind === "department" ? "Posto disponível" : "Espaço compartilhado"}</span>
             </li>
           );
         })}
@@ -215,7 +232,9 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
             })}
           </li>
         )}
-      </ul>
+        {query && !OFFICE_ROOMS.some((room) => matches(room.name) || botsInRoom(seating, room.id).some((id) => matches(byId.get(id)?.name ?? ""))) && <li className="office-roster-empty">Nenhuma sala encontrada.</li>}
+      </ul>}
+      </div>
     </aside>
   );
 }
