@@ -250,7 +250,8 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
                   </button>
                 ) : section.name}
               </h2>
-              {!collapsed && (
+              {/* Continua montada ao recolher: é o que deixa a altura animar nos dois sentidos. */}
+              <div className="office-section-body" data-collapsed={collapsed} inert={collapsed}>
                 <div className="office-team-list">
                   {section.bots.map((bot) => {
                     const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
@@ -270,7 +271,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
                     </button>;
                   })}
                 </div>
-              )}
+              </div>
             </section>
           );
         })}
