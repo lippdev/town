@@ -1,6 +1,7 @@
 import { AmbientLight, DirectionalLight, OrthographicCamera, Scene, Vector3, WebGLRenderer, NeutralToneMapping, SRGBColorSpace } from "three";
 import { loadGltf, ROBOT_URL } from "@/avatar/human/humanAssets";
 import { sharedCrop, solidBounds, type PixelBounds } from "./portraitFrame";
+import { robotReactionFor } from "./robotMotion";
 import { RobotRig } from "./RobotRig";
 import type { RobotExpression, RobotLook } from "./robotLook";
 
@@ -77,9 +78,6 @@ function stripImage(frames: readonly HTMLCanvasElement[]): string {
   return output.toDataURL("image/png");
 }
 
-/** A reação precisa mudar o rosto, mesmo em quem já está com a expressão de surpresa salva. */
-const reactionOf = (expression: RobotExpression): RobotExpression => (expression === "Surprised" ? "Angry" : "Surprised");
-
 /** Retratos do mesmo GLB da cena. Um renderer temporário para o lote, sem animação. */
 export async function robotPortraits(looks: Record<string, RobotLook>): Promise<Record<string, RobotPortrait>> {
   const gltf = await loadGltf(ROBOT_URL);
@@ -119,7 +117,7 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
           renderer.render(scene, camera);
           return captureFrame(renderer.domElement);
         };
-        const shots = [shoot(0, look.expression), shoot(LOOK_YAW, look.expression), shoot(-LOOK_YAW, look.expression), shoot(0, reactionOf(look.expression))];
+        const shots = [shoot(0, look.expression), shoot(LOOK_YAW, look.expression), shoot(-LOOK_YAW, look.expression), shoot(0, robotReactionFor(id, look.expression))];
         const crop = sharedCrop(shots[0]!.bounds, shots.map((shot) => shot.bounds));
         const frames = shots.map((shot) => pixelFrame(shot.canvas, crop));
         result[id] = { still: stripImage(frames.slice(0, 1)), sheet: stripImage(frames) };
