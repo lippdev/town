@@ -58,6 +58,7 @@ function TopBar({ connection }: { connection: OfficeConnection | null }) {
         <a href="/">Painel clássico</a>
         <a href="/?prototipo=engenharia">Sala Engenharia</a>
         <a href="/personagens.html">Estúdio</a>
+        <a href="/avatares.html">Criar pessoa</a>
       </nav>
     </header>
   );

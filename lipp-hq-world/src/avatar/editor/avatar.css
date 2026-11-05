@@ -1,0 +1,37 @@
+/* O editor de pessoas usa a mesma base do estúdio (studio.css); aqui só o que é dele. */
+.cs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.av-rail__actions { grid-template-columns: 1fr; }
+
+.av-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.av-tab {
+  min-height: 30px; padding: 4px 6px; background: var(--cs-surface-raised); border: 1px solid var(--cs-line); border-radius: 7px;
+  font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.av-tab:hover { background: #f0efeb; }
+.av-tab[aria-selected="true"], .av-tab[aria-selected="true"]:hover { background: var(--cs-ink); border-color: var(--cs-ink); color: #fff; }
+.av-tab--locked { color: var(--cs-ink-soft); border-style: dashed; }
+.av-tab--locked[aria-selected="true"] { color: #fff; }
+
+.av-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.av-item {
+  display: grid; justify-items: center; align-content: start; gap: 2px; min-width: 0; padding: 3px 3px 5px;
+  background: var(--cs-surface-raised); border: 1px solid var(--cs-line); border-radius: 8px; font-size: 11px; line-height: 1.2;
+}
+.av-item img { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 5px; background: #e7e5e1; }
+.av-item span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.av-item:hover { border-color: var(--cs-line-strong); }
+.av-item[aria-checked="true"] { border-color: var(--cs-accent); background: var(--cs-accent-soft); box-shadow: inset 0 0 0 1px var(--cs-accent); }
+.av-item--none { align-content: center; min-height: 72px; font-size: 12px; color: var(--cs-ink-soft); }
+
+.av-segmented { display: flex; gap: 5px; }
+.av-segmented .cs-button[aria-checked="true"] { background: var(--cs-ink); border-color: var(--cs-ink); color: #fff; }
+
+.av-pose select {
+  height: 30px; max-width: 132px; padding: 0 6px; background: none; border: 0; border-radius: 7px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--cs-ink); cursor: pointer;
+}
+.av-pose select:hover { background: rgba(31, 35, 40, 0.08); }
+
+.av-foot { grid-template-columns: 1fr 1fr; }
+.av-save, .av-foot__warn { grid-column: 1 / -1; }
+.av-foot__warn { margin: 0; }
