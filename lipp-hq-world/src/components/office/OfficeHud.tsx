@@ -26,15 +26,20 @@ const SIDEBAR_OVERLAY_WIDTH = 600;
 type WorkspaceView = "escritorio" | "conversas" | "kanban";
 
 /** Retratos dos robôs, compartilhados pela sidebar e pela conversa. */
-function usePortraits(bots: readonly OfficeBot[]): Record<string, string> {
+function usePortraits(bots: readonly OfficeBot[]): { stills: Record<string, string>; sheets: Record<string, string> } {
   const savedLooks = useOfficeStore((state) => state.robotLooks);
   const portraitKey = JSON.stringify(Object.fromEntries(bots.map((bot) => [bot.id, lookFor(bot.color, savedLooks[bot.id])])));
-  const [portraits, setPortraits] = useState<Record<string, string>>({});
+  const [portraits, setPortraits] = useState<{ stills: Record<string, string>; sheets: Record<string, string> }>({ stills: {}, sheets: {} });
   useEffect(() => {
     let cancelled = false;
     robotPortraits(JSON.parse(portraitKey)).then((images) => {
-      if (!cancelled) setPortraits(images);
-    }).catch(() => { if (!cancelled) setPortraits({}); });
+      if (cancelled) return;
+      const ids = Object.keys(images);
+      setPortraits({
+        stills: Object.fromEntries(ids.map((id) => [id, images[id]!.still])),
+        sheets: Object.fromEntries(ids.map((id) => [id, images[id]!.sheet])),
+      });
+    }).catch(() => { if (!cancelled) setPortraits({ stills: {}, sheets: {} }); });
     return () => { cancelled = true; };
   }, [portraitKey]);
   return portraits;
@@ -167,16 +172,17 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
 
 const normalizeSearch = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
 
-function Roster({ open, onToggle, view, onView, conversationBotId, onConversation, portraits, demo }: {
+function Roster({ open, onToggle, view, onView, conversationBotId, onConversation, sheets, demo }: {
   open: boolean;
   onToggle: () => void;
   view: WorkspaceView;
   onView: (view: WorkspaceView) => void;
   conversationBotId: string | null;
   onConversation: (botId: string) => void;
-  portraits: Record<string, string>;
+  sheets: Record<string, string>;
   demo: DemoConversations;
 }) {
+  const [reacting, setReacting] = useState<string | null>(null);
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
@@ -212,11 +218,20 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
             const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
             const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
             return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
+              setReacting(bot.id);
               if (view === "conversas") { onConversation(bot.id); return; }
               onView("escritorio");
               useOfficeStore.getState().selectBot(bot.id);
             }}>
-              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>{portraits[bot.id] ? <img src={portraits[bot.id]} alt="" /> : <span>{bot.name.slice(0, 2)}</span>}</span>
+              <span
+                className="office-agent-avatar"
+                style={{ "--agent-color": bot.color } as React.CSSProperties}
+                data-reacting={reacting === bot.id || undefined}
+                aria-hidden
+                onAnimationEnd={(event) => { if (event.animationName === "agent-hop") setReacting(null); }}
+              >
+                {sheets[bot.id] ? <span className="agent-sprite" data-agent-sprite={bot.id} style={{ backgroundImage: `url(${sheets[bot.id]})` }} /> : <span>{bot.name.slice(0, 2)}</span>}
+              </span>
               <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
               {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
               {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
@@ -503,7 +518,7 @@ export function OfficeHud({ live }: { live: boolean }) {
   const [view, setView] = useState<WorkspaceView>("escritorio");
   const [conversationBotId, setConversationBotId] = useState<string | null>(null);
   const bots = useOfficeStore((state) => state.bots);
-  const portraits = usePortraits(bots);
+  const { stills: portraits, sheets } = usePortraits(bots);
   const demo = useDemoConversations(live ? [] : bots.map((bot) => bot.id));
   const connection = useConnection();
   const shown = live ? connection : null;
@@ -562,7 +577,7 @@ export function OfficeHud({ live }: { live: boolean }) {
         onView={changeView}
         conversationBotId={conversationBot?.id ?? null}
         onConversation={openConversation}
-        portraits={portraits}
+        sheets={sheets}
         demo={demo}
       />
       {view === "kanban" && <OfficeKanban embedded onClose={() => setView("escritorio")} />}
