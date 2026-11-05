@@ -90,7 +90,8 @@
 }
 
 .office-bot-tag {
-  pointer-events: auto;
+  opacity: 0;
+  pointer-events: none;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -123,13 +124,16 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* De longe os postos extras ficam próximos demais: o nome só aparece ao apontar. */
-.office-labels[data-far="true"] .office-bot-tag.extra:not(.active) {
-  display: none;
+/* A lista mantém todos acessíveis; na cena, só a interação revela o nome.
+   Opacidade preserva o foco por teclado sem criar alvos invisíveis ao mouse. */
+.office-bot-tag.active,
+.office-bot-tag:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.office-bot-tag.elsewhere {
-  display: none;
+.office-bot-tag.elsewhere:not(.active):not(:focus-visible) {
+  opacity: 0;
 }
 
 .office-entrance-tag {

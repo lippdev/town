@@ -107,7 +107,7 @@ export function OfficeLabels() {
             onPointerEnter={() => useOfficeStore.getState().setHovered(room.id, null)}
           >
             <strong>{room.name}</strong>
-            <span>{owner}</span>
+            <span>{room.kind === "department" ? `${occupants.length} em posto` : owner}</span>
           </button>
         );
       })}
