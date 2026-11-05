@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { FLOOR_BOUNDS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
+import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
 import {
   FORWARD,
   clampView,
@@ -14,7 +14,7 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { FLOOR_MARGIN, currentInsets, floorFit, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
+import { FLOOR_MARGIN, currentInsets, floorFit, panBounds, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 const DISTANCE = 45;
@@ -124,7 +124,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const limits = () => zoomLimits(officeRuntime.floorZoom);
     const moveGoal = (next: typeof officeRuntime.goal) => {
       const { min, max } = limits();
-      officeRuntime.goal = clampView(next, FLOOR_BOUNDS, min, max);
+      officeRuntime.goal = clampView(next, panBounds(), min, max);
       useOfficeStore.getState().markFree();
     };
     const isBackground = (event: Event) => !(event.target as HTMLElement).closest("button, a, input, textarea");
