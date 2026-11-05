@@ -31,6 +31,7 @@ import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt }
 import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
+import { ChiefScene } from "./ChiefScene";
 import { OfficeCity } from "./CityScene";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
@@ -388,6 +389,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
       {mode === "demo" && (
         <PartBoundary onError={() => undefined}>
           <OfficeCity />
+          <ChiefScene />
         </PartBoundary>
       )}
       <RoomGlow />

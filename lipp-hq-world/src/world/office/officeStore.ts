@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
 import { CITY_BOUNDS, CITY_VIEW } from "./officeCity";
+import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
@@ -34,6 +35,10 @@ interface OfficeState {
   humanGoals: Record<string, HumanGoal>;
   humanPhases: Record<string, HumanPhase>;
   humansError: string | null;
+  chiefStatus: ChiefStatus;
+  chiefRequest: ChiefRequest | null;
+  setChiefStatus: (status: ChiefStatus) => void;
+  setChiefRequest: (request: ChiefRequest | null) => void;
   /** Cor e expressão escolhidas no editor; quem não está aqui usa o padrão. */
   robotLooks: RobotLooks;
   setRobotLooks: (looks: RobotLooks) => void;
@@ -73,6 +78,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   humansWaiting: [],
   selectedHumanId: null,
   humanGoals: {},
+  chiefStatus: "chegando",
+  chiefRequest: null,
+  setChiefStatus: (chiefStatus) => set({ chiefStatus }),
+  setChiefRequest: (chiefRequest) => set({ chiefRequest }),
   humanPhases: {},
   humansError: null,
   robotLooks: {},

@@ -7,7 +7,7 @@ import { FACING, OFFICE_ROOMS_BY_ID, OFFICE_SEATS, type OfficeSeat } from "./off
  * sessão nem estado, e só existe na demonstração. Este arquivo não importa three.
  */
 
-export type HumanPhase = "standing" | "toChair" | "sitting" | "seated" | "rising" | "toSpot";
+export type HumanPhase = "standing" | "toChair" | "sitting" | "seated" | "rising" | "toSpot" | "errand";
 export type HumanGoal = "standing" | "seated";
 
 export const HUMAN_PHASE_LABEL: Record<HumanPhase, string> = {
@@ -17,6 +17,7 @@ export const HUMAN_PHASE_LABEL: Record<HumanPhase, string> = {
   seated: "Sentada",
   rising: "Levantando",
   toSpot: "Voltando",
+  errand: "Andando",
 };
 
 export { HUMAN_SCALE };

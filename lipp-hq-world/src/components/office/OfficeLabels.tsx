@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
+import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
 import { CORRIDOR, ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
@@ -24,6 +25,7 @@ export function OfficeLabels() {
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
   const humans = useOfficeStore((state) => state.humans);
+  const chiefStatus = useOfficeStore((state) => state.chiefStatus);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
   const hoveredHumanId = useOfficeStore((state) => state.hoveredHumanId);
   const nodes = useRef(new Map<HTMLElement, Anchor>());
@@ -157,6 +159,7 @@ export function OfficeLabels() {
             onClick={() => useOfficeStore.getState().selectHuman(human.id)}
           >
             <strong>{human.name}</strong>
+            {human.id === CHIEF_ID && <span className={chiefStatus === "reuniao" ? "office-chief-status busy" : "office-chief-status"}>{CHIEF_STATUS_LABEL[chiefStatus]}</span>}
           </button>
         );
       })}
