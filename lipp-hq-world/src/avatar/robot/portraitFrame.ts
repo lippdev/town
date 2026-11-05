@@ -26,11 +26,16 @@ export function solidBounds(rgba: ArrayLike<number>, width: number, height: numb
   return maxX < 0 ? null : { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
-/** Onde desenhar o recorte para ele caber no quadrado, sem distorcer e centrado nos dois eixos. */
-export function centeredFit(bounds: Pick<PixelBounds, "width" | "height">, size: number, margin: number): PixelBounds {
-  const room = size - margin * 2;
-  const scale = room / Math.max(bounds.width, bounds.height);
-  const width = bounds.width * scale;
-  const height = bounds.height * scale;
-  return { x: (size - width) / 2, y: (size - height) / 2, width, height };
+/**
+ * Recorte quadrado comum a todos os quadros de uma animação. O centro vem do primeiro
+ * quadro, que é o retrato parado: virar a cabeça não muda a escala nem desloca o rosto.
+ */
+export function sharedCrop(base: PixelBounds, frames: readonly PixelBounds[]): PixelBounds {
+  const centerX = base.x + base.width / 2;
+  const centerY = base.y + base.height / 2;
+  let half = Math.max(base.width, base.height) / 2;
+  for (const frame of frames) {
+    half = Math.max(half, centerX - frame.x, frame.x + frame.width - centerX, centerY - frame.y, frame.y + frame.height - centerY);
+  }
+  return { x: centerX - half, y: centerY - half, width: half * 2, height: half * 2 };
 }

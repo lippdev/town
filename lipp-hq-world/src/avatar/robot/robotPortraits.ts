@@ -1,8 +1,8 @@
 import { AmbientLight, DirectionalLight, OrthographicCamera, Scene, Vector3, WebGLRenderer, NeutralToneMapping, SRGBColorSpace } from "three";
 import { loadGltf, ROBOT_URL } from "@/avatar/human/humanAssets";
-import { centeredFit, solidBounds } from "./portraitFrame";
+import { sharedCrop, solidBounds, type PixelBounds } from "./portraitFrame";
 import { RobotRig } from "./RobotRig";
-import type { RobotLook } from "./robotLook";
+import type { RobotExpression, RobotLook } from "./robotLook";
 
 /** Lado do retrato em pixels de arte, com folga para a cabeça não encostar na borda. */
 const PORTRAIT_SIZE = 32;
@@ -11,24 +11,39 @@ const PORTRAIT_MARGIN = 2;
 const PORTRAIT_OUTPUT = PORTRAIT_SIZE * 2;
 const RENDER_SIZE = 256;
 /** Folga do enquadramento 3D. O centro exato sai do recorte, em pixels. */
-const HEAD_FRAME_PADDING = 1.2;
+const HEAD_FRAME_PADDING = 1.4;
+/** Quanto a cabeça vira para cada lado ao olhar em volta, em radianos. */
+const LOOK_YAW = 0.42;
+const UP = new Vector3(0, 1, 0);
 /** Sobrancelhas e olhos pretos sumiriam contra o fundo escuro da sidebar. */
 const PORTRAIT_MIN_LEVEL = 64;
 
-/** Pixel art com dithering ordenado: recorta o que foi desenhado e centra nos dois eixos. */
-function pixelPortrait(source: HTMLCanvasElement): string {
+export interface RobotPortrait {
+  /** O retrato parado, igual ao primeiro quadro da tira. */
+  still: string;
+  /** Tira horizontal: centro, olhando para um lado, para o outro e reagindo. */
+  sheet: string;
+}
+
+/** Cópia 2D do que o WebGL acabou de desenhar, com a área ocupada pelo robô. */
+function captureFrame(source: HTMLCanvasElement): { canvas: HTMLCanvasElement; bounds: PixelBounds } {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = source.width;
+  const context = canvas.getContext("2d", { willReadFrequently: true })!;
+  context.drawImage(source, 0, 0);
+  const bounds = solidBounds(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height)
+    ?? { x: 0, y: 0, width: canvas.width, height: canvas.height };
+  return { canvas, bounds };
+}
+
+/** Pixel art com dithering ordenado, a partir do recorte comum aos quadros. */
+function pixelFrame(source: HTMLCanvasElement, crop: PixelBounds): HTMLCanvasElement {
   const size = PORTRAIT_SIZE;
-  const full = document.createElement("canvas");
-  full.width = full.height = source.width;
-  const fullContext = full.getContext("2d", { willReadFrequently: true })!;
-  fullContext.drawImage(source, 0, 0);
-  const bounds = solidBounds(fullContext.getImageData(0, 0, full.width, full.height).data, full.width, full.height)
-    ?? { x: 0, y: 0, width: full.width, height: full.height };
-  const fit = centeredFit(bounds, size, PORTRAIT_MARGIN);
+  const room = size - PORTRAIT_MARGIN * 2;
   const sample = document.createElement("canvas");
   sample.width = sample.height = size;
   const context = sample.getContext("2d")!;
-  context.drawImage(full, bounds.x, bounds.y, bounds.width, bounds.height, fit.x, fit.y, fit.width, fit.height);
+  context.drawImage(source, crop.x, crop.y, crop.width, crop.height, PORTRAIT_MARGIN, PORTRAIT_MARGIN, room, room);
   const pixels = context.getImageData(0, 0, size, size);
   const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   for (let y = 0; y < size; y++) {
@@ -48,16 +63,25 @@ function pixelPortrait(source: HTMLCanvasElement): string {
     }
   }
   context.putImageData(pixels, 0, 0);
+  return sample;
+}
+
+/** Amplia os quadros lado a lado, sem suavizar, numa imagem só. */
+function stripImage(frames: readonly HTMLCanvasElement[]): string {
   const output = document.createElement("canvas");
-  output.width = output.height = PORTRAIT_OUTPUT;
+  output.width = PORTRAIT_OUTPUT * frames.length;
+  output.height = PORTRAIT_OUTPUT;
   const ink = output.getContext("2d")!;
   ink.imageSmoothingEnabled = false;
-  ink.drawImage(sample, 0, 0, PORTRAIT_OUTPUT, PORTRAIT_OUTPUT);
+  frames.forEach((frame, index) => ink.drawImage(frame, index * PORTRAIT_OUTPUT, 0, PORTRAIT_OUTPUT, PORTRAIT_OUTPUT));
   return output.toDataURL("image/png");
 }
 
+/** A reação precisa mudar o rosto, mesmo em quem já está com a expressão de surpresa salva. */
+const reactionOf = (expression: RobotExpression): RobotExpression => (expression === "Surprised" ? "Angry" : "Surprised");
+
 /** Retratos do mesmo GLB da cena. Um renderer temporário para o lote, sem animação. */
-export async function robotPortraits(looks: Record<string, RobotLook>): Promise<Record<string, string>> {
+export async function robotPortraits(looks: Record<string, RobotLook>): Promise<Record<string, RobotPortrait>> {
   const gltf = await loadGltf(ROBOT_URL);
   const renderer = new WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(RENDER_SIZE, RENDER_SIZE);
@@ -73,12 +97,11 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
   fill.position.set(-3, 2, 1);
   scene.add(fill);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
-  const result: Record<string, string> = {};
+  const result: Record<string, RobotPortrait> = {};
   try {
     for (const [id, look] of Object.entries(looks)) {
       const rig = new RobotRig(gltf.scene, gltf.animations, { reduced: true });
       try {
-        rig.apply(look);
         scene.add(rig.root);
         const { box, forward } = rig.isolateHead();
         const center = box.getCenter(new Vector3());
@@ -87,11 +110,19 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
         camera.left = camera.bottom = -half;
         camera.right = camera.top = half;
         camera.updateProjectionMatrix();
-        // De frente para o rosto: a simetria é o que faz a cabeça parecer centrada.
-        camera.position.copy(center).addScaledVector(forward, 3);
-        camera.lookAt(center);
-        renderer.render(scene, camera);
-        result[id] = pixelPortrait(renderer.domElement);
+        const shoot = (yaw: number, expression: RobotExpression) => {
+          rig.apply({ ...look, expression });
+          // De frente para o rosto: a simetria é o que faz a cabeça parecer centrada.
+          const view = forward.clone().applyAxisAngle(UP, yaw);
+          camera.position.copy(center).addScaledVector(view, 3);
+          camera.lookAt(center);
+          renderer.render(scene, camera);
+          return captureFrame(renderer.domElement);
+        };
+        const shots = [shoot(0, look.expression), shoot(LOOK_YAW, look.expression), shoot(-LOOK_YAW, look.expression), shoot(0, reactionOf(look.expression))];
+        const crop = sharedCrop(shots[0]!.bounds, shots.map((shot) => shot.bounds));
+        const frames = shots.map((shot) => pixelFrame(shot.canvas, crop));
+        result[id] = { still: stripImage(frames.slice(0, 1)), sheet: stripImage(frames) };
       } finally {
         scene.remove(rig.root);
         rig.dispose();
