@@ -8,7 +8,7 @@ import { OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_CAPACITY, SE
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
-import { CHIEF_ID } from "@/world/office/officeChief";
+import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
@@ -329,11 +329,12 @@ function HumanPanel() {
           </button>
         </div>
         <div className="drawer-sub">
-          <span className="panel-role" data-human-phase={phase}>{HUMAN_PHASE_LABEL[phase]}</span>
+          <span className="panel-role" data-human-phase={phase}>{human.id === CHIEF_ID ? "Chefe da equipe" : HUMAN_PHASE_LABEL[phase]}</span>
         </div>
       </header>
       <div className="drawer-body">
-        <div className="office-human-actions">
+        {human.id === CHIEF_ID && <ChiefAgenda />}
+        {human.id !== CHIEF_ID && <div className="office-human-actions">
           {goal === "standing" ? (
             <button type="button" className="office-button primary" disabled={!settled || !human.chair} data-human-sit onClick={() => store.setHumanGoal(human.id, "seated")}>
               <Armchair size={14} aria-hidden /> Sentar na bancada
@@ -343,18 +344,43 @@ function HumanPanel() {
               <PersonStanding size={14} aria-hidden /> Levantar e voltar
             </button>
           )}
-          {human.id !== CHIEF_ID && (
-            <a className="office-button" href={`/avatares.html?pessoa=${encodeURIComponent(human.id)}`}>
-              <Pencil size={13} aria-hidden /> Editar
-            </a>
-          )}
-        </div>
+          <a className="office-button" href={`/avatares.html?pessoa=${encodeURIComponent(human.id)}`}>
+            <Pencil size={13} aria-hidden /> Editar
+          </a>
+        </div>}
         {!human.chair && <p className="panel-warn">Os bots ocuparam as cadeiras da bancada: não há onde sentar agora.</p>}
         <p className="panel-warn">
-          {human.id === CHIEF_ID ? "Chefe da equipe, só na demonstração: não vem do Hermes e não executa nada. Por enquanto, só anda e senta quando você manda." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
+          {human.id === CHIEF_ID ? "Exemplo, só na demonstração: a agenda é fictícia e ainda não lê o Outlook. A ronda é só visual." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
         </p>
       </div>
     </aside>
+  );
+}
+
+/** O que o Chefe está fazendo e a agenda de exemplo, com atalhos para ver cada cena. */
+function ChiefAgenda() {
+  const status = useOfficeStore((state) => state.chiefStatus);
+  const pending = useOfficeStore((state) => state.chiefRequest);
+  const request = useOfficeStore.getState().setChiefRequest;
+  return (
+    <section className="office-chief-agenda" data-chief-agenda>
+      <p className={status === "reuniao" ? "office-chief-now busy" : "office-chief-now"}>{CHIEF_STATUS_LABEL[status]}</p>
+      <h3>Agenda de hoje (exemplo)</h3>
+      <ul>
+        {SAMPLE_AGENDA.map((event) => (
+          <li key={event.time}>
+            <time>{event.time}</time>
+            <span>{event.title}</span>
+            <small>{event.calendar}</small>
+          </li>
+        ))}
+      </ul>
+      <div className="office-human-actions">
+        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("reuniao")}>Entrar em reunião</button>
+        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("ronda")}>Fazer a ronda</button>
+        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("chegada")}>Rever a chegada</button>
+      </div>
+    </section>
   );
 }
 

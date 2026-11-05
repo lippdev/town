@@ -57,6 +57,8 @@ export class HumanActor {
    * de a cadeira se virar, então ela espera a cadeira começar.
    */
   private walked = 0;
+  private errandPath: readonly Point[] = [];
+  private errandWalked = 0;
   private backwards = false;
   private seatTime = 0;
   private hipsBack = 0;
@@ -99,6 +101,39 @@ export class HumanActor {
 
   get seatId() {
     return this.seat?.id ?? null;
+  }
+
+  /** Coloca a pessoa num ponto, sem andar. Quem chega de fora da cena começa assim. */
+  moveTo(point: Point) {
+    this.x = point.x;
+    this.z = point.z;
+    this.place();
+  }
+
+  /** Anda por um caminho qualquer e fica em pé no fim. Só sai de quem está parado em pé. */
+  errand(path: readonly Point[]) {
+    if (this.phase !== "standing") return;
+    if (this.reduced) {
+      this.moveTo(path[path.length - 1]!);
+      return;
+    }
+    this.errandPath = path;
+    this.errandWalked = 0;
+    this.phase = "errand";
+    this.figure.play("walk");
+  }
+
+  private walkErrand(step: number) {
+    this.errandWalked += this.clips.walkSpeed * HUMAN_SCALE * step;
+    const pose = pathPose(this.errandPath, this.errandWalked);
+    this.x = pose.x;
+    this.z = pose.z;
+    this.yaw = turnToward(this.yaw, pose.yaw, TURN_PER_SECOND * step);
+    if (this.errandWalked >= pathLength(this.errandPath)) {
+      this.phase = "standing";
+      this.figure.play("idle");
+      this.advance();
+    }
   }
 
   /** Muda o destino. Quem está no meio de um movimento termina antes de atender. */
@@ -163,6 +198,9 @@ export class HumanActor {
       case "rising":
         this.sit(step);
         break;
+      case "errand":
+        this.walkErrand(step);
+        break;
       default:
         break;
     }
@@ -171,7 +209,7 @@ export class HumanActor {
   }
 
   get moving() {
-    return this.phase === "toChair" || this.phase === "toSpot";
+    return this.phase === "toChair" || this.phase === "toSpot" || this.phase === "errand";
   }
 
   private walk(step: number) {

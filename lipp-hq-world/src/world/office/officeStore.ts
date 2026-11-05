@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
+import { CITY_BOUNDS, CITY_VIEW } from "./officeCity";
+import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
@@ -33,6 +35,10 @@ interface OfficeState {
   humanGoals: Record<string, HumanGoal>;
   humanPhases: Record<string, HumanPhase>;
   humansError: string | null;
+  chiefStatus: ChiefStatus;
+  chiefRequest: ChiefRequest | null;
+  setChiefStatus: (status: ChiefStatus) => void;
+  setChiefRequest: (request: ChiefRequest | null) => void;
   /** Cor e expressão escolhidas no editor; quem não está aqui usa o padrão. */
   robotLooks: RobotLooks;
   setRobotLooks: (looks: RobotLooks) => void;
@@ -72,6 +78,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   humansWaiting: [],
   selectedHumanId: null,
   humanGoals: {},
+  chiefStatus: "chegando",
+  chiefRequest: null,
+  setChiefStatus: (chiefStatus) => set({ chiefStatus }),
+  setChiefRequest: (chiefRequest) => set({ chiefRequest }),
   humanPhases: {},
   humansError: null,
   robotLooks: {},
@@ -145,8 +155,12 @@ export function currentInsets(): Insets {
   return { ...insets, right: useHQStore.getState().viewInsetRight };
 }
 
+/** Na demonstração a cidade em volta também pode ser vista. */
+export const panBounds = () => (useOfficeStore.getState().mode === "demo" ? CITY_BOUNDS : FLOOR_BOUNDS);
+
 export function floorFit(viewport: Viewport): OfficeView {
-  return fitView(FLOOR_BOUNDS, viewport, currentInsets(), { margin: FLOOR_MARGIN });
+  const demo = useOfficeStore.getState().mode === "demo";
+  return fitView(demo ? CITY_VIEW : FLOOR_BOUNDS, viewport, currentInsets(), { margin: FLOOR_MARGIN });
 }
 
 /** Botões + e −: zoom em torno do meio da área livre. */
@@ -157,6 +171,6 @@ export function zoomStep(factor: number) {
   const py = insets.top + (viewport.height - insets.top - insets.bottom) / 2;
   const limits = zoomLimits(floorZoom);
   const next = Math.min(limits.max, Math.max(limits.min, goal.zoom * factor));
-  officeRuntime.goal = clampView(zoomViewAt(goal, next, px, py, viewport), FLOOR_BOUNDS, limits.min, limits.max);
+  officeRuntime.goal = clampView(zoomViewAt(goal, next, px, py, viewport), panBounds(), limits.min, limits.max);
   useOfficeStore.getState().markFree();
 }

@@ -683,3 +683,58 @@ button.office-roster-room:hover {
 .office-hud .boot-error {
   pointer-events: auto;
 }
+
+.office-chief-status {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: #9fb0c8;
+}
+
+.office-chief-status.busy {
+  color: #ff8a7d;
+}
+
+.office-bot-tag.active .office-chief-status {
+  color: #2c3a55;
+}
+
+.office-bot-tag.active .office-chief-status.busy {
+  color: #a8261a;
+}
+
+.office-chief-agenda h3 {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  color: #9fb0c8;
+}
+
+.office-chief-agenda ul {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.office-chief-agenda li {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.office-chief-agenda small {
+  color: #7f8ea6;
+}
+
+.office-chief-now {
+  margin: 0;
+  font-weight: 600;
+  color: #6fe08f;
+}
+
+.office-chief-now.busy {
+  color: #ff8a7d;
+}
