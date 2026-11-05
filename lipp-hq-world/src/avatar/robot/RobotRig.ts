@@ -147,6 +147,17 @@ export class RobotRig {
     }
   }
 
+  /** Mistura duas expressões, para os retratos mudarem de rosto aos poucos. */
+  mixExpression(from: RobotExpression, to: RobotExpression, mix: number) {
+    for (const mesh of this.faces) {
+      for (const name of MORPHS) {
+        const index = mesh.morphTargetDictionary![name];
+        if (index === undefined) continue;
+        mesh.morphTargetInfluences![index] = (from === name ? 1 - mix : 0) + (to === name ? mix : 0);
+      }
+    }
+  }
+
   /**
    * Deixa só a cabeça visível, para retratos. Devolve a caixa dela em metros de cena e
    * para onde o rosto aponta na pose atual: o Idle deixa a cabeça levemente virada.
