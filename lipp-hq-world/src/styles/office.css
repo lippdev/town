@@ -981,5 +981,5 @@ button.office-roster-room:hover {
 .office-hud:has(.kanban.embedded) > .office-focus,
 .office-hud:has(.kanban.embedded) > .office-bottom,
 .office-hud:has(.kanban.embedded) > .drawer { visibility: hidden; }
-.office-agent-avatar:has(img) { width: 52px; height: 56px; overflow: hidden; border-radius: 0; }
-.office-agent-avatar img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.office-agent-avatar:has(img) { width: 48px; height: 48px; overflow: hidden; border-radius: 0; }
+.office-agent-avatar img { image-rendering: pixelated; display: block; width: 100%; height: 100%; object-fit: contain; }
