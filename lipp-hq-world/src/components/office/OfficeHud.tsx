@@ -8,6 +8,7 @@ import { OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_CAPACITY, SE
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
+import { CHIEF_ID } from "@/world/office/officeChief";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
@@ -342,13 +343,15 @@ function HumanPanel() {
               <PersonStanding size={14} aria-hidden /> Levantar e voltar
             </button>
           )}
-          <a className="office-button" href={`/avatares.html?pessoa=${encodeURIComponent(human.id)}`}>
-            <Pencil size={13} aria-hidden /> Editar
-          </a>
+          {human.id !== CHIEF_ID && (
+            <a className="office-button" href={`/avatares.html?pessoa=${encodeURIComponent(human.id)}`}>
+              <Pencil size={13} aria-hidden /> Editar
+            </a>
+          )}
         </div>
         {!human.chair && <p className="panel-warn">Os bots ocuparam as cadeiras da bancada: não há onde sentar agora.</p>}
         <p className="panel-warn">
-          Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda.
+          {human.id === CHIEF_ID ? "Chefe da equipe, só na demonstração: não vem do Hermes e não executa nada. Por enquanto, só anda e senta quando você manda." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
         </p>
       </div>
     </aside>
