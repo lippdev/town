@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { House, Columns3, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { lookFor } from "@/avatar/robot/robotLook";
+import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { useHQStore } from "@/state/useHQStore";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
-import { OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_CAPACITY, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
+import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
@@ -46,7 +48,6 @@ function ModeChip({ connection }: { connection: OfficeConnection | null }) {
 }
 
 function TopBar({ connection }: { connection: OfficeConnection | null }) {
-  const [kanbanOpen, setKanbanOpen] = useState(false);
   const demo = connection === null;
   return (
     <>
@@ -65,10 +66,8 @@ function TopBar({ connection }: { connection: OfficeConnection | null }) {
         <a href="/personagens.html">Estúdio</a>
         <a href="/avatares.html">Criar pessoa</a>
         <a href="/avatares.html?aba=robos">Robôs</a>
-        {demo && <button type="button" className="office-nav-button" onClick={() => setKanbanOpen(true)}>Kanban</button>}
       </nav>
     </header>
-      {kanbanOpen && <OfficeKanban onClose={() => setKanbanOpen(false)} />}
     </>
   );
 }
@@ -113,7 +112,7 @@ function OfflineNotice({ connection }: { connection: OfficeConnection | null }) 
 }
 
 /** Pessoas à parte dos bots: não têm sala nem estado, e são criadas por você. */
-function PeopleList() {
+function PeopleList({ matches }: { matches: (text: string) => boolean }) {
   const humans = useOfficeStore((state) => state.humans);
   const waiting = useOfficeStore((state) => state.humansWaiting);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
@@ -124,7 +123,7 @@ function PeopleList() {
         <a href="/avatares.html">Criar pessoa</a>
       </div>
       {humans.length === 0 && <p className="office-roster-empty">Ninguém ainda. Quem você criar e salvar aparece no hall.</p>}
-      {humans.map((human) => (
+      {humans.filter((human) => matches(human.name)).map((human) => (
         <button
           key={human.id}
           type="button"
@@ -132,7 +131,7 @@ function PeopleList() {
           data-person-row={human.id}
           onClick={() => useOfficeStore.getState().selectHuman(human.id)}
         >
-          <span className="agent-dot" style={{ background: human.preset.colors.top }} aria-hidden />
+          <span className="office-agent-avatar" style={{ "--agent-color": human.preset.colors.top } as React.CSSProperties} aria-hidden><PersonStanding size={22} /></span>
           <span className="office-roster-name">{human.name}</span>
         </button>
       ))}
@@ -145,77 +144,60 @@ function PeopleList() {
   );
 }
 
-function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+const normalizeSearch = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+
+function Roster({ open, onToggle, kanbanOpen, onKanban }: {
+  open: boolean; onToggle: () => void; kanbanOpen: boolean; onKanban: (open: boolean) => void;
+}) {
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
-  const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
-  const byId = new Map(bots.map((bot) => [bot.id, bot]));
-  const seated = Object.keys(seating.seats).length;
-
-  if (!open) {
-    return (
-      <button type="button" className="office-roster-toggle closed" onClick={onToggle} aria-expanded={false} aria-label="Abrir salas e bots">
-        <PanelLeftOpen size={16} aria-hidden /> Salas e bots
-      </button>
-    );
-  }
-
-  const row = (bot: OfficeBot) => (
-    <button
-      key={bot.id}
-      type="button"
-      className={bot.id === selectedBotId ? "office-roster-bot active" : "office-roster-bot"}
-      onClick={() => useOfficeStore.getState().selectBot(bot.id)}
-    >
-      <span className="agent-dot" style={{ background: bot.color }} aria-hidden />
-      <span className="office-roster-name">{bot.name}</span>
-      {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
+  const [query, setQuery] = useState("");
+  const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
+  const filtered = bots.filter((bot) => matches(`${bot.name} ${bot.role}`));
+  const savedLooks = useOfficeStore((state) => state.robotLooks);
+  const portraitKey = JSON.stringify(Object.fromEntries(bots.map((bot) => [bot.id, lookFor(bot.color, savedLooks[bot.id])])));
+  const [portraits, setPortraits] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    robotPortraits(JSON.parse(portraitKey)).then((images) => {
+      if (!cancelled) setPortraits(images);
+    }).catch(() => { if (!cancelled) setPortraits({}); });
+    return () => { cancelled = true; };
+  }, [portraitKey]);
+  if (!open) return (
+    <button type="button" className="office-roster-toggle closed" onClick={onToggle} aria-expanded={false} aria-label="Abrir navegação">
+      <PanelLeftOpen size={18} aria-hidden />
     </button>
   );
-
   return (
-    <aside className="office-roster" data-office-inset="left" aria-label="Salas e bots">
+    <aside className="office-roster" data-office-inset="left" aria-label="Navegação do Lipp HQ">
       <div className="office-roster-head">
-        <strong>Salas e bots</strong>
-        <button type="button" className="panel-close" onClick={onToggle} aria-expanded aria-label="Recolher salas e bots">
-          <PanelLeftClose size={16} aria-hidden />
-        </button>
+        <div className="office-workspace-title"><strong>Lipp HQ</strong><span>{bots.length} agentes · {mode === "demo" ? "Demonstração" : "Hermes"}</span></div>
+        <button type="button" className="panel-close" onClick={onToggle} aria-expanded aria-label="Recolher navegação"><PanelLeftClose size={17} aria-hidden /></button>
       </div>
-      <p className="office-capacity" data-capacity>
-        {seated} de {SEAT_CAPACITY} postos ocupados
-        {seating.unseated.length > 0 ? ` · ${seating.unseated.length} sem posto` : ""}
-      </p>
-      {mode === "demo" && <PeopleList />}
-      <ul className="office-roster-list">
-        {OFFICE_ROOMS.map((room) => {
-          const here = botsInRoom(seating, room.id).map((id) => byId.get(id)).filter((bot): bot is OfficeBot => Boolean(bot));
-          return (
-            <li key={room.id} className={room.id === focusedRoomId ? "focused" : undefined}>
-              <button type="button" className="office-roster-room" onClick={() => useOfficeStore.getState().focusRoom(room.id)}>
-                <span className="office-room-dot" style={{ background: room.color }} aria-hidden />
-                {room.name}
-                {room.kind === "common" && <em>área comum</em>}
-              </button>
-              {here.map(row)}
-              {here.length === 0 && room.kind === "department" && <span className="office-roster-empty">posto vazio</span>}
-            </li>
-          );
-        })}
-        {seating.unseated.length > 0 && (
-          <li className="office-unseated">
-            <div className="office-roster-room static">
-              <TriangleAlert size={13} aria-hidden /> Sem posto ({seating.unseated.length})
-            </div>
-            <p>O andar tem {SEAT_CAPACITY} postos. Estes bots seguem na frota e abrem aqui, mas não têm corpo na cena.</p>
-            {seating.unseated.map((id) => {
-              const bot = byId.get(id);
-              return bot ? row(bot) : null;
-            })}
-          </li>
-        )}
-      </ul>
+      <label className="office-agent-search"><Search size={16} aria-hidden /><input className="office-roster-search" type="search" aria-label="Buscar agentes ou pessoas" placeholder="Buscar na equipe…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      <nav className="office-sidebar-nav" aria-label="Área de trabalho">
+        <button type="button" aria-current={!kanbanOpen ? "page" : undefined} onClick={() => { onKanban(false); useOfficeStore.getState().backToFloor(); }}><House size={18} aria-hidden /> Escritório</button>
+        {mode === "demo" && <button type="button" aria-current={kanbanOpen ? "page" : undefined} onClick={() => onKanban(true)}><Columns3 size={18} aria-hidden /> Kanban</button>}
+      </nav>
+      <div className="office-directory">
+        <h2 className="office-section-title">Agentes <span>{bots.length}</span></h2>
+        <div className="office-team-list">
+          {filtered.map((bot) => {
+            return <button key={bot.id} type="button" aria-pressed={bot.id === selectedBotId && !kanbanOpen} className={bot.id === selectedBotId && !kanbanOpen ? "office-roster-bot active" : "office-roster-bot"} onClick={() => { onKanban(false); useOfficeStore.getState().selectBot(bot.id); }}>
+              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>{portraits[bot.id] ? <img src={portraits[bot.id]} alt="" /> : <span>{bot.name.slice(0, 2)}</span>}</span>
+              <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
+              {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
+              {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
+            </button>;
+          })}
+          {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
+        </div>
+        {mode === "demo" && <PeopleList matches={matches} />}
+      </div>
+      <footer className="office-sidebar-footer"><span className="office-agent-avatar"><PersonStanding size={20} aria-hidden /></span><div>Lipp HQ<small>{mode === "demo" ? "Ambiente de demonstração" : "Modo frota Hermes"}</small></div></footer>
     </aside>
   );
 }
@@ -275,7 +257,7 @@ function CameraBar() {
           <Maximize size={13} aria-hidden /> Ver o andar inteiro
         </button>
       </div>
-      <p className="office-hint">Selecione um personagem na cena ou em Salas e bots · arraste para mover · role para aproximar · Esc volta</p>
+      <p className="office-hint">Selecione um personagem na cena ou na lista de agentes · arraste para mover · role para aproximar · Esc volta</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>
         {GRAPHICS_MODES.map((mode) => (
@@ -327,7 +309,7 @@ function HumanPanel() {
     <aside ref={node} className="drawer office-demo-panel" aria-label={`Pessoa ${human.name}`} data-human-panel={human.id}>
       <header className="drawer-head">
         <div className="drawer-title">
-          <span className="agent-dot" style={{ background: human.preset.colors.top }} aria-hidden />
+          <span className="office-agent-avatar" style={{ "--agent-color": human.preset.colors.top } as React.CSSProperties} aria-hidden><PersonStanding size={22} /></span>
           <strong>{human.name}</strong>
           <span className="panel-tag">pessoa</span>
           <button type="button" className="panel-close" onClick={store.clearHuman} aria-label="Fechar (Esc)" title="Fechar (Esc)">
@@ -485,6 +467,7 @@ function LoadOverlay() {
 /** Interface do escritório. Mede os painéis para a câmera enquadrar só a área livre. */
 export function OfficeHud({ live }: { live: boolean }) {
   const [rosterOpen, setRosterOpen] = useState(() => window.innerWidth >= ROSTER_MIN_WIDTH);
+  const [kanbanOpen, setKanbanOpen] = useState(false);
   const connection = useConnection();
   const shown = live ? connection : null;
   const layer = useRef<HTMLDivElement | null>(null);
@@ -514,9 +497,10 @@ export function OfficeHud({ live }: { live: boolean }) {
   }, [rosterOpen]);
 
   return (
-    <div className="office-hud" ref={layer}>
+    <div className="office-hud" data-sidebar-open={rosterOpen} ref={layer}>
       <TopBar connection={shown} />
-      <Roster open={rosterOpen} onToggle={() => setRosterOpen((value) => !value)} />
+      <Roster open={rosterOpen} onToggle={() => setRosterOpen((value) => !value)} kanbanOpen={kanbanOpen} onKanban={setKanbanOpen} />
+      {kanbanOpen && <OfficeKanban embedded onClose={() => setKanbanOpen(false)} />}
       <FocusBar />
       <OfflineNotice connection={shown} />
       <CameraBar />

@@ -8,7 +8,7 @@ const ALL = "todos";
 const FILIPE = { id: OWNER_FILIPE, name: "Filipe", color: "#f2f5fa" };
 
 /** Quadro de tarefas da demonstração, por cima da cena. Arrastar ou escolher a coluna move o cartão. */
-export function OfficeKanban({ onClose }: { onClose: () => void }) {
+export function OfficeKanban({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
   const bots = useOfficeStore((state) => state.bots);
   const [cards, setCards] = useState<KanbanCard[]>(() => loadCards(browserStorage()));
   const [filter, setFilter] = useState(ALL);
@@ -30,7 +30,7 @@ export function OfficeKanban({ onClose }: { onClose: () => void }) {
 
   const visible = cards.filter((card) => filter === ALL || card.owner === filter);
   return (
-    <div className="kanban" role="dialog" aria-modal="true" aria-label="Quadro de tarefas" data-kanban>
+    <div className={embedded ? "kanban embedded" : "kanban"} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : true} aria-label="Quadro de tarefas" data-kanban>
       <header className="kanban-head">
         <div>
           <h2>Quadro de tarefas</h2>
