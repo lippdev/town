@@ -1,11 +1,10 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { Vector3, type Scene, type WebGLRenderer } from "three";
+import type { Scene, WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
+import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
-import { humanActors, humanFigures, officeRuntime, useOfficeStore } from "./officeStore";
-import { seatedFigures } from "./OfficeScene";
+import { humanActors, humanFigures, officeRuntime, robotActors, useOfficeStore } from "./officeStore";
 
 declare global {
   interface Window {
@@ -53,7 +52,8 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         bots: store.bots.map((bot) => bot.id),
         seats: store.seating.seats,
         unseated: store.seating.unseated,
-        rigs: [...seatedFigures.keys()].sort(),
+        rigs: [...robotActors.keys()].sort(),
+        robots: Object.fromEntries([...robotActors].map(([id, actor]) => [id, { ...actor.position, flown: actor.flown, height: actor.rig.height, look: actor.rig.snapshot() }])),
         humans: store.humans.map((human) => ({
           id: human.id,
           name: human.name,
@@ -72,33 +72,17 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       const position = humanActors.get(id)?.position;
       return position ? worldToScreen([position.x, position.y + 0.7, position.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
-    /** Pixel do meio da figura na tela, para o harness clicar nela. */
+    /** Pixel do meio do robô na tela, onde ele estiver agora, para o harness clicar nele. */
     botPoint: (botId: string) => {
+      const robot = robotActors.get(botId);
       const seat = OFFICE_SEATS_BY_ID[useOfficeStore.getState().seating.seats[botId] ?? ""];
-      return seat ? worldToScreen([seat.x, 0.95, seat.z], officeRuntime.view, officeRuntime.viewport) : null;
+      if (robot) return worldToScreen([robot.position.x, robot.position.y + robot.rig.height / 2, robot.position.z], officeRuntime.view, officeRuntime.viewport);
+      return seat ? worldToScreen([seat.x, 1.5, seat.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
     /** Pixel de um ponto livre do chão da sala. */
     roomPoint: (roomId: string, localX = 0, localZ = 0) => {
       const room = OFFICE_ROOMS_BY_ID[roomId]!;
       return worldToScreen([room.center.x + localX, 0, room.center.z + localZ], officeRuntime.view, officeRuntime.viewport);
-    },
-    /** Medidas da figura sentada: pés, quadril e altura, em metros de cena. */
-    figureInfo: (botId: string) => {
-      const figure = seatedFigures.get(botId);
-      if (!figure) return null;
-      const parent = scene.getObjectByName(`bot-${botId}`);
-      parent?.updateWorldMatrix(true, true);
-      const world = (name: string) => parent?.getObjectByName(name)?.getWorldPosition(new Vector3()).toArray() ?? null;
-      const hips = world("Hips");
-      return {
-        hips,
-        footL: world("FootL"),
-        fistL: world("FistL"),
-        fistR: world("FistR"),
-        head: world("Head"),
-        roomOfHips: hips ? (roomAt(hips[0]!, hips[2]!)?.id ?? null) : null,
-        visible: Boolean(parent),
-      };
     },
   };
 }

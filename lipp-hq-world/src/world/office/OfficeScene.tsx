@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
@@ -23,22 +23,19 @@ import {
   type Texture,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { findBaseProblems } from "@/character-studio/viewport/figureRig";
 import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
-import { BACK_WALL_CUT, DESK_REACH, FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt, type OfficeSeat } from "./officeLayout";
-import { DESK_TOP, FIGURE_SCALE, buildOffice, type OfficeBuild } from "./officeRooms";
-import type { OfficeBot } from "./officeRoster";
+import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt } from "./officeLayout";
+import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
-import { SeatedFigure } from "./seatedFigure";
+import { OfficeRobots } from "./RobotBodies";
 import { thinIslands } from "./thinIslands";
 import { useOfficeStore } from "./officeStore";
 
-export const FIGURE_URL = "/prototipo/pulse.glb";
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
 
 /** A sombra muda pouco com todos sentados: refazê-la raramente é o maior corte de custo. */
@@ -283,24 +280,6 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
   );
 }
 
-function SeatMarker() {
-  const selectedBotId = useHQStore((state) => state.selectedBotId);
-  const hoveredBotId = useOfficeStore((state) => state.hoveredBotId);
-  const seating = useOfficeStore((state) => state.seating);
-  const bots = useOfficeStore((state) => state.bots);
-  const id = selectedBotId ?? hoveredBotId;
-  const seat = id ? OFFICE_SEATS_BY_ID[seating.seats[id] ?? ""] : undefined;
-  const bot = bots.find((candidate) => candidate.id === id);
-  if (!seat || !bot) return null;
-  const selected = selectedBotId === id;
-  return (
-    <mesh position={[seat.x, 0.07, seat.z]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
-      <ringGeometry args={[0.5, selected ? 0.62 : 0.56, 48]} />
-      <meshBasicMaterial color={bot.color} transparent opacity={selected ? 0.95 : 0.55} depthWrite={false} toneMapped={false} />
-    </mesh>
-  );
-}
-
 function RoomGlow() {
   const hoveredRoomId = useOfficeStore((state) => state.hoveredRoomId);
   const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
@@ -312,62 +291,6 @@ function RoomGlow() {
       <planeGeometry args={[maxX - minX, maxZ - minZ]} />
       <meshBasicMaterial color={room.color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
     </mesh>
-  );
-}
-
-/** Registro para o QA ler as figuras reais. */
-export const seatedFigures = new Map<string, SeatedFigure>();
-
-function OfficeFigure({ bot, seat }: { bot: OfficeBot; seat: OfficeSeat }) {
-  const { scene, animations } = useGLTF(FIGURE_URL);
-  const [figure, setFigure] = useState<SeatedFigure | null>(null);
-  const specKey = JSON.stringify(bot.spec);
-  const phase = useMemo(() => [...bot.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) * 0.73, [bot.id]);
-  const reduced = useReducedMotion();
-  useEffect(() => {
-    const problems = findBaseProblems(scene, animations);
-    if (problems.length > 0) {
-      useOfficeStore.getState().setFiguresError(`O modelo não tem ${problems.join(", ")}.`);
-      return;
-    }
-    const spec = JSON.parse(specKey) as OfficeBot["spec"];
-    const next = new SeatedFigure(scene, animations, spec, {
-      handY: (DESK_TOP + 0.035) / FIGURE_SCALE,
-      handZ: (DESK_REACH + 0.06) / FIGURE_SCALE,
-      phase,
-    });
-    seatedFigures.set(bot.id, next);
-    setFigure(next);
-    return () => {
-      seatedFigures.delete(bot.id);
-      next.dispose();
-      setFigure(null);
-    };
-  }, [scene, animations, specKey, phase, bot.id]);
-  useFrame(({ clock }) => {
-    if (!reduced) figure?.sway(clock.elapsedTime);
-  });
-  if (!figure) return null;
-  return (
-    <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]} scale={FIGURE_SCALE} name={`bot-${bot.id}`} userData={{ botId: bot.id }}>
-      <primitive object={figure.root} />
-    </group>
-  );
-}
-
-function OfficeFigures() {
-  const bots = useOfficeStore((state) => state.bots);
-  const seating = useOfficeStore((state) => state.seating);
-  useEffect(() => {
-    useOfficeStore.getState().setFiguresError(null);
-  }, []);
-  return (
-    <>
-      {bots.map((bot) => {
-        const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
-        return seat ? <OfficeFigure key={bot.id} bot={bot} seat={seat} /> : null;
-      })}
-    </>
   );
 }
 
@@ -453,14 +376,11 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
         </Suspense>
       </PartBoundary>
       <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
-        <Suspense fallback={null}>
-          <OfficeFigures />
-        </Suspense>
+        <OfficeRobots world={officeBuild()} />
       </PartBoundary>
       <PartBoundary onError={(message) => useOfficeStore.getState().setHumansError(message)}>
         <OfficeHumans />
       </PartBoundary>
-      <SeatMarker />
       <RoomGlow />
     </>
   );

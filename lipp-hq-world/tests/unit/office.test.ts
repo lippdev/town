@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import { Box3, BufferAttribute, Vector3, type AnimationClip, type Object3D, type SkinnedMesh } from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { BufferAttribute } from "three";
+import { describe, expect, it } from "vitest";
 import { AGENTS } from "@/agents/agents";
 import { PULSE_BASE_SPEC } from "@/character-studio/model/presets";
 import { parseSpec } from "@/character-studio/model/schema";
@@ -21,7 +18,7 @@ import {
   type OfficeDoor,
   type OfficeRoom,
 } from "@/world/office/officeLayout";
-import { DESK_TOP, FIGURE_SCALE, SEAT_TOP, buildOffice, wallRuns } from "@/world/office/officeRooms";
+import { buildOffice, wallRuns } from "@/world/office/officeRooms";
 import { assignSeats, botsInRoom, demoBots, fleetBots, specForBot } from "@/world/office/officeRoster";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, parseOfficeRoute } from "@/world/office/officeRoute";
 import {
@@ -32,9 +29,7 @@ import {
   worldToScreen,
   zoomViewAt,
 } from "@/world/office/officeCamera";
-import { SeatedFigure } from "@/world/office/seatedFigure";
 import { thinIslands } from "@/world/office/thinIslands";
-import { DESK_REACH } from "@/world/office/officeLayout";
 
 const overlaps = (a: OfficeBounds, b: OfficeBounds) => a.minX < b.maxX - 1e-6 && a.maxX > b.minX + 1e-6 && a.minZ < b.maxZ - 1e-6 && a.maxZ > b.minZ + 1e-6;
 
@@ -331,84 +326,5 @@ describe("câmera", () => {
     expect(pickBoxAt(aim.x, aim.y, view, viewport, [back, front])).toBe("frente");
     const away = worldToScreen([-4, 0, 4], view, viewport);
     expect(pickBoxAt(away.x, away.y, view, viewport, [back, front])).toBeNull();
-  });
-});
-
-describe("figura sentada", () => {
-  let scene: Object3D;
-  let clips: AnimationClip[];
-
-  beforeAll(async () => {
-    const bytes = readFileSync("public/prototipo/pulse.glb");
-    const loader = new GLTFLoader();
-    loader.setMeshoptDecoder(MeshoptDecoder);
-    const gltf = await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, "");
-    scene = gltf.scene;
-    clips = gltf.animations;
-  });
-
-  const seated = (spec = PULSE_BASE_SPEC) => {
-    const figure = new SeatedFigure(scene, clips, spec, {
-      handY: (DESK_TOP + 0.035) / FIGURE_SCALE,
-      handZ: (DESK_REACH + 0.06) / FIGURE_SCALE,
-      phase: 0,
-    });
-    figure.root.scale.setScalar(FIGURE_SCALE);
-    figure.root.updateMatrixWorld(true);
-    return figure;
-  };
-  const position = (figure: SeatedFigure, name: string) => figure.root.getObjectByName(name)!.getWorldPosition(new Vector3());
-
-  const bounds = (figure: SeatedFigure, material?: string) => {
-    const box = new Box3();
-    const point = new Vector3();
-    figure.root.traverse((node) => {
-      const mesh = node as SkinnedMesh;
-      if (!mesh.isSkinnedMesh || (material && (mesh.material as { name: string }).name !== material)) return;
-      mesh.skeleton.update();
-      for (let index = 0; index < mesh.geometry.attributes.position!.count; index += 1) {
-        mesh.getVertexPosition(index, point);
-        mesh.localToWorld(point);
-        box.expandByPoint(point);
-      }
-    });
-    return box;
-  };
-
-  it.each(AGENTS.map((agent) => [agent.id, specForBot(agent.id, agent.color)] as const))("%s: pés no chão, quadril na cadeira, mãos no tampo", (_id, spec) => {
-    const figure = seated(spec);
-    const all = bounds(figure);
-    // pés: nem enterrados, nem suspensos
-    expect(all.min.y).toBeGreaterThan(-0.02);
-    expect(all.min.y).toBeLessThan(0.03);
-    // a calça apoia no assento, afundando pouco
-    const pants = bounds(figure, "Pants");
-    expect(pants.min.y).toBeGreaterThan(SEAT_TOP - 0.06);
-    expect(pants.min.y).toBeLessThan(SEAT_TOP + 0.02);
-    // quadril centrado na cadeira, para a rotação do posto não deslocar a figura
-    const hips = position(figure, "Hips");
-    expect(Math.abs(hips.x)).toBeLessThan(0.01);
-    expect(Math.abs(hips.z)).toBeLessThan(0.01);
-    for (const hand of ["FistL", "FistR"]) {
-      const fist = position(figure, hand);
-      expect(Math.abs(fist.y - (DESK_TOP + 0.035)), hand).toBeLessThan(0.08);
-      expect(Math.abs(fist.z - (DESK_REACH + 0.06)), hand).toBeLessThan(0.08);
-    }
-    // a cabeça fica acima da mesa e o joelho cabe embaixo dela
-    expect(position(figure, "Head").y).toBeGreaterThan(DESK_TOP + 0.4);
-    expect(position(figure, "LowerLegL").y).toBeLessThan(DESK_TOP - 0.15);
-    figure.dispose();
-  });
-
-  it("respirar não acumula: o mesmo instante dá a mesma pose", () => {
-    const figure = seated();
-    figure.sway(1.25);
-    figure.root.updateMatrixWorld(true);
-    const first = position(figure, "Head").clone();
-    figure.sway(7.5);
-    figure.sway(1.25);
-    figure.root.updateMatrixWorld(true);
-    expect(position(figure, "Head").distanceTo(first)).toBeLessThan(1e-6);
-    figure.dispose();
   });
 });

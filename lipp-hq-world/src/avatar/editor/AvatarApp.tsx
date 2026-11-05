@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dices, Plus, Trash2 } from "lucide-react";
 import { normalizeHex } from "@/character-studio/model/schema";
 import { CATEGORIES, CATEGORIES_BY_ID, ITEMS_BY_ID, type Category, type CategoryId } from "@/avatar/human/catalog";
@@ -17,6 +17,7 @@ import {
   type HumanPreset,
 } from "@/avatar/human/preset";
 import { HumanPreview, type PreviewApi } from "./HumanPreview";
+import { RobotStudio } from "./RobotStudio";
 import "@/character-studio/studio.css";
 import "./avatar.css";
 
@@ -25,6 +26,9 @@ const QA_ENABLED = import.meta.env.DEV || new URLSearchParams(window.location.se
 
 /** O escritório abre o editor já na pessoa clicada. */
 const askedPerson = new URLSearchParams(window.location.search).get("pessoa");
+
+type Tab = "pessoas" | "robos";
+const askedTab: Tab = new URLSearchParams(window.location.search).get("aba") === "robos" ? "robos" : "pessoas";
 
 const newId = () => `pessoa-${crypto.randomUUID().slice(0, 8)}`;
 const nextName = (doc: AvatarDoc) => `Pessoa ${doc.presets.length + 1}`;
@@ -84,7 +88,41 @@ function ColorField({ label, value, palette, onChange }: { label: string; value:
   );
 }
 
+function Tabs({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+  return (
+    <div className="av-kind" role="tablist" aria-label="O que editar">
+      <button type="button" role="tab" aria-selected={tab === "pessoas"} data-tab="pessoas" onClick={() => onTab("pessoas")}>Pessoas</button>
+      <button type="button" role="tab" aria-selected={tab === "robos"} data-tab="robos" onClick={() => onTab("robos")}>Robôs</button>
+    </div>
+  );
+}
+
 export function AvatarApp() {
+  const [tab, setTab] = useState<Tab>(askedTab);
+  if (tab === "robos") {
+    return (
+      <div className="cs-app">
+        <nav className="cs-rail" aria-label="Editor">
+          <header className="cs-brand">
+            <span className="cs-brand__mark">Lipp HQ</span>
+            <h1>Editar robôs</h1>
+          </header>
+          <div className="cs-rail__scroll">
+            <Tabs tab={tab} onTab={setTab} />
+            <p className="cs-empty">Os robôs representam os bots: cada um segue com o nome, a sala e o estado que já tem.</p>
+          </div>
+          <div className="cs-rail__actions av-rail__actions">
+            <a className="cs-button" href={OFFICE_DEMO}>Ver escritório</a>
+          </div>
+        </nav>
+        <RobotStudio />
+      </div>
+    );
+  }
+  return <PeopleEditor tabs={<Tabs tab={tab} onTab={setTab} />} />;
+}
+
+function PeopleEditor({ tabs }: { tabs: ReactNode }) {
   const [loaded] = useState(() => loadAvatars(browserStorage()));
   const [doc, setDoc] = useState<AvatarDoc>(loaded.doc);
   const [draft, setDraft] = useState<HumanPreset>(() => doc.presets.find((preset) => preset.id === askedPerson) ?? doc.presets.find((preset) => preset.id === doc.selectedId) ?? newPreset(newId(), nextName(doc), ""));
@@ -188,6 +226,7 @@ export function AvatarApp() {
           <h1>Criar pessoa</h1>
         </header>
         <div className="cs-rail__scroll">
+          {tabs}
           <section aria-labelledby="av-people">
             <h2 id="av-people" className="cs-eyebrow">Pessoas salvas <span className="cs-count">{doc.presets.length}</span></h2>
             {doc.presets.length === 0 && <p className="cs-empty">Nenhuma ainda. Monte a primeira e salve: ela aparece no hall do escritório.</p>}

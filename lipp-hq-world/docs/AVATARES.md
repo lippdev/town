@@ -107,8 +107,10 @@ que saiu do catálogo volta ao padrão sem apagar a pessoa.
 
 ## Verificação
 
-- `pnpm test`: catálogo contra os arquivos, preset, persistência e figura.
-- `pnpm qa:avatar`: o fluxo no navegador (`HQ_URL` aponta para o servidor).
+- `pnpm test`: catálogo contra os arquivos, preset, persistência, figura, rotas e robôs.
+- `pnpm qa:avatar`: o editor de pessoas no navegador (`HQ_URL` aponta para o servidor).
+- `pnpm qa:pessoas`: do editor até sentar na bancada.
+- `pnpm qa:robos`: voo, clique, cor, expressão, movimento reduzido e fps.
 
 ## Pessoas no escritório
 
@@ -133,3 +135,56 @@ Salvar em outra aba já atualiza o escritório aberto.
 
 Limites reais: entrar na cadeira é um deslizar de lado enquanto o clipe toca, não um passo.
 As mãos da pose sentada não pousam na mesa. A sombra acompanha quem anda a cada 6 quadros.
+
+## Robôs no escritório
+
+Cada bot é um RobotExpressive, com o nome, a sala, a etiqueta, o painel e o estado que já
+tinha. A figura sentada do Pulse saiu do escritório; o `pulse.glb` segue no estúdio de
+personagens e como fonte do clipe de sentar das pessoas.
+
+- **Voo só na demonstração.** Na frota real o robô flutua no posto e não sai dali: um voo
+  pareceria dizer algo sobre o que o bot está fazendo. O estado continua vindo do Hermes, no
+  ponto da etiqueta. Na demonstração, o painel diz que o voo é só desenho.
+- **Rotas contra a planta real.** `officeFlights.ts` faz uma busca A* numa grade de 10 cm a
+  partir dos `footprints` de `buildOffice()`, das plantas e das paredes. O robô só usa a
+  própria sala, as portas dela e os corredores: nunca outra sala, nem o hall, onde as pessoas
+  ficam. Bot sem caminho flutua no posto em vez de atravessar algo. A cadeira é a única peça
+  que fica abaixo do voo.
+- **Altura.** O pé fica entre 1,04 e 1,12 m, acima do encosto da cadeira (1,03 m). O alto da
+  cabeça fica abaixo da verga das portas (2,25 m). O robô foi reduzido para 1,09 m por isso.
+- **Determinístico.** A posição é função do instante: sem sorteio nem relógio do sistema. Os
+  testes conferem também que dois robôs nunca chegam a menos de 75 cm no chão.
+- **Clique.** O robô selecionado acena uma vez e volta ao posto pelo mesmo caminho. Ao soltar,
+  espera o voo agendado alcançá-lo, em vez de saltar até onde estaria. O aceno responde a quem
+  clicou e não diz nada sobre o bot.
+- **Pernas.** No arquivo, os pés são alvos de IK presos à raiz. `hangLegs` dobra coxa e canela
+  e leva o pé até o fim da canela, numa pose de quem está no ar. O modelo não é alterado.
+- **Cor e expressão.** Em `/avatares.html?aba=robos`, gravadas em `hq.robos.v1`. O padrão do
+  corpo é a cor do bot, e dado inválido volta ao padrão. Os clipes do arquivo têm trilha dos
+  três morphs e apagariam a expressão, então essas trilhas são filtradas. Corpo e morphs são
+  de cada robô, e o cache do arquivo não muda. A expressão é só aparência: não vem do estado.
+- **Movimento reduzido.** Todos parados no posto, sem flutuar e sem gesto.
+- **Sombra.** O robô não projeta sombra do sol, que mudaria aos saltos a cada refazer do mapa.
+  Uma marca no chão mostra onde ele está.
+
+Limites reais: o voo é um passeio de ida e volta, e nenhum robô desvia de outro em tempo real
+(a separação vem do horário). Em bot com posto extra, na frota real, o voo não existe.
+`OfficeBot.spec` e `specForBot` ficaram sem uso no escritório e continuam lá, com os testes
+deles, para não misturar limpeza nesta entrega.
+
+## Custo medido
+
+Windows, RTX 3070, Chromium com D3D11, 1440 × 900, qualidade alta:
+
+| Cena                                         | fps | Chamadas de desenho | Triângulos por quadro |
+| -------------------------------------------- | --- | ------------------- | --------------------- |
+| Sete robôs, sem pessoas                      | 60  | 157                 | 447 mil               |
+| Sete robôs e seis pessoas, roupa mais pesada | 60  | 235 a 301           | 1 a 2 milhões         |
+
+Os 60 fps são o limite da tela nesse teste, não a folga da placa. A segunda linha é o pior
+caso, e o maior número é o do quadro que refaz o mapa de sombra. Cada linha é uma leitura de
+um quadro, e não foi medido em máquina mais fraca; nela, o modo automático cai para a
+qualidade leve se não segurar cerca de 38 fps.
+
+O `office.mjs` não roda direto no Windows: usa `--use-angle=metal` e o `.bin/vite` de Unix.
+Foi rodado com esses dois pontos trocados numa cópia temporária. A cópia não foi commitada.

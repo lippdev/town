@@ -14,7 +14,7 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { FLOOR_MARGIN, currentInsets, floorFit, humanActors, officeRuntime, useOfficeStore, zoomStep } from "./officeStore";
+import { FLOOR_MARGIN, currentInsets, floorFit, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 const DISTANCE = 45;
@@ -23,13 +23,20 @@ const EASE_PER_SECOND = 7;
 const CLICK_SLOP = 5;
 const KEY_PAN = 60;
 
-/** Caixas de clique das figuras: bem mais barato e estável que testar a malha com esqueleto. */
+/**
+ * Caixas de clique dos robôs: bem mais barato e estável que testar a malha. Vão do chão ao
+ * alto da cabeça, de onde o robô estiver agora; na sala em foco, só os daquela sala.
+ */
 function botBoxes(onlyRoom?: string): PickBox[] {
   const { seating } = useOfficeStore.getState();
   return Object.entries(seating.seats).flatMap(([botId, seatId]) => {
     const seat = OFFICE_SEATS_BY_ID[seatId];
     if (!seat || (onlyRoom && seat.roomId !== onlyRoom)) return [];
-    return [{ id: botId, minX: seat.x - 0.38, maxX: seat.x + 0.38, minY: 0, maxY: 1.85, minZ: seat.z - 0.38, maxZ: seat.z + 0.38 }];
+    const actor = robotActors.get(botId);
+    const x = actor?.position.x ?? seat.x;
+    const z = actor?.position.z ?? seat.z;
+    const top = actor ? actor.position.y + actor.rig.height : 2.1;
+    return [{ id: botId, minX: x - 0.38, maxX: x + 0.38, minY: 0, maxY: top, minZ: z - 0.38, maxZ: z + 0.38 }];
   });
 }
 

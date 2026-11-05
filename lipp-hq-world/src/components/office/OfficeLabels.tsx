@@ -28,6 +28,8 @@ export function OfficeLabels() {
   const hoveredHumanId = useOfficeStore((state) => state.hoveredHumanId);
   const nodes = useRef(new Map<HTMLElement, Anchor>());
   const liveNodes = useRef(new Map<string, HTMLElement>());
+  /** Para onde a etiqueta aponta enquanto o corpo não carregou ou não existe. */
+  const liveFallback = useRef(new Map<string, Anchor>());
   const layer = useRef<HTMLDivElement | null>(null);
   const shade = useRef<HTMLDivElement | null>(null);
 
@@ -45,7 +47,7 @@ export function OfficeLabels() {
       const { view, viewport } = officeRuntime;
       // Quem se mexe é reposicionado a cada quadro; o resto só quando a câmera muda.
       for (const [id, node] of liveNodes.current) {
-        const anchor = officeRuntime.liveAnchors.get(id);
+        const anchor = officeRuntime.liveAnchors.get(id) ?? liveFallback.current.get(id);
         if (!anchor) continue;
         const point = worldToScreen(anchor, view, viewport);
         node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
@@ -117,7 +119,15 @@ export function OfficeLabels() {
           <button
             key={bot.id}
             type="button"
-            ref={place([seat.x, 1.92, seat.z])}
+            ref={(node) => {
+              if (node) {
+                liveNodes.current.set(bot.id, node);
+                liveFallback.current.set(bot.id, [seat.x, 2.2, seat.z]);
+              } else {
+                liveNodes.current.delete(bot.id);
+                liveFallback.current.delete(bot.id);
+              }
+            }}
             className={classes}
             style={{ "--tag-color": bot.color } as React.CSSProperties}
             data-bot={bot.id}
@@ -140,7 +150,7 @@ export function OfficeLabels() {
               if (node) liveNodes.current.set(human.id, node);
               else liveNodes.current.delete(human.id);
             }}
-            className={["office-bot-tag", "office-human-tag", active ? "active" : "", focusedRoomId && focusedRoomId !== "hall" ? "elsewhere" : ""].filter(Boolean).join(" ")}
+            className={["office-bot-tag", "office-human-tag", active ? "active" : "", humans.length > 2 ? "extra" : "", focusedRoomId && focusedRoomId !== "hall" ? "elsewhere" : ""].filter(Boolean).join(" ")}
             style={{ "--tag-color": "#94a3b8" } as React.CSSProperties}
             data-human={human.id}
             aria-label={`${human.name}, pessoa`}

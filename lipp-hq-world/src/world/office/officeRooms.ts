@@ -22,12 +22,7 @@ import {
 } from "./officeLayout";
 import { screenUv, signUv } from "./officeTextures";
 
-/**
- * A figura do estúdio tem pernas curtas: sentada em postura natural, o assento fica a
- * 0,28 m. A cena usa a figura em escala 1,15 e a mobília medida a partir dela, com a
- * mesa mais baixa que a do protótipo (lá o quadril flutuava por causa do bug do GLB).
- */
-export const FIGURE_SCALE = 1.15;
+/** A mobília foi medida para figuras de pernas curtas: assento e mesa são baixos. */
 export const SEAT_TOP = 0.33;
 export const DESK_TOP = 0.72;
 
