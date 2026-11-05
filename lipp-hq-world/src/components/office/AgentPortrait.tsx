@@ -6,6 +6,8 @@ import { PORTRAIT_FRAMES, REACTION_MS, REST_FRAME, portraitFrame, robotMotionFor
 const HOVER_IN_MS = 90;
 /** E para desligar: mais longo, para o robô voltar ao lugar sem corte. */
 const HOVER_OUT_MS = 320;
+/** Os movimentos foram medidos para 32 px: na linha compacta, o avatar tem 24 px. */
+const DISTANCE_SCALE = 0.75;
 
 const framePosition = (frame: number) => `${(frame / (PORTRAIT_FRAMES - 1)) * 100}% 0`;
 
@@ -58,7 +60,7 @@ export function AgentPortrait({ botId, sheet }: { botId: string; sheet: string }
         return;
       }
       const pose = robotPose(motion, seconds, hover, reaction);
-      sprite.style.transform = `translate3d(${pose.x.toFixed(2)}px, ${pose.y.toFixed(2)}px, 0) rotate(${pose.rotate.toFixed(2)}deg) scale(${pose.scale.toFixed(3)})`;
+      sprite.style.transform = `translate3d(${(pose.x * DISTANCE_SCALE).toFixed(2)}px, ${(pose.y * DISTANCE_SCALE).toFixed(2)}px, 0) rotate(${pose.rotate.toFixed(2)}deg) scale(${pose.scale.toFixed(3)})`;
       const frame = portraitFrame(pose.yaw, pose.face);
       if (frame !== lastFrame) {
         sprite.style.backgroundPosition = framePosition(frame);

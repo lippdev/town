@@ -1076,3 +1076,29 @@ button.office-roster-room:hover {
 
 /* Retrato em quadros de pixel art. Quem move é o `AgentPortrait`, a cada quadro da tela. */
 .agent-sprite { display: block; width: 100%; height: 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+
+/* Sidebar compacta: linhas de 36 px, com o papel do agente à direita do nome. */
+.office-roster { padding: 14px 10px; gap: 16px; }
+.office-agent-search { height: 40px; box-sizing: border-box; border-radius: 12px; }
+.office-sidebar-nav { gap: 2px; }
+.office-sidebar-nav button { height: 36px; padding: 0 8px 0 9px; gap: 9px; border-radius: 10px; font-size: 14px; }
+.office-sidebar-nav button:hover { background: rgba(127, 127, 127, 0.08); }
+.office-sidebar-nav button[aria-current="page"] { background: rgba(127, 127, 127, 0.14); }
+.office-section-title { align-items: center; height: 32px; margin: 0; padding: 0 8px; color: #efefec; font-size: 13px; font-weight: 650; letter-spacing: -0.005em; text-transform: none; }
+.office-team-list { display: grid; gap: 2px; }
+.office-roster-bot { height: 36px; min-height: 0; box-sizing: border-box; padding: 0 8px 0 6px; gap: 6px; border-radius: 10px; font-size: 14px; }
+.office-roster-bot:hover { background: rgba(127, 127, 127, 0.08); }
+.office-roster-bot.active { background: rgba(127, 127, 127, 0.14); }
+.office-agent-avatar { width: 24px; height: 24px; }
+.office-agent-avatar:has(img), .office-agent-avatar:has(.agent-sprite) { width: 24px; height: 24px; }
+.office-agent-avatar svg { width: 18px; height: 18px; }
+.office-roster-name { display: flex; flex: 1; align-items: baseline; gap: 8px; min-width: 0; font-size: 14px; font-weight: 400; white-space: nowrap; }
+.office-roster-name small { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: #8f8f89; font-size: 12px; text-align: right; text-overflow: ellipsis; }
+.office-people-head { padding: 0 8px; }
+.office-sidebar-footer { padding-top: 10px; }
+.office-people { margin: 8px 0 0; padding: 0; border: 0; }
+.office-people-head { display: flex; align-items: center; justify-content: space-between; height: 32px; margin: 0; }
+.office-people-head strong { color: #efefec; font-size: 13px; font-weight: 650; letter-spacing: -0.005em; }
+.office-people-head a { font-size: 12px; }
+.office-people .office-roster-bot { color: inherit; }
+.office-people .office-agent-avatar { color: #c8c9ce; }
