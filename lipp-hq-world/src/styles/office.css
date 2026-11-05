@@ -1078,6 +1078,8 @@ button.office-roster-room:hover {
 @media (prefers-reduced-motion: no-preference) {
   .office-roster-bot:hover .agent-sprite,
   .office-roster-bot:focus-visible .agent-sprite { animation: agent-look 2.2s step-end infinite; }
+  .office-roster-bot:hover .office-agent-avatar:not([data-reacting]),
+  .office-roster-bot:focus-visible .office-agent-avatar:not([data-reacting]) { animation: agent-look-hop 2.2s linear infinite; }
   .office-agent-avatar[data-reacting] { animation: agent-hop 620ms steps(8) 1; }
   .office-agent-avatar[data-reacting] .agent-sprite { animation: agent-react 620ms step-end 1; }
 }
@@ -1087,6 +1089,11 @@ button.office-roster-room:hover {
   41%, 58% { background-position: 0 0; }
   59%, 80% { background-position: 66.6667% 0; }
   81%, 100% { background-position: 0 0; }
+}
+/* Pulinho discreto a cada virada de cabeça: menor que o do clique e no mesmo ritmo do olhar. */
+@keyframes agent-look-hop {
+  0%, 18%, 25%, 58%, 65%, 100% { transform: translateY(0); }
+  21%, 61% { transform: translateY(-3px); }
 }
 @keyframes agent-react {
   0%, 100% { background-position: 100% 0; }
