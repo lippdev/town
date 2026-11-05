@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { useHQStore } from "@/state/useHQStore";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
 import { OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_CAPACITY, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
+import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
@@ -103,6 +104,39 @@ function OfflineNotice({ connection }: { connection: OfficeConnection | null }) 
   return null;
 }
 
+/** Pessoas à parte dos bots: não têm sala nem estado, e são criadas por você. */
+function PeopleList() {
+  const humans = useOfficeStore((state) => state.humans);
+  const waiting = useOfficeStore((state) => state.humansWaiting);
+  const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
+  return (
+    <section className="office-people" aria-label="Pessoas" data-people>
+      <div className="office-people-head">
+        <strong>Pessoas</strong>
+        <a href="/avatares.html">Criar pessoa</a>
+      </div>
+      {humans.length === 0 && <p className="office-roster-empty">Ninguém ainda. Quem você criar e salvar aparece no hall.</p>}
+      {humans.map((human) => (
+        <button
+          key={human.id}
+          type="button"
+          className={human.id === selectedHumanId ? "office-roster-bot active" : "office-roster-bot"}
+          data-person-row={human.id}
+          onClick={() => useOfficeStore.getState().selectHuman(human.id)}
+        >
+          <span className="agent-dot" style={{ background: human.preset.colors.top }} aria-hidden />
+          <span className="office-roster-name">{human.name}</span>
+        </button>
+      ))}
+      {waiting.length > 0 && (
+        <p className="office-roster-empty" data-people-waiting>
+          O hall tem lugar para {HUMAN_CAPACITY}. Fora da cena: {waiting.map((person) => person.name).join(", ")}.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
@@ -145,6 +179,7 @@ function Roster({ open, onToggle }: { open: boolean; onToggle: () => void }) {
         {seated} de {SEAT_CAPACITY} postos ocupados
         {seating.unseated.length > 0 ? ` · ${seating.unseated.length} sem posto` : ""}
       </p>
+      {mode === "demo" && <PeopleList />}
       <ul className="office-roster-list">
         {OFFICE_ROOMS.map((room) => {
           const here = botsInRoom(seating, room.id).map((id) => byId.get(id)).filter((bot): bot is OfficeBot => Boolean(bot));
@@ -246,23 +281,13 @@ function CameraBar() {
   );
 }
 
-/** A gaveta da demonstração: quem é e onde senta. Nada de sessão, chat ou estado. */
-function DemoPanel() {
-  const selectedBotId = useHQStore((state) => state.selectedBotId);
-  const clearSelection = useHQStore((state) => state.clearSelection);
+/** Mede a gaveta aberta para a câmera enquadrar só o que sobra da tela. */
+function useDrawerInset(open: boolean) {
   const setViewInsetRight = useHQStore((state) => state.setViewInsetRight);
-  const bots = useOfficeStore((state) => state.bots);
-  const seating = useOfficeStore((state) => state.seating);
-  const bot = bots.find((candidate) => candidate.id === selectedBotId);
   const node = useRef<HTMLElement | null>(null);
-  const open = Boolean(bot);
-
   useEffect(() => {
     const element = node.current;
-    if (!open || !element) {
-      setViewInsetRight(0);
-      return;
-    }
+    if (!open || !element) return;
     const measure = () => setViewInsetRight(Math.max(0, window.innerWidth - element.getBoundingClientRect().left));
     measure();
     const observer = new ResizeObserver(measure);
@@ -274,6 +299,69 @@ function DemoPanel() {
       setViewInsetRight(0);
     };
   }, [open, setViewInsetRight]);
+  return node;
+}
+
+/** A gaveta de uma pessoa: o que ela está fazendo agora e o que dá para mandar. */
+function HumanPanel() {
+  const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
+  const humans = useOfficeStore((state) => state.humans);
+  const goals = useOfficeStore((state) => state.humanGoals);
+  const phases = useOfficeStore((state) => state.humanPhases);
+  const human = humans.find((candidate) => candidate.id === selectedHumanId);
+  const node = useDrawerInset(Boolean(human));
+  if (!human) return null;
+  const goal = goals[human.id] ?? "standing";
+  const phase = phases[human.id] ?? "standing";
+  const settled = phase === "standing" || phase === "seated";
+  const store = useOfficeStore.getState();
+  return (
+    <aside ref={node} className="drawer office-demo-panel" aria-label={`Pessoa ${human.name}`} data-human-panel={human.id}>
+      <header className="drawer-head">
+        <div className="drawer-title">
+          <span className="agent-dot" style={{ background: human.preset.colors.top }} aria-hidden />
+          <strong>{human.name}</strong>
+          <span className="panel-tag">pessoa</span>
+          <button type="button" className="panel-close" onClick={store.clearHuman} aria-label="Fechar (Esc)" title="Fechar (Esc)">
+            <X size={16} aria-hidden />
+          </button>
+        </div>
+        <div className="drawer-sub">
+          <span className="panel-role" data-human-phase={phase}>{HUMAN_PHASE_LABEL[phase]}</span>
+        </div>
+      </header>
+      <div className="drawer-body">
+        <div className="office-human-actions">
+          {goal === "standing" ? (
+            <button type="button" className="office-button primary" disabled={!settled || !human.chair} data-human-sit onClick={() => store.setHumanGoal(human.id, "seated")}>
+              <Armchair size={14} aria-hidden /> Sentar na bancada
+            </button>
+          ) : (
+            <button type="button" className="office-button primary" disabled={!settled} data-human-stand onClick={() => store.setHumanGoal(human.id, "standing")}>
+              <PersonStanding size={14} aria-hidden /> Levantar e voltar
+            </button>
+          )}
+          <a className="office-button" href={`/avatares.html?pessoa=${encodeURIComponent(human.id)}`}>
+            <Pencil size={13} aria-hidden /> Editar
+          </a>
+        </div>
+        {!human.chair && <p className="panel-warn">Os bots ocuparam as cadeiras da bancada: não há onde sentar agora.</p>}
+        <p className="panel-warn">
+          Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+/** A gaveta da demonstração: quem é e onde senta. Nada de sessão, chat ou estado. */
+function DemoPanel() {
+  const selectedBotId = useHQStore((state) => state.selectedBotId);
+  const clearSelection = useHQStore((state) => state.clearSelection);
+  const bots = useOfficeStore((state) => state.bots);
+  const seating = useOfficeStore((state) => state.seating);
+  const bot = bots.find((candidate) => candidate.id === selectedBotId);
+  const node = useDrawerInset(Boolean(bot));
 
   if (!bot) return null;
   const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
@@ -322,6 +410,7 @@ function LoadOverlay() {
   const load = useOfficeStore((state) => state.load);
   const error = useOfficeStore((state) => state.loadError);
   const figuresError = useOfficeStore((state) => state.figuresError);
+  const humansError = useOfficeStore((state) => state.humansError);
   if (load === "loading") return <div className="boot-label">Montando o escritório…</div>;
   if (load === "stalled" || load === "failed") {
     return (
@@ -337,6 +426,15 @@ function LoadOverlay() {
       <div className="office-notice slim figures" role="alert">
         <TriangleAlert size={14} aria-hidden />
         <span>Os personagens não carregaram ({figuresError}); a planta e a lista seguem funcionando.</span>
+        <button type="button" className="office-button" onClick={() => window.location.reload()}>Tentar de novo</button>
+      </div>
+    );
+  }
+  if (humansError) {
+    return (
+      <div className="office-notice slim figures" role="alert" data-humans-error>
+        <TriangleAlert size={14} aria-hidden />
+        <span>Uma pessoa não carregou por inteiro ({humansError}); o resto do escritório segue funcionando.</span>
         <button type="button" className="office-button" onClick={() => window.location.reload()}>Tentar de novo</button>
       </div>
     );
@@ -383,6 +481,7 @@ export function OfficeHud({ live }: { live: boolean }) {
       <OfflineNotice connection={shown} />
       <CameraBar />
       {live ? <BotDrawer characterTab={false} /> : <DemoPanel />}
+      {!live && <HumanPanel />}
       <LoadOverlay />
     </div>
   );

@@ -26,6 +26,8 @@ function trimShadowCasters(root: { traverse: (fn: (node: unknown) => void) => vo
   root.traverse((node) => {
     const mesh = node as Mesh;
     if (!mesh.isMesh || !mesh.castShadow || !mesh.geometry) return;
+    // Quem decide já decidiu: a esfera de malha comprimida nem está em metros.
+    if (mesh.userData.keepShadow) return;
     if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
     sphere.copy(mesh.geometry.boundingSphere!).applyMatrix4(mesh.matrixWorld);
     if (sphere.radius < SMALL_CASTER_RADIUS) {

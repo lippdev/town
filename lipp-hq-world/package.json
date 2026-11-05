@@ -15,6 +15,7 @@
     "qa:personagens": "node scripts/visual-qa/character-studio.mjs",
     "qa:escritorio": "node scripts/visual-qa/office.mjs",
     "qa:avatar": "node scripts/visual-qa/avatar.mjs",
+    "qa:pessoas": "node scripts/visual-qa/office-people.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
   },

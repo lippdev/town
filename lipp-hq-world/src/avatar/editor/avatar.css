@@ -33,5 +33,7 @@
 .av-pose select:hover { background: rgba(31, 35, 40, 0.08); }
 
 .av-foot { grid-template-columns: 1fr 1fr; }
-.av-save, .av-foot__warn { grid-column: 1 / -1; }
+.av-save, .av-go, .av-foot__warn { grid-column: 1 / -1; }
+.av-go { text-decoration: none; color: var(--cs-ink); }
+.av-go--off { opacity: 0.45; pointer-events: none; }
 .av-foot__warn { margin: 0; }

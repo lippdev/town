@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
+import type { HumanFigure } from "@/avatar/human/HumanFigure";
+import type { HumanActor } from "./HumanActor";
+import type { HumanGoal, HumanPhase, OfficeHuman } from "./officeHumans";
 import { type OfficeBot, type Seating } from "./officeRoster";
 import type { OfficeMode } from "./officeRoute";
 
@@ -17,8 +20,17 @@ interface OfficeState {
   framing: Framing;
   hoveredRoomId: string | null;
   hoveredBotId: string | null;
+  hoveredHumanId: string | null;
   bots: OfficeBot[];
   seating: Seating;
+  /** Pessoas salvas no editor, na cena. Só na demonstração; nunca entram em `bots`. */
+  humans: OfficeHuman[];
+  /** Salvas além da capacidade: listadas, sem corpo. */
+  humansWaiting: { id: string; name: string }[];
+  selectedHumanId: string | null;
+  humanGoals: Record<string, HumanGoal>;
+  humanPhases: Record<string, HumanPhase>;
+  humansError: string | null;
   /** Painéis fixos que cobrem a cena; a gaveta vem de `viewInsetRight`. */
   insets: Omit<Insets, "right">;
   load: LoadState;
@@ -26,7 +38,13 @@ interface OfficeState {
   figuresError: string | null;
   setMode: (mode: OfficeMode) => void;
   setRoster: (bots: OfficeBot[], seating: Seating) => void;
-  setHovered: (roomId: string | null, botId: string | null) => void;
+  setHovered: (roomId: string | null, botId: string | null, humanId?: string | null) => void;
+  setHumans: (humans: OfficeHuman[], waiting: { id: string; name: string }[]) => void;
+  setHumanPhase: (id: string, phase: HumanPhase) => void;
+  setHumanGoal: (id: string, goal: HumanGoal) => void;
+  setHumansError: (error: string | null) => void;
+  selectHuman: (id: string) => void;
+  clearHuman: () => void;
   setInsets: (insets: Omit<Insets, "right">) => void;
   setLoad: (load: LoadState, error?: string) => void;
   setFiguresError: (error: string | null) => void;
@@ -42,18 +60,40 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   framing: "floor",
   hoveredRoomId: null,
   hoveredBotId: null,
+  hoveredHumanId: null,
   bots: [],
   seating: { seats: {}, unseated: [] },
+  humans: [],
+  humansWaiting: [],
+  selectedHumanId: null,
+  humanGoals: {},
+  humanPhases: {},
+  humansError: null,
   insets: { left: 0, top: 0, bottom: 0 },
   load: "loading",
   loadError: null,
   figuresError: null,
   setMode: (mode) => set({ mode }),
   setRoster: (bots, seating) => set({ bots, seating }),
-  setHovered: (hoveredRoomId, hoveredBotId) => {
+  setHovered: (hoveredRoomId, hoveredBotId, hoveredHumanId = null) => {
     const state = get();
-    if (state.hoveredRoomId !== hoveredRoomId || state.hoveredBotId !== hoveredBotId) set({ hoveredRoomId, hoveredBotId });
+    if (state.hoveredRoomId !== hoveredRoomId || state.hoveredBotId !== hoveredBotId || state.hoveredHumanId !== hoveredHumanId) {
+      set({ hoveredRoomId, hoveredBotId, hoveredHumanId });
+    }
   },
+  setHumans: (humans, humansWaiting) => {
+    const { selectedHumanId } = get();
+    set({ humans, humansWaiting, selectedHumanId: humans.some((human) => human.id === selectedHumanId) ? selectedHumanId : null });
+  },
+  setHumanPhase: (id, phase) => set((state) => ({ humanPhases: { ...state.humanPhases, [id]: phase } })),
+  setHumanGoal: (id, goal) => set((state) => ({ humanGoals: { ...state.humanGoals, [id]: goal } })),
+  setHumansError: (humansError) => set({ humansError }),
+  selectHuman: (id) => {
+    // Pessoa e bot não dividem a gaveta: abrir uma fecha o outro.
+    useHQStore.getState().clearSelection();
+    set({ selectedHumanId: id, focusedRoomId: "hall", framing: "room" });
+  },
+  clearHuman: () => set({ selectedHumanId: null }),
   setInsets: (insets) => {
     const current = get().insets;
     if (current.left !== insets.left || current.top !== insets.top || current.bottom !== insets.bottom) set({ insets });
@@ -63,10 +103,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   focusRoom: (roomId) => set({ focusedRoomId: roomId, framing: "room" }),
   backToFloor: () => {
     useHQStore.getState().clearSelection();
-    set({ focusedRoomId: null, framing: "floor" });
+    set({ selectedHumanId: null, focusedRoomId: null, framing: "floor" });
   },
   selectBot: (botId) => {
     useHQStore.getState().selectBot(botId);
+    set({ selectedHumanId: null });
     const seatId = get().seating.seats[botId];
     const seat = seatId ? OFFICE_SEATS_BY_ID[seatId] : undefined;
     // Bot sem posto não tem sala para focar: a gaveta abre e a câmera fica onde está.
@@ -83,7 +124,13 @@ export const officeRuntime = {
   floorZoom: 30,
   /** Foi posicionada ao menos uma vez: o primeiro quadro entra sem animar. */
   placed: false,
+  /** Quem se mexe na cena: id → ponto da etiqueta, atualizado a cada quadro. */
+  liveAnchors: new Map<string, readonly [number, number, number]>(),
 };
+
+/** Fora do estado do React: mudam a cada quadro. O clique e o QA leem daqui. */
+export const humanActors = new Map<string, HumanActor>();
+export const humanFigures = new Map<string, HumanFigure>();
 
 export function currentInsets(): Insets {
   const { insets } = useOfficeStore.getState();

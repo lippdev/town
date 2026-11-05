@@ -23,7 +23,11 @@ export function OfficeLabels() {
   const hoveredBotId = useOfficeStore((state) => state.hoveredBotId);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
+  const humans = useOfficeStore((state) => state.humans);
+  const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
+  const hoveredHumanId = useOfficeStore((state) => state.hoveredHumanId);
   const nodes = useRef(new Map<HTMLElement, Anchor>());
+  const liveNodes = useRef(new Map<string, HTMLElement>());
   const layer = useRef<HTMLDivElement | null>(null);
   const shade = useRef<HTMLDivElement | null>(null);
 
@@ -39,6 +43,13 @@ export function OfficeLabels() {
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const { view, viewport } = officeRuntime;
+      // Quem se mexe é reposicionado a cada quadro; o resto só quando a câmera muda.
+      for (const [id, node] of liveNodes.current) {
+        const anchor = officeRuntime.liveAnchors.get(id);
+        if (!anchor) continue;
+        const point = worldToScreen(anchor, view, viewport);
+        node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+      }
       const count = nodes.current.size;
       if (view.x === last.x && view.z === last.z && view.zoom === last.zoom && count === lastCount && !layer.current?.dataset.dirty) return;
       last = { ...view };
@@ -116,6 +127,26 @@ export function OfficeLabels() {
             {mode === "live" && bot.state && <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />}
             <strong>{bot.name}</strong>
             {mode === "live" && bot.state && focusedRoomId === seat.roomId && <em>{stateLabel(bot.state)}</em>}
+          </button>
+        );
+      })}
+      {humans.map((human) => {
+        const active = human.id === selectedHumanId || human.id === hoveredHumanId;
+        return (
+          <button
+            key={human.id}
+            type="button"
+            ref={(node) => {
+              if (node) liveNodes.current.set(human.id, node);
+              else liveNodes.current.delete(human.id);
+            }}
+            className={["office-bot-tag", "office-human-tag", active ? "active" : "", focusedRoomId && focusedRoomId !== "hall" ? "elsewhere" : ""].filter(Boolean).join(" ")}
+            style={{ "--tag-color": "#94a3b8" } as React.CSSProperties}
+            data-human={human.id}
+            aria-label={`${human.name}, pessoa`}
+            onClick={() => useOfficeStore.getState().selectHuman(human.id)}
+          >
+            <strong>{human.name}</strong>
           </button>
         );
       })}

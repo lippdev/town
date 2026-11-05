@@ -13,6 +13,10 @@ export interface HumanClips {
   walk: AnimationClip;
   sit: AnimationClip;
   poses: Record<PhotoPose, AnimationClip>;
+  /** Metros por segundo, na escala do arquivo, em que o pé de apoio não escorrega. */
+  walkSpeed: number;
+  /** Onde o quadril fica na pose sentada, em Z, na escala do arquivo. */
+  seatedHipsZ: number;
 }
 
 const m = (bone: string) => `mixamorig${bone}`;
@@ -146,8 +150,52 @@ export function buildHumanClips({ armature, poses, robot, pulse }: ClipSources):
     idle,
     walk,
     sit,
+    walkSpeed: measureWalkSpeed(armature, walk),
+    seatedHipsZ: sampleBones(armature, sit, [sit.duration], [m("Hips")])[0]![m("Hips")]!.z,
     poses: Object.fromEntries(PHOTO_POSES.map((pose) => [pose, named(pose)])) as Record<PhotoPose, AnimationClip>,
   };
+}
+
+function sampleBones(armature: Object3D, clip: AnimationClip, times: readonly number[], bones: readonly string[]) {
+  const root = cloneSkinned(armature);
+  const mixer = new AnimationMixer(root);
+  const action = mixer.clipAction(clip);
+  action.play();
+  const samples = times.map((time) => {
+    action.time = time;
+    mixer.update(0);
+    root.updateMatrixWorld(true);
+    return Object.fromEntries(bones.map((bone) => [bone, root.getObjectByName(bone)!.getWorldPosition(new Vector3())]));
+  });
+  mixer.stopAllAction();
+  mixer.uncacheRoot(root);
+  disposeClone(root);
+  return samples;
+}
+
+/**
+ * A velocidade sai do próprio clipe: é a do pé que está no chão, indo para trás. Andar mais
+ * rápido ou mais devagar que isso faria o pé deslizar.
+ */
+export function measureWalkSpeed(armature: Object3D, walk: AnimationClip): number {
+  const left = m("LeftToeBase");
+  const right = m("RightToeBase");
+  const steps = 40;
+  const dt = walk.duration / steps;
+  const samples = sampleBones(armature, walk, Array.from({ length: steps + 1 }, (_, index) => index * dt), [left, right]);
+  let total = 0;
+  let counted = 0;
+  for (let index = 1; index < samples.length; index += 1) {
+    const now = samples[index]!;
+    const before = samples[index - 1]!;
+    const planted = now[left]!.y <= now[right]!.y ? left : right;
+    const slide = before[planted]!.z - now[planted]!.z;
+    if (slide > 0) {
+      total += slide / dt;
+      counted += 1;
+    }
+  }
+  return counted > 0 ? total / counted : 0.8;
 }
 
 /** Deixa o esqueleto no primeiro quadro: parar o mixer devolveria tudo à pose em T. */
