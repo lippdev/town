@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferAttribute, Color, ConeGeometry, CylinderGeometry, type BufferGeometry } from "three";
+import { BoxGeometry, BufferAttribute, Color, ConeGeometry, CylinderGeometry, PlaneGeometry, type BufferGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ENTRANCE, FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
 
@@ -7,7 +7,13 @@ import { ENTRANCE, FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
  * vértices, então custa uma chamada de desenho. A câmera olha de +x +z: prédio alto só atrás
  * do escritório; na frente, baixo, para não cobrir a rua.
  */
-export const CITY_BOUNDS: OfficeBounds = { minX: -34, maxX: 30, minZ: -30, maxZ: 28 };
+export const CITY_BOUNDS: OfficeBounds = { minX: -100, maxX: 100, minZ: -96, maxZ: 96 };
+
+/** O entorno desenhado à mão. Daqui para fora os quarteirões são gerados. */
+const CITY_CORE: OfficeBounds = { minX: -34, maxX: 30, minZ: -30, maxZ: 28 };
+const OUTER_ROAD_WIDTH = 3.5;
+const OUTER_BLOCK = 26;
+const LOT = 9;
 
 /** O que a câmera enquadra de início: o prédio e a rua da entrada. */
 export const CITY_VIEW: OfficeBounds = { minX: FLOOR_BOUNDS.minX - 1, maxX: FLOOR_BOUNDS.maxX + 1, minZ: FLOOR_BOUNDS.minZ - 1, maxZ: 15.5 };
@@ -55,6 +61,13 @@ class ColorMerge {
     this.add(new BoxGeometry(width, height, length), x, bottom + height / 2, z, color);
   }
 
+  /** Janela: só a face que a câmera vê, seis vértices em vez dos 36 de uma caixa. */
+  pane(x: number, y: number, z: number, facing: "x" | "z", color: string) {
+    const pane = new PlaneGeometry(0.7, 0.8);
+    if (facing === "x") pane.rotateY(Math.PI / 2);
+    this.add(pane, x, y + 0.4, z, color);
+  }
+
   build() {
     const merged = mergeGeometries(this.parts);
     for (const part of this.parts) part.dispose();
@@ -83,12 +96,12 @@ function building(city: ColorMerge, minX: number, maxX: number, minZ: number, ma
     const columnsZ = Math.floor(width / 1.3);
     for (let column = 0; column < columnsZ; column += 1) {
       const lit = shuffled(seed + floor * 7 + column * 13) > 0.72;
-      city.box(minX + (column + 0.5) * (width / columnsZ), y, maxZ + 0.01, 0.7, 0.8, 0.04, lit ? LIT : DARK_GLASS);
+      city.pane(minX + (column + 0.5) * (width / columnsZ), y, maxZ + 0.03, "z", lit ? LIT : DARK_GLASS);
     }
     const columnsX = Math.floor(length / 1.3);
     for (let column = 0; column < columnsX; column += 1) {
       const lit = shuffled(seed + floor * 11 + column * 17) > 0.72;
-      city.box(maxX + 0.01, y, minZ + (column + 0.5) * (length / columnsX), 0.04, 0.8, 0.7, lit ? LIT : DARK_GLASS);
+      city.pane(maxX + 0.03, y, minZ + (column + 0.5) * (length / columnsX), "x", lit ? LIT : DARK_GLASS);
     }
   }
 }
@@ -101,8 +114,81 @@ function tree(city: ColorMerge, x: number, z: number, scale = 1) {
 
 function lane(city: ColorMerge, axis: "x" | "z", at: number, from: number, to: number) {
   for (let position = from; position < to; position += 3) {
-    if (axis === "x") city.slab(position, position + 1.4, at - 0.05, at + 0.05, SURFACE.mark, 0.004, "#d9d4c4");
-    else city.slab(at - 0.05, at + 0.05, position, position + 1.4, SURFACE.mark, 0.004, "#d9d4c4");
+    const end = Math.min(to, position + 1.4);
+    if (axis === "x") city.slab(position, end, at - 0.05, at + 0.05, SURFACE.mark, 0.004, "#d9d4c4");
+    else city.slab(at - 0.05, at + 0.05, position, end, SURFACE.mark, 0.004, "#d9d4c4");
+  }
+}
+
+type Span = readonly [number, number];
+
+/** Ruas e quarteirões de um eixo, do entorno até a ponta da cidade. */
+function outerStreets(coreMin: number, coreMax: number, min: number, max: number) {
+  const roads: Span[] = [];
+  const blocks: Span[] = [];
+  const step = OUTER_ROAD_WIDTH + OUTER_BLOCK;
+  for (let at = coreMax; at < max; at += step) {
+    roads.push([at, at + OUTER_ROAD_WIDTH]);
+    blocks.push([at + OUTER_ROAD_WIDTH, Math.min(max, at + step)]);
+  }
+  for (let at = coreMin; at > min; at -= step) {
+    roads.push([at - OUTER_ROAD_WIDTH, at]);
+    blocks.push([Math.max(min, at - step), at - OUTER_ROAD_WIDTH]);
+  }
+  return { roads, blocks };
+}
+
+/** Enche um quarteirão de prédios ou, de vez em quando, faz dele uma praça. */
+function outerBlock(city: ColorMerge, [fromX, toX]: Span, [fromZ, toZ]: Span, seed: number) {
+  const columns = Math.floor((toX - fromX - 2) / LOT);
+  const rows = Math.floor((toZ - fromZ - 2) / LOT);
+  if (columns < 1 || rows < 1) return;
+  if (shuffled(seed) > 0.82) {
+    city.slab(fromX, toX, fromZ, toZ, SURFACE.walk, 0.05, "#5c7a58");
+    for (let index = 0; index < columns * rows; index += 1) {
+      tree(city, fromX + 2 + shuffled(seed + index * 3) * (toX - fromX - 4), fromZ + 2 + shuffled(seed + index * 5) * (toZ - fromZ - 4));
+    }
+    return;
+  }
+  // Na frente do escritório os prédios são baixos: a câmera olha por cima deles.
+  const front = fromX >= CITY_CORE.maxX || fromZ >= CITY_CORE.maxZ;
+  const width = (toX - fromX - 2) / columns;
+  const length = (toZ - fromZ - 2) / rows;
+  for (let column = 0; column < columns; column += 1) {
+    for (let row = 0; row < rows; row += 1) {
+      const lot = seed + column * 19 + row * 23;
+      const height = front ? 2.5 + shuffled(lot) * 4 : 4 + shuffled(lot) * 7;
+      const minX = fromX + 1 + column * width;
+      const minZ = fromZ + 1 + row * length;
+      building(city, minX, minX + width - 1, minZ, minZ + length - 1, height, lot);
+    }
+  }
+}
+
+function outerCity(city: ColorMerge) {
+  const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
+  const alongX = outerStreets(CITY_CORE.minX, CITY_CORE.maxX, minX, maxX);
+  const alongZ = outerStreets(CITY_CORE.minZ, CITY_CORE.maxZ, minZ, maxZ);
+  for (const [from, to] of alongX.roads) {
+    city.slab(from, to, minZ, maxZ, SURFACE.road, 0.02, "#33363c");
+    lane(city, "z", (from + to) / 2, minZ + 1, maxZ);
+  }
+  for (const [from, to] of alongZ.roads) {
+    city.slab(minX, maxX, from, to, SURFACE.road, 0.02, "#33363c");
+    lane(city, "x", (from + to) / 2, minX + 1, maxX);
+  }
+  // As ruas do entorno seguem até a ponta da cidade e dividem também os quarteirões de fora.
+  const { south, north, east, west } = ROADS;
+  const coreX: Span[] = [[CITY_CORE.minX, west.from], [west.to, east.from], [east.to, CITY_CORE.maxX]];
+  const coreZ: Span[] = [[CITY_CORE.minZ, north.from], [north.to, south.from], [south.to, CITY_CORE.maxZ]];
+  const xs = [...coreX, ...alongX.blocks];
+  const zs = [...coreZ, ...alongZ.blocks];
+  let seed = 500;
+  for (const x of xs) {
+    for (const z of zs) {
+      seed += 1;
+      if (!coreX.includes(x) || !coreZ.includes(z)) outerBlock(city, x, z, seed);
+    }
   }
 }
 
@@ -143,8 +229,8 @@ export function buildCityGeometry() {
     }
   }
   // Praças na frente da rua: prédio ali esconderia o carro e a entrada.
-  city.slab(minX, maxX, 16.5, 21, SURFACE.walk, 0.05, "#5c7a58");
-  city.slab(19.5, maxX, -11, 21, SURFACE.walk, 0.05, "#5c7a58");
+  city.slab(CITY_CORE.minX, CITY_CORE.maxX, 16.5, 21, SURFACE.walk, 0.05, "#5c7a58");
+  city.slab(19.5, CITY_CORE.maxX, -11, 21, SURFACE.walk, 0.05, "#5c7a58");
   for (let x = -30; x < 28; x += 6.5) tree(city, x, 18.8 + (shuffled(x) - 0.5) * 2.2);
   for (let z = -9; z < 15; z += 5.5) tree(city, 24 + (shuffled(z) - 0.5) * 3, z);
 
@@ -153,6 +239,7 @@ export function buildCityGeometry() {
   }
   for (let z = -10; z <= 9; z += 4.75) tree(city, 14.1, z, 0.8);
   for (let x = -12; x <= 13; x += 5) tree(city, x, -11.6, 0.8);
+  outerCity(city);
   return city.build();
 }
 

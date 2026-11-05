@@ -156,6 +156,23 @@ export function clampView(view: OfficeView, floor: OfficeBounds, min: number, ma
   };
 }
 
+/**
+ * Mantém o chão visível dentro de `bounds`, para a tela nunca passar da ponta da cidade.
+ * O que a tela vê do chão é um retângulo girado em 45°: de quanto ele se afasta do centro,
+ * em x e em z, depende só do zoom e da tela. Se não couber, o zoom sobe até caber.
+ */
+export function keepGroundInside(view: OfficeView, viewport: Viewport, bounds: OfficeBounds): OfficeView {
+  const reachAtZoomOne = (viewport.width / 2 + viewport.height / (2 * sinE)) * sinA;
+  const half = Math.min(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) / 2;
+  const zoom = Math.max(view.zoom, reachAtZoomOne / half);
+  const reach = reachAtZoomOne / zoom;
+  return {
+    x: Math.min(bounds.maxX - reach, Math.max(bounds.minX + reach, view.x)),
+    z: Math.min(bounds.maxZ - reach, Math.max(bounds.minZ + reach, view.z)),
+    zoom,
+  };
+}
+
 /** Faixa de zoom: do andar com folga até uma pessoa ocupar boa parte da tela. */
 export function zoomLimits(floorZoom: number): { min: number; max: number } {
   return { min: floorZoom * 0.7, max: Math.max(floorZoom * 7, 170) };

@@ -92,7 +92,7 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
             shadows="soft"
             dpr={dpr}
             gl={{ antialias: true, powerPreference: "high-performance" }}
-            camera={{ near: 0.5, far: 120, position: [30, 26, 30], zoom: 30 }}
+            camera={{ near: 0.5, far: 400, position: [30, 26, 30], zoom: 30 }}
             onCreated={({ gl }) => {
               gl.toneMapping = NeutralToneMapping;
               gl.toneMappingExposure = 1;
