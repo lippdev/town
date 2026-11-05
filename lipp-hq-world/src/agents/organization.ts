@@ -27,9 +27,9 @@ export const ORG_TEAMS: readonly OrgTeamDefinition[] = [
     groups: [
       { id: "coordenacao", name: "Coordenação", members: ["forge"] },
       { id: "github", name: "GitHub Intelligence", members: ["pulse"] },
-      { id: "product-operations", name: "Product Operations", members: ["atlas"] },
-      { id: "pesquisa", name: "Pesquisa", members: ["scout"] },
       { id: "comunidade", name: "Comunidade", members: ["echo"] },
+      { id: "pesquisa", name: "Pesquisa", members: ["scout"] },
+      { id: "product-operations", name: "Product Operations", members: ["atlas"] },
       { id: "conteudo", name: "Conteúdo", members: ["ink"] },
     ],
   },
@@ -69,4 +69,28 @@ export function buildOrgChart<Bot extends { id: string }>(bots: readonly Bot[]):
     }),
     unassigned: bots.filter((bot) => !placed.has(bot.id)),
   };
+}
+
+export interface RosterSection<Bot> {
+  id: string;
+  name: string;
+  /** Só equipe recolhe: Direção e os sem lugar ficam sempre à vista. */
+  collapsible: boolean;
+  bots: Bot[];
+}
+
+/** A lista da sidebar: mesma organização do organograma, na ordem dele, sem seção vazia. */
+export function buildRosterSections<Bot extends { id: string }>(bots: readonly Bot[]): RosterSection<Bot>[] {
+  const { leadership, teams, unassigned } = buildOrgChart(bots);
+  const sections: RosterSection<Bot>[] = [
+    { id: "direcao", name: "Direção", collapsible: false, bots: leadership },
+    ...teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+      collapsible: true,
+      bots: team.groups.flatMap((group) => group.members),
+    })),
+    { id: "sem-equipe", name: "Sem equipe definida", collapsible: false, bots: unassigned },
+  ];
+  return sections.filter((section) => section.bots.length > 0);
 }

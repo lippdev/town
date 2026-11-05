@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { ChevronDown, House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { buildRosterSections } from "@/agents/organization";
 import { lookFor } from "@/avatar/robot/robotLook";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
@@ -167,6 +168,25 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
 
 const normalizeSearch = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
 
+const COLLAPSED_TEAMS_KEY = "lipp-hq.sidebar.equipes-recolhidas";
+
+function readCollapsedTeams(): string[] {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(COLLAPSED_TEAMS_KEY) ?? "[]");
+    return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCollapsedTeams(ids: readonly string[]) {
+  try {
+    localStorage.setItem(COLLAPSED_TEAMS_KEY, JSON.stringify(ids));
+  } catch {
+    // Sem armazenamento, a equipe só não lembra de ficar recolhida.
+  }
+}
+
 function Roster({ open, onToggle, view, onView, conversationBotId, onConversation, sheets, demo }: {
   open: boolean;
   onToggle: () => void;
@@ -182,8 +202,15 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
   const [query, setQuery] = useState("");
+  const [collapsedTeams, setCollapsedTeams] = useState(readCollapsedTeams);
   const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
   const filtered = bots.filter((bot) => matches(`${bot.name} ${bot.role}`));
+  const searching = query.trim().length > 0;
+  const toggleTeam = (id: string) => {
+    const next = collapsedTeams.includes(id) ? collapsedTeams.filter((team) => team !== id) : [...collapsedTeams, id];
+    setCollapsedTeams(next);
+    saveCollapsedTeams(next);
+  };
   const pending = mode === "demo" ? bots.reduce((total, bot) => total + demo.pendingOf(bot.id), 0) : 0;
   if (!open) return (
     <button type="button" className="office-roster-toggle closed" onClick={onToggle} aria-expanded={false} aria-label="Abrir navegação">
@@ -208,27 +235,47 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
         {mode === "demo" && <button type="button" aria-current={view === "kanban" ? "page" : undefined} onClick={() => onView("kanban")}><Columns3 size={18} aria-hidden /> Kanban</button>}
       </nav>
       <div className="office-directory">
-        <h2 className="office-section-title">Agentes</h2>
-        <div className="office-team-list">
-          {filtered.map((bot) => {
-            const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
-            const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
-            return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} title={bot.role} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
-              if (view === "conversas") { onConversation(bot.id); return; }
-              onView("escritorio");
-              useOfficeStore.getState().selectBot(bot.id);
-            }}>
-              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
-                {sheets[bot.id] ? <AgentPortrait botId={bot.id} sheet={sheets[bot.id]!} /> : <span>{bot.name.slice(0, 2)}</span>}
-              </span>
-              <span className="office-roster-name">{bot.name}{mode === "demo" && <small>{bot.role}</small>}</span>
-              {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
-              {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
-              {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
-            </button>;
-          })}
-          {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
-        </div>
+        {buildRosterSections(filtered).map((section) => {
+          // A busca abre a equipe: quem foi encontrado nunca fica escondido.
+          const collapsed = section.collapsible && !searching && collapsedTeams.includes(section.id);
+          const waitingInSection = mode === "demo" ? section.bots.reduce((total, bot) => total + demo.pendingOf(bot.id), 0) : 0;
+          return (
+            <section key={section.id} className="office-roster-section" aria-label={section.name} data-roster-section={section.id}>
+              <h2 className="office-section-title">
+                {section.collapsible ? (
+                  <button type="button" className="office-section-toggle" aria-expanded={!collapsed} disabled={searching} onClick={() => toggleTeam(section.id)}>
+                    <span className="office-section-name">{section.name} <small>{section.bots.length}</small></span>
+                    {collapsed && waitingInSection > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waitingInSection}</span>}
+                    <ChevronDown size={14} aria-hidden />
+                  </button>
+                ) : section.name}
+              </h2>
+              {/* Continua montada ao recolher: é o que deixa a altura animar nos dois sentidos. */}
+              <div className="office-section-body" data-collapsed={collapsed} inert={collapsed}>
+                <div className="office-team-list">
+                  {section.bots.map((bot) => {
+                    const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
+                    const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
+                    return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} title={bot.role} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
+                      if (view === "conversas") { onConversation(bot.id); return; }
+                      onView("escritorio");
+                      useOfficeStore.getState().selectBot(bot.id);
+                    }}>
+                      <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
+                        {sheets[bot.id] ? <AgentPortrait botId={bot.id} sheet={sheets[bot.id]!} /> : <span>{bot.name.slice(0, 2)}</span>}
+                      </span>
+                      <span className="office-roster-name">{bot.name}{mode === "demo" && <small>{bot.role}</small>}</span>
+                      {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
+                      {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
+                      {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
+                    </button>;
+                  })}
+                </div>
+              </div>
+            </section>
+          );
+        })}
+        {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
         {mode === "demo" && <PeopleList matches={matches} />}
       </div>
       <OfficeAccountMenu detail={mode === "demo" ? "Demonstração" : "Frota do Hermes"} />

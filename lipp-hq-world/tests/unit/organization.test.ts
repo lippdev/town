@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AGENTS } from "@/agents/agents";
-import { ORG_LEADERSHIP, ORG_TEAMS, buildOrgChart } from "@/agents/organization";
+import { ORG_LEADERSHIP, ORG_TEAMS, buildOrgChart, buildRosterSections } from "@/agents/organization";
 
 const ids = (bots: Array<{ id: string }>) => bots.map((bot) => bot.id);
 
@@ -20,9 +20,9 @@ describe("organização", () => {
     expect(chart.teams[0]!.groups.map((group) => [group.name, ids(group.members)])).toEqual([
       ["Coordenação", ["forge"]],
       ["GitHub Intelligence", ["pulse"]],
-      ["Product Operations", ["atlas"]],
-      ["Pesquisa", ["scout"]],
       ["Comunidade", ["echo"]],
+      ["Pesquisa", ["scout"]],
+      ["Product Operations", ["atlas"]],
       ["Conteúdo", ["ink"]],
     ]);
     expect(chart.unassigned).toEqual([]);
@@ -41,5 +41,26 @@ describe("organização", () => {
 
   it("não esconde bot sem lugar definido", () => {
     expect(ids(buildOrgChart([{ id: "novo" }, { id: "argos" }]).unassigned)).toEqual(["novo"]);
+  });
+});
+
+describe("seções da sidebar", () => {
+  const summary = (bots: Array<{ id: string }>) => buildRosterSections(bots).map((section) => [section.name, section.collapsible, ids(section.bots)]);
+
+  it("separa a direção da equipe Open Source, que é a única que recolhe", () => {
+    expect(summary(AGENTS)).toEqual([
+      ["Direção", false, ["argos"]],
+      ["Open Source", true, ["forge", "pulse", "echo", "scout", "atlas", "ink"]],
+    ]);
+  });
+
+  it("some com a seção que ficou vazia, como numa busca", () => {
+    expect(summary([{ id: "ink" }])).toEqual([["Open Source", true, ["ink"]]]);
+    expect(summary([{ id: "argos" }])).toEqual([["Direção", false, ["argos"]]]);
+    expect(summary([])).toEqual([]);
+  });
+
+  it("mostra quem não tem lugar definido em uma seção própria", () => {
+    expect(summary([{ id: "novo" }])).toEqual([["Sem equipe definida", false, ["novo"]]]);
   });
 });
