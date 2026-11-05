@@ -23,18 +23,24 @@ interface Traffic {
   start: number;
 }
 
+/** `start` é quanto da via o carro já andou: os primeiros começam perto do escritório. */
 const TRAFFIC: readonly Traffic[] = [
-  { color: "#b23a48", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 4.2, start: 0 },
-  { color: "#d7d3c8", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.4, start: 26 },
-  { color: "#3a6ea5", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.8, start: 8 },
-  { color: "#c9a13b", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.1, start: 30 },
+  { color: "#b23a48", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 4.2, start: 74 },
+  { color: "#d7d3c8", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.4, start: 100 },
+  { color: "#3f6b4f", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.8, start: 135 },
+  { color: "#23262c", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.6, start: 180 },
+  { color: "#3a6ea5", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.8, start: 104 },
+  { color: "#8a7f73", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.3, start: 60 },
+  { color: "#c9a13b", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.1, start: 92 },
+  { color: "#6f7480", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.5, start: 150 },
 ];
 
 function TrafficCar({ car, reduced }: { car: Traffic; reduced: boolean }) {
   const mesh = useRef<Mesh>(null);
   const geometry = useMemo(() => buildCarGeometry(car.color), [car.color]);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  const span = car.axis === "x" ? [CITY_BOUNDS.minX + 2, CITY_BOUNDS.maxX - 2] : [CITY_BOUNDS.minZ + 2, CITY_BOUNDS.maxZ - 2];
+  // Dá a volta além da ponta da cidade, onde a câmera não chega: nenhum carro some à vista.
+  const span = car.axis === "x" ? [CITY_BOUNDS.minX - 4, CITY_BOUNDS.maxX + 4] : [CITY_BOUNDS.minZ - 4, CITY_BOUNDS.maxZ + 4];
   const length = span[1]! - span[0]!;
   const travelled = useRef(car.start);
   useFrame((_, delta) => {
