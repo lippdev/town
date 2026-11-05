@@ -11,6 +11,7 @@ import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnecti
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
+import { OfficeAccountMenu } from "./OfficeAccountMenu";
 import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
@@ -25,6 +26,9 @@ const CONNECT_WAIT_MS = 6000;
 const SIDEBAR_OVERLAY_WIDTH = 600;
 
 type WorkspaceView = "escritorio" | "conversas" | "kanban";
+
+const VIEW_TITLE: Record<WorkspaceView, string> = { escritorio: "Escritório", conversas: "Conversas", kanban: "Kanban" };
+const SEARCH_KEY = /mac|iphone|ipad/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
 
 /** Retratos dos robôs, compartilhados pela sidebar e pela conversa. */
 function usePortraits(bots: readonly OfficeBot[]): { stills: Record<string, string>; sheets: Record<string, string> } {
@@ -74,28 +78,17 @@ function ModeChip({ connection }: { connection: OfficeConnection | null }) {
   }
 }
 
-function TopBar({ connection }: { connection: OfficeConnection | null }) {
+function TopBar({ connection, title }: { connection: OfficeConnection | null; title: string }) {
   const demo = connection === null;
   return (
-    <>
     <header className="office-top" data-office-inset="top">
-      <div className="office-brand">
-        <span className="sidebar-dot" aria-hidden />
-        <strong>Lipp HQ</strong>
-        <span>Escritório completo</span>
-      </div>
+      <h1 className="office-page-title">{title}</h1>
       <ModeChip connection={connection} />
-      {demo && <span className="office-demo-note">Sete bots de referência, sem Hermes: nada aqui é atividade real.</span>}
-      <nav className="office-nav" aria-label="Outras páginas">
+      {demo && <span className="office-demo-note">Sete bots de exemplo, sem atividade real.</span>}
+      <nav className="office-nav" aria-label="Fonte dos dados">
         <a href={demo ? OFFICE_LIVE_URL : OFFICE_DEMO_URL}>{demo ? "Usar frota do Hermes" : "Ver demonstração"}</a>
-        <a href="/">Painel clássico</a>
-        <a href="/?prototipo=engenharia">Sala Engenharia</a>
-        <a href="/personagens.html">Estúdio</a>
-        <a href="/avatares.html">Criar pessoa</a>
-        <a href="/avatares.html?aba=robos">Robôs</a>
       </nav>
     </header>
-    </>
   );
 }
 
@@ -147,7 +140,7 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
     <section className="office-people" aria-label="Pessoas" data-people>
       <div className="office-people-head">
         <strong>Pessoas</strong>
-        <a href="/avatares.html">Criar pessoa</a>
+        <a href="/avatares.html" aria-label="Criar pessoa">Criar</a>
       </div>
       {humans.length === 0 && <p className="office-roster-empty">Ninguém ainda. Quem você criar e salvar aparece no hall.</p>}
       {humans.filter((human) => matches(human.name)).map((human) => (
@@ -199,10 +192,11 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   return (
     <aside className="office-roster" data-office-inset="left" aria-label="Navegação do Lipp HQ">
       <div className="office-roster-head">
-        <div className="office-workspace-title"><strong>Lipp HQ</strong><span>{bots.length} agentes · {mode === "demo" ? "Demonstração" : "Hermes"}</span></div>
+        <span className="office-workspace-mark" aria-hidden>L</span>
+        <div className="office-workspace-title"><strong>Lipp HQ</strong><span>{bots.length} {bots.length === 1 ? "agente" : "agentes"}</span></div>
         <button type="button" className="panel-close" onClick={onToggle} aria-expanded aria-label="Recolher navegação"><PanelLeftClose size={17} aria-hidden /></button>
       </div>
-      <label className="office-agent-search"><Search size={16} aria-hidden /><input className="office-roster-search" type="search" aria-label="Buscar agentes ou pessoas" placeholder="Buscar na equipe…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      <label className="office-agent-search"><Search size={16} aria-hidden /><input className="office-roster-search" type="search" aria-label="Buscar agentes ou pessoas" aria-keyshortcuts="Meta+K Control+K" placeholder="Buscar na equipe…" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd className="office-search-key" aria-hidden>{SEARCH_KEY}</kbd></label>
       <nav className="office-sidebar-nav" aria-label="Área de trabalho">
         <button type="button" aria-current={view === "escritorio" ? "page" : undefined} onClick={() => { onView("escritorio"); useOfficeStore.getState().backToFloor(); }}><House size={18} aria-hidden /> Escritório</button>
         <button type="button" data-nav-conversas aria-current={view === "conversas" ? "page" : undefined} onClick={() => onView("conversas")}>
@@ -212,7 +206,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
         {mode === "demo" && <button type="button" aria-current={view === "kanban" ? "page" : undefined} onClick={() => onView("kanban")}><Columns3 size={18} aria-hidden /> Kanban</button>}
       </nav>
       <div className="office-directory">
-        <h2 className="office-section-title">Agentes <span>{bots.length}</span></h2>
+        <h2 className="office-section-title">Agentes</h2>
         <div className="office-team-list">
           {filtered.map((bot) => {
             const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
@@ -235,7 +229,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
         </div>
         {mode === "demo" && <PeopleList matches={matches} />}
       </div>
-      <footer className="office-sidebar-footer"><span className="office-agent-avatar"><PersonStanding size={20} aria-hidden /></span><div>Lipp HQ<small>{mode === "demo" ? "Ambiente de demonstração" : "Modo frota Hermes"}</small></div></footer>
+      <OfficeAccountMenu detail={mode === "demo" ? "Demonstração" : "Frota do Hermes"} />
     </aside>
   );
 }
@@ -295,7 +289,7 @@ function CameraBar() {
           <Maximize size={13} aria-hidden /> Ver o andar inteiro
         </button>
       </div>
-      <p className="office-hint">Selecione um personagem na cena ou na lista de agentes · arraste para mover · role para aproximar · Esc volta</p>
+      <p className="office-hint">Clique em um personagem para abrir · arraste para mover · role para aproximar · Esc volta</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>
         {GRAPHICS_MODES.map((mode) => (
@@ -537,6 +531,17 @@ export function OfficeHud({ live }: { live: boolean }) {
   const conversationBot = bots.find((bot) => bot.id === conversationBotId) ?? bots[0];
 
   useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      setRosterOpen(true);
+      requestAnimationFrame(() => layer.current?.querySelector<HTMLInputElement>(".office-roster-search")?.focus());
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
     const element = layer.current;
     if (!element) return;
     const measure = () => {
@@ -562,7 +567,7 @@ export function OfficeHud({ live }: { live: boolean }) {
 
   return (
     <div className="office-hud" data-sidebar-open={rosterOpen} ref={layer}>
-      <TopBar connection={shown} />
+      <TopBar connection={shown} title={VIEW_TITLE[view]} />
       <Roster
         open={rosterOpen}
         onToggle={() => setRosterOpen((value) => !value)}
