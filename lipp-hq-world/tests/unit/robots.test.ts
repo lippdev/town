@@ -147,10 +147,11 @@ describe("o robô do arquivo oficial", () => {
     const rig = new RobotRig(scene, clips);
     expect(rig.height).toBeGreaterThan(0.9);
     expect(ROBOT_SCALE).toBeGreaterThan(0);
-    // Em toda a flutuação: acima do encosto da cadeira (1,03 m) e abaixo da verga (2,25 m).
+    // Em toda a flutuação: rente ao chão, sem encostar nele, e abaixo da verga (2,25 m).
     for (let t = 0; t < 60; t += 0.1) {
       const feet = HOVER_Y + bobAt(t, 1.7);
-      expect(feet).toBeGreaterThan(1.03);
+      expect(feet).toBeGreaterThan(0.05);
+      expect(feet).toBeLessThan(0.2);
       expect(feet + rig.height).toBeLessThan(2.25);
     }
     rig.dispose();

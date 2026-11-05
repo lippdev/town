@@ -2,7 +2,7 @@ import { Group } from "three";
 import type { RobotRig } from "@/avatar/robot/RobotRig";
 import type { OfficeSeat } from "./officeLayout";
 import { pathPose, turnToward } from "./officeHumans";
-import { HOVER_Y, bobAt, botPhase, flightDistanceAt, nextFlightCap, type FlightPlan } from "./officeFlights";
+import { HOVER_OVER_CHAIR_Y, HOVER_Y, bobAt, botPhase, flightDistanceAt, nextFlightCap, type FlightPlan } from "./officeFlights";
 
 const TURN_PER_SECOND = 3.2;
 const LEAN_PER_SPEED = 0.16;
@@ -21,7 +21,8 @@ export class RobotActor {
   private distance = 0;
   private x: number;
   private z: number;
-  private y = HOVER_Y;
+  private y: number;
+  private readonly hover: number;
   private yaw: number;
   private lean = 0;
   private readonly phase: number;
@@ -34,6 +35,8 @@ export class RobotActor {
     private readonly reduced: boolean,
   ) {
     this.phase = botPhase(botId);
+    this.hover = seat.kind === "posto" ? HOVER_Y : HOVER_OVER_CHAIR_Y;
+    this.y = this.hover;
     this.x = seat.x;
     this.z = seat.z;
     this.yaw = seat.yaw;
@@ -80,7 +83,7 @@ export class RobotActor {
       const speed = step > 0 ? Math.abs(moved) / step : 0;
       this.lean += (Math.min(speed * LEAN_PER_SPEED, 0.32) - this.lean) * Math.min(1, LEAN_EASE * step);
     }
-    this.y = HOVER_Y + bobAt(seconds, this.phase);
+    this.y = this.hover + bobAt(seconds, this.phase);
     this.place();
   }
 }

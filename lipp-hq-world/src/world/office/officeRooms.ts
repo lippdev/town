@@ -203,7 +203,7 @@ function rack(b: KitBuilder, height: number) {
   b.solid("rack", 0, 0, 0.6, 0.65);
 }
 
-/** Um posto completo: cadeira, mesa e o que estiver sobre ela. */
+/** Um posto completo: mesa e o que estiver sobre ela. O robô flutua ali, sem cadeira. */
 function workstation(
   b: KitBuilder,
   seat: OfficeSeat,
@@ -212,7 +212,6 @@ function workstation(
   const { width = 2.2, depth = 0.95, x = 0, pedestal = 0, monitors = [[0, 0]], lamp } = options;
   const center = DESK_REACH + depth / 2;
   b.at([seat.x, 0, seat.z], seat.yaw, () => {
-    chair(b);
     deskTop(b, x, center, width, depth, pedestal);
     for (const [mx, variant] of monitors) monitor(b, mx, center + 0.25, variant);
     keyboard(b, 0, DESK_REACH + 0.13);

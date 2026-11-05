@@ -227,10 +227,11 @@ personagens.
 - **Rotas contra a planta real.** `officeFlights.ts` faz uma busca A* numa grade de 10 cm a
   partir dos `footprints` de `buildOffice()`, das plantas e das paredes. O robô só usa a
   própria sala, as portas dela e os corredores: nunca outra sala, nem o hall, onde as pessoas
-  ficam. Bot sem caminho flutua no posto em vez de atravessar algo. A cadeira é a única peça
-  que fica abaixo do voo.
-- **Altura.** O pé fica entre 1,04 e 1,12 m, acima do encosto da cadeira (1,03 m). O alto da
-  cabeça fica abaixo da verga das portas (2,25 m). O robô foi reduzido para 1,09 m por isso.
+  ficam. Bot sem caminho flutua no posto em vez de atravessar algo. Voando baixo, ele contorna
+  todos os móveis, cadeiras inclusive.
+- **Altura.** O pé fica entre 8 e 16 cm do chão: mais alto, o robô parecia estar em cima dos
+  móveis. Por isso os postos de departamento não têm cadeira. Na bancada e na reunião, que só
+  recebem robô com a frota cheia, a cadeira continua lá e ele fica acima do encosto (1,08 m).
 - **Determinístico.** A posição é função do instante: sem sorteio nem relógio do sistema. Os
   testes conferem também que dois robôs nunca chegam a menos de 75 cm no chão.
 - **Clique.** O robô selecionado acena uma vez e volta ao posto pelo mesmo caminho. Ao soltar,
