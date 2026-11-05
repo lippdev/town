@@ -16,6 +16,7 @@ import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { OfficeHud } from "./OfficeHud";
 import { OfficeLabels } from "./OfficeLabels";
+import "@fontsource-variable/onest";
 import "@/styles/office.css";
 
 /** Quem está em cena: os sete da demonstração, ou a frota real a cada leitura. */
