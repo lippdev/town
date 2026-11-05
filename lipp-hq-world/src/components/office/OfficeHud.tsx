@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Code2, Compass, Megaphone, Palette, Settings2, Crown, House, Columns3, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { House, Columns3, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { lookFor } from "@/avatar/robot/robotLook";
+import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { useHQStore } from "@/state/useHQStore";
@@ -142,10 +144,6 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
   );
 }
 
-const AGENT_ICONS: Record<string, typeof Bot> = {
-  pulse: Code2, scout: Compass, echo: Megaphone, atlas: Palette,
-  argos: Crown, forge: Settings2, ink: Pencil,
-};
 const normalizeSearch = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
 
 function Roster({ open, onToggle, kanbanOpen, onKanban }: {
@@ -158,6 +156,16 @@ function Roster({ open, onToggle, kanbanOpen, onKanban }: {
   const [query, setQuery] = useState("");
   const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
   const filtered = bots.filter((bot) => matches(`${bot.name} ${bot.role}`));
+  const savedLooks = useOfficeStore((state) => state.robotLooks);
+  const portraitKey = JSON.stringify(Object.fromEntries(bots.map((bot) => [bot.id, lookFor(bot.color, savedLooks[bot.id])])));
+  const [portraits, setPortraits] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    robotPortraits(JSON.parse(portraitKey)).then((images) => {
+      if (!cancelled) setPortraits(images);
+    }).catch(() => { if (!cancelled) setPortraits({}); });
+    return () => { cancelled = true; };
+  }, [portraitKey]);
   if (!open) return (
     <button type="button" className="office-roster-toggle closed" onClick={onToggle} aria-expanded={false} aria-label="Abrir navegação">
       <PanelLeftOpen size={18} aria-hidden />
@@ -178,9 +186,8 @@ function Roster({ open, onToggle, kanbanOpen, onKanban }: {
         <h2 className="office-section-title">Agentes <span>{bots.length}</span></h2>
         <div className="office-team-list">
           {filtered.map((bot) => {
-            const Icon = AGENT_ICONS[bot.id] ?? Bot;
             return <button key={bot.id} type="button" aria-pressed={bot.id === selectedBotId && !kanbanOpen} className={bot.id === selectedBotId && !kanbanOpen ? "office-roster-bot active" : "office-roster-bot"} onClick={() => { onKanban(false); useOfficeStore.getState().selectBot(bot.id); }}>
-              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden><Icon size={23} /></span>
+              <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>{portraits[bot.id] ? <img src={portraits[bot.id]} alt="" /> : <span>{bot.name.slice(0, 2)}</span>}</span>
               <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
               {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
               {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
