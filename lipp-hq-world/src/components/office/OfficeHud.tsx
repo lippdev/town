@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { House, Columns3, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { House, Columns3, MessagesSquare, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { lookFor } from "@/avatar/robot/robotLook";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
@@ -10,7 +10,9 @@ import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
+import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
+import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
 import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
@@ -18,6 +20,25 @@ import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
 const ROSTER_MIN_WIDTH = 1180;
 /** Sem resposta do Hermes neste tempo, o app para de dizer "conectando". */
 const CONNECT_WAIT_MS = 6000;
+/** Nesta largura a sidebar cobre a tela: escolher uma conversa precisa revelá-la. */
+const SIDEBAR_OVERLAY_WIDTH = 600;
+
+type WorkspaceView = "escritorio" | "conversas" | "kanban";
+
+/** Retratos dos robôs, compartilhados pela sidebar e pela conversa. */
+function usePortraits(bots: readonly OfficeBot[]): Record<string, string> {
+  const savedLooks = useOfficeStore((state) => state.robotLooks);
+  const portraitKey = JSON.stringify(Object.fromEntries(bots.map((bot) => [bot.id, lookFor(bot.color, savedLooks[bot.id])])));
+  const [portraits, setPortraits] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    robotPortraits(JSON.parse(portraitKey)).then((images) => {
+      if (!cancelled) setPortraits(images);
+    }).catch(() => { if (!cancelled) setPortraits({}); });
+    return () => { cancelled = true; };
+  }, [portraitKey]);
+  return portraits;
+}
 
 function useConnection(): OfficeConnection {
   const fleet = useHQStore((state) => state.fleet);
@@ -146,8 +167,15 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
 
 const normalizeSearch = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
 
-function Roster({ open, onToggle, kanbanOpen, onKanban }: {
-  open: boolean; onToggle: () => void; kanbanOpen: boolean; onKanban: (open: boolean) => void;
+function Roster({ open, onToggle, view, onView, conversationBotId, onConversation, portraits, demo }: {
+  open: boolean;
+  onToggle: () => void;
+  view: WorkspaceView;
+  onView: (view: WorkspaceView) => void;
+  conversationBotId: string | null;
+  onConversation: (botId: string) => void;
+  portraits: Record<string, string>;
+  demo: DemoConversations;
 }) {
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
@@ -156,16 +184,7 @@ function Roster({ open, onToggle, kanbanOpen, onKanban }: {
   const [query, setQuery] = useState("");
   const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
   const filtered = bots.filter((bot) => matches(`${bot.name} ${bot.role}`));
-  const savedLooks = useOfficeStore((state) => state.robotLooks);
-  const portraitKey = JSON.stringify(Object.fromEntries(bots.map((bot) => [bot.id, lookFor(bot.color, savedLooks[bot.id])])));
-  const [portraits, setPortraits] = useState<Record<string, string>>({});
-  useEffect(() => {
-    let cancelled = false;
-    robotPortraits(JSON.parse(portraitKey)).then((images) => {
-      if (!cancelled) setPortraits(images);
-    }).catch(() => { if (!cancelled) setPortraits({}); });
-    return () => { cancelled = true; };
-  }, [portraitKey]);
+  const pending = mode === "demo" ? bots.reduce((total, bot) => total + demo.pendingOf(bot.id), 0) : 0;
   if (!open) return (
     <button type="button" className="office-roster-toggle closed" onClick={onToggle} aria-expanded={false} aria-label="Abrir navegação">
       <PanelLeftOpen size={18} aria-hidden />
@@ -179,16 +198,27 @@ function Roster({ open, onToggle, kanbanOpen, onKanban }: {
       </div>
       <label className="office-agent-search"><Search size={16} aria-hidden /><input className="office-roster-search" type="search" aria-label="Buscar agentes ou pessoas" placeholder="Buscar na equipe…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <nav className="office-sidebar-nav" aria-label="Área de trabalho">
-        <button type="button" aria-current={!kanbanOpen ? "page" : undefined} onClick={() => { onKanban(false); useOfficeStore.getState().backToFloor(); }}><House size={18} aria-hidden /> Escritório</button>
-        {mode === "demo" && <button type="button" aria-current={kanbanOpen ? "page" : undefined} onClick={() => onKanban(true)}><Columns3 size={18} aria-hidden /> Kanban</button>}
+        <button type="button" aria-current={view === "escritorio" ? "page" : undefined} onClick={() => { onView("escritorio"); useOfficeStore.getState().backToFloor(); }}><House size={18} aria-hidden /> Escritório</button>
+        <button type="button" data-nav-conversas aria-current={view === "conversas" ? "page" : undefined} onClick={() => onView("conversas")}>
+          <MessagesSquare size={18} aria-hidden /> Conversas
+          {pending > 0 && <span className="office-nav-count" aria-label={`${pending} ${pending === 1 ? "aprovação pendente" : "aprovações pendentes"}`}>{pending}</span>}
+        </button>
+        {mode === "demo" && <button type="button" aria-current={view === "kanban" ? "page" : undefined} onClick={() => onView("kanban")}><Columns3 size={18} aria-hidden /> Kanban</button>}
       </nav>
       <div className="office-directory">
         <h2 className="office-section-title">Agentes <span>{bots.length}</span></h2>
         <div className="office-team-list">
           {filtered.map((bot) => {
-            return <button key={bot.id} type="button" aria-pressed={bot.id === selectedBotId && !kanbanOpen} className={bot.id === selectedBotId && !kanbanOpen ? "office-roster-bot active" : "office-roster-bot"} onClick={() => { onKanban(false); useOfficeStore.getState().selectBot(bot.id); }}>
+            const active = view === "conversas" ? bot.id === conversationBotId : view === "escritorio" && bot.id === selectedBotId;
+            const waiting = mode === "demo" ? demo.pendingOf(bot.id) : 0;
+            return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
+              if (view === "conversas") { onConversation(bot.id); return; }
+              onView("escritorio");
+              useOfficeStore.getState().selectBot(bot.id);
+            }}>
               <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>{portraits[bot.id] ? <img src={portraits[bot.id]} alt="" /> : <span>{bot.name.slice(0, 2)}</span>}</span>
               <span className="office-roster-name">{bot.name}<small>{bot.role}</small></span>
+              {waiting > 0 && <span className="office-nav-count" title="Esperando sua decisão">{waiting}</span>}
               {mode === "live" && bot.state && <span className="office-roster-state">{stateLabel(bot.state)}</span>}
               {seating.unseated.includes(bot.id) && <span className="office-roster-state">Sem posto</span>}
             </button>;
@@ -373,7 +403,7 @@ function ChiefAgenda() {
 }
 
 /** A gaveta da demonstração: quem é e onde senta. Nada de sessão, chat ou estado. */
-function DemoPanel() {
+function DemoPanel({ onConversation }: { onConversation: (botId: string) => void }) {
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const clearSelection = useHQStore((state) => state.clearSelection);
   const bots = useOfficeStore((state) => state.bots);
@@ -415,6 +445,9 @@ function DemoPanel() {
           Isto é uma demonstração: o bot não está executando nada, e não há sessões, mensagens nem estado ao vivo aqui. O
           voo é só desenho: não representa nenhuma tarefa.
         </p>
+        <button type="button" className="office-button primary" data-open-conversation onClick={() => onConversation(bot.id)}>
+          <MessagesSquare size={14} aria-hidden /> Conversar com {bot.name}
+        </button>
         <a className="panel-link" href="/avatares.html?aba=robos">
           <Pencil size={12} aria-hidden />
           Mudar cor e expressão do robô
@@ -467,10 +500,33 @@ function LoadOverlay() {
 /** Interface do escritório. Mede os painéis para a câmera enquadrar só a área livre. */
 export function OfficeHud({ live }: { live: boolean }) {
   const [rosterOpen, setRosterOpen] = useState(() => window.innerWidth >= ROSTER_MIN_WIDTH);
-  const [kanbanOpen, setKanbanOpen] = useState(false);
+  const [view, setView] = useState<WorkspaceView>("escritorio");
+  const [conversationBotId, setConversationBotId] = useState<string | null>(null);
+  const bots = useOfficeStore((state) => state.bots);
+  const portraits = usePortraits(bots);
+  const demo = useDemoConversations(live ? [] : bots.map((bot) => bot.id));
   const connection = useConnection();
   const shown = live ? connection : null;
   const layer = useRef<HTMLDivElement | null>(null);
+
+  /** A conversa substitui a cena: a gaveta de quem estava selecionado não fica escondida atrás dela. */
+  const openConversation = (botId: string) => {
+    useHQStore.getState().clearSelection();
+    useOfficeStore.getState().clearHuman();
+    setConversationBotId(botId);
+    setView("conversas");
+    if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) setRosterOpen(false);
+  };
+  const changeView = (next: WorkspaceView) => {
+    if (next !== "conversas") {
+      setView(next);
+      return;
+    }
+    const target = useHQStore.getState().selectedBotId ?? conversationBotId ?? bots[0]?.id;
+    if (target) openConversation(target);
+    else setView(next);
+  };
+  const conversationBot = bots.find((bot) => bot.id === conversationBotId) ?? bots[0];
 
   useEffect(() => {
     const element = layer.current;
@@ -499,12 +555,22 @@ export function OfficeHud({ live }: { live: boolean }) {
   return (
     <div className="office-hud" data-sidebar-open={rosterOpen} ref={layer}>
       <TopBar connection={shown} />
-      <Roster open={rosterOpen} onToggle={() => setRosterOpen((value) => !value)} kanbanOpen={kanbanOpen} onKanban={setKanbanOpen} />
-      {kanbanOpen && <OfficeKanban embedded onClose={() => setKanbanOpen(false)} />}
+      <Roster
+        open={rosterOpen}
+        onToggle={() => setRosterOpen((value) => !value)}
+        view={view}
+        onView={changeView}
+        conversationBotId={conversationBot?.id ?? null}
+        onConversation={openConversation}
+        portraits={portraits}
+        demo={demo}
+      />
+      {view === "kanban" && <OfficeKanban embedded onClose={() => setView("escritorio")} />}
+      {view === "conversas" && <OfficeConversations bot={conversationBot} bots={bots} live={live} portraits={portraits} demo={demo} />}
       <FocusBar />
       <OfflineNotice connection={shown} />
       <CameraBar />
-      {live ? <BotDrawer characterTab={false} /> : <DemoPanel />}
+      {live ? <BotDrawer characterTab={false} /> : <DemoPanel onConversation={openConversation} />}
       {!live && <HumanPanel />}
       <LoadOverlay />
     </div>
