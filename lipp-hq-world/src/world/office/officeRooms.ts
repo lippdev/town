@@ -318,6 +318,16 @@ function windowUnit(b: KitBuilder, from: number, to: number, color: string) {
   b.plane([center, 1.9, -0.05], width - 0.2, HEAD - SILL - 0.02, [0, 0, 1, 1], "glow", 0, "#d6b288");
 }
 
+const POST_WIDTH = 0.07;
+/** O batente avança sobre o vão: rente à ponta da parede, as duas faces disputam o mesmo plano e piscam. */
+const POST_LIP = 0.01;
+
+function doorPosts(b: KitBuilder, door: { at: number; width: number }, from: number, to: number) {
+  for (const edge of [-1, 1]) {
+    b.box([door.at + edge * (door.width / 2 - POST_LIP + POST_WIDTH / 2), (from + to) / 2, 0], [POST_WIDTH, to - from, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
+  }
+}
+
 function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side: RoomSide) {
   const halfLength = wallHalfLength(room, side);
   const color = wallColor(side);
@@ -345,7 +355,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
     buildWallBand(b, runs, 0, cutHeight(side, BACK_WALL_CUT), color);
     skirt(b);
     for (const door of doors) {
-      for (const edge of [-1, 1]) b.box([door.at + edge * (door.width / 2 + 0.03), BACK_WALL_CUT / 2, 0], [0.06, BACK_WALL_CUT + 0.02, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
+      doorPosts(b, door, 0, BACK_WALL_CUT + 0.02);
     }
   });
   // A parte de cima só existe com a sala em foco: não projeta sombra, senão a luz da
@@ -354,7 +364,7 @@ function buildBackWall(b: KitBuilder, raised: KitBuilder, room: OfficeRoom, side
     buildWallBand(raised, runs, BACK_WALL_CUT, cutHeight(side, WALL_HEIGHT), color, false);
     for (const door of doors) {
       raised.box([door.at, (2.25 + WALL_HEIGHT) / 2, 0], [door.width, WALL_HEIGHT - 2.25, WALL_THICKNESS], { color, cast: false });
-      for (const edge of [-1, 1]) raised.box([door.at + edge * (door.width / 2 + 0.03), (BACK_WALL_CUT + 2.25) / 2, 0], [0.06, 2.25 - BACK_WALL_CUT, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
+      doorPosts(raised, door, BACK_WALL_CUT, 2.25);
     }
   });
 }
@@ -364,7 +374,7 @@ function buildFrontWall(b: KitBuilder, room: OfficeRoom, side: RoomSide) {
   wallFrame(b, room, side)(() => {
     buildWallBand(b, wallRuns(wallHalfLength(room, side), doors), 0, cutHeight(side, FRONT_WALL_CUT), WALL_FRONT);
     for (const door of doors) {
-      for (const edge of [-1, 1]) b.box([door.at + edge * (door.width / 2 + 0.03), FRONT_WALL_CUT / 2, 0], [0.06, FRONT_WALL_CUT + 0.02, WALL_THICKNESS + 0.04], { color: FRAME, cast: false });
+      doorPosts(b, door, 0, FRONT_WALL_CUT + 0.02);
     }
   });
 }
