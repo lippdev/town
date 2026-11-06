@@ -204,7 +204,7 @@ function rack(b: KitBuilder, height: number) {
 }
 
 /** Um posto completo: mesa e o que estiver sobre ela. O robô flutua ali, sem cadeira. */
-function workstation(
+export function workstation(
   b: KitBuilder,
   seat: OfficeSeat,
   options: { width?: number; depth?: number; x?: number; pedestal?: -1 | 0 | 1; monitors?: readonly (readonly [number, number])[]; lamp?: number },
