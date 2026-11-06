@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Prova dos quatro andares de expansão: chega-se a eles por seletor, tecla, fachada e URL; têm salas
- * e etiqueta dizendo que estão reservados; ninguém mora lá; e ir e vir não acumula na GPU.
+ * e etiqueta dizendo que são cenário; os figurantes só existem no andar à mostra, fora de Pessoas e
+ * do clique; e ir e vir não acumula na GPU.
  *
  * Uso: HQ_URL=http://127.0.0.1:5231 node scripts/visual-qa/office-building-expansion.mjs [pasta]
  * Perfil novo e /api/hq bloqueado: não fala com Hermes nenhum nem toca no navegador de ninguém.
@@ -41,13 +42,19 @@ const go = async (page, view) => {
   await page.click(`[data-floor-selector] [data-view="${view}"]`);
   await arrived(page);
 };
-/** Ninguém em cena: nem robô, nem pessoa, nem figura de cenário, nem etiqueta de gente. */
-const assertEmpty = async (page, id) => {
+/** Só os figurantes deste andar: nem robô, nem pessoa, nem gente de outro andar, nem etiqueta sem pedir. */
+const assertOnlyCast = async (page, id) => {
+  await page.mouse.move(4, 4);
+  await page.waitForFunction((floor) => {
+    const { scenery } = window.__HQ_OFFICE_QA__.state();
+    return scenery.length >= 3 && scenery.every((person) => person.id.startsWith(`${floor}-`));
+  }, id, { timeout: 15000 });
   const now = await state(page);
   assert.deepEqual(now.rigs, [], `${id}: robô fantasma`);
-  assert.deepEqual(now.scenery, [], `${id}: cenário fantasma`);
+  assert.ok(now.scenery.length <= 5, `${id}: ${now.scenery.length} figurantes`);
+  assert.equal(new Set(now.scenery.map((person) => person.id)).size, now.scenery.length, `${id}: figurante duplicado`);
   assert.deepEqual(now.humans.filter((human) => human.mounted).map((human) => human.id), [], `${id}: pessoa fantasma`);
-  assert.equal(await page.locator(".office-labels [data-bot], .office-labels [data-human], .office-labels [data-scenery]").count(), 0, `${id}: etiqueta de gente`);
+  assert.equal(await page.locator(".office-labels [data-bot], .office-labels [data-human], .office-labels [data-scenery]").count(), 0, `${id}: etiqueta sem pedir`);
 };
 
 try {
@@ -64,15 +71,15 @@ try {
   await page.waitForLoadState("networkidle");
   const costs = {};
 
-  await check("o seletor leva a cada andar, com salas, placa e etiqueta de reservado, sem ninguém", async () => {
+  await check("o seletor leva a cada andar, com salas, placa e etiqueta de cenário, e só os figurantes dele", async () => {
     for (const { id, level } of FLOORS) {
       await go(page, id);
       await page.waitForFunction((name) => window.__HQ_OFFICE_QA__.objectNamed(name), `andar-${id}`);
-      await assertEmpty(page, id);
+      await assertOnlyCast(page, id);
       const rooms = await page.locator(".office-labels [data-room]").evaluateAll((nodes) => nodes.map((node) => node.dataset.room));
       assert.ok(rooms.length >= 4, `${id}: ${rooms}`);
       for (const room of rooms) assert.ok(room.startsWith(`${id}-`), `${room} sem o andar na frente`);
-      assert.match(await page.textContent(`[data-floor-title="${id}"]`), new RegExp(`Expansão · andar ${level} · espaço reservado`));
+      assert.match(await page.textContent(`[data-floor-title="${id}"]`), new RegExp(`Expansão · andar ${level} · cenário simulado`));
       assert.equal(new URL(page.url()).searchParams.get("andar"), id);
       await page.mouse.move(4, 4);
       await page.waitForTimeout(700);
@@ -82,6 +89,44 @@ try {
         return { calls, triangles };
       });
     }
+  });
+
+  await check("figurante não entra em Pessoas, não abre gaveta e não troca de sala por conta própria", async () => {
+    for (const { id } of FLOORS) {
+      await go(page, id);
+      await assertOnlyCast(page, id);
+      const people = await page.locator("[data-people]").innerText().catch(() => "");
+      assert.ok(!/figurante/i.test(people), `${id}: figurante em Pessoas: ${people}`);
+      const cast = (await state(page)).scenery;
+      for (const person of cast) {
+        const point = await page.evaluate((target) => window.__HQ_OFFICE_QA__.sceneryPoint(target), person.id);
+        await page.mouse.click(point.x, point.y);
+        const after = await state(page);
+        assert.equal(after.selectedHumanId, null, `${person.id} abriu pessoa`);
+        assert.equal(after.selectedBotId, null, `${person.id} abriu bot`);
+        // Clicar nela é clicar no chão atrás dela: no máximo foca a sala. Já no andar inteiro, Esc sairia do prédio.
+        if (after.framing !== "floor") await page.keyboard.press("Escape");
+        await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().framing === "floor");
+        await page.waitForTimeout(350);
+        assert.equal((await state(page)).buildingView, id);
+      }
+      assert.equal(await page.locator("[data-human-panel], [data-demo-panel]").count(), 0, `${id}: abriu gaveta`);
+    }
+  });
+
+  await check("a etiqueta de figurante só aparece com a sala em foco", async () => {
+    const { id } = FLOORS[0];
+    await go(page, id);
+    await assertOnlyCast(page, id);
+    const room = `${id}-bancadas`;
+    const point = await page.evaluate((target) => window.__HQ_OFFICE_QA__.roomPoint(target, 0.2, 0.2), room);
+    await page.mouse.click(point.x, point.y);
+    await page.waitForFunction((target) => window.__HQ_OFFICE_QA__.state().focusedRoomId === target, room);
+    await page.waitForSelector(".office-labels [data-scenery]");
+    const tags = await page.locator(".office-labels [data-scenery]").allTextContents();
+    assert.equal(tags.length, 3, tags.join());
+    for (const tag of tags) assert.equal(tag, "Figurante · cenário");
+    await page.keyboard.press("Escape");
   });
 
   await check("clicar numa sala aproxima e abre o rótulo dela; clicar não abre gaveta", async () => {
@@ -117,7 +162,7 @@ try {
       await page.mouse.click(point.x, point.y);
       assert.equal((await state(page)).buildingView, id, `pavimento ${level}`);
       await arrived(page);
-      await assertEmpty(page, id);
+      await assertOnlyCast(page, id);
     }
   });
 
@@ -146,6 +191,7 @@ try {
     assert.equal(end.buildingView, "expansao-4");
     assert.deepEqual(end.mountedFloors, ["expansao-4"]);
     assert.deepEqual(end.rigs, []);
+    assert.ok(end.scenery.every((person) => person.id.startsWith("expansao-4-")), `figurante de outro andar: ${end.scenery.map((person) => person.id)}`);
     assert.equal(await page.evaluate(() => ["office-fixed", "andar-expansao-2", "andar-expansao-5"].some((name) => window.__HQ_OFFICE_QA__.objectNamed(name))), false);
   });
 
