@@ -12,7 +12,7 @@ function SceneryBody({ person, base, reduced }: { person: SceneryHuman; base: Hu
   const [actor, setActor] = useState<HumanActor | null>(null);
   useEffect(() => {
     const figure = new HumanFigure(base, { phase: person.spot.x });
-    const created = new HumanActor(figure, { spot: person.spot, chair: person.chair }, { walkSpeed: base.clips.walkSpeed }, reduced);
+    const created = new HumanActor(figure, { spot: person.spot, chair: person.chair, ...(person.restYaw === undefined ? {} : { restYaw: person.restYaw }) }, { walkSpeed: base.clips.walkSpeed }, reduced);
     if (person.chair) created.settle("seated");
     else figure.play("idle", { instant: true, frozen: reduced });
     void figure.wear(resolveHuman(person.preset));

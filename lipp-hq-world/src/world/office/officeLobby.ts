@@ -32,6 +32,10 @@ export interface SceneryHuman {
   spot: Point;
   /** Cadeira onde fica sentada; sem ela, fica em pé olhando para a câmera. */
   chair: OfficeSeat | null;
+  /** Para onde olha em pé, quando não é para o sul. */
+  restYaw?: number;
+  /** Sala dela: com isso, a etiqueta só aparece com a sala apontada ou em foco. */
+  roomId?: string;
 }
 
 const SCENERY_DATE = "2026-11-05T00:00:00.000Z";
