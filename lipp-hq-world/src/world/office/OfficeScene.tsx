@@ -28,11 +28,12 @@ import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
 import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
-import { buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
+import { buildDirectorate, buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
+import { DIRECTORATE_SEATS, DIRECTORATE_SIGNS } from "./officeDirectorate";
 import { LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
 import { SceneryHumans } from "./SceneryHumans";
 import { buildingSignTexture } from "./buildingFacade";
-import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS } from "./officeLayout";
+import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, type OfficeSeat } from "./officeLayout";
 import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
@@ -378,13 +379,14 @@ function FloorSign({ spec }: { spec: FloorSignSpec }) {
 }
 
 /** Andar feito só de peças do kit: sem as paredes que sobem nem as cadeiras do hall. */
-function KitFloor({ floor, build, signs, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
+function KitFloor({ floor, build, signs, seats, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; seats?: readonly OfficeSeat[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
   return (
     <>
       <ShadowRefresh />
       <group name={`andar-${floor}`}>
         <BatchMeshes batch={build.fixed} materials={materials} />
       </group>
+      {seats && <HumanChairs material={materials.matte} seats={seats} />}
       {signs.map((spec) => <FloorSign key={spec.text} spec={spec} />)}
       <FloorProps floor={floor} props={build.props} quality={quality} />
       <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} />
@@ -418,6 +420,7 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
     <>
       {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
       {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
+      {view === "diretoria" && <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />}
       {view === "terreo" && <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />}
       <SceneReady />
     </>

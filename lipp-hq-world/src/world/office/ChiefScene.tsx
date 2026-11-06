@@ -3,12 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Mesh, type MeshStandardMaterial } from "three";
 import { viewElevation } from "./officeBuilding";
 import { buildCarGeometry, CURB_LANE_Z } from "./officeCity";
-import { ARRIVAL, CHIEF_ID, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, arrivalPath, carTravel, patrolLegs } from "./officeChief";
+import { ARRIVAL, CHIEF_ID, CLIMB_SECONDS, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, carTravel } from "./officeChief";
+import { directoratePatrol } from "./officeDirectorate";
 import type { Point } from "./officeHumans";
-import { DESK_REACH, OFFICE_SEATS_BY_ID, type OfficeSeat } from "./officeLayout";
+import { DESK_REACH, type OfficeSeat } from "./officeLayout";
 import { humanActors, useOfficeStore } from "./officeStore";
 
-type Step = "driving" | "door" | "entering" | "toDesk" | "working" | "meeting" | "rising" | "patrolling" | "pausing";
+type Step = "driving" | "door" | "climbing" | "toDesk" | "working" | "meeting" | "rising" | "patrolling" | "pausing";
 
 function signTexture(text: string, color: string) {
   const canvas = document.createElement("canvas");
@@ -67,8 +68,9 @@ function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
 }
 
 /**
- * Roteiro do Chefe na demonstração: chega de carro, entra, trabalha, entra em reunião e faz a
- * ronda. É só desenho, com tempos curtos para caber na tela; não lê agenda nenhuma ainda.
+ * Roteiro do Chefe na demonstração: chega de carro, sobe, trabalha, entra em reunião e anda pela
+ * Diretoria. É só desenho, com tempos curtos; não lê agenda. Não há trajeto da porta ao elevador
+ * nem subida animada: enquanto "sobe", ele não está em andar nenhum, e reaparece na mesa.
  */
 export function ChiefScene() {
   const human = useOfficeStore((state) => state.humans.find((candidate) => candidate.id === CHIEF_ID));
@@ -78,70 +80,78 @@ export function ChiefScene() {
   const geometry = useMemo(() => buildCarGeometry("#1d2230"), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const script = useRef<{ step: Step; time: number; legs: Point[][]; leg: number }>({ step: "driving", time: 0, legs: [], leg: 0 });
-  const seat = human?.chair ? OFFICE_SEATS_BY_ID[human.chair.id] : null;
+  const seat = human?.chair ?? null;
 
   useFrame((_, delta) => {
     const actor = humanActors.get(CHIEF_ID);
     if (!human || !car.current) return;
     const store = useOfficeStore.getState();
     const state = script.current;
-    const go = (step: Step) => {
-      state.step = step;
+    const go = (next: Step) => {
+      state.step = next;
       state.time = 0;
     };
-    state.time += Math.min(delta, 0.1);
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced && state.step === "driving") {
-      car.current.position.set(ARRIVAL.stopX, -0.05, CURB_LANE_Z);
-      if (actor) actor.holder.visible = true;
+    const atDesk = () => {
+      if (actor) {
+        actor.holder.visible = true;
+        actor.settle("seated");
+      }
       store.setHumanGoal(CHIEF_ID, "seated");
       store.setChiefStatus("mesa");
       go("working");
+    };
+    state.time += Math.min(delta, 0.1);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Rever a chegada vale de onde ele estiver: o corpo some até voltar à mesa.
+    if (store.chiefRequest === "chegada") {
+      store.setChiefRequest(null);
+      store.setHumanGoal(CHIEF_ID, "seated");
+      go("driving");
+    }
+
+    if (state.step === "driving" || state.step === "door" || state.step === "climbing") {
+      if (actor) actor.holder.visible = false;
+      if (reduced) {
+        car.current.position.set(ARRIVAL.stopX, -0.05, CURB_LANE_Z);
+        atDesk();
+      } else if (state.step === "driving") {
+        const point = carTravel(state.time);
+        car.current.position.set(point.x, -0.05, CURB_LANE_Z);
+        if (store.chiefStatus !== "chegando") store.setChiefStatus("chegando");
+        if (point.done) go("door");
+      } else if (state.step === "door") {
+        if (state.time > ARRIVAL.doorSeconds) {
+          store.setChiefStatus("entrando");
+          go("climbing");
+        }
+      } else if (state.time > CLIMB_SECONDS) {
+        atDesk();
+      }
+      return;
+    }
+
+    // Fora da Diretoria não há corpo: o passeio termina e ele fica na mesa, sem andar por outro andar.
+    if (!actor) {
+      if (store.chiefRequest) store.setChiefRequest(null);
+      if (state.step !== "working" && state.step !== "meeting") atDesk();
       return;
     }
 
     const request = store.chiefRequest;
-    if (request && actor) {
+    if (request) {
       if (request === "reuniao" && state.step === "working") {
         store.setChiefRequest(null);
         store.setChiefStatus("reuniao");
         go("meeting");
-      } else if ((request === "ronda" || request === "chegada") && (state.step === "working" || state.step === "meeting")) {
+      } else if (request === "ronda" && (state.step === "working" || state.step === "meeting")) {
         store.setHumanGoal(CHIEF_ID, "standing");
         store.setChiefStatus("levantando");
         go("rising");
       }
     }
 
-    // O carro anda com o andar do chefe fora de cena; o resto do roteiro espera o corpo dele.
-    if (state.step === "driving") {
-      const point = carTravel(state.time);
-      car.current.position.set(point.x, -0.05, CURB_LANE_Z);
-      if (actor) {
-        actor.holder.visible = false;
-        actor.moveTo({ x: point.x, z: CURB_LANE_Z });
-      }
-      if (store.chiefStatus !== "chegando") store.setChiefStatus("chegando");
-      if (point.done) go("door");
-      return;
-    }
-    if (!actor) return;
     switch (state.step) {
-      case "door":
-        if (state.time > ARRIVAL.doorSeconds) {
-          actor.moveTo(ARRIVAL.door);
-          actor.holder.visible = true;
-          actor.errand(arrivalPath(human.spot));
-          store.setChiefStatus("entrando");
-          go("entering");
-        }
-        break;
-      case "entering":
-        if (actor.phase === "standing") {
-          store.setHumanGoal(CHIEF_ID, "seated");
-          go("toDesk");
-        }
-        break;
       case "toDesk":
         if (actor.phase === "seated") {
           store.setChiefStatus("mesa");
@@ -156,20 +166,14 @@ export function ChiefScene() {
         break;
       case "meeting":
         if (state.time > MEETING_SECONDS) {
-          store.setHumanGoal(CHIEF_ID, "standing");
-          store.setChiefStatus("levantando");
-          go("rising");
+          store.setChiefStatus("mesa");
+          go("working");
         }
         break;
       case "rising":
         if (actor.phase === "standing") {
-          if (useOfficeStore.getState().chiefRequest === "chegada") {
-            store.setChiefRequest(null);
-            go("driving");
-            break;
-          }
           store.setChiefRequest(null);
-          state.legs = patrolLegs(human.spot);
+          state.legs = directoratePatrol(human.spot);
           state.leg = 0;
           actor.errand(state.legs[0]!);
           store.setChiefStatus("ronda");
