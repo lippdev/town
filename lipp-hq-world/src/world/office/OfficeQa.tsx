@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "./officeLayout";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, STORY } from "./officeBuilding";
+import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
 import { humanActors, humanFigures, officeRuntime, robotActors, useOfficeStore } from "./officeStore";
 
@@ -42,6 +43,8 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     state: () => {
       const store = useOfficeStore.getState();
       return {
+        buildingView: store.buildingView,
+        pendingView: store.pendingView,
         focusedRoomId: store.focusedRoomId,
         framing: store.framing,
         load: store.load,
@@ -98,9 +101,13 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       if (robot) return worldToScreen([robot.position.x, robot.position.y + robot.rig.height / 2, robot.position.z], officeRuntime.view, officeRuntime.viewport);
       return seat ? worldToScreen([seat.x, 1.5, seat.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
+    /** Só para provar o que está montado: há um objeto com este nome na cena? */
+    objectNamed: (name: string) => scene.getObjectByName(name) !== undefined,
+    /** Pixel do meio de um pavimento na fachada, com o prédio fechado. */
+    levelPoint: (level: number) => worldToScreen([FACADE_BOUNDS.maxX, (level + 0.5) * STORY, FACADE_BOUNDS.maxZ - 3], officeRuntime.view, officeRuntime.viewport),
     /** Pixel de um ponto livre do chão da sala. */
     roomPoint: (roomId: string, localX = 0, localZ = 0) => {
-      const room = OFFICE_ROOMS_BY_ID[roomId]!;
+      const room = BUILDING_ROOMS_BY_ID[roomId]!;
       return worldToScreen([room.center.x + localX, 0, room.center.z + localZ], officeRuntime.view, officeRuntime.viewport);
     },
   };

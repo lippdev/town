@@ -21,7 +21,7 @@ import { RobotStudio } from "./RobotStudio";
 import "@/character-studio/studio.css";
 import "./avatar.css";
 
-const OFFICE_DEMO = "/?escritorio=completo&modo=demonstracao";
+const OFFICE_DEMO = "/?escritorio=completo&modo=demonstracao&andar=operacao";
 const QA_ENABLED = import.meta.env.DEV || new URLSearchParams(window.location.search).has("qa");
 
 /** O escritório abre o editor já na pessoa clicada. */

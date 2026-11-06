@@ -12,7 +12,7 @@ import { chromium } from "playwright";
 
 const BASE = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const OUT = process.argv[2] ?? "qa/office-people";
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&andar=operacao";
 // X4000/X4122 são avisos do compilador HLSL do Windows (ANGLE/D3D11): aparecem no escritório
 // mesmo sem nenhuma pessoa salva e não dizem nada sobre esta cena.
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log:[^]*warning X\d+/];
@@ -25,7 +25,7 @@ async function check(name, fn) {
   console.log(`  ok  ${name}`);
 }
 
-const browser = await chromium.launch({ args: ["--use-angle=d3d11", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ args: [`--use-angle=${process.env.HQ_ANGLE ?? "d3d11"}`, "--ignore-gpu-blocklist"] });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await context.newPage();
 const problems = [];

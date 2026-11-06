@@ -17,7 +17,7 @@ const OUT = process.argv[2] ?? "qa/office-seat";
 const PREFIX = process.argv[3] ?? "depois";
 const STEPS = (process.env.HQ_SEAT_STEPS ?? "0.45,0.75,1.05,1.3,2.15,3.05,3.55").split(",").map(Number);
 const EXIT_STEPS = (process.env.HQ_SEAT_EXIT_STEPS ?? "0.5,1.5,2.6,3.2").split(",").map(Number);
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&andar=operacao";
 // X4000/X4122 são avisos do compilador HLSL do Windows (ANGLE/D3D11), sem relação com a cena.
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log:[^]*warning X\d+/];
 mkdirSync(OUT, { recursive: true });
@@ -31,7 +31,7 @@ const PEOPLE = [
   ["Fred", [["hair", "Hair.003", "#17120f"], ["outfit", "Outfit.003"]]],
 ];
 
-const browser = await chromium.launch({ args: ["--use-angle=d3d11", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ args: [`--use-angle=${process.env.HQ_ANGLE ?? "d3d11"}`, "--ignore-gpu-blocklist"] });
 const context = await browser.newContext({ viewport: { width: 1200, height: 800 } });
 const page = await context.newPage();
 const problems = [];

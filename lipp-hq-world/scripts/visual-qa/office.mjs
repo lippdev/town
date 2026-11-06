@@ -21,7 +21,7 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = process.env.HQ_OFFICE_OUTPUT ?? "/tmp/hq-escritorio";
 const skipPerf = process.argv.includes("--skip-perf");
 const onlyPerf = process.argv.includes("--only-perf");
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&andar=operacao";
 const LIVE = "/?escritorio=completo";
 const ROOMS = ["engenharia", "comando", "comunidade", "pesquisa", "hall", "produto", "conteudo", "operacoes", "reunioes"];
 const BOTS = { pulse: "Pulse", argos: "Argos", forge: "Forge", echo: "Echo", scout: "Scout", atlas: "Atlas", ink: "Ink" };
