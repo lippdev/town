@@ -27,18 +27,18 @@ import { CHAIR as HUMAN_CHAIR, DESK } from "@/avatar/human/seatFit";
 export const SEAT_TOP = HUMAN_CHAIR.seatTop;
 export const DESK_TOP = DESK.top;
 
-const WALL_WEST = "#8e8478";
-const WALL_NORTH = "#9a9083";
-const WALL_FRONT = "#a69b8d";
-const FRAME = "#383a38";
+export const WALL_WEST = "#8e8478";
+export const WALL_NORTH = "#9a9083";
+export const WALL_FRONT = "#a69b8d";
+export const FRAME = "#383a38";
 const METAL = "#36302c";
 const CHAIR = "#323943";
 
-const WOOD: PartOptions = { surface: "wood" };
+export const WOOD: PartOptions = { surface: "wood" };
 
 type Frame = (fn: () => void) => void;
 
-function chair(b: KitBuilder, color = CHAIR) {
+export function chair(b: KitBuilder, color = CHAIR) {
   b.box([0, SEAT_TOP - 0.06, 0], [0.54, 0.12, 0.55], { color });
   b.box([0, 0.72, -0.31], [0.54, 0.62, 0.095], { color: "#353c47" });
   b.box([0, 0.16, 0], [0.055, 0.24, 0.055], { color: "#565d63", cast: false });
@@ -73,7 +73,7 @@ export function humanChairGeometry(color = "#4d5159") {
   return b.build().values().next().value!;
 }
 
-function deskTop(b: KitBuilder, x: number, z: number, width: number, depth: number, pedestal: -1 | 0 | 1 = 0) {
+export function deskTop(b: KitBuilder, x: number, z: number, width: number, depth: number, pedestal: -1 | 0 | 1 = 0) {
   const legs = DESK_TOP - 0.09;
   b.box([x, DESK_TOP - 0.045, z], [width, 0.09, depth], WOOD);
   for (const side of [-1, 1]) b.box([x + side * (width / 2 - 0.16), legs / 2, z], [0.12, legs, depth - 0.14], { color: "#414141" });
@@ -86,7 +86,7 @@ function deskTop(b: KitBuilder, x: number, z: number, width: number, depth: numb
 }
 
 /** Monitor voltado para a cadeira (que olha para +Z neste referencial). */
-function monitor(b: KitBuilder, x: number, z: number, variant: number, yaw = Math.PI) {
+export function monitor(b: KitBuilder, x: number, z: number, variant: number, yaw = Math.PI) {
   b.at([x, DESK_TOP, z], yaw, () => {
     b.box([0, 0.02, 0], [0.32, 0.035, 0.21], { cast: false });
     b.box([0, 0.18, -0.03], [0.055, 0.32, 0.06], { cast: false });
@@ -95,7 +95,7 @@ function monitor(b: KitBuilder, x: number, z: number, variant: number, yaw = Mat
   });
 }
 
-function keyboard(b: KitBuilder, x: number, z: number) {
+export function keyboard(b: KitBuilder, x: number, z: number) {
   b.box([x, DESK_TOP + 0.018, z], [0.64, 0.035, 0.23], { color: "#30343b", cast: false });
   for (let row = 0; row < 4; row += 1) {
     b.box([x, DESK_TOP + 0.038, z - 0.08 + row * 0.05], [0.57, 0.004, 0.018], { color: "#696d72", cast: false });
@@ -110,7 +110,7 @@ function laptop(b: KitBuilder, x: number, z: number, variant: number) {
   });
 }
 
-function bookshelf(b: KitBuilder, height: number, width: number, rowsAt: readonly number[]) {
+export function bookshelf(b: KitBuilder, height: number, width: number, rowsAt: readonly number[]) {
   const colors = ["#384d61", "#a28b6a", "#745442", "#b7aa8d", "#313f48"];
   const half = width / 2;
   b.box([-0.22, height / 2, 0], [0.08, height, width - 0.11], WOOD);
@@ -129,7 +129,7 @@ function bookshelf(b: KitBuilder, height: number, width: number, rowsAt: readonl
   b.solid("estante", 0, 0, 0.56, width);
 }
 
-function sofa(b: KitBuilder, pillow: string) {
+export function sofa(b: KitBuilder, pillow: string) {
   const fabric: PartOptions = { surface: "fabric", color: "#777a83" };
   for (const x of [-0.82, 0.82]) for (const z of [-0.32, 0.32]) b.box([x, 0.1, z], [0.06, 0.2, 0.06], { color: METAL, cast: false });
   b.rounded([0, 0.29, 0], [2.05, 0.32, 0.87], 0.08, fabric);
@@ -140,7 +140,7 @@ function sofa(b: KitBuilder, pillow: string) {
   b.solid("sofá", 0, 0, 2.2, 0.95);
 }
 
-function armchair(b: KitBuilder, color = "#777a83") {
+export function armchair(b: KitBuilder, color = "#777a83") {
   const fabric: PartOptions = { surface: "fabric", color };
   for (const x of [-0.3, 0.3]) for (const z of [-0.28, 0.28]) b.box([x, 0.08, z], [0.05, 0.16, 0.05], { color: METAL, cast: false });
   b.rounded([0, 0.26, 0], [0.8, 0.26, 0.78], 0.07, fabric);
@@ -149,7 +149,7 @@ function armchair(b: KitBuilder, color = "#777a83") {
   b.solid("poltrona", 0, 0, 0.82, 0.8);
 }
 
-function rug(b: KitBuilder, x: number, z: number, width: number, depth: number, color = "#ffffff") {
+export function rug(b: KitBuilder, x: number, z: number, width: number, depth: number, color = "#ffffff") {
   b.box([x, 0.035, z], [width, 0.025, depth], { surface: "fabric", color: multiplyGray(color), cast: false });
 }
 
@@ -158,7 +158,7 @@ function multiplyGray(color: string) {
   return color === "#ffffff" ? "#777a83" : color;
 }
 
-function lowTable(b: KitBuilder, width: number, depth: number, height = 0.42) {
+export function lowTable(b: KitBuilder, width: number, depth: number, height = 0.42) {
   b.box([0, height, 0], [width, 0.075, depth], WOOD);
   for (const x of [-width / 2 + 0.1, width / 2 - 0.1]) {
     for (const z of [-depth / 2 + 0.09, depth / 2 - 0.09]) b.box([x, height / 2 - 0.02, z], [0.035, height - 0.02, 0.035], { color: "#282e35", cast: false });
@@ -166,7 +166,7 @@ function lowTable(b: KitBuilder, width: number, depth: number, height = 0.42) {
   b.solid("mesa baixa", 0, 0, width, depth);
 }
 
-function cabinet(b: KitBuilder, width: number, height = 0.86, depth = 0.45) {
+export function cabinet(b: KitBuilder, width: number, height = 0.86, depth = 0.45) {
   b.box([0, height / 2, 0], [width, height, depth], WOOD);
   const doors = Math.max(2, Math.round(width / 0.55));
   for (let i = 0; i < doors; i += 1) {
@@ -176,13 +176,13 @@ function cabinet(b: KitBuilder, width: number, height = 0.86, depth = 0.45) {
 }
 
 /** Painel de vidro junto ao corredor, como o da sala aprovada: a entrada continua aberta. */
-function glassPanel(b: KitBuilder, width: number) {
+export function glassPanel(b: KitBuilder, width: number) {
   for (const z of [-width / 2, width / 2]) b.box([0, 1.2, z], [0.045, 2.4, 0.045], { color: FRAME, cast: false });
   for (const y of [0.08, 1.2, 2.38]) b.box([0, y, 0], [0.045, 0.04, width + 0.05], { color: FRAME, cast: false });
   b.plane([0, 1.22, 0], width - 0.05, 2.32, [0, 0, 1, 1], "glass", Math.PI / 2, "#b8d6dd");
 }
 
-function whiteboard(b: KitBuilder, width: number, height: number, columnColors: readonly string[]) {
+export function whiteboard(b: KitBuilder, width: number, height: number, columnColors: readonly string[]) {
   b.box([0, 0, 0], [width + 0.08, height + 0.08, 0.04], { color: "#3a3d42", cast: false });
   b.box([0, 0, 0.024], [width, height, 0.012], { color: "#dcd8cf", cast: false });
   const columns = columnColors.length;
@@ -300,7 +300,7 @@ const SILL = 1.04;
 const HEAD = 2.72;
 
 /** A janela da sala aprovada, em qualquer largura: vão real, peitoril e venezianas. */
-function windowUnit(b: KitBuilder, from: number, to: number, color: string) {
+export function windowUnit(b: KitBuilder, from: number, to: number, color: string) {
   const width = to - from;
   const center = (from + to) / 2;
   b.box([center, SILL / 2, 0], [width, SILL, WALL_THICKNESS], { color });

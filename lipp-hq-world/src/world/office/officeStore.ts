@@ -197,6 +197,8 @@ export const officeRuntime = {
 export const humanActors = new Map<string, HumanActor>();
 export const humanFigures = new Map<string, HumanFigure>();
 export const robotActors = new Map<string, RobotActor>();
+/** Gente de cenário: à parte de `humanActors`, para o clique nunca achar ninguém ali. */
+export const sceneryActors = new Map<string, HumanActor>();
 
 export function currentInsets(): Insets {
   const { insets } = useOfficeStore.getState();
@@ -206,7 +208,7 @@ export function currentInsets(): Insets {
 /** Do lado de fora, a cidade em volta também pode ser vista; dentro, o arrasto fica no andar. */
 export const panBounds = () => {
   const { mode, buildingView } = useOfficeStore.getState();
-  return mode === "demo" && buildingView === "exterior" ? CITY_BOUNDS : FLOOR_BOUNDS;
+  return mode === "demo" && (buildingView === "exterior" || buildingView === "terreo") ? CITY_BOUNDS : FLOOR_BOUNDS;
 };
 
 export function floorFit(viewport: Viewport): OfficeView {

@@ -4,8 +4,12 @@ import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
 import { BUILDING_LEVELS, FLOOR_LEVEL, STORY, cityBoundsAt, floorAtLevel, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { parsePreset } from "@/avatar/human/preset";
+import { buildLobby } from "@/world/office/buildingInteriors";
 import { CITY_BOUNDS } from "@/world/office/officeCity";
-import { OFFICE_SEATS } from "@/world/office/officeLayout";
+import { pathLength, pathPose } from "@/world/office/officeHumans";
+import { FLOOR_BOUNDS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
+import { ELEVATOR_CORE_X, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
 import { useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
@@ -38,6 +42,7 @@ describe("vistas do prédio", () => {
 
   it("só pavimento com interior responde ao clique", () => {
     expect(floorAtLevel(FLOOR_LEVEL.operacao)).toBe("operacao");
+    expect(floorAtLevel(FLOOR_LEVEL.terreo)).toBe("terreo");
     expect(floorAtLevel(BUILDING_LEVELS - 2)).toBeNull();
   });
 
@@ -52,6 +57,52 @@ describe("vistas do prédio", () => {
     expect(neighborView("exterior", 1)).toBe("exterior");
     expect(neighborView("exterior", -1)).not.toBe("exterior");
     expect(neighborView("operacao", 1)).toBe("exterior");
+  });
+});
+
+describe("térreo", () => {
+  const { footprints, props } = buildLobby();
+  const blocked = (x: number, z: number, margin = 0.12) => footprints.find((item) => x > item.minX - margin && x < item.maxX + margin && z > item.minZ - margin && z < item.maxZ + margin);
+
+  it("a atendente é cenário: etiqueta explícita, com peças do catálogo e sem ações", () => {
+    const [attendant] = LOBBY_SCENERY;
+    expect(attendant!.tag).toMatch(/cenográfica/);
+    const { preset, problems } = parsePreset(attendant!.preset);
+    expect(problems).toEqual([]);
+    expect(preset?.parts).toEqual(attendant!.preset.parts);
+    expect(attendant!.chair).toBeNull();
+  });
+
+  it("a atendente fica atrás do balcão, em lugar livre", () => {
+    const { spot } = LOBBY_SCENERY[0]!;
+    expect(spot.z).toBeLessThan(RECEPTION.z);
+    expect(blocked(spot.x, spot.z)?.label).toBeUndefined();
+  });
+
+  it("da porta até o balcão não há móvel no caminho", () => {
+    for (let walked = 0; walked <= pathLength(LOBBY_WALK); walked += 0.1) {
+      const point = pathPose(LOBBY_WALK, walked);
+      expect(blocked(point.x, point.z, 0.3)?.label, `${point.x}, ${point.z}`).toBeUndefined();
+    }
+  });
+
+  it("cada zona é do térreo e não encosta em sala de outro andar", () => {
+    expect(viewRooms("terreo").map((room) => room.id)).toEqual(["recepcao", "elevadores", "lounge", "cafe"]);
+    expect(viewRoomAt("terreo", RECEPTION.x, RECEPTION.z)?.id).toBe("recepcao");
+    expect(viewRoomAt("operacao", RECEPTION.x, RECEPTION.z)?.id).not.toBe("recepcao");
+  });
+
+  it("o núcleo dos elevadores fica no eixo do corredor do escritório", () => {
+    const corridor = corridorBounds().find((item) => item.minZ === FLOOR_BOUNDS.minZ && item.minX > 0)!;
+    expect((corridor.minX + corridor.maxX) / 2).toBeCloseTo(ELEVATOR_CORE_X);
+    expect(ELEVATOR_XS[1]).toBe(ELEVATOR_CORE_X);
+  });
+
+  it("móveis e plantas ficam dentro do prédio", () => {
+    for (const item of props) {
+      expect(Math.abs(item.at[0])).toBeLessThan(FLOOR_BOUNDS.maxX);
+      expect(Math.abs(item.at[2])).toBeLessThan(FLOOR_BOUNDS.maxZ);
+    }
   });
 });
 

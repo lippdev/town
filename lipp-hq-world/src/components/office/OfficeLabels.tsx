@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
 import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
-import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, viewRooms } from "@/world/office/officeBuilding";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, sceneryOfView, viewRooms } from "@/world/office/officeBuilding";
 import { ENTRANCE, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
@@ -162,11 +162,16 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {mode === "live" && !focusedRoomId && (
+      {(mode === "live" || buildingView === "terreo") && !focusedRoomId && (
         <span className="office-entrance-tag" ref={place([ENTRANCE.x + 0.2, 0.02, ENTRANCE.z + 2.6])}>
           Entrada
         </span>
       )}
+      {sceneryOfView(buildingView).map((person) => (
+        <span key={person.id} className="office-scenery-tag" data-scenery={person.id} ref={place([person.spot.x, person.chair ? 1.55 : 1.85, person.spot.z])}>
+          {person.tag}
+        </span>
+      ))}
       {buildingView === "exterior" && hoveredFloor && (
         <span className="office-floor-tag" aria-hidden ref={place([FACADE_BOUNDS.maxX, (hoveredLevel! + 0.5) * STORY, FACADE_BOUNDS.maxZ])}>
           {FLOOR_LABEL[hoveredFloor].name}

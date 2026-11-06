@@ -45,6 +45,10 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
 - *Troca:* escurece 170 ms, troca o que está montado com a câmera já no lugar e clareia. Não há
   animação contínua de abertura da fachada nem de elevador. Com movimento reduzido é imediata.
 
+O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
+atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe
+comando. Os elevadores também são desenho; quem muda de andar é o seletor.
+
 ## Como usar
 
 | Ação | Como |

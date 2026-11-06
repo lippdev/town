@@ -27,8 +27,12 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
-import { BUILDING_ROOMS_BY_ID } from "./officeBuilding";
-import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, roomAt } from "./officeLayout";
+import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
+import { buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
+import { LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
+import { SceneryHumans } from "./SceneryHumans";
+import { buildingSignTexture } from "./buildingFacade";
+import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS } from "./officeLayout";
 import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
@@ -169,7 +173,7 @@ const unit = new Vector3(1, 1, 1);
  * GLBs caros (a planta tem 69 mil triângulos) entram por instância e dividem a mesma
  * geometria. Fora da sala em foco, a planta usa a versão sem a maior parte da terra.
  */
-function InstancedProp({ url, placements, quality }: { url: string; placements: PropPlacement[]; quality: GraphicsQuality }) {
+function InstancedProp({ url, placements, quality, floor }: { url: string; placements: PropPlacement[]; quality: GraphicsQuality; floor: FloorId }) {
   const { scene } = useGLTF(url);
   const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
   const { parts, center, minY, baseWidth } = useMemo(() => {
@@ -183,7 +187,7 @@ function InstancedProp({ url, placements, quality }: { url: string; placements: 
     return { parts: meshes, center: bounds.getCenter(new Vector3()), minY: bounds.min.y, baseWidth: bounds.getSize(new Vector3()).x };
   }, [scene]);
 
-  const inFocus = (item: PropPlacement) => roomAt(item.at[0], item.at[2])?.id === focusedRoomId;
+  const inFocus = (item: PropPlacement) => viewRoomAt(floor, item.at[0], item.at[2])?.id === focusedRoomId;
   const near = placements.filter(inFocus);
   const far = placements.filter((item) => !inFocus(item));
 
@@ -346,11 +350,51 @@ function ShadowRefresh() {
   return null;
 }
 
+/** Plantas e luminárias de um andar: sem cena, a falha delas não derruba nada. */
+function FloorProps({ floor, props, quality }: { floor: FloorId; props: PropPlacement[]; quality: GraphicsQuality }) {
+  const plants = useMemo(() => props.filter((item) => item.kind === "planta"), [props]);
+  const lamps = useMemo(() => props.filter((item) => item.kind === "luminaria"), [props]);
+  return (
+    <PartBoundary onError={(message) => console.warn("[escritório] planta/luminária fora da cena:", message)}>
+      <Suspense fallback={null}>
+        {plants.length > 0 && <InstancedProp url={PROP_URL.planta} placements={plants} quality={quality} floor={floor} />}
+        {lamps.length > 0 && <InstancedProp url={PROP_URL.luminaria} placements={lamps} quality={quality} floor={floor} />}
+      </Suspense>
+    </PartBoundary>
+  );
+}
+
+const FLOOR_SHADOW = { scale: [FLOOR_BOUNDS.maxX * 2 + 3, FLOOR_BOUNDS.maxZ * 2 + 3] as [number, number], opacity: 0.36, blur: 2.4, far: 3.5, resolution: 1024, frames: 1 };
+
+function FloorSign({ spec }: { spec: FloorSignSpec }) {
+  const texture = useMemo(() => buildingSignTexture(spec.text), [spec.text]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <mesh position={[spec.at[0], spec.at[1], spec.at[2]]} rotation={[0, spec.rotationY ?? 0, 0]} name={`placa-${spec.text}`}>
+      <planeGeometry args={[spec.width, spec.height]} />
+      <meshBasicMaterial map={texture} toneMapped={false} />
+    </mesh>
+  );
+}
+
+/** Andar feito só de peças do kit: sem as paredes que sobem nem as cadeiras do hall. */
+function KitFloor({ floor, build, signs, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
+  return (
+    <>
+      <ShadowRefresh />
+      <group name={`andar-${floor}`}>
+        <BatchMeshes batch={build.fixed} materials={materials} />
+      </group>
+      {signs.map((spec) => <FloorSign key={spec.text} spec={spec} />)}
+      <FloorProps floor={floor} props={build.props} quality={quality} />
+      <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} />
+    </>
+  );
+}
+
 /** O escritório dos bots: o andar da Operação. */
 function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
   const build = officeBuild();
-  const plants = useMemo(() => build.props.filter((item) => item.kind === "planta"), [build]);
-  const lamps = useMemo(() => build.props.filter((item) => item.kind === "luminaria"), [build]);
   return (
     <>
       <ShadowRefresh />
@@ -359,13 +403,8 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
       </group>
       <HumanChairs material={materials.matte} />
       <RaisedWalls build={build} materials={materials} />
-      <PartBoundary onError={(message) => console.warn("[escritório] planta/luminária fora da cena:", message)}>
-        <Suspense fallback={null}>
-          <InstancedProp url={PROP_URL.planta} placements={plants} quality={quality} />
-          <InstancedProp url={PROP_URL.luminaria} placements={lamps} quality={quality} />
-        </Suspense>
-      </PartBoundary>
-      <ContactShadows position={[0, 0.012, 0]} scale={[FLOOR_BOUNDS.maxX * 2 + 3, FLOOR_BOUNDS.maxZ * 2 + 3]} opacity={0.36} blur={2.4} far={3.5} resolution={1024} frames={1} />
+      <FloorProps floor="operacao" props={build.props} quality={quality} />
+      <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} />
     </>
   );
 }
@@ -374,9 +413,12 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
 function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   const materials = useOfficeMaterials();
   const view = useOfficeStore((state) => state.buildingView);
+  const mode = useOfficeStore((state) => state.mode);
   return (
     <>
       {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
+      {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
+      {view === "terreo" && <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />}
       <SceneReady />
     </>
   );
@@ -414,6 +456,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
       {mode === "demo" && (
         <PartBoundary onError={() => undefined}>
           <BuildingSurroundings />
+          <SceneryHumans />
           <ChiefScene />
         </PartBoundary>
       )}
