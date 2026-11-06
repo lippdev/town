@@ -3,14 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
-import { BUILDING_LEVELS, FLOOR_LEVEL, STORY, cityBoundsAt, floorAtLevel, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { BUILDING_LEVELS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, floorAtLevel, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
 import { parsePreset } from "@/avatar/human/preset";
-import { buildLobby } from "@/world/office/buildingInteriors";
+import { buildDirectorate, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
+import type { Batch } from "@/world/office/officeKit";
+import { buildOffice } from "@/world/office/officeRooms";
 import { placeChief } from "@/world/office/officeChief";
 import { CITY_BOUNDS } from "@/world/office/officeCity";
 import { pathLength, pathPose } from "@/world/office/officeHumans";
-import { FLOOR_BOUNDS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
-import { ELEVATOR_CORE_X, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
+import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
+import { ELEVATOR_CORE, ELEVATOR_CORE_X, ELEVATOR_STOPS, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
 import { floorFit, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
@@ -106,6 +108,88 @@ describe("térreo", () => {
       expect(Math.abs(item.at[0])).toBeLessThan(FLOOR_BOUNDS.maxX);
       expect(Math.abs(item.at[2])).toBeLessThan(FLOOR_BOUNDS.maxZ);
     }
+  });
+});
+
+describe("caixa dos elevadores", () => {
+  const builds = { terreo: buildLobby(), operacao: buildOperationCore(), diretoria: buildDirectorate() };
+  const FLOORS = Object.keys(ELEVATOR_STOPS) as FloorId[];
+
+  /** Alguma peça da malha passa por esta caixa? Testa triângulo a triângulo, não só vértice. */
+  function crosses(batch: Batch, box: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number }) {
+    for (const geometry of batch.values()) {
+      const position = geometry.getAttribute("position");
+      const index = geometry.index;
+      const count = index ? index.count : position.count;
+      for (let at = 0; at < count; at += 3) {
+        const vertices = [0, 1, 2].map((corner) => (index ? index.getX(at + corner) : at + corner));
+        const xs = vertices.map((vertex) => position.getX(vertex));
+        const ys = vertices.map((vertex) => position.getY(vertex));
+        const zs = vertices.map((vertex) => position.getZ(vertex));
+        if (Math.min(...xs) < box.maxX && Math.max(...xs) > box.minX && Math.min(...ys) < box.maxY && Math.max(...ys) > box.minY && Math.min(...zs) < box.maxZ && Math.max(...zs) > box.minZ) return true;
+      }
+    }
+    return false;
+  }
+  function deepest(batch: Batch) {
+    let z = Infinity;
+    for (const geometry of batch.values()) {
+      geometry.computeBoundingBox();
+      z = Math.min(z, geometry.boundingBox!.min.z);
+    }
+    return z;
+  }
+  const { bounds, front, back, pitch, partition, cab } = ELEVATOR_CORE;
+
+  it("cabe uma cabine de verdade no poço, com folga para as paredes", () => {
+    expect(front - back).toBeGreaterThanOrEqual(cab.depth + 0.1);
+    expect(pitch - partition).toBeGreaterThanOrEqual(cab.width + 0.1);
+    expect(cab.width).toBeGreaterThanOrEqual(1.4);
+    expect(cab.depth).toBeGreaterThanOrEqual(1.4);
+    expect(bounds.maxZ - bounds.minZ).toBeGreaterThan(2);
+  });
+
+  it("os três andares têm a mesma caixa: o poço não muda de lugar na torre", () => {
+    for (const floor of FLOORS) expect(deepest(builds[floor].fixed), floor).toBeCloseTo(bounds.minZ - 0.1, 1);
+    expect(ELEVATOR_STOPS.operacao.doors).toEqual([1]);
+    expect(new Set(FLOORS.map((floor) => ELEVATOR_STOPS[floor].openShaft)).size).toBe(FLOORS.length);
+  });
+
+  it("a caixa fica fora da laje e não encosta em sala, posto, móvel nem na rua", () => {
+    expect(bounds.maxZ).toBeLessThanOrEqual(FLOOR_BOUNDS.minZ);
+    expect(bounds.minZ).toBeGreaterThan(-12);
+    expect(bounds.minX).toBeGreaterThan(FLOOR_BOUNDS.minX);
+    expect(bounds.maxX).toBeLessThan(FLOOR_BOUNDS.maxX);
+    for (const room of OFFICE_ROOMS) expect(room.bounds.minZ).toBeGreaterThanOrEqual(bounds.maxZ);
+    for (const seat of OFFICE_SEATS) expect(seat.z).toBeGreaterThan(bounds.maxZ);
+    for (const floor of FLOORS) for (const item of builds[floor].footprints) expect(item.minZ, `${floor}: ${item.label}`).toBeGreaterThan(bounds.maxZ);
+  });
+
+  it("a parede é vazada de verdade na frente de cada porta, e a passagem até ela está livre", () => {
+    for (const floor of FLOORS) {
+      const { doors, opening, recess } = ELEVATOR_STOPS[floor];
+      const full = floor === "operacao" ? buildOffice({ elevatorOpening: true }).fixed : builds[floor].fixed;
+      for (const index of doors) {
+        const x = ELEVATOR_XS[index]!;
+        const passage = { minX: x - opening / 2 + 0.12, maxX: x + opening / 2 - 0.12, minY: 0.2, maxY: ELEVATOR_CORE.doorHeight - 0.05 };
+        // Do piso até a porta, atravessando a linha da parede, não há nada no caminho.
+        expect(crosses(full, { ...passage, minZ: ELEVATOR_CORE.wallFace - recess + 0.05, maxZ: FLOOR_BOUNDS.minZ + 0.9 }), `${floor}/${index}`).toBe(false);
+        for (const item of builds[floor].footprints) expect(item.minZ < FLOOR_BOUNDS.minZ + 1.2 && item.maxX > passage.minX && item.minX < passage.maxX, `${floor}: ${item.label}`).toBe(false);
+      }
+    }
+  });
+
+  it("a porta do escritório cabe no corredor sem estreitá-lo", () => {
+    const corridor = corridorBounds().find((item) => item.minZ === FLOOR_BOUNDS.minZ && item.minX > 0)!;
+    expect(ELEVATOR_STOPS.operacao.opening).toBeLessThanOrEqual(corridor.maxX - corridor.minX);
+  });
+
+  it("a frota real continua com a parede inteira no fim do corredor", () => {
+    const x = ELEVATOR_XS[1];
+    const wall = { minX: x - 0.3, maxX: x + 0.3, minY: 0.5, maxY: 2, minZ: FLOOR_BOUNDS.minZ - 0.18, maxZ: FLOOR_BOUNDS.minZ + 0.1 };
+    expect(crosses(buildOffice().fixed, wall)).toBe(true);
+    expect(crosses(buildOffice({ elevatorOpening: true }).fixed, wall)).toBe(false);
+    expect(deepest(buildOffice().fixed)).toBeGreaterThan(bounds.maxZ - 0.3);
   });
 });
 
