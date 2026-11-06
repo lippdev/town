@@ -1,8 +1,9 @@
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { CITY_AIR, CITY_LIT_MIN } from "./cityHaze";
+import { shouldStall } from "./loadWatch";
 import { CLOCK_POLL_MS, NIGHT_BACKGROUND, currentMinutes, daylightAt, skyFor } from "./dayCycle";
-import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
+import { ContactShadows, SoftShadows, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import type {
   DirectionalLight,
   Group,
@@ -411,12 +412,39 @@ function SceneReady() {
   return null;
 }
 
+/**
+ * Vigia o carregamento pelos arquivos que chegam, não pelo relógio.
+ *
+ * Antes eram 20 s fixos: em máquina com render por software a cena terminava de
+ * montar e o aviso "está demorando" aparecia antes do prédio, como se tivesse
+ * falhado. Agora o aviso só entra quando os downloads param de avançar.
+ */
 function LoadWatch() {
+  const active = useProgress((state) => state.active);
+  const loaded = useProgress((state) => state.loaded);
+  const pulse = useRef({ active, loaded, at: Date.now(), startedAt: Date.now() });
+
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (useOfficeStore.getState().load === "loading") useOfficeStore.getState().setLoad("stalled");
-    }, 20000);
-    return () => window.clearTimeout(timer);
+    const now = Date.now();
+    // download em andamento ou arquivo novo contam como vida
+    if (active || loaded !== pulse.current.loaded) pulse.current.at = now;
+    pulse.current.active = active;
+    pulse.current.loaded = loaded;
+  }, [active, loaded]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const store = useOfficeStore.getState();
+      if (store.load !== "loading") return;
+      const now = Date.now();
+      const stalled = shouldStall({
+        active: pulse.current.active,
+        idleMs: now - pulse.current.at,
+        elapsedMs: now - pulse.current.startedAt,
+      });
+      if (stalled) store.setLoad("stalled");
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
   return null;
 }

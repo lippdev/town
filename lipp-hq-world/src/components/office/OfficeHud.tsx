@@ -1,4 +1,5 @@
 import { useLayoutEffect, useEffect, useRef, useState } from "react";
+import { useProgress } from "@react-three/drei";
 import { ChevronDown, House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { buildRosterSections } from "@/agents/organization";
 import { lookFor } from "@/avatar/robot/robotLook";
@@ -528,12 +529,28 @@ function LoadOverlay() {
   const error = useOfficeStore((state) => state.loadError);
   const figuresError = useOfficeStore((state) => state.figuresError);
   const humansError = useOfficeStore((state) => state.humansError);
-  if (load === "loading") return <div className="boot-label">Montando o escritório…</div>;
+  // progresso real dos arquivos (glTF e texturas), não um cronômetro
+  const loaded = useProgress((state) => state.loaded);
+  const total = useProgress((state) => state.total);
+  const progressText = total > 0 ? `${Math.min(loaded, total)} de ${total} arquivos` : null;
+
+  if (load === "loading") {
+    return (
+      <div className="boot-label">
+        Montando o escritório…{progressText ? ` ${progressText}` : ""}
+      </div>
+    );
+  }
   if (load === "stalled" || load === "failed") {
     return (
       <div className="boot-error" role="alert">
-        <strong>{load === "stalled" ? "O escritório está demorando para carregar." : "Não consegui montar o escritório."}</strong>
-        <p>{error ?? "Os arquivos da cena não chegaram. Verifique se o servidor local segue de pé."}</p>
+        <strong>{load === "stalled" ? "O escritório ainda está carregando." : "Não consegui montar o escritório."}</strong>
+        <p>
+          {error ??
+            (progressText
+              ? `Os arquivos da cena pararam de chegar em ${progressText}. Verifique se o servidor local segue de pé.`
+              : "Os arquivos da cena não chegaram. Verifique se o servidor local segue de pé.")}
+        </p>
         <button type="button" onClick={() => window.location.reload()}>Tentar de novo</button>
       </div>
     );
