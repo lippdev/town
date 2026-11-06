@@ -607,9 +607,19 @@ button.office-roster-room:hover {
   pointer-events: auto;
 }
 
-/* Com a gaveta aberta, a barra de baixo termina antes dela. */
-.office-hud:has(.drawer) .office-bottom {
-  right: calc(min(400px, 100vw - 32px) + 16px);
+/* Com a gaveta aberta, a barra de baixo termina antes dela — mas só onde
+   sobra largura para as duas. Em tela estreita a gaveta tomaria quase tudo e
+   empurraria "Leve" para fora; lá ela cobre a cena e a barra volta ao fechar. */
+@media (min-width: 960px) {
+  .office-hud:has(.drawer) .office-bottom {
+    right: calc(min(400px, 100vw - 32px) + 16px);
+  }
+}
+
+@media (max-width: 959px) {
+  .office-hud:has(.drawer) > .office-bottom {
+    visibility: hidden;
+  }
 }
 
 .office-camera,
@@ -975,6 +985,14 @@ button.office-roster-room:hover {
 .office-hud .kanban.embedded { left: var(--sidebar-width); top: 52px; background: #181a1e; overflow-y: auto; }
 .office-roster-toggle.closed { left: 0; top: 64px; border-radius: 0 7px 7px 0; }
 .office-bottom { left: calc(var(--sidebar-width) + 12px); }
+
+/* Em tela estreita a navegação é sobreposta, não coluna: ela cobre a cena e a
+   barra de baixo volta inteira quando fecha. Empurrar a barra pela largura da
+   navegação deixava "Leve" fora da tela no celular. */
+@media (max-width: 860px) {
+  .office-hud .office-bottom { left: 12px; }
+  .office-hud:has(.office-roster) > .office-bottom { visibility: hidden; }
+}
 @media (max-width: 600px) { .office-hud { --sidebar-width: 248px; } .office-hud[data-sidebar-open="false"] { --sidebar-width: 0px; } .office-top { overflow-x: auto; } }
 .office-hud:has(.office-roster) .office-focus { left: calc(var(--sidebar-width) + 12px); max-width: calc(100vw - var(--sidebar-width) - 28px); }
 .office-hud:has(.office-roster):has(.drawer) .office-focus { max-width: calc(100vw - var(--sidebar-width) - min(400px, 100vw - 32px) - 28px); }
