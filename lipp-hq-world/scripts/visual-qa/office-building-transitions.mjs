@@ -42,26 +42,28 @@ const ready = async (page, url = DEMO) => {
   await page.waitForLoadState("networkidle");
 };
 
-/** Olha o quadro de verdade: quanto da tela é só o fundo vazio, sem cena nenhuma. */
+/** Olha o quadro de verdade: quanto da imagem é só o fundo vazio, sem cena nenhuma. */
+const measureEmpty = async (data) => {
+  const image = new Image();
+  image.src = `data:image/png;base64,${data}`;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(image, 0, 0);
+  const { data: pixels } = context.getImageData(0, 0, image.width, image.height);
+  let empty = 0;
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (Math.abs(pixels[index] - 17) + Math.abs(pixels[index + 1] - 24) + Math.abs(pixels[index + 2] - 40) < 8 || pixels[index] + pixels[index + 1] + pixels[index + 2] < 12) empty += 1;
+  }
+  return empty / (pixels.length / 4);
+};
 const emptyShare = async (page, width = 1440, height = 900) => {
   const png = (await page.screenshot({ clip: { x: 240, y: 0, width: width - 240, height } })).toString("base64");
-  return page.evaluate(async (data) => {
-    const image = new Image();
-    image.src = `data:image/png;base64,${data}`;
-    await image.decode();
-    const canvas = document.createElement("canvas");
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    context.drawImage(image, 0, 0);
-    const { data: pixels } = context.getImageData(0, 0, image.width, image.height);
-    let empty = 0;
-    for (let index = 0; index < pixels.length; index += 4) {
-      if (Math.abs(pixels[index] - 17) + Math.abs(pixels[index + 1] - 24) + Math.abs(pixels[index + 2] - 40) < 8 || pixels[index] + pixels[index + 1] + pixels[index + 2] < 12) empty += 1;
-    }
-    return empty / (pixels.length / 4);
-  }, png);
+  return page.evaluate(measureEmpty, png);
 };
+const landscape = {};
 
 try {
   const page = await newPage();
@@ -151,7 +153,8 @@ try {
       const view = route[index];
       const result = await click(view);
       assertSmooth(result, view);
-      (timings[`${route[index - 1]}>${view}`] ??= []).push({ ms: Math.round(result.ms), frames: result.frames.length });
+      const gaps = result.frames.slice(1).map((frame, gap) => frame.t - result.frames[gap].t).sort((a, b) => a - b);
+      (timings[`${route[index - 1]}>${view}`] ??= []).push({ ms: Math.round(result.ms), frames: result.frames.length, medianFrameMs: Math.round(gaps[gaps.length >> 1]), worstFrameMs: Math.round(gaps.at(-1)) });
       assert.equal(new URL(page.url()).searchParams.get("andar"), view);
     }
   });
@@ -295,6 +298,33 @@ try {
     await page.waitForTimeout(250);
   });
 
+  await check("paisagem e tela larga: a coroa cabe parada e a tela não fica vazia no caminho", async () => {
+    await click("exterior");
+    for (const [width, height] of [[844, 390], [1920, 600], [390, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(300);
+      const spire = await page.evaluate(() => window.__HQ_OFFICE_QA__.spirePoint());
+      assert.ok(spire.y >= 40 && spire.y < height && spire.x > 0 && spire.x < width, `${width}x${height}: coroa em ${JSON.stringify(spire)}`);
+      const shares = [];
+      for (const fraction of [0.2, 0.5, 0.8]) {
+        await page.evaluate((value) => window.__HQ_OFFICE_QA__.holdTravel(value), fraction);
+        if (fraction === 0.2) await page.evaluate(() => document.querySelector('[data-view="diretoria"]').click());
+        await page.waitForTimeout(150);
+        const clipX = width > 900 ? 240 : 0;
+        const png = (await page.screenshot({ clip: { x: clipX, y: 52, width: width - clipX, height: height - 52 } })).toString("base64");
+        shares.push(await page.evaluate(measureEmpty, png));
+      }
+      await page.evaluate(() => window.__HQ_OFFICE_QA__.holdTravel(null));
+      await arrived();
+      // A coroa inteira vale mais que a cidade nestes formatos: o fundo pode aparecer um pouco, sem dominar.
+      assert.ok(shares.every((share) => share < 0.2), `${width}x${height}: ${shares.map((share) => (share * 100).toFixed(1))}% vazio`);
+      landscape[`${width}x${height}`] = shares.map((share) => Number((share * 100).toFixed(1)));
+      await click("exterior");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(250);
+  });
+
   const memory = () => page.evaluate(() => ({ ...window.__gpuCounts(), geometries: window.__HQ_OFFICE_QA__.renderInfo().geometries }));
   const cycle = async () => { for (const view of [...FLOORS, "exterior"].slice(0, 3)) await click(view); };
   let before, after;
@@ -366,6 +396,23 @@ try {
     assert.deepEqual((await state()).view, view);
   });
 
+  await check("quatro pedidos a cada 100 ms terminam no último, a partir de onde já estava", async () => {
+    await click("operacao");
+    const end = await page.evaluate(async (views) => {
+      const qa = window.__HQ_OFFICE_QA__;
+      for (const view of views) {
+        document.querySelector(`[data-view="${view}"]`).click();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const middle = qa.state().travel.progress;
+      while (qa.state().traveling) await new Promise(requestAnimationFrame);
+      return { middle, state: qa.state() };
+    }, ["diretoria", "terreo", "exterior", "diretoria"]);
+    assert.equal(end.state.buildingView, "diretoria");
+    assert.deepEqual(end.state.mountedFloors, ["diretoria"]);
+    assert.ok(Math.abs(end.state.view.zoom - end.state.goal.zoom) < 1e-6);
+  });
+
   await check("voltar ao andar de saída no meio só desfaz o caminho", async () => {
     await click("diretoria");
     const end = await page.evaluate(async () => {
@@ -429,8 +476,8 @@ try {
   });
 
   assert.deepEqual(errors, []);
-  writeFileSync(`${out}/resultado.json`, JSON.stringify({ checks, timings, before, samples, after, errors }, null, 2));
-  console.log(JSON.stringify({ timings, before, after }));
+  writeFileSync(`${out}/resultado.json`, JSON.stringify({ checks, timings, landscape, before, samples, after, errors }, null, 2));
+  console.log(JSON.stringify({ timings, landscape, before, after }));
   console.log(`\n${checks.length} verificações ok.`);
 } finally {
   await browser.close();
