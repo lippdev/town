@@ -1,5 +1,6 @@
 import type { HumanPreset } from "@/avatar/human/preset";
 import { HUMAN_SCALE, SIT, SIT_TIMELINE } from "@/avatar/human/seatFit";
+import type { FloorId } from "./officeBuilding";
 import { FACING, OFFICE_ROOMS_BY_ID, OFFICE_SEATS, type OfficeSeat } from "./officeLayout";
 
 /**
@@ -46,6 +47,9 @@ export interface OfficeHuman {
   id: string;
   name: string;
   preset: HumanPreset;
+  /** Onde a pessoa fica: só existe corpo com esse andar em tela. */
+  floor: FloorId;
+  roomId: string;
   spot: Point;
   /** Cadeira livre da bancada do hall; nula se os bots ocuparam todas. */
   chair: OfficeSeat | null;
@@ -76,6 +80,8 @@ export function placeHumans(presets: readonly HumanPreset[], occupiedSeats: Iter
     id: preset.id,
     name: preset.name,
     preset,
+    floor: "operacao" as const,
+    roomId: "hall",
     spot: { x: hall.x + SPOTS[index]!.x, z: hall.z + SPOTS[index]!.z },
     chair: chairs[index] ?? null,
     phase: (hash(preset.id) % 100) / 25,
