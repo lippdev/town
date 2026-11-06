@@ -8,7 +8,8 @@ import { ELEVATOR_CORE } from "./officeLobby";
  * vértices, então custa uma chamada de desenho. A câmera olha de +x +z: prédio alto só atrás
  * do escritório; na frente, baixo, para não cobrir a rua.
  */
-export const CITY_BOUNDS: OfficeBounds = { minX: -100, maxX: 100, minZ: -96, maxZ: 96 };
+/** Chega até onde a torre inteira cabe em tela: do alto dela se vê mais chão. Mais para o fundo, onde a tela aponta. */
+export const CITY_BOUNDS: OfficeBounds = { minX: -160, maxX: 128, minZ: -160, maxZ: 126 };
 
 /** O entorno desenhado à mão. Daqui para fora os quarteirões são gerados. */
 const CITY_CORE: OfficeBounds = { minX: -34, maxX: 30, minZ: -30, maxZ: 28 };
