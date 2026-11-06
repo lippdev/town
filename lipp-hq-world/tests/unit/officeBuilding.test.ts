@@ -1,9 +1,9 @@
-import { Group } from "three";
+import { Group, type BufferGeometry } from "three";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
-import { BUILDING_LEVELS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, floorAtLevel, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { BUILDING_HEIGHT, BUILDING_LEVELS, CROWN_HEIGHT, CROWN_STEPS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, decorativeLevels, floorAtLevel, viewFit, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
 import { parsePreset } from "@/avatar/human/preset";
 import { buildDirectorate, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
 import type { Batch } from "@/world/office/officeKit";
@@ -194,19 +194,61 @@ describe("caixa dos elevadores", () => {
 });
 
 describe("fachada", () => {
+  const { body, lit, bodyEnds, litEnds } = buildFacade();
+  const topOfRange = (geometry: BufferGeometry, end: number) => {
+    const position = geometry.getAttribute("position");
+    let top = -Infinity;
+    for (let index = 0; index < end; index += 1) top = Math.max(top, position.getY(index));
+    return top;
+  };
+
+  it("são 14 pavimentos: três de verdade e onze só de fachada", () => {
+    expect(BUILDING_LEVELS).toBe(14);
+    expect(FLOOR_LEVEL).toEqual({ terreo: 0, operacao: 1, diretoria: 13 });
+    expect(decorativeLevels()).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    for (const level of decorativeLevels()) expect(floorAtLevel(level)).toBeNull();
+  });
+
   it("cada pavimento acrescenta vértices e a coroa vem depois de todos: o corte é só parar antes", () => {
-    const { body, lit, bodyEnds, litEnds } = buildFacade();
     expect(bodyEnds).toHaveLength(BUILDING_LEVELS);
     for (let level = 1; level < BUILDING_LEVELS; level += 1) {
       expect(bodyEnds[level]!).toBeGreaterThan(bodyEnds[level - 1]!);
-      expect(litEnds[level]!).toBeGreaterThan(litEnds[level - 1]!);
+      expect(litEnds[level]!).toBeGreaterThanOrEqual(litEnds[level - 1]!);
     }
     expect(body.getAttribute("position").count).toBeGreaterThan(bodyEnds.at(-1)!);
     expect(lit.getAttribute("position").count).toBeGreaterThan(litEnds.at(-1)!);
   });
 
+  it("nenhum detalhe passa da laje do seu pavimento: o corte não deixa nada acima do andar em tela", () => {
+    for (let level = 0; level < BUILDING_LEVELS; level += 1) {
+      expect(topOfRange(body, bodyEnds[level]!), `corpo ${level}`).toBeLessThanOrEqual((level + 1) * STORY + 1e-3);
+      expect(topOfRange(lit, litEnds[level]!), `luz ${level}`).toBeLessThanOrEqual((level + 1) * STORY + 1e-3);
+    }
+  });
+
+  it("o andar habitável é inteiro até a última laje: os recuos só existem na coroa", () => {
+    const position = body.getAttribute("position");
+    let narrowest = Infinity;
+    let widest = -Infinity;
+    for (let index = bodyEnds.at(-2)!; index < bodyEnds.at(-1)!; index += 1) {
+      narrowest = Math.min(narrowest, position.getX(index));
+      widest = Math.max(widest, position.getX(index));
+    }
+    expect(narrowest).toBeLessThanOrEqual(FLOOR_BOUNDS.minX);
+    expect(widest).toBeGreaterThanOrEqual(FLOOR_BOUNDS.maxX);
+    for (const step of CROWN_STEPS) expect(step.inset).toBeGreaterThan(0);
+    const insets = CROWN_STEPS.map((step) => step.inset);
+    expect(insets).toEqual([...insets].sort((a, b) => a - b));
+    expect(new Set(insets).size).toBe(3);
+  });
+
+  it("a agulha é o ponto mais alto, e o enquadramento do exterior vai até ela", () => {
+    const top = topOfRange(body, body.getAttribute("position").count);
+    expect(top).toBeCloseTo(BUILDING_HEIGHT + CROWN_HEIGHT, 1);
+    expect(viewFit("exterior").top).toBeCloseTo(top, 1);
+  });
+
   it("fica leve: uma malha só por material, sem passar de 60 mil vértices", () => {
-    const { body, lit } = buildFacade();
     expect(body.getAttribute("position").count + lit.getAttribute("position").count).toBeLessThan(60000);
   });
 });

@@ -17,11 +17,25 @@ export type BuildingView = "exterior" | FloorId;
 
 /** Altura de um pavimento na fachada: 3 m de parede mais a laje. */
 export const STORY = 3.4;
-/** Pavimentos desenhados na fachada. Só os de `FLOOR_LEVEL` têm interior. */
-export const BUILDING_LEVELS = 11;
+/** Pavimentos da torre. Só os de `FLOOR_LEVEL` têm interior; os outros são fachada. */
+export const BUILDING_LEVELS = 14;
 export const BUILDING_HEIGHT = STORY * BUILDING_LEVELS;
-/** Coroa e placa acima da última laje: entram no enquadramento do exterior. */
-export const CROWN_HEIGHT = 3.4;
+/** Pavimentos que formam a base da torre, com colunas no lugar da fita de janelas. */
+export const BASE_LEVELS = 2;
+
+/**
+ * A coroa, de baixo para cima: cada degrau recua dos quatro lados. Todo recuo fica acima da última
+ * laje: a Diretoria é o andar inteiro, e um recuo mais abaixo faria os móveis vazarem da fachada.
+ */
+export const CROWN_STEPS: ReadonlyArray<{ inset: number; height: number }> = [
+  { inset: 1.5, height: 3.6 },
+  { inset: 4, height: 3.2 },
+  { inset: 6.4, height: 2.8 },
+];
+/** Base da agulha e a agulha, sobre o último degrau. */
+export const SPIRE_HEIGHT = 4.6;
+/** Coroa e agulha acima da última laje: entram no enquadramento do exterior. */
+export const CROWN_HEIGHT = CROWN_STEPS.reduce((sum, step) => sum + step.height, 0) + SPIRE_HEIGHT;
 
 /** Fachada um pouco para dentro da laje do andar: a borda do corte fica à mostra. */
 export const FACADE_BOUNDS: OfficeBounds = {
@@ -80,6 +94,14 @@ export function viewFit(view: BuildingView): { bounds: OfficeBounds; top?: numbe
 export function cityBoundsAt(city: OfficeBounds, elevation: number): OfficeBounds {
   const shift = (elevation * Math.cos(ELEVATION) * Math.sin(AZIMUTH)) / Math.sin(ELEVATION);
   return { ...city, minX: city.minX + shift, minZ: city.minZ + shift };
+}
+
+/**
+ * Pavimentos só de fachada: não clicam, não têm sala e não custam nada além da malha. Para um deles
+ * virar andar de verdade, basta entrar em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e `viewRooms`.
+ */
+export function decorativeLevels(): number[] {
+  return Array.from({ length: BUILDING_LEVELS }, (_, level) => level).filter((level) => floorAtLevel(level) === null);
 }
 
 /** Andar acima ou abaixo: o exterior fica no alto da lista, como quem sai do prédio. */

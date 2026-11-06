@@ -27,7 +27,7 @@ continuam iguais e não carregam nada desta página.
 
 ## O prédio (só na demonstração)
 
-A demonstração abre com o prédio do Lipp HQ fechado, na cidade. O seletor discreto no canto (ou
+A demonstração abre com a torre do Lipp HQ fechada, na cidade. O seletor discreto no canto (ou
 apontar e clicar no pavimento na fachada, ou PageUp/PageDown, ou `?andar=` na URL) abre o corte
 de um andar. Só o andar em tela tem móveis e personagens; a fachada é uma malha leve. A frota do
 Hermes não tem nada disso: fica no escritório, sem seletor, cidade nem fachada.
@@ -47,6 +47,20 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
   animação no lugar deles, e o Canvas e o resto da tela não são recriados: a URL muda por
   `replaceState`. Os andares fora de tela ficam desmontados, mas modelos e peças já estão
   carregados desde a abertura da demonstração, então nada espera a rede na hora da troca.
+
+A **torre** tem 14 pavimentos: Térreo (0), Operação (1), Diretoria (13) e 11 só de fachada, que
+não clicam nem têm sala (`decorativeLevels`). A arquitetura é art déco própria do Lipp HQ: base
+de dois pavimentos com colunas duplas e friso de bronze, pilastras e janelas estreitas na
+vertical, e coroa de três degraus com agulha discreta.
+
+- **Recuo só acima da última laje.** A Diretoria é o andar inteiro, e recuar antes faria os móveis
+  vazarem da fachada.
+- **O corte vale por construção.** Cada detalhe entra no intervalo de vértices do seu pavimento e
+  nunca passa da laje dele; só a coroa passa, e ela vem depois de todos. O teste confere isso.
+- **Para um pavimento de fachada virar andar:** entra em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e
+  `viewRooms`, com a caixa dos elevadores e o interior. A fachada não muda.
+- **A cidade cresceu para o fundo** (`CITY_BOUNDS`): do alto da torre se vê mais chão, e sem isso o
+  limite da cidade cortaria a coroa no enquadramento.
 
 O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe

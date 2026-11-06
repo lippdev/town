@@ -1,6 +1,7 @@
 import { Box3 } from "three";
 import { describe, expect, it } from "vitest";
-import { fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
+import { NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
+import { viewFit } from "@/world/office/officeBuilding";
 import { CITY_BOUNDS, CITY_VIEW, buildCityGeometry } from "@/world/office/officeCity";
 
 const SCREENS: Viewport[] = [
@@ -56,6 +57,17 @@ describe("geometria da cidade", () => {
     expect(box.max.x).toBeCloseTo(CITY_BOUNDS.maxX, 3);
     expect(box.min.z).toBeCloseTo(CITY_BOUNDS.minZ, 3);
     expect(box.max.z).toBeCloseTo(CITY_BOUNDS.maxZ, 3);
+  });
+
+  it("a torre fechada cabe em tela sem a cidade acabar e sem precisar aproximar", () => {
+    const { bounds, top } = viewFit("exterior");
+    for (const screen of SCREENS) {
+      const fit = fitView(bounds, screen, NO_INSETS, { margin: 0.04, ...(top === undefined ? {} : { top }) });
+      const kept = keepGroundInside(fit, screen, CITY_BOUNDS);
+      expect(kept.x, `${screen.width}`).toBeCloseTo(fit.x, 3);
+      expect(kept.z, `${screen.width}`).toBeCloseTo(fit.z, 3);
+      expect(kept.zoom, `${screen.width}`).toBeCloseTo(fit.zoom, 3);
+    }
   });
 
   it("continua leve: uma malha só, com menos de 200 mil vértices", () => {

@@ -58,6 +58,12 @@ const goTo = async (page, view) => {
 /** Todo controle da cena alcançável por Tab. */
 const sceneFocusables = (page) => page.evaluate(() => [...document.querySelectorAll(".office-labels button, .office-labels a")].filter((node) => getComputedStyle(node).visibility !== "hidden").map((node) => node.dataset.room ?? node.dataset.bot ?? node.dataset.human ?? node.textContent));
 
+/** A coroa inteira na tela, abaixo da barra do topo: se a agulha sair, a silhueta some. */
+const assertTowerFits = async (page, width, height) => {
+  const spire = await page.evaluate(() => window.__HQ_OFFICE_QA__.spirePoint());
+  assert.ok(spire.x > 0 && spire.x < width && spire.y > 52 && spire.y < height, `agulha fora da tela: ${JSON.stringify(spire)}`);
+};
+
 const FLOORS = (process.env.HQ_FLOORS ?? "diretoria,operacao,terreo").split(",");
 
 const page = await open(DEMO);
@@ -69,6 +75,7 @@ await check("a demonstração abre com o prédio fechado, sem bot nem rótulo", 
   assert.equal(now.buildingView, "exterior");
   assert.deepEqual(now.rigs, []);
   assert.deepEqual(await sceneFocusables(page), []);
+  await assertTowerFits(page, 1440, 900);
   await shot(page, "exterior");
 });
 
@@ -87,7 +94,7 @@ for (const floor of FLOORS) {
 }
 
 await check("clicar no pavimento aceso entra no andar; pavimento decorativo não faz nada", async () => {
-  const decorative = await page.evaluate(() => window.__HQ_OFFICE_QA__.levelPoint(4));
+  const decorative = await page.evaluate(() => window.__HQ_OFFICE_QA__.levelPoint(7));
   await page.mouse.click(decorative.x, decorative.y);
   await page.waitForTimeout(400);
   assert.equal((await state(page)).buildingView, "exterior");
@@ -349,6 +356,7 @@ await check("a frota real não tem prédio: sem seletor, sem fachada, sem cidade
 await check("celular: o seletor cabe e o enquadramento acompanha", async () => {
   const phone = await open(DEMO, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await settled(phone);
+  await assertTowerFits(phone, 390, 844);
   await shot(phone, "celular-exterior");
   const box = await phone.locator("[data-floor-selector]").boundingBox();
   assert.ok(box && box.x + box.width <= 390 && box.x >= 0);
