@@ -213,10 +213,10 @@ export interface CityBuilding extends Lot {
 }
 
 /** Fachada de um pavimento por vez, com detalhe conforme a distância: perto, janela; longe, faixa. */
-function facade(city: ColorMerge, face: "x" | "z", at: number, start: number, span: number, bottom: number, stories: number, glass: string, seed: number, near: boolean, far: number) {
-  const place = (along: number, y: number, width: number, height: number, color: string, relief = 0) => {
-    if (face === "z") city.quad(along, y, at + relief, "z", width, height, color);
-    else city.quad(at + relief, y, along, "x", width, height, color);
+function facade(city: ColorMerge, glow: ColorMerge, face: "x" | "z", at: number, start: number, span: number, bottom: number, stories: number, glass: string, seed: number, near: boolean, far: number) {
+  const place = (along: number, y: number, width: number, height: number, color: string, relief = 0, into = city) => {
+    if (face === "z") into.quad(along, y, at + relief, "z", width, height, color);
+    else into.quad(at + relief, y, along, "x", width, height, color);
   };
   const bay = 2.6 + shuffled(seed) * 1.4;
   const count = Math.max(1, Math.round(span / bay));
@@ -232,13 +232,14 @@ function facade(city: ColorMerge, face: "x" | "z", at: number, start: number, sp
     if (!near && far > 0.55) continue;
     for (let column = 0; column < count; column += 1) {
       if (shuffled(seed + story * 7.1 + column * 13.3) < 0.8) continue;
-      place(start + (column + 0.5) * step, y, Math.min(step * 0.62, 1.8), 1.7, lit, 0.03);
+      // Janela acesa vai para a malha própria: de dia ela apaga sem mexer no resto.
+      place(start + (column + 0.5) * step, y, Math.min(step * 0.62, 1.8), 1.7, lit, 0.03, glow);
     }
   }
 }
 
 /** Um prédio: base, às vezes um corpo recuado e uma casa de máquinas. Só o que a câmera vê. */
-function building(city: ColorMerge, lot: Lot, stories: number, seed: number): number {
+function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number, seed: number): number {
   const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
   const far = Math.min(1, distance / 170);
   const near = distance < 62;
@@ -252,8 +253,8 @@ function building(city: ColorMerge, lot: Lot, stories: number, seed: number): nu
   const stack = (from: Lot, base: number, count: number, salt: number) => {
     const top = base + count * STORY;
     city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, roof);
-    facade(city, "z", from.maxZ + 0.02, from.minX, from.maxX - from.minX, base, count, glass, seed + salt, near, far);
-    facade(city, "x", from.maxX + 0.02, from.minZ, from.maxZ - from.minZ, base, count, glass, seed + salt + 3, near, far);
+    facade(city, glow, "z", from.maxZ + 0.02, from.minX, from.maxX - from.minX, base, count, glass, seed + salt, near, far);
+    facade(city, glow, "x", from.maxX + 0.02, from.minZ, from.maxZ - from.minZ, base, count, glass, seed + salt + 3, near, far);
     if (far < 0.6) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, paint("#3d4046"), paint("#34373d"), roof);
     return top;
   };
@@ -364,8 +365,10 @@ export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; blo
 /** Cornija e casa de máquinas: o teto do prédio passa um pouco da altura dos pavimentos. */
 const EXTRAS = 1.4;
 
-export function buildCityGeometry() {
+/** A cidade em duas malhas: o corpo, que recebe luz, e as janelas acesas, que brilham por conta própria. */
+export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
   const city = new ColorMerge();
+  const glow = new ColorMerge();
   const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
   city.slab(minX, maxX, minZ, maxZ, SURFACE.plate, 1.4, "#33363c");
   // Calçada em volta do prédio; a laje do escritório cobre o meio dela.
@@ -390,7 +393,7 @@ export function buildCityGeometry() {
     const [fromZ, toZ] = block.z;
     city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, mix("#8f8c84", AIR, haze((fromX + toX) / 2, (fromZ + toZ) / 2)));
   }
-  buildings.forEach((lot, index) => building(city, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
+  buildings.forEach((lot, index) => building(city, glow, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
   parks.forEach((park, index) => {
     const [fromX, toX] = park.x;
     const [fromZ, toZ] = park.z;
@@ -413,7 +416,14 @@ export function buildCityGeometry() {
   for (let z = -10; z <= 9; z += 4.75) tree(city, 14.1, z, 0.8);
   // A calçada dos fundos cede o lugar da caixa dos elevadores.
   for (let x = -12; x <= 13; x += 5) if (x < ELEVATOR_CORE.bounds.minX - 1 || x > ELEVATOR_CORE.bounds.maxX + 1) tree(city, x, -11.6, 0.8);
-  return city.build();
+  return { body: city.build(), lit: glow.build() };
+}
+
+/** Só o corpo da cidade, para quem mede a extensão e o peso dela. */
+export function buildCityGeometry() {
+  const { body, lit } = buildCity();
+  lit.dispose();
+  return body;
 }
 
 /** Carro de 3,4 m, olhando para +z com rotação zero. */
