@@ -3,11 +3,14 @@ import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
 import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, sceneryOfView, viewRooms } from "@/world/office/officeBuilding";
-import { ENTRANCE, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { expansionFloor } from "@/world/office/officeExpansion";
+import { ENTRANCE, FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
 type Anchor = readonly [number, number, number];
+
+const FLOOR_NORTH = FLOOR_BOUNDS.minZ;
 
 /** Quando os rótulos dos postos extras aparecem: de longe eles se atropelariam. */
 const EXTRA_TAG_ZOOM = 60;
@@ -31,6 +34,7 @@ export function OfficeLabels() {
   const buildingView = useOfficeStore((state) => state.buildingView);
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
   const traveling = useOfficeStore((state) => state.traveling);
+  const expansion = expansionFloor(buildingView);
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
   // Chegando, ele ainda não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
   const chiefAway = chiefStatus === "chegando" || chiefStatus === "entrando";
@@ -174,6 +178,11 @@ export function OfficeLabels() {
           {person.tag}
         </span>
       ))}
+      {expansion && !focusedRoomId && (
+        <span className="office-scenery-tag office-expansion-tag" data-floor-title={expansion.id} ref={place([-0.2, 3.25, FLOOR_NORTH])}>
+          {expansion.title} · espaço reservado
+        </span>
+      )}
       {buildingView === "exterior" && hoveredFloor && (
         <span className="office-floor-tag" aria-hidden ref={place([FACADE_BOUNDS.maxX, (hoveredLevel! + 0.5) * STORY, FACADE_BOUNDS.maxZ])}>
           {FLOOR_LABEL[hoveredFloor].name}

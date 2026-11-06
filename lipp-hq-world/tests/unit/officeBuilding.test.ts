@@ -3,10 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
-import { BUILDING_HEIGHT, BUILDING_LEVELS, BUILDING_VIEWS, type BuildingView, CROWN_HEIGHT, CROWN_STEPS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, decorativeLevels, floorAtLevel, viewFit, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { BUILDING_HEIGHT, BUILDING_LEVELS, BUILDING_ROOMS_BY_ID, sceneryOfView, BUILDING_VIEWS, type BuildingView, CROWN_HEIGHT, CROWN_STEPS, FLOOR_LEVEL, STORY, cityBoundsAt, decorativeLevels, floorAtLevel, viewFit, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
 import { TOWER_TOP, cutAt, planTravel, plateOpacity, restCut, sectionAt, shownAt, travelProgress } from "@/world/office/floorTravel";
 import { parsePreset } from "@/avatar/human/preset";
-import { buildDirectorate, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
+import { buildDirectorate, buildExpansion, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
+import { EXPANSION_CORRIDOR, EXPANSION_FLOORS, expansionFloor } from "@/world/office/officeExpansion";
 import type { Batch } from "@/world/office/officeKit";
 import { buildOffice } from "@/world/office/officeRooms";
 import { placeChief } from "@/world/office/officeChief";
@@ -114,7 +115,7 @@ describe("térreo", () => {
 
 describe("caixa dos elevadores", () => {
   const builds = { terreo: buildLobby(), operacao: buildOperationCore(), diretoria: buildDirectorate() };
-  const FLOORS = Object.keys(ELEVATOR_STOPS) as FloorId[];
+  const FLOORS = Object.keys(ELEVATOR_STOPS) as Array<keyof typeof ELEVATOR_STOPS>;
 
   /** Alguma peça da malha passa por esta caixa? Testa triângulo a triângulo, não só vértice. */
   function crosses(batch: Batch, box: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number }) {
@@ -203,10 +204,10 @@ describe("fachada", () => {
     return top;
   };
 
-  it("são 14 pavimentos: três de verdade e onze só de fachada", () => {
+  it("são 14 pavimentos: sete de verdade e sete só de fachada", () => {
     expect(BUILDING_LEVELS).toBe(14);
-    expect(FLOOR_LEVEL).toEqual({ terreo: 0, operacao: 1, diretoria: 13 });
-    expect(decorativeLevels()).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(FLOOR_LEVEL).toEqual({ terreo: 0, operacao: 1, diretoria: 13, "expansao-2": 2, "expansao-3": 3, "expansao-4": 4, "expansao-5": 5 });
+    expect(decorativeLevels()).toEqual([6, 7, 8, 9, 10, 11, 12]);
     for (const level of decorativeLevels()) expect(floorAtLevel(level)).toBeNull();
   });
 
@@ -251,6 +252,121 @@ describe("fachada", () => {
 
   it("fica leve: uma malha só por material, sem passar de 60 mil vértices", () => {
     expect(body.getAttribute("position").count + lit.getAttribute("position").count).toBeLessThan(60000);
+  });
+});
+
+describe("andares de expansão", () => {
+  const ids = EXPANSION_FLOORS.map((floor) => floor.id);
+  const walls = (id: string) => [...buildExpansion(id).fixed.values()].reduce((lowest, part) => {
+    part.computeBoundingBox();
+    return Math.min(lowest, part.boundingBox!.min.z);
+  }, Infinity);
+
+  it("têm a mesma caixa dos elevadores dos outros andares", () => {
+    const reference = [...buildLobby().fixed.values()].reduce((lowest, part) => {
+      part.computeBoundingBox();
+      return Math.min(lowest, part.boundingBox!.min.z);
+    }, Infinity);
+    for (const id of ids) expect(walls(id), id).toBeCloseTo(reference, 3);
+  });
+
+  it("são quatro, nos pavimentos 2 a 5, sem mexer na Diretoria", () => {
+    expect(EXPANSION_FLOORS.map((floor) => floor.level)).toEqual([2, 3, 4, 5]);
+    expect(FLOOR_LEVEL.diretoria).toBe(13);
+    for (const floor of EXPANSION_FLOORS) expect(floorAtLevel(floor.level)).toBe(floor.id);
+    expect(floorAtLevel(6)).toBeNull();
+  });
+
+  it("cada um abre pela URL, e a frota real ignora", () => {
+    for (const id of ids) {
+      expect(initialBuildingView("demo", `?andar=${id}`)).toBe(id);
+      expect(initialBuildingView("live", `?andar=${id}`)).toBe("operacao");
+    }
+  });
+
+  it("as teclas passam por todos, de cima a baixo", () => {
+    const visited: BuildingView[] = ["exterior"];
+    for (let step = 0; step < 7; step += 1) visited.push(neighborView(visited.at(-1)!, -1));
+    expect(visited).toEqual(["exterior", "diretoria", "expansao-5", "expansao-4", "expansao-3", "expansao-2", "operacao", "terreo"]);
+  });
+
+  it("nenhuma zona repete id, nem entre andares", () => {
+    const every = [...BUILDING_VIEWS].flatMap((view) => viewRooms(view).map((room) => room.id));
+    expect(new Set(every).size).toBe(every.length);
+    for (const id of ids) {
+      for (const room of viewRooms(id)) {
+        expect(room.id.startsWith(`${id}-`)).toBe(true);
+        expect(BUILDING_ROOMS_BY_ID[room.id]).toBe(room);
+      }
+    }
+  });
+
+  it("zonas não se sobrepõem, cabem no andar, e clicar em cada uma acha a própria", () => {
+    for (const id of ids) {
+      for (const room of viewRooms(id)) {
+        expect(room.bounds.minX).toBeGreaterThanOrEqual(FLOOR_BOUNDS.minX);
+        expect(room.bounds.maxX).toBeLessThanOrEqual(FLOOR_BOUNDS.maxX);
+        expect(room.bounds.minZ).toBeGreaterThanOrEqual(FLOOR_BOUNDS.minZ);
+        expect(room.bounds.maxZ).toBeLessThanOrEqual(FLOOR_BOUNDS.maxZ);
+        expect(viewRoomAt(id, room.center.x, room.center.z)?.id, `${room.id} não acha o próprio centro`).toBe(room.id);
+      }
+    }
+  });
+
+  it("não inventa equipe nem gente: só disponível, reservado e apoio", () => {
+    for (const id of ids) {
+      expect(sceneryOfView(id)).toEqual([]);
+      for (const room of viewRooms(id)) expect(room.purpose).toContain("reservado");
+    }
+    expect(EXPANSION_FLOORS.map((floor) => floor.title)).toEqual(["Expansão · andar 2", "Expansão · andar 3", "Expansão · andar 4", "Expansão · andar 5"]);
+    const fleetNames = /argos|forge|pulse|echo|scout|atlas|\bink\b/i;
+    for (const room of ids.flatMap((id) => viewRooms(id))) expect(room.name).not.toMatch(fleetNames);
+  });
+
+  it("corredor livre dos elevadores até as zonas, e nada fora do andar", () => {
+    const { minX, maxX, minZ, maxZ } = EXPANSION_CORRIDOR;
+    expect(maxX - minX).toBeCloseTo(1.5, 6);
+    for (const id of ids) {
+      for (const item of buildExpansion(id).footprints) {
+        const crosses = item.maxX > minX && item.minX < maxX && item.maxZ > minZ && item.minZ < maxZ;
+        expect(crosses, `${id}: ${item.label} no corredor`).toBe(false);
+        const core = ELEVATOR_CORE.bounds;
+        // A caixa dos elevadores fica fora da laje; nada do andar entra nela nem sai da laje pelos lados.
+        expect(item.minX, `${id}: ${item.label}`).toBeGreaterThanOrEqual(Math.min(FLOOR_BOUNDS.minX, core.minX));
+        expect(item.maxX, `${id}: ${item.label}`).toBeLessThanOrEqual(FLOOR_BOUNDS.maxX);
+        expect(item.maxZ, `${id}: ${item.label}`).toBeLessThanOrEqual(FLOOR_BOUNDS.maxZ);
+      }
+    }
+  });
+
+  it("móveis não colidem entre si", () => {
+    for (const id of ids) {
+      const { footprints } = buildExpansion(id);
+      footprints.forEach((a, index) => {
+        for (const b of footprints.slice(index + 1)) {
+          const hit = a.maxX > b.minX && a.minX < b.maxX && a.maxZ > b.minZ && a.minZ < b.maxZ;
+          expect(hit, `${id}: ${a.label} em ${b.label}`).toBe(false);
+        }
+      });
+    }
+  });
+
+  it("as quatro plantas são diferentes de verdade, e cada uma custa uma mobília", () => {
+    const shapes = ids.map((id) => {
+      const floor = expansionFloor(id)!;
+      return floor.pieces.map(({ kind }) => kind).join();
+    });
+    expect(new Set(shapes).size).toBe(4);
+    const triangles = (batch: Batch) => [...batch.values()].reduce((sum, part) => sum + part.getAttribute("position").count / 3, 0);
+    for (const id of ids) expect(triangles(buildExpansion(id).fixed), id).toBeLessThan(60_000);
+  });
+
+  it("as mesas respeitam a planta pedida: ilhas, células, redondas e cabines", () => {
+    const kinds = (id: string, kind: string) => expansionFloor(id)!.pieces.filter((piece) => piece.kind === kind).length;
+    expect(kinds("expansao-2", "island")).toBe(2);
+    expect(kinds("expansao-3", "desk")).toBe(8);
+    expect(kinds("expansao-4", "round")).toBe(2);
+    expect(kinds("expansao-5", "desk")).toBe(4);
   });
 });
 

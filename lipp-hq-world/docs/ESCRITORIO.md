@@ -57,7 +57,14 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
   - Movimento reduzido: troca na mesma ação, sem quadro no caminho.
   - Os andares fora de tela ficam desmontados; modelos e peças já estão à mão desde a abertura.
 
-A **torre** tem 14 pavimentos: Térreo (0), Operação (1), Diretoria (13) e 11 só de fachada, que
+Os **andares de expansão** (pavimentos 2 a 5) são salas reservadas para as próximas equipes, e a
+placa e a etiqueta dizem isso. Não têm nome de equipe, gente, bot nem ação. Tudo vem da tabela em
+`officeExpansion.ts`: zonas e mobília por andar, com id de zona levando o andar na frente. Para uma
+equipe ocupar um andar, é só trocar a tabela. Bancadas abertas (2), células e reunião (3), oficina
+e mesas redondas (4), cabines e jardim (5). A malha só é montada na primeira visita ao andar, e o
+seletor junta os quatro numa linha só.
+
+A **torre** tem 14 pavimentos: Térreo (0), Operação (1), expansões (2 a 5), Diretoria (13) e 7 só de fachada, que
 não clicam nem têm sala (`decorativeLevels`). A arquitetura é art déco própria do Lipp HQ: base
 de dois pavimentos com colunas duplas e friso de bronze, pilastras e janelas estreitas na
 vertical, e coroa de três degraus com agulha discreta.
@@ -66,7 +73,7 @@ vertical, e coroa de três degraus com agulha discreta.
   vazarem da fachada.
 - **O corte vale por construção.** Cada detalhe entra no intervalo de vértices do seu pavimento e
   nunca passa da laje dele; só a coroa passa, e ela vem depois de todos. O teste confere isso.
-- **Para um pavimento de fachada virar andar:** entra em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e
+- **Para um pavimento de fachada virar andar reservado:** entra em `EXPANSION_FLOORS`. Um andar novo de outro tipo entra em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e
   `viewRooms`, com a caixa dos elevadores e o interior. A fachada não muda.
 - **A cidade cresceu para o fundo** (`CITY_BOUNDS`): do alto da torre se vê mais chão, e sem isso o
   limite da cidade cortaria a coroa no enquadramento. O fit exterior prioriza a torre completa,

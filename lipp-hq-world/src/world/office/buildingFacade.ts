@@ -253,6 +253,9 @@ export function buildingSignTexture(text = "LIPP HQ") {
   context.fillRect(0, 0, 768, 128);
   context.fillStyle = "#ffe7c4";
   context.font = `800 ${text.length > 8 ? 76 : 100}px system-ui, sans-serif`;
+  // Placa comprida encolhe até caber: o canvas tem largura fixa.
+  const room = context.measureText(text).width;
+  if (room > 720) context.font = `800 ${Math.floor(76 * (720 / room))}px system-ui, sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText(text, 384, 70);

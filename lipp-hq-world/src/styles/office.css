@@ -1323,3 +1323,16 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .office-labels { transition: opacity 0.16s ease; }
 .office-labels[data-traveling="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .office-labels { transition: none; } }
+
+/* Andares reservados: uma linha do seletor, com um botão pequeno por andar. */
+.office-floor-group { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 2px 0 8px; color: var(--ui-dim); font-size: 12px; }
+.office-floor-group > div { display: flex; gap: 1px; margin-left: auto; }
+.office-floor.mini { min-height: 28px; min-width: 24px; padding: 0; justify-content: center; }
+.office-floor.mini b { width: auto; }
+.office-expansion-tag { color: #ffe7c4; }
+@media (max-width: 600px) {
+  .office-floor-group { padding: 0; min-height: 0; }
+  .office-floor-group > span { display: none; }
+  .office-floor-group > div { display: grid; grid-template-columns: 1fr 1fr; margin: 0; width: 100%; }
+  .office-floor.mini { min-width: 22px; min-height: 26px; }
+}

@@ -2,6 +2,7 @@ import { CITY_VIEW } from "./officeCity";
 import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt, type OfficeBounds } from "./officeLayout";
 import { AZIMUTH, ELEVATION, type PickBox } from "./officeCamera";
 import { DIRECTORATE_ROOMS, DIRECTORATE_SCENERY } from "./officeDirectorate";
+import { EXPANSION_FLOORS, expansionFloor, expansionRooms, type ExpansionFloorId } from "./officeExpansion";
 import { LOBBY_ROOMS, LOBBY_SCENERY, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 import type { OfficeMode } from "./officeRoute";
 
@@ -12,7 +13,7 @@ import type { OfficeMode } from "./officeRoute";
  * `worldToScreen`, o raio do clique, `roomAt`, as cadeiras e as sombras seguem valendo sem
  * nenhum deslocamento. O custo é o entorno precisar saber a elevação do andar em tela.
  */
-export type FloorId = "terreo" | "operacao" | "diretoria";
+export type FloorId = "terreo" | "operacao" | "diretoria" | ExpansionFloorId;
 export type BuildingView = "exterior" | FloorId;
 
 /** Altura de um pavimento na fachada: 3 m de parede mais a laje. */
@@ -45,16 +46,22 @@ export const FACADE_BOUNDS: OfficeBounds = {
   maxZ: FLOOR_BOUNDS.maxZ + 0.25,
 };
 
-export const FLOOR_LEVEL: Record<FloorId, number> = { terreo: 0, operacao: 1, diretoria: BUILDING_LEVELS - 1 };
+export const FLOOR_LEVEL = {
+  terreo: 0,
+  operacao: 1,
+  diretoria: BUILDING_LEVELS - 1,
+  ...Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, floor.level])),
+} as Record<FloorId, number>;
 
-export const FLOOR_LABEL: Record<FloorId, { name: string; short: string }> = {
+export const FLOOR_LABEL = {
   diretoria: { name: "Diretoria", short: "D" },
   operacao: { name: "Operação", short: "1" },
   terreo: { name: "Térreo", short: "T" },
-};
+  ...Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, { name: floor.title, short: String(floor.level) }])),
+} as Record<FloorId, { name: string; short: string }>;
 
 /** Ordem do seletor, como num painel de elevador: de cima para baixo, com o exterior à parte. */
-export const FLOOR_ORDER: readonly FloorId[] = ["diretoria", "operacao", "terreo"];
+export const FLOOR_ORDER: readonly FloorId[] = ["diretoria", ...[...EXPANSION_FLOORS].sort((a, b) => b.level - a.level).map((floor) => floor.id), "operacao", "terreo"];
 export const BUILDING_VIEWS: readonly BuildingView[] = ["exterior", ...FLOOR_ORDER];
 
 export const isBuildingView = (value: string | null): value is BuildingView => BUILDING_VIEWS.includes(value as BuildingView);
@@ -98,7 +105,7 @@ export function cityBoundsAt(city: OfficeBounds, elevation: number): OfficeBound
 
 /**
  * Pavimentos só de fachada: não clicam, não têm sala e não custam nada além da malha. Para um deles
- * virar andar de verdade, basta entrar em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e `viewRooms`.
+ * virar andar reservado, basta entrar em `EXPANSION_FLOORS`, com as zonas e a mobília dele.
  */
 export function decorativeLevels(): number[] {
   return Array.from({ length: BUILDING_LEVELS }, (_, level) => level).filter((level) => floorAtLevel(level) === null);
@@ -110,16 +117,20 @@ export function neighborView(view: BuildingView, direction: 1 | -1): BuildingVie
   return BUILDING_VIEWS[Math.min(BUILDING_VIEWS.length - 1, Math.max(0, index - direction))]!;
 }
 
+const EXPANSION_ROOMS = Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, expansionRooms(floor)])) as Record<ExpansionFloorId, BuildingRoom[]>;
+
 /** Salas do andar em tela. O exterior não tem sala nenhuma. */
 export function viewRooms(view: BuildingView): readonly BuildingRoom[] {
   if (view === "operacao") return OFFICE_ROOMS;
   if (view === "diretoria") return DIRECTORATE_ROOMS;
-  return view === "terreo" ? LOBBY_ROOMS : [];
+  if (view === "terreo") return LOBBY_ROOMS;
+  const expansion = expansionFloor(view);
+  return expansion ? EXPANSION_ROOMS[expansion.id] : [];
 }
 
 export const BUILDING_ROOMS_BY_ID: Record<string, BuildingRoom> = {
   ...OFFICE_ROOMS_BY_ID,
-  ...Object.fromEntries([...LOBBY_ROOMS, ...DIRECTORATE_ROOMS].map((room) => [room.id, room])),
+  ...Object.fromEntries([...LOBBY_ROOMS, ...DIRECTORATE_ROOMS, ...Object.values(EXPANSION_ROOMS).flat()].map((room) => [room.id, room])),
 };
 
 export function viewRoomAt(view: BuildingView, x: number, z: number): BuildingRoom | null {

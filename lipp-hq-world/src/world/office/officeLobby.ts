@@ -121,7 +121,10 @@ export const ELEVATOR_STOPS = {
   // com o recuo dos outros andares, a própria parede cobriria a porta nesta câmera.
   operacao: { doors: [1], openShaft: 1, opening: 1.18, recess: 0.06, panel: false, machines: false },
   diretoria: { doors: [0, 1, 2], openShaft: 2, opening: 1.75, recess: 0.3, panel: true, machines: true },
-} as const satisfies Record<FloorId, ElevatorStop>;
+} as const satisfies Record<"terreo" | "operacao" | "diretoria", ElevatorStop>;
+
+/** Andares reservados: o mesmo núcleo do térreo, com a cabine parada no poço de cada um. */
+export const expansionStop = (openShaft: number): ElevatorStop => ({ doors: [0, 1, 2], openShaft, opening: 1.75, recess: 0.3, panel: true, machines: false });
 
 export const LOBBY_SIGNS: readonly FloorSignSpec[] = [
   { text: "LIPP HQ", at: [RECEPTION.x, 1.75, minZ + 0.2], width: 4.8, height: 0.8 },
