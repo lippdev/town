@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, STORY } from "./officeBuilding";
+import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
 import { humanActors, humanFigures, officeRuntime, robotActors, sceneryActors, useOfficeStore } from "./officeStore";
@@ -120,6 +120,8 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     },
     /** Pixel do meio de um pavimento na fachada, com o prédio fechado. */
     levelPoint: (level: number) => worldToScreen([FACADE_BOUNDS.maxX, (level + 0.5) * STORY, FACADE_BOUNDS.maxZ - 3], officeRuntime.view, officeRuntime.viewport),
+    /** Pixel da ponta da agulha, para provar que a coroa cabe no enquadramento. */
+    spirePoint: () => worldToScreen([(FACADE_BOUNDS.minX + FACADE_BOUNDS.maxX) / 2, BUILDING_HEIGHT + CROWN_HEIGHT, (FACADE_BOUNDS.minZ + FACADE_BOUNDS.maxZ) / 2], officeRuntime.view, officeRuntime.viewport),
     /** Pixel de um ponto livre do chão da sala. */
     roomPoint: (roomId: string, localX = 0, localZ = 0) => {
       const room = BUILDING_ROOMS_BY_ID[roomId]!;
