@@ -1,8 +1,12 @@
 import { Box3 } from "three";
 import { describe, expect, it } from "vitest";
-import { NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
+import { AZIMUTH, ELEVATION, NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
 import { viewFit } from "@/world/office/officeBuilding";
-import { CITY_BOUNDS, CITY_VIEW, buildCityGeometry } from "@/world/office/officeCity";
+import { BUILDING_HEIGHT, STORY } from "@/world/office/officeBuilding";
+import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, buildCityGeometry, cityPlan, occlusionCap } from "@/world/office/officeCity";
+
+/** Aumentar este número é uma decisão: a cidade é uma malha só, mas cada vértice sai toda vez. */
+const CITY_VERTEX_BUDGET = 70_000;
 
 const SCREENS: Viewport[] = [
   { width: 1440, height: 900 },
@@ -70,7 +74,66 @@ describe("geometria da cidade", () => {
     }
   });
 
-  it("continua leve: uma malha só, com menos de 200 mil vértices", () => {
-    expect(geometry.getAttribute("position").count).toBeLessThan(200_000);
+  it("continua leve: uma malha só, bem menos que os 200 mil vértices da cidade em grade", () => {
+    const vertices = geometry.getAttribute("position").count;
+    expect(vertices).toBeLessThan(CITY_VERTEX_BUDGET);
+  });
+});
+
+describe("composição da cidade", () => {
+  const { buildings, parks } = cityPlan();
+  const heights = buildings.map(({ height }) => height);
+
+  it("nenhum prédio passa do corpo da torre: ela é a protagonista", () => {
+    expect(Math.max(...heights)).toBeLessThan(BUILDING_HEIGHT);
+  });
+
+  it("os pavimentos têm a medida da torre", () => {
+    for (const height of heights) expect((height / STORY) % 1).toBeCloseTo(0, 6);
+  });
+
+  it("tem variação de verdade: baixos, médios e altos, com muitas alturas diferentes", () => {
+    const bands = { low: 0, mid: 0, high: 0 };
+    for (const height of heights) {
+      if (height <= 4 * STORY) bands.low += 1;
+      else if (height <= 8 * STORY) bands.mid += 1;
+      else bands.high += 1;
+    }
+    expect(bands.low).toBeGreaterThan(buildings.length * 0.15);
+    expect(bands.mid).toBeGreaterThan(buildings.length * 0.15);
+    expect(bands.high).toBeGreaterThan(5);
+    expect(new Set(heights).size).toBeGreaterThanOrEqual(8);
+  });
+
+  it("lotes não têm tamanho único: a grade não se repete", () => {
+    const widths = new Set(buildings.map(({ minX, maxX }) => Math.round(maxX - minX)));
+    expect(widths.size).toBeGreaterThan(6);
+  });
+
+  it("nenhum prédio cobre a torre, a calçada ou a rua da entrada na câmera fixa", () => {
+    const perMeter = (Math.cos(ELEVATION) * Math.sin(AZIMUTH)) / Math.sin(ELEVATION);
+    const { minX, maxX, minZ, maxZ } = PROTECTED_GROUND;
+    for (const { minX: a, maxX: b, minZ: c, maxZ: d, height } of buildings) {
+      const reach = (height + 1.4) * perMeter;
+      // A sombra do prédio na direção da câmera, passo a passo.
+      for (let t = 0; t <= reach; t += 0.25) {
+        const overlaps = a - t < maxX && b - t > minX && c - t < maxZ && d - t > minZ;
+        expect(overlaps, `prédio em ${a},${c} com ${height} m`).toBe(false);
+      }
+    }
+  });
+
+  it("a altura limite vale zero em cima do lote e cresce com a distância", () => {
+    expect(occlusionCap({ minX: 0, maxX: 2, minZ: 0, maxZ: 2 })).toBe(0);
+    expect(occlusionCap({ minX: 40, maxX: 42, minZ: 40, maxZ: 42 })).toBeGreaterThan(occlusionCap({ minX: 30, maxX: 32, minZ: 30, maxZ: 32 }));
+    // De lado, sem passar pelo lote na direção da câmera: não há limite.
+    expect(occlusionCap({ minX: -100, maxX: -90, minZ: 80, maxZ: 90 })).toBe(Infinity);
+  });
+
+  it("tem praças e não tem prédio dentro do lote nem na praça da entrada", () => {
+    expect(parks.length).toBeGreaterThanOrEqual(6);
+    for (const { minX, maxX, minZ, maxZ } of buildings) {
+      expect(maxX > PROTECTED_GROUND.minX && minX < PROTECTED_GROUND.maxX && maxZ > PROTECTED_GROUND.minZ && minZ < PROTECTED_GROUND.maxZ).toBe(false);
+    }
   });
 });
