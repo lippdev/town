@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Group, type Mesh } from "three";
+import { Group, MeshBasicMaterial, MeshStandardMaterial, type Mesh } from "three";
 import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/HumanFigure";
 import { newPreset, resolveHuman, type HumanPreset } from "@/avatar/human/preset";
 import { HUMAN_SCALE, turnToward } from "./officeHumans";
 import { officeRuntime } from "./officeStore";
+import { withCityHaze } from "./cityHaze";
 import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCity } from "./officeCity";
 
 const TURN_PER_SECOND = 5;
@@ -26,14 +27,14 @@ interface Traffic {
 
 /** `start` é quanto da via o carro já andou: os primeiros começam perto do escritório. */
 const TRAFFIC: readonly Traffic[] = [
-  { color: "#b23a48", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 4.2, start: 74 },
-  { color: "#d7d3c8", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.4, start: 100 },
-  { color: "#3f6b4f", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.8, start: 135 },
-  { color: "#23262c", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.6, start: 180 },
-  { color: "#3a6ea5", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.8, start: 104 },
-  { color: "#8a7f73", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.3, start: 60 },
-  { color: "#c9a13b", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.1, start: 92 },
-  { color: "#6f7480", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.5, start: 150 },
+  { color: "#6d2a33", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 4.2, start: 74 },
+  { color: "#8f8d86", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.4, start: 100 },
+  { color: "#2f4238", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.8, start: 135 },
+  { color: "#1c1f25", axis: "x", lane: FAR_LANE_Z, direction: -1, speed: 3.6, start: 180 },
+  { color: "#2d425c", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.8, start: 104 },
+  { color: "#5c5a55", axis: "z", lane: ROADS.east.from + 1, direction: 1, speed: 3.3, start: 60 },
+  { color: "#b98f35", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.1, start: 92 },
+  { color: "#464b55", axis: "z", lane: ROADS.east.to - 1, direction: -1, speed: 3.5, start: 150 },
 ];
 
 function TrafficCar({ car, reduced }: { car: Traffic; reduced: boolean }) {
@@ -135,10 +136,19 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
   });
   const reduced = usePrefersReduced();
   const built = useMemo(() => buildCity(), []);
+  const materials = useMemo(
+    () => ({
+      body: withCityHaze(new MeshStandardMaterial({ vertexColors: true, roughness: 0.9 })),
+      lit: withCityHaze(new MeshBasicMaterial({ vertexColors: true })),
+    }),
+    [],
+  );
   useEffect(() => () => {
     built.body.dispose();
     built.lit.dispose();
-  }, [built]);
+    materials.body.dispose();
+    materials.lit.dispose();
+  }, [built, materials]);
   const [base, setBase] = useState<HumanBase | null>(null);
   useEffect(() => {
     let alive = true;
@@ -154,13 +164,9 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
   }, []);
   return (
     <>
-      <mesh ref={city} geometry={built.body} name="cidade">
-        <meshStandardMaterial vertexColors roughness={0.9} />
-      </mesh>
+      <mesh ref={city} geometry={built.body} material={materials.body} name="cidade" />
       {/* As janelas acesas não dependem da luz da cena; a hora do dia ajusta a cor do material. */}
-      <mesh geometry={built.lit} name="cidade-acesa">
-        <meshBasicMaterial vertexColors />
-      </mesh>
+      <mesh geometry={built.lit} material={materials.lit} name="cidade-acesa" />
       {TRAFFIC.map((car) => (
         <TrafficCar key={car.color} car={car} reduced={reduced} />
       ))}

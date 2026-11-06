@@ -1,5 +1,6 @@
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { CITY_AIR, CITY_LIT_MIN } from "./cityHaze";
 import { CLOCK_POLL_MS, NIGHT_BACKGROUND, currentMinutes, daylightAt, skyFor } from "./dayCycle";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
@@ -318,11 +319,15 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
     }
     scene.environmentIntensity = cave ? 0.42 : sky.environment;
     gl.toneMappingExposure = cave ? 1 : sky.exposure;
+    CITY_AIR.value.set(sky.air);
     for (const name of ["fachada-acesa", "cidade-acesa"]) {
       const lit = scene.getObjectByName(name) as Mesh | undefined;
       const material = lit?.material as { color?: Color } | undefined;
       material?.color?.setScalar(sky.litWindows);
     }
+    // De dia a cidade não tem luz acesa: o quadro ocre sobre a pedra virava remendo. Sai uma chamada.
+    const cityLit = scene.getObjectByName("cidade-acesa");
+    if (cityLit) cityLit.visible = sky.litWindows > CITY_LIT_MIN;
   });
   return (
     <>

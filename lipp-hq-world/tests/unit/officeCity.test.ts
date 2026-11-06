@@ -1,12 +1,14 @@
-import { Box3 } from "three";
+import { Box3, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { AZIMUTH, ELEVATION, NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
 import { viewFit } from "@/world/office/officeBuilding";
 import { BUILDING_HEIGHT, STORY } from "@/world/office/officeBuilding";
-import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, buildCityGeometry, cityPlan, occlusionCap } from "@/world/office/officeCity";
+import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, ROADS, buildCity, buildCityGeometry, cityPlan, elevatedLines, occlusionCap } from "@/world/office/officeCity";
 
 /** Aumentar este número é uma decisão: a cidade é uma malha só, mas cada vértice sai toda vez. */
-const CITY_VERTEX_BUDGET = 70_000;
+const CITY_VERTEX_BUDGET = 45_000;
+/** Em m² de janela acesa. A cidade anterior tinha 1.516, sorteados um a um: a de agora acende menos. */
+const CITY_LIT_AREA_BUDGET = 1_500;
 
 const SCREENS: Viewport[] = [
   { width: 1440, height: 900 },
@@ -78,6 +80,47 @@ describe("geometria da cidade", () => {
     const vertices = geometry.getAttribute("position").count;
     expect(vertices).toBeLessThan(CITY_VERTEX_BUDGET);
   });
+
+  it("acende menos que a cidade anterior, agrupado em andares e colunas", () => {
+    const { body, lit } = buildCity();
+    const position = lit.getAttribute("position");
+    const [a, b, c] = [new Vector3(), new Vector3(), new Vector3()];
+    let area = 0;
+    for (let index = 0; index < position.count; index += 3) {
+      a.fromBufferAttribute(position, index);
+      b.fromBufferAttribute(position, index + 1);
+      c.fromBufferAttribute(position, index + 2);
+      area += b.sub(a).cross(c.sub(a)).length() / 2;
+    }
+    expect(area).toBeLessThan(CITY_LIT_AREA_BUDGET);
+    body.dispose();
+    lit.dispose();
+  });
+});
+
+describe("trilho elevado", () => {
+  const lines = elevatedLines();
+
+  it("não cobre a torre nem a rua da entrada na câmera fixa", () => {
+    expect(lines.length).toBeGreaterThan(0);
+    for (const { deck, top } of lines) expect(occlusionCap(deck)).toBeGreaterThan(top + 0.7);
+  });
+
+  it("passa por cima dos carros e os pilares não caem em rua nenhuma da torre", () => {
+    for (const { pillars, bottom } of lines) {
+      expect(bottom).toBeGreaterThan(5);
+      expect(pillars.length).toBeGreaterThan(8);
+      for (const { minX, maxX, minZ, maxZ } of pillars) {
+        for (const road of [ROADS.south, ROADS.north]) expect(minZ < road.to && maxZ > road.from).toBe(false);
+        for (const road of [ROADS.east, ROADS.west]) expect(minX < road.to && maxX > road.from).toBe(false);
+      }
+    }
+  });
+
+  it("as duas linhas se cruzam sem encostar", () => {
+    const [upper, lower] = lines;
+    expect(upper!.bottom).toBeGreaterThan(lower!.top + 0.7 + 1);
+  });
 });
 
 describe("composição da cidade", () => {
@@ -86,6 +129,29 @@ describe("composição da cidade", () => {
 
   it("nenhum prédio passa do corpo da torre: ela é a protagonista", () => {
     expect(Math.max(...heights)).toBeLessThan(BUILDING_HEIGHT);
+  });
+
+  it("nem coroa nem espigão de vizinho chegam à última laje da torre", () => {
+    for (const { top, height } of buildings) {
+      expect(top).toBeLessThan(BUILDING_HEIGHT);
+      expect(top).toBeGreaterThanOrEqual(height);
+    }
+  });
+
+  it("a cidade sobe em recuos: há agulhas e sentinelas, e coroa só onde não cobre a torre", () => {
+    const styles = new Set(buildings.map(({ style }) => style));
+    for (const style of ["sentinel", "needle", "municipal", "foundry", "tenement"] as const) expect(styles).toContain(style);
+    const crowned = buildings.filter(({ crowned }) => crowned);
+    expect(crowned.length).toBeGreaterThan(10);
+    for (const lot of crowned) expect(occlusionCap(lot)).toBe(Infinity);
+  });
+
+  it("tem os três marcos, nenhum deles encostando na rua ou na frente da torre", () => {
+    for (const style of ["clock", "dome", "mast"] as const) {
+      const landmark = buildings.find((building) => building.style === style);
+      expect(landmark, style).toBeDefined();
+      expect(occlusionCap(landmark!)).toBe(Infinity);
+    }
   });
 
   it("os pavimentos têm a medida da torre", () => {
@@ -113,8 +179,8 @@ describe("composição da cidade", () => {
   it("nenhum prédio cobre a torre, a calçada ou a rua da entrada na câmera fixa", () => {
     const perMeter = (Math.cos(ELEVATION) * Math.sin(AZIMUTH)) / Math.sin(ELEVATION);
     const { minX, maxX, minZ, maxZ } = PROTECTED_GROUND;
-    for (const { minX: a, maxX: b, minZ: c, maxZ: d, height } of buildings) {
-      const reach = (height + 1.4) * perMeter;
+    for (const { minX: a, maxX: b, minZ: c, maxZ: d, height, top } of buildings) {
+      const reach = Math.max(top, height + 1.4) * perMeter;
       // A sombra do prédio na direção da câmera, passo a passo.
       for (let t = 0; t <= reach; t += 0.25) {
         const overlaps = a - t < maxX && b - t > minX && c - t < maxZ && d - t > minZ;
