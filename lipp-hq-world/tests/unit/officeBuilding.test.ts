@@ -15,7 +15,7 @@ import { CITY_BOUNDS } from "@/world/office/officeCity";
 import { pathLength, pathPose } from "@/world/office/officeHumans";
 import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
 import { ELEVATOR_CORE, ELEVATOR_CORE_X, ELEVATOR_STOPS, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
-import { aimCamera, floorFit, stepTravel, zoomStep, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
+import { aimCamera, cameraEaseStep, floorFit, stepTravel, zoomStep, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
   it("a frota real sempre fica no escritório, mesmo pedindo outro andar", () => {
@@ -559,6 +559,21 @@ describe("navegação entre andares", () => {
     expect(frames).toBeGreaterThan(20);
     expect(officeRuntime.view).toEqual(floorFit(officeRuntime.viewport));
     expect(useOfficeStore.getState()).toMatchObject({ traveling: false, mountedFloors: ["terreo"] });
+  });
+
+  it("a câmera chega ao destino pelo relógio, e não pelo número de quadros", () => {
+    // 0,25 s é um quadro de 4 fps: a suavização precisa cobrir o mesmo caminho de um quadro de 60 fps.
+    expect(cameraEaseStep(1 / 60)).toBeGreaterThan(0.1);
+    expect(cameraEaseStep(0.25)).toBeGreaterThan(0.8);
+    let remaining = 30;
+    let step = cameraEaseStep(0.75);
+    let frames = 0;
+    while (remaining > 0.2 && frames < 100) {
+      remaining -= remaining * step;
+      step = cameraEaseStep(0.75);
+      frames += 1;
+    }
+    expect(frames).toBeLessThanOrEqual(2);
   });
 
   it("num aparelho lento a viagem dura o mesmo relógio, não o mesmo número de quadros", () => {
