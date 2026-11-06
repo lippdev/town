@@ -50,6 +50,8 @@ function botBoxes(onlyRoom?: string): PickBox[] {
 function humanBoxes(onlyRoom?: string): PickBox[] {
   const { humans } = useOfficeStore.getState();
   return [...humanActors].flatMap(([id, actor]) => {
+    // Quem ainda está chegando não tem corpo à vista, e não se clica no que não se vê.
+    if (!actor.holder.visible) return [];
     if (onlyRoom && humans.find((human) => human.id === id)?.roomId !== onlyRoom) return [];
     const { x, z } = actor.position;
     return [{ id, minX: x - 0.3, maxX: x + 0.3, minY: 0, maxY: 1.55, minZ: z - 0.3, maxZ: z + 0.3 }];
@@ -113,7 +115,9 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     if (store.framing === "floor") runtime.goal = floor;
     else if (store.framing === "room" && room && !store.pendingView) runtime.goal = fitView(room.bounds, runtime.viewport, insets, { margin: FLOOR_MARGIN });
 
-    if (store.mode === "demo") runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, viewElevation(store.buildingView)));
+    // Enquadrando o andar alto, ele manda: no celular, o limite da cidade cortaria a ponta do piso.
+    const elevation = viewElevation(store.buildingView);
+    if (store.mode === "demo" && !(store.framing === "floor" && elevation > 0)) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
 
     const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
     runtime.placed = true;

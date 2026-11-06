@@ -32,6 +32,8 @@ export function OfficeLabels() {
   const pendingView = useOfficeStore((state) => state.pendingView);
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
+  // Chegando, ele ainda não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
+  const chiefAway = chiefStatus === "chegando" || chiefStatus === "entrando";
   const nodes = useRef(new Map<HTMLElement, Anchor>());
   const liveNodes = useRef(new Map<string, HTMLElement>());
   /** Para onde a etiqueta aponta enquanto o corpo não carregou ou não existe. */
@@ -141,7 +143,7 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {humans.filter((human) => human.floor === buildingView).map((human) => {
+      {humans.filter((human) => human.floor === buildingView && !(human.id === CHIEF_ID && chiefAway)).map((human) => {
         const active = human.id === selectedHumanId || human.id === hoveredHumanId;
         return (
           <button
