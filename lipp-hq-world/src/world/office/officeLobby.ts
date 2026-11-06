@@ -17,7 +17,7 @@ const { minX, maxX, minZ, maxZ } = FLOOR_BOUNDS;
 
 export const LOBBY_ROOMS: BuildingRoom[] = [
   zone("recepcao", "Recepção", "#d6a65c", "Balcão de boas-vindas. Cenário: a atendente não atende nem registra nada.", { minX: -9.2, maxX: 0.6, minZ, maxZ: 2 }),
-  zone("elevadores", "Elevadores", "#8fa3b8", "Hall dos elevadores. Só visual: para mudar de andar, use o seletor.", { minX: 1.2, maxX, minZ, maxZ: -1.2 }),
+  zone("elevadores", "Elevadores", "#8fa3b8", "Hall dos elevadores. Só visual: para mudar de andar, use o seletor.", { minX: 0.8, maxX, minZ, maxZ: -1.2 }),
   zone("lounge", "Lounge", "#7f9f83", "Espera com sofás e poltronas. Só cenário.", { minX: 1.6, maxX, minZ: 0.6, maxZ }),
   zone("cafe", "Café", "#a97c5b", "Balcão de café e mesinhas. Só cenário.", { minX, maxX: -6.6, minZ: 2, maxZ }),
 ];
@@ -66,7 +66,12 @@ export interface FloorSignSpec {
   rotationY?: number;
 }
 
-export const ELEVATOR_XS = [3.1, 5.4, 7.7] as const;
+/**
+ * O núcleo dos elevadores é o mesmo nos andares: a porta do meio fica no eixo do corredor leste do
+ * escritório. Numa torre de verdade o poço não muda de lugar de um pavimento para o outro.
+ */
+export const ELEVATOR_CORE_X = 4.35;
+export const ELEVATOR_XS = [ELEVATOR_CORE_X - 2.3, ELEVATOR_CORE_X, ELEVATOR_CORE_X + 2.3] as const;
 
 export const LOBBY_SIGNS: readonly FloorSignSpec[] = [
   { text: "LIPP HQ", at: [RECEPTION.x, 1.75, minZ + 0.2], width: 4.8, height: 0.8 },

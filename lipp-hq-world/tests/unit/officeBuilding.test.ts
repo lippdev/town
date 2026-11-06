@@ -8,8 +8,8 @@ import { parsePreset } from "@/avatar/human/preset";
 import { buildLobby } from "@/world/office/buildingInteriors";
 import { CITY_BOUNDS } from "@/world/office/officeCity";
 import { pathLength, pathPose } from "@/world/office/officeHumans";
-import { FLOOR_BOUNDS, OFFICE_SEATS } from "@/world/office/officeLayout";
-import { LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
+import { FLOOR_BOUNDS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
+import { ELEVATOR_CORE_X, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
 import { useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
@@ -90,6 +90,12 @@ describe("térreo", () => {
     expect(viewRooms("terreo").map((room) => room.id)).toEqual(["recepcao", "elevadores", "lounge", "cafe"]);
     expect(viewRoomAt("terreo", RECEPTION.x, RECEPTION.z)?.id).toBe("recepcao");
     expect(viewRoomAt("operacao", RECEPTION.x, RECEPTION.z)?.id).not.toBe("recepcao");
+  });
+
+  it("o núcleo dos elevadores fica no eixo do corredor do escritório", () => {
+    const corridor = corridorBounds().find((item) => item.minZ === FLOOR_BOUNDS.minZ && item.minX > 0)!;
+    expect((corridor.minX + corridor.maxX) / 2).toBeCloseTo(ELEVATOR_CORE_X);
+    expect(ELEVATOR_XS[1]).toBe(ELEVATOR_CORE_X);
   });
 
   it("móveis e plantas ficam dentro do prédio", () => {

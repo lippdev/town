@@ -28,7 +28,7 @@ import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
 import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
-import { buildLobby, type FloorBuild } from "./buildingInteriors";
+import { buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
 import { LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
 import { SceneryHumans } from "./SceneryHumans";
 import { buildingSignTexture } from "./buildingFacade";
@@ -413,9 +413,11 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
 function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   const materials = useOfficeMaterials();
   const view = useOfficeStore((state) => state.buildingView);
+  const mode = useOfficeStore((state) => state.mode);
   return (
     <>
       {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
+      {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
       {view === "terreo" && <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />}
       <SceneReady />
     </>
