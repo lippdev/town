@@ -51,7 +51,7 @@ export class HumanActor {
   private goal: HumanGoal = "standing";
   private readonly seat: OfficeSeat | null;
   private readonly spot: Point;
-  private readonly route: Point[];
+  private readonly route: readonly Point[];
   /**
    * Metros já andados. Abaixo de zero, ela ainda não saiu do lugar: caminho curto não dá tempo
    * de a cadeira se virar, então ela espera a cadeira começar.
@@ -70,7 +70,7 @@ export class HumanActor {
 
   constructor(
     private readonly figure: ActorFigure,
-    human: Pick<OfficeHuman, "spot" | "chair">,
+    human: Pick<OfficeHuman, "spot" | "chair" | "route">,
     private readonly clips: ActorClips,
     private readonly reduced: boolean,
   ) {
@@ -79,7 +79,7 @@ export class HumanActor {
     this.chair = human.chair ? chairAtHome(human.chair) : null;
     this.x = human.spot.x;
     this.z = human.spot.z;
-    this.route = human.chair ? chairRoute(human.spot, human.chair) : [human.spot];
+    this.route = human.route ?? (human.chair ? chairRoute(human.spot, human.chair) : [human.spot]);
     this.holder.scale.setScalar(HUMAN_SCALE);
     this.holder.add(figure.root);
     this.place();

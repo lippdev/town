@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Matrix4, Quaternion, Vector3, type InstancedMesh, type Material } from "three";
-import { OFFICE_SEATS } from "./officeLayout";
+import { OFFICE_SEATS, type OfficeSeat } from "./officeLayout";
 import { chairAtHome, type ChairPose } from "./officeHumans";
 import { humanChairGeometry } from "./officeRooms";
-import { humanActors } from "./officeStore";
+import { humanActors, sceneryActors } from "./officeStore";
 
-const SEATS = OFFICE_SEATS.filter((seat) => seat.roomId === "hall");
+const HALL_SEATS = OFFICE_SEATS.filter((seat) => seat.roomId === "hall");
 const UP = new Vector3(0, 1, 0);
 const UNIT = new Vector3(1, 1, 1);
 const matrix = new Matrix4();
@@ -14,10 +14,10 @@ const rotation = new Quaternion();
 const place = new Vector3();
 
 /** As cadeiras da bancada, numa chamada de desenho só. Paradas, não custam nada por quadro. */
-export function HumanChairs({ material }: { material: Material }) {
+export function HumanChairs({ material, seats = HALL_SEATS }: { material: Material; seats?: readonly OfficeSeat[] }) {
   const geometry = useMemo(() => humanChairGeometry(), []);
   const mesh = useRef<InstancedMesh | null>(null);
-  const last = useRef<(ChairPose | null)[]>(SEATS.map(() => null));
+  const last = useRef<(ChairPose | null)[]>(seats.map(() => null));
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
@@ -31,22 +31,25 @@ export function HumanChairs({ material }: { material: Material }) {
   };
 
   useLayoutEffect(() => {
-    SEATS.forEach((seat, index) => put(index, chairAtHome(seat)));
+    seats.forEach((seat, index) => put(index, chairAtHome(seat)));
     mesh.current!.instanceMatrix.needsUpdate = true;
+    // Cada andar monta o próprio conjunto: a lista não muda depois disso.
   }, []);
 
   useFrame(() => {
     if (!mesh.current) return;
     let changed = false;
-    SEATS.forEach((seat, index) => {
+    seats.forEach((seat, index) => {
       let pose = chairAtHome(seat);
-      for (const actor of humanActors.values()) {
-        if (actor.seatId === seat.id && actor.chair) pose = actor.chair;
+      for (const actors of [humanActors, sceneryActors]) {
+        for (const actor of actors.values()) {
+          if (actor.seatId === seat.id && actor.chair) pose = actor.chair;
+        }
       }
       if (put(index, pose)) changed = true;
     });
     if (changed) mesh.current.instanceMatrix.needsUpdate = true;
   });
 
-  return <instancedMesh ref={mesh} name="cadeiras-do-hall" args={[geometry, material, SEATS.length]} castShadow receiveShadow frustumCulled={false} raycast={() => null} />;
+  return <instancedMesh ref={mesh} name="cadeiras-do-hall" args={[geometry, material, seats.length]} castShadow receiveShadow frustumCulled={false} raycast={() => null} />;
 }
