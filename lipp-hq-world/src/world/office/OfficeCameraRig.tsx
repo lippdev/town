@@ -189,7 +189,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         else useOfficeStore.getState().setHovered(null, null);
         return;
       }
-      if (moving()) return;
+      if (moving()) { pointers.clear(); pinch = 0; dragged = true; return; }
       pointers.set(event.pointerId, point);
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
