@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/HumanFigure";
 import { resolveHuman } from "@/avatar/human/preset";
+import { wearBatGear } from "./hideoutGear";
 import { HumanActor } from "./HumanActor";
 import { FloorGroup } from "./BuildingScene";
 import { sceneryOfView, type FloorId } from "./officeBuilding";
@@ -16,9 +17,11 @@ function SceneryBody({ person, base, reduced }: { person: SceneryHuman; base: Hu
     if (person.chair) created.settle("seated");
     else figure.play("idle", { instant: true, frozen: reduced });
     void figure.wear(resolveHuman(person.preset));
+    const takeOffGear = person.gear === "morcego" ? wearBatGear(figure) : null;
     sceneryActors.set(person.id, created);
     setActor(created);
     return () => {
+      takeOffGear?.();
       sceneryActors.delete(person.id);
       figure.dispose();
       setActor(null);
