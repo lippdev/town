@@ -58,11 +58,18 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
   - Os andares fora de tela ficam desmontados; modelos e peças já estão à mão desde a abertura.
 
 Os **andares de expansão** (pavimentos 2 a 5) são salas reservadas para as próximas equipes, e a
-placa e a etiqueta dizem isso. Não têm nome de equipe, gente, bot nem ação. Tudo vem da tabela em
-`officeExpansion.ts`: zonas e mobília por andar, com id de zona levando o andar na frente. Para uma
-equipe ocupar um andar, é só trocar a tabela. Bancadas abertas (2), células e reunião (3), oficina
-e mesas redondas (4), cabines e jardim (5). A malha só é montada na primeira visita ao andar, e o
-seletor junta os quatro numa linha só.
+etiqueta do andar diz que o que se vê é cenário simulado. Não têm nome de equipe, bot, sessão nem
+ação. Tudo vem da tabela em `officeExpansion.ts`: zonas, mobília e figurantes por andar, com id de
+zona levando o andar na frente. Para uma equipe ocupar um andar, é só trocar a tabela. Bancadas
+abertas (2), células e reunião (3), oficina e mesas redondas (4), cabines e jardim (5). A malha só é
+montada na primeira visita ao andar, e o seletor junta os quatro numa linha só.
+
+Os **figurantes** são de 4 a 5 por andar, com a mesma figura e as mesmas peças das Pessoas, cada um
+com aparência própria. Só compõem a cena, como a atendente: não entram em Pessoas, não clicam e não
+recebem comando, e só existem com o andar deles à mostra. Sentam em cadeira de verdade, no lugar de
+uma cadeira fixa da mobília, e só esse lugar ganha laptop, monitor ou papel. Só há figurante virado
+para a câmera, para o rosto aparecer. A etiqueta "Figurante · cenário" só aparece com a sala apontada
+ou em foco, para a cena não virar uma lista de nomes.
 
 A **torre** tem 14 pavimentos: Térreo (0), Operação (1), expansões (2 a 5), Diretoria (13) e 7 só de fachada, que
 não clicam nem têm sala (`decorativeLevels`). A arquitetura é art déco própria do Lipp HQ: base
