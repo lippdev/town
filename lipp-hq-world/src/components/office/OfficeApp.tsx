@@ -14,6 +14,7 @@ import { placeHumans } from "@/world/office/officeHumans";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
+import { FloorFade } from "./BuildingControls";
 import { OfficeHud } from "./OfficeHud";
 import { OfficeLabels } from "./OfficeLabels";
 import "@fontsource-variable/onest";
@@ -77,10 +78,11 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   const dpr = pixelRatioFor(quality, window.devicePixelRatio);
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
+  // Antes do primeiro quadro: a frota real nunca chega a montar o prédio.
+  useState(() => useOfficeStore.getState().setMode(mode));
   useRoster(mode);
   useHumans(mode);
   useRobotLooks();
-  useEffect(() => useOfficeStore.getState().setMode(mode), [mode]);
 
   return (
     <div className="app-shell office-shell" onContextMenu={(event) => event.preventDefault()}>
@@ -105,6 +107,7 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
           </Canvas>
         )}
         <OfficeLabels />
+        <FloorFade />
       </div>
       <OfficeHud live={mode === "live"} />
       {mode === "live" && <HermesConnection />}

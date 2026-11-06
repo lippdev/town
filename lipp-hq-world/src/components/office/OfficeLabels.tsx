@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
 import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
-import { ENTRANCE, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, viewRooms } from "@/world/office/officeBuilding";
+import { ENTRANCE, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
@@ -27,6 +28,10 @@ export function OfficeLabels() {
   const chiefStatus = useOfficeStore((state) => state.chiefStatus);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
   const hoveredHumanId = useOfficeStore((state) => state.hoveredHumanId);
+  const buildingView = useOfficeStore((state) => state.buildingView);
+  const pendingView = useOfficeStore((state) => state.pendingView);
+  const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
+  const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
   const nodes = useRef(new Map<HTMLElement, Anchor>());
   const liveNodes = useRef(new Map<string, HTMLElement>());
   /** Para onde a etiqueta aponta enquanto o corpo não carregou ou não existe. */
@@ -64,7 +69,7 @@ export function OfficeLabels() {
       const focused = useOfficeStore.getState().focusedRoomId;
       if (shade.current && focused) {
         // Um furo com a silhueta da sala: o resto do andar recua, sem nenhum custo na cena.
-        const outline = boxSilhouette(OFFICE_ROOMS_BY_ID[focused]!.bounds, view, viewport)
+        const outline = boxSilhouette(BUILDING_ROOMS_BY_ID[focused]!.bounds, view, viewport)
           .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
           .join(" ");
         shade.current.style.clipPath = `path(evenodd, "M0 0H${viewport.width}V${viewport.height}H0Z ${outline}Z")`;
@@ -85,9 +90,9 @@ export function OfficeLabels() {
   });
 
   return (
-    <div className="office-labels" ref={layer}>
+    <div className="office-labels" ref={layer} data-switching={pendingView !== null}>
       <div className={focusedRoomId ? "office-shade on" : "office-shade"} ref={shade} aria-hidden />
-      {OFFICE_ROOMS.map((room) => {
+      {viewRooms(buildingView).map((room) => {
         // Só o local apontado revela a identificação sobre a cena.
         const classes = room.id === hoveredRoomId ? "office-room-tag hovered" : "office-room-tag";
         return (
@@ -105,7 +110,7 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {bots.map((bot) => {
+      {buildingView === "operacao" && bots.map((bot) => {
         const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
         if (!seat) return null;
         const active = bot.id === selectedBotId || bot.id === hoveredBotId;
@@ -136,7 +141,7 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {humans.map((human) => {
+      {humans.filter((human) => human.floor === buildingView).map((human) => {
         const active = human.id === selectedHumanId || human.id === hoveredHumanId;
         return (
           <button
@@ -146,7 +151,7 @@ export function OfficeLabels() {
               if (node) liveNodes.current.set(human.id, node);
               else liveNodes.current.delete(human.id);
             }}
-            className={["office-bot-tag", "office-human-tag", active ? "active" : "", humans.length > 2 ? "extra" : "", focusedRoomId && focusedRoomId !== "hall" ? "elsewhere" : ""].filter(Boolean).join(" ")}
+            className={["office-bot-tag", "office-human-tag", active ? "active" : "", humans.length > 2 ? "extra" : "", focusedRoomId && focusedRoomId !== human.roomId ? "elsewhere" : ""].filter(Boolean).join(" ")}
             style={{ "--tag-color": "#94a3b8" } as React.CSSProperties}
             data-human={human.id}
             aria-label={`${human.name}, pessoa`}
@@ -157,9 +162,14 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {!focusedRoomId && (
+      {mode === "live" && !focusedRoomId && (
         <span className="office-entrance-tag" ref={place([ENTRANCE.x + 0.2, 0.02, ENTRANCE.z + 2.6])}>
           Entrada
+        </span>
+      )}
+      {buildingView === "exterior" && hoveredFloor && (
+        <span className="office-floor-tag" aria-hidden ref={place([FACADE_BOUNDS.maxX, (hoveredLevel! + 0.5) * STORY, FACADE_BOUNDS.maxZ])}>
+          {FLOOR_LABEL[hoveredFloor].name}
         </span>
       )}
     </div>
