@@ -4,6 +4,7 @@ import { Group, type Mesh } from "three";
 import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/HumanFigure";
 import { newPreset, resolveHuman, type HumanPreset } from "@/avatar/human/preset";
 import { HUMAN_SCALE, turnToward } from "./officeHumans";
+import { officeRuntime } from "./officeStore";
 import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCityGeometry } from "./officeCity";
 
 const TURN_PER_SECOND = 5;
@@ -126,7 +127,12 @@ function Passerby({ walker, base, reduced }: { walker: Walker; base: HumanBase; 
 }
 
 /** Cidade, trânsito e gente na rua. Não mexe em nada do escritório. */
-export function OfficeCity({ elevated = false, receiveShadow = true }: { elevated?: boolean; receiveShadow?: boolean }) {
+export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
+  const city = useRef<Mesh>(null);
+  // É um uniforme, sem recompilar: acompanha a âncora no mesmo quadro em que ela muda.
+  useFrame(() => {
+    if (city.current) city.current.receiveShadow = officeRuntime.travel.root === 0;
+  });
   const reduced = usePrefersReduced();
   const geometry = useMemo(() => buildCityGeometry(), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -145,7 +151,7 @@ export function OfficeCity({ elevated = false, receiveShadow = true }: { elevate
   }, []);
   return (
     <>
-      <mesh geometry={geometry} name="cidade" receiveShadow={receiveShadow}>
+      <mesh ref={city} geometry={geometry} name="cidade">
         <meshStandardMaterial vertexColors roughness={0.9} />
       </mesh>
       {TRAFFIC.map((car) => (

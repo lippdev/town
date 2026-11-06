@@ -27,7 +27,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
-import { BUILDING_ROOMS_BY_ID, viewRoomAt, type BuildingView, type FloorId } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
 import { buildDirectorate, buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
 import { ROBOT_URL, loadGltf, loadPart } from "@/avatar/human/humanAssets";
 import { loadHumanBase } from "@/avatar/human/HumanFigure";
@@ -41,13 +41,15 @@ import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { ChiefScene } from "./ChiefScene";
-import { BuildingSurroundings } from "./BuildingScene";
+import { BuildingSurroundings, FloorGroup } from "./BuildingScene";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
 import { OfficeRobots } from "./RobotBodies";
 import { thinIslands } from "./thinIslands";
 import type { OfficeMode } from "./officeRoute";
-import { useOfficeStore } from "./officeStore";
+import { travelSinks, useOfficeStore } from "./officeStore";
+
+type BuildingFloors = readonly FloorId[];
 
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
 
@@ -352,12 +354,23 @@ function LoadWatch() {
   return null;
 }
 
-/** No mesmo quadro da troca: o andar que acabou de entrar não pode herdar a sombra do anterior. */
-function ShadowRefresh({ view }: { view: BuildingView }) {
+/** Quem entra no meio da viagem, ou troca o andar à mostra: não pode herdar a sombra do anterior. */
+function ShadowRefresh({ view }: { view: BuildingFloors }) {
   const gl = useThree((state) => state.gl);
   useLayoutEffect(() => {
     gl.shadowMap.needsUpdate = true;
   }, [gl, view]);
+  return null;
+}
+
+/**
+ * A sombra de contato olha para cima a partir do piso e pegaria a fachada e a laje da viagem.
+ * Estes dois quadros em volta dela escondem o entorno só durante aquela foto.
+ */
+function HideGround({ hidden }: { hidden: boolean }) {
+  useFrame(() => {
+    for (const group of travelSinks.ground) group.visible = !hidden;
+  });
   return null;
 }
 
@@ -441,18 +454,33 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
 /** Materiais ficam; o andar é o único pedaço do prédio com móveis, e só ele está montado. */
 function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   const materials = useOfficeMaterials();
-  const view = useOfficeStore((state) => state.buildingView);
+  const mounted = useOfficeStore((state) => state.mountedFloors);
+  const shown = useOfficeStore((state) => state.shownFloor);
   const mode = useOfficeStore((state) => state.mode);
   return (
     <>
-      <ShadowRefresh view={view} />
-      {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
-      {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
-      {view === "diretoria" && <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />}
-      {view === "terreo" && <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />}
+      <ShadowRefresh view={mounted} />
+      {mounted.includes("operacao") && (
+        <FloorGroup floor="operacao">
+          <OperacaoFloor quality={quality} materials={materials} />
+          {mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
+        </FloorGroup>
+      )}
+      {mounted.includes("diretoria") && (
+        <FloorGroup floor="diretoria">
+          <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />
+        </FloorGroup>
+      )}
+      {mounted.includes("terreo") && (
+        <FloorGroup floor="terreo">
+          <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />
+        </FloorGroup>
+      )}
       {/* Um único par de render targets: remontar ContactShadows por andar vaza GPU no drei. */}
-      <group visible={view !== "exterior"}>
-        <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} frames={view === "exterior" ? 0 : 1} />
+      <group visible={shown !== null}>
+        <HideGround hidden />
+        <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} frames={shown === null ? 0 : 1} />
+        <HideGround hidden={false} />
       </group>
       <SceneReady />
     </>

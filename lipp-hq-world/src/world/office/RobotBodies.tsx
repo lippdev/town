@@ -11,6 +11,7 @@ import { buildFlightPlans, type FlightPlan, type FlightWorld } from "./officeFli
 import type { OfficeBot } from "./officeRoster";
 import { RobotActor } from "./RobotActor";
 import { officeRuntime, robotActors, useOfficeStore } from "./officeStore";
+import { FloorGroup } from "./BuildingScene";
 
 function softDisc() {
   const canvas = document.createElement("canvas");
@@ -137,6 +138,7 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const seating = useOfficeStore((state) => state.seating);
   const mode = useOfficeStore((state) => state.mode);
   const view = useOfficeStore((state) => state.buildingView);
+  const mounted = useOfficeStore((state) => state.mountedFloors.includes("operacao"));
   const [model, setModel] = useState<{ scene: Object3D; clips: AnimationClip[] } | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const mark = useGroundMark();
@@ -171,15 +173,15 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   }, [mode, reduced, seatedKey, world]);
 
   // Fica montado em todo andar, com o modelo à mão: ao voltar à Operação, os robôs já entram.
-  if (!model || view !== "operacao") return null;
+  if (!model || !mounted) return null;
   return (
-    <>
+    <FloorGroup floor="operacao">
       {bots.map((bot) => {
         const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
         if (!seat) return null;
         return <RobotBody key={bot.id} bot={bot} seat={seat} plan={plans.get(bot.id) ?? null} scene={model.scene} clips={model.clips} reduced={reduced} mark={mark} />;
       })}
       <RobotRing />
-    </>
+    </FloorGroup>
   );
 }
