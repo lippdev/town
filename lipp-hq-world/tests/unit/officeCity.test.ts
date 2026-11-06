@@ -103,6 +103,14 @@ describe("composição da cidade", () => {
     for (const lot of crowned) expect(occlusionCap(lot)).toBe(Infinity);
   });
 
+  it("tem os três marcos, nenhum deles encostando na rua ou na frente da torre", () => {
+    for (const style of ["clock", "dome", "mast"] as const) {
+      const landmark = buildings.find((building) => building.style === style);
+      expect(landmark, style).toBeDefined();
+      expect(occlusionCap(landmark!)).toBe(Infinity);
+    }
+  });
+
   it("os pavimentos têm a medida da torre", () => {
     for (const height of heights) expect((height / STORY) % 1).toBeCloseTo(0, 6);
   });

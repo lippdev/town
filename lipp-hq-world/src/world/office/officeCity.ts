@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferAttribute, Color, ConeGeometry, CylinderGeometry, PlaneGeometry, type BufferGeometry } from "three";
+import { BoxGeometry, BufferAttribute, CircleGeometry, Color, ConeGeometry, CylinderGeometry, PlaneGeometry, SphereGeometry, type BufferGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { AZIMUTH, ELEVATION } from "./officeCamera";
 import { ENTRANCE, FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
@@ -36,7 +36,7 @@ export const EAST_WALK_X = 13;
 const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015, lawn: -0.011, path: -0.007 } as const;
 const DARK_GLASS = "#22303f";
 /** O chão é neutro e escuro: quem aparece são os volumes. A calçada da torre é a mais clara. */
-const GROUND = { asphalt: "#1a1d22", walk: "#464b54", towerWalk: "#6a6e75", mark: "#7c7b74" } as const;
+const GROUND = { asphalt: "#1a1d22", walk: "#464b54", towerWalk: "#6a6e75", plaza: "#565b64", mark: "#7c7b74" } as const;
 
 export class ColorMerge {
   private readonly parts: BufferGeometry[] = [];
@@ -230,7 +230,8 @@ function splitLots(lot: Lot, seed: number, max: number, out: Lot[] = []): Lot[] 
 }
 
 /** As tipologias: a cidade se repete nelas, e é a repetição que deixa o conjunto limpo. */
-export type BuildingStyle = "sentinel" | "needle" | "municipal" | "foundry" | "tenement";
+export type LandmarkStyle = "clock" | "dome" | "mast";
+export type BuildingStyle = "sentinel" | "needle" | "municipal" | "foundry" | "tenement" | LandmarkStyle;
 
 export interface CityBuilding extends Lot {
   /** Até a última laje, sempre um número inteiro de pavimentos. */
@@ -384,6 +385,9 @@ function facade(city: ColorMerge, glow: ColorMerge, { face, at, start, span, bot
 
 /** Um prédio segundo a tipologia dele: só o que a câmera vê, com o tom sorteado entre os vizinhos. */
 function building(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: number) {
+  if (plan.style === "clock") return clockTower(city, glow, plan, seed);
+  if (plan.style === "dome") return domedHall(city, glow, plan, seed);
+  if (plan.style === "mast") return mastTower(city, glow, plan, seed);
   const distance = Math.hypot((plan.minX + plan.maxX) / 2, (plan.minZ + plan.maxZ) / 2);
   const detail: Detail = distance < 70 ? 0 : distance < 118 ? 1 : 2;
   const side = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
@@ -419,6 +423,107 @@ function building(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: 
   }
 }
 
+/**
+ * Os marcos, um por quarteirão escolhido à mão, cada um numa praça de pedra. Os dois primeiros ladeiam
+ * a torre na tela; o mastro fica mais para trás, na linha do céu. Nenhum chega à última laje dela.
+ */
+const LANDMARKS: Readonly<Record<string, { style: LandmarkStyle; half: number; stories: number; top: number }>> = {
+  "west:1|lot": { style: "clock", half: 6, stories: 11, top: 11 * STORY + 7.2 },
+  "lot|north:1": { style: "dome", half: 8, stories: 4, top: 4 * STORY + 10.5 },
+  "west:2|lot": { style: "mast", half: 6, stories: 10, top: 10 * STORY + 9.5 },
+};
+/** Cobre velho, bem apagado: é o único tom fora da ardósia, e de dia um verde mais vivo roubava a cena. */
+const PATINA = "#31454a";
+const DIAL = "#a8a494";
+const DIAL_LIT = "#d4b67e";
+const BEACON = "#ff5a3c";
+
+function stoneTier(city: ColorMerge, glow: ColorMerge, lot: Lot, bottom: number, stories: number, wall: string, seed: number) {
+  const top = bottom + stories * STORY;
+  const { minX, maxX, minZ, maxZ } = lot;
+  const shade = mix(wall, "#14171d", 0.12);
+  city.prism(minX, maxX, minZ, maxZ, bottom, top, wall, shade, ROOF);
+  // Marco não sorteia luz: a dele é o mostrador, as frestas e o aviso.
+  const shared = { bottom, stories, detail: 0 as const, lights: { floors: [], columns: 0, from: 0, to: 0, tone: LIT_TONES[0] } };
+  facade(city, glow, { ...shared, face: "z", at: maxZ, start: minX, span: maxX - minX, wall, seed });
+  facade(city, glow, { ...shared, face: "x", at: maxX, start: minZ, span: maxZ - minZ, wall: shade, seed: seed + 3 });
+  city.prism(minX - 0.16, maxX + 0.16, minZ - 0.16, maxZ + 0.16, top - 0.02, top + 0.3, LIMESTONE, LIMESTONE, ROOF);
+  return top;
+}
+
+/** Mostrador nas duas faces à vista: claro de dia, aceso à noite, e os ponteiros sempre escuros. */
+function clockFace(city: ColorMerge, glow: ColorMerge, face: "x" | "z", at: number, along: number, y: number) {
+  const disc = (radius: number, relief: number, color: string, target: ColorMerge) => {
+    const circle = new CircleGeometry(radius, 20);
+    if (face === "x") circle.rotateY(Math.PI / 2);
+    if (face === "z") target.add(circle, along, y, at + relief, color);
+    else target.add(circle, at + relief, y, along, color);
+  };
+  disc(2.1, 0.02, CORNICE, city);
+  disc(1.9, 0.04, DIAL, city);
+  disc(1.9, 0.06, DIAL_LIT, glow);
+  const hand = (width: number, height: number, drop: number, shift: number) => {
+    if (face === "z") city.quad(along + shift, y - drop, at + 0.08, "z", width, height, CORNICE);
+    else city.quad(at + 0.08, y - drop, along - shift, "x", width, height, CORNICE);
+  };
+  // Nove em ponto, sempre: ponteiro que anda custaria uma malha a mais por quase nada.
+  hand(0.16, 1.6, 0, 0);
+  hand(1.15, 0.16, 0.08, -0.575);
+}
+
+/** Torre do relógio: base larga, fuste estreito, campanário com mostrador e telhado em ponta. */
+function clockTower(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: number) {
+  const x = (plan.minX + plan.maxX) / 2;
+  const z = (plan.minZ + plan.maxZ) / 2;
+  const around = (half: number): Lot => ({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
+  let top = stoneTier(city, glow, around(6), 0, 3, FACADES[0], seed);
+  top = stoneTier(city, glow, around(3.6), top, 6, FACADES[3], seed + 1);
+  const belfry = around(3.4);
+  city.prism(belfry.minX, belfry.maxX, belfry.minZ, belfry.maxZ, top, top + 2 * STORY, FACADES[0], mix(FACADES[0], "#14171d", 0.12), ROOF);
+  clockFace(city, glow, "z", belfry.maxZ, x, top + STORY);
+  clockFace(city, glow, "x", belfry.maxX, z, top + STORY);
+  top += 2 * STORY;
+  city.prism(belfry.minX - 0.2, belfry.maxX + 0.2, belfry.minZ - 0.2, belfry.maxZ + 0.2, top - 0.02, top + 0.3, LIMESTONE, LIMESTONE, ROOF);
+  city.add(pyramid(6.8, 5, 6.8), x, top + 0.3 + 2.5, z, ZINC);
+  city.add(new ConeGeometry(0.22, 1.9, 4, 1, true), x, top + 5.3 + 0.95, z, LIMESTONE);
+}
+
+/** Palácio de cúpula: colunata, ático, tambor com frestas acesas e cúpula de cobre velho. */
+function domedHall(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: number) {
+  const x = (plan.minX + plan.maxX) / 2;
+  const z = (plan.minZ + plan.maxZ) / 2;
+  const around = (half: number): Lot => ({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
+  let top = stoneTier(city, glow, around(8), 0, 3, FACADES[0], seed);
+  top = stoneTier(city, glow, around(6), top, 1, FACADES[1], seed + 1);
+  const radius = 4.4;
+  const drum = 3.4;
+  city.add(new CylinderGeometry(radius, radius, drum, 16, 1, true), x, top + drum / 2, z, LIMESTONE);
+  // As frestas só na metade que a câmera vê: de +x a +z.
+  for (let slit = 0; slit < 5; slit += 1) {
+    const angle = (slit + 0.5) * (Math.PI / 5);
+    const plane = new PlaneGeometry(0.55, 2.2);
+    plane.rotateY(angle);
+    glow.add(plane, x + Math.sin(angle) * (radius + 0.03), top + 1.7, z + Math.cos(angle) * (radius + 0.03), DIAL_LIT);
+  }
+  top += drum;
+  city.add(new SphereGeometry(radius + 0.2, 16, 5, 0, Math.PI * 2, 0, Math.PI / 2), x, top, z, PATINA);
+  top += radius + 0.2;
+  city.add(new CylinderGeometry(0.7, 0.7, 1, 8, 1, true), x, top + 0.4, z, LIMESTONE);
+  city.add(new ConeGeometry(0.28, 1.6, 6, 1, true), x, top + 0.9 + 0.8, z, PATINA);
+}
+
+/** Prédio do mastro: dois recuos e uma antena fina, com a luz de aviso que aparece de longe. */
+function mastTower(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: number) {
+  const x = (plan.minX + plan.maxX) / 2;
+  const z = (plan.minZ + plan.maxZ) / 2;
+  const around = (half: number): Lot => ({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half });
+  let top = stoneTier(city, glow, around(6), 0, 4, FACADES[2], seed);
+  top = stoneTier(city, glow, around(4.6), top, 4, FACADES[2], seed + 1);
+  top = stoneTier(city, glow, around(3.2), top, 2, FACADES[2], seed + 2);
+  city.add(new ConeGeometry(0.3, 9, 4, 1, true), x, top + 0.3 + 4.5, z, LIMESTONE);
+  glow.add(new BoxGeometry(0.5, 0.5, 0.5), x, top + 0.3 + 8.9, z, BEACON);
+}
+
 /** Conífera fechada: perto, com tronco e dois tempos; longe, só a copa. */
 function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
   if (detailed) city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 5, 1, true), x, 0.5 * scale, z, "#2e2622");
@@ -435,7 +540,7 @@ function park(city: ColorMerge, { x: [fromX, toX], z: [fromZ, toZ] }: BlockSpec)
   const z = (fromZ + toZ) / 2;
   city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.lawn, GARDEN);
   const near = Math.hypot(x, z) < 70;
-  const step = near ? 5 : 11;
+  const step = near ? 4 : 11;
   const scale = near ? 1 : 1.3;
   const row = (along: "x" | "z", at: number, from: number, to: number) => {
     // Praça curta demais para esta fila: ela sairia do quarteirão.
@@ -503,13 +608,22 @@ function cityBlocks(): BlockSpec[] {
 const BREATHING = 26;
 
 /** A planta da cidade: onde há prédio e de que altura, sem desenhar nada. Também é o que o teste lê. */
-export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; blocks: BlockSpec[] } {
+export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; plazas: BlockSpec[]; blocks: BlockSpec[] } {
   const buildings: CityBuilding[] = [];
   const parks: BlockSpec[] = [];
+  const plazas: BlockSpec[] = [];
   const blocks = cityBlocks().filter(({ key }) => key !== "lot|lot");
   blocks.forEach((block, blockIndex) => {
     const [fromX, toX] = block.x;
     const [fromZ, toZ] = block.z;
+    const landmark = LANDMARKS[block.key];
+    if (landmark) {
+      const x = (fromX + toX) / 2;
+      const z = (fromZ + toZ) / 2;
+      plazas.push(block);
+      buildings.push({ minX: x - landmark.half, maxX: x + landmark.half, minZ: z - landmark.half, maxZ: z + landmark.half, height: landmark.stories * STORY, top: landmark.top, style: landmark.style, crowned: true });
+      return;
+    }
     // O primeiro quarteirão de cada lado da frente é praça, com a rua da entrada à vista.
     const front = block.key.endsWith("south:0") || block.key.startsWith("east:0");
     if (front || PARKS.has(block.key) || toX - fromX < 6 || toZ - fromZ < 6) {
@@ -543,7 +657,7 @@ export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; blo
       buildings.push({ ...footprint, height, top, style, crowned });
     });
   });
-  return { buildings, parks, blocks };
+  return { buildings, parks, plazas, blocks };
 }
 
 /** A cornija: o teto do prédio passa um pouco da altura dos pavimentos. */
@@ -570,7 +684,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
     for (const { span, width } of streets) if (width >= 6) lane(city, "x", (span[0] + span[1]) / 2, minX + 1, maxX);
   }
 
-  const { buildings, parks, blocks } = cityPlan();
+  const { buildings, parks, plazas, blocks } = cityPlan();
   for (const block of blocks) {
     const [fromX, toX] = block.x;
     const [fromZ, toZ] = block.z;
@@ -578,6 +692,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
   }
   buildings.forEach((plan, index) => building(city, glow, plan, 300 + index * 2.3));
   for (const block of parks) park(city, block);
+  for (const { x: [fromX, toX], z: [fromZ, toZ] } of plazas) city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.lawn, GROUND.plaza);
 
   // Árvores das calçadas da torre, por fora de quem chega de carro.
   for (let x = -12; x <= 13; x += 4.5) {
