@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
-import { BUILDING_HEIGHT, BUILDING_LEVELS, CROWN_HEIGHT, CROWN_STEPS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, decorativeLevels, floorAtLevel, viewFit, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { BUILDING_HEIGHT, BUILDING_LEVELS, BUILDING_VIEWS, type BuildingView, CROWN_HEIGHT, CROWN_STEPS, FLOOR_LEVEL, type FloorId, STORY, cityBoundsAt, decorativeLevels, floorAtLevel, viewFit, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
+import { TOWER_TOP, cutAt, planTravel, plateOpacity, restCut, sectionAt, shownAt, travelProgress } from "@/world/office/floorTravel";
 import { parsePreset } from "@/avatar/human/preset";
 import { buildDirectorate, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
 import type { Batch } from "@/world/office/officeKit";
@@ -13,7 +14,7 @@ import { CITY_BOUNDS } from "@/world/office/officeCity";
 import { pathLength, pathPose } from "@/world/office/officeHumans";
 import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
 import { ELEVATOR_CORE, ELEVATOR_CORE_X, ELEVATOR_STOPS, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
-import { floorFit, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
+import { aimCamera, floorFit, stepTravel, zoomStep, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
   it("a frota real sempre fica no escritório, mesmo pedindo outro andar", () => {
@@ -253,36 +254,172 @@ describe("fachada", () => {
   });
 });
 
+describe("caminho do corte", () => {
+  const rest = (view: BuildingView) => ({ cut: restCut(view), shown: view === "exterior" ? null : view, moving: false, elevation: viewElevation(view) });
+  const pathOf = (from: BuildingView, to: BuildingView) => planTravel(rest(from), to);
+  const samples = Array.from({ length: 201 }, (_, index) => index / 200);
+
+  it("sai e chega exatamente no descanso das duas vistas", () => {
+    for (const from of BUILDING_VIEWS) {
+      for (const to of BUILDING_VIEWS) {
+        if (from === to) continue;
+        const plan = pathOf(from, to);
+        expect(cutAt(plan, 0)).toBeCloseTo(restCut(from), 6);
+        expect(cutAt(plan, 1)).toBeCloseTo(restCut(to), 6);
+      }
+    }
+  });
+
+  it("a laje está fechada sempre que o andar à mostra muda: nada aparece de repente", () => {
+    for (const from of BUILDING_VIEWS) {
+      for (const to of BUILDING_VIEWS) {
+        if (from === to) continue;
+        const plan = pathOf(from, to);
+        let last = shownAt(plan, 0);
+        for (const progress of samples) {
+          const shown = shownAt(plan, progress);
+          if (shown !== last) {
+            expect(plateOpacity(cutAt(plan, progress - 1 / 200), last), `${from}>${to} em ${progress}`).toBeGreaterThan(0.95);
+            expect(plateOpacity(cutAt(plan, progress), shown), `${from}>${to} em ${progress}`).toBeGreaterThan(0.95);
+          }
+          last = shown;
+        }
+      }
+    }
+  });
+
+  it("andar à mostra nunca fica acima do corte: nenhum piso flutua sobre a laje", () => {
+    for (const from of BUILDING_VIEWS) {
+      for (const to of BUILDING_VIEWS) {
+        if (from === to) continue;
+        const plan = pathOf(from, to);
+        for (const progress of samples) {
+          const shown = shownAt(plan, progress);
+          if (shown) expect(cutAt(plan, progress)).toBeGreaterThanOrEqual(FLOOR_LEVEL[shown] * STORY - 1e-6);
+        }
+      }
+    }
+  });
+
+  it("o tempo fica entre 480 e 650 ms, e o progresso nunca anda para trás", () => {
+    for (const to of ["terreo", "diretoria"] as const) {
+      const plan = pathOf("exterior", to);
+      expect(plan.duration).toBeGreaterThanOrEqual(480);
+      expect(plan.duration).toBeLessThanOrEqual(650);
+      let last = 0;
+      for (const t of samples) {
+        const progress = travelProgress(plan, t * plan.duration);
+        expect(progress).toBeGreaterThanOrEqual(last);
+        last = progress;
+      }
+      expect(last).toBe(1);
+    }
+  });
+
+  it("voltar ao andar ainda à mostra só desfaz o caminho, sem subir até a laje", () => {
+    const plan = planTravel({ cut: 4.4, shown: "operacao", moving: true, elevation: 8 }, "operacao");
+    expect(plan.points).toEqual([4.4, STORY]);
+    expect(shownAt(plan, 0)).toBe("operacao");
+    expect(shownAt(plan, 0.5)).toBe("operacao");
+  });
+
+  it("a seção acompanha a coroa em degraus e some na agulha", () => {
+    const body = sectionAt(10)!;
+    const firstStep = sectionAt(BUILDING_HEIGHT + 1)!;
+    const lastStep = sectionAt(BUILDING_HEIGHT + 9)!;
+    expect(firstStep.maxX - firstStep.minX).toBeLessThan(body.maxX - body.minX);
+    expect(lastStep.maxX - lastStep.minX).toBeLessThan(firstStep.maxX - firstStep.minX);
+    expect(sectionAt(TOWER_TOP)).toBeNull();
+  });
+});
+
 describe("navegação entre andares", () => {
   const seatOf = OFFICE_SEATS.find((seat) => seat.kind === "posto")!;
   const start = useOfficeStore.getState();
   afterEach(() => {
-    useOfficeStore.setState({ ...start, seating: { seats: {}, unseated: [] }, mode: "demo", buildingView: "exterior" });
+    useOfficeStore.setState({ ...start, seating: { seats: {}, unseated: [] }, mode: "demo", buildingView: "exterior", traveling: false });
+    Object.assign(officeRuntime.travel, { flight: null, cut: restCut("exterior"), elevation: 0, root: 0, shown: null, plate: 0, hold: null });
     useHQStore.getState().clearSelection();
     officeRuntime.viewport = { width: 1, height: 1 };
   });
 
-  it("trocar muda o andar na mesma chamada, sem estado de espera e sem cronômetro", () => {
+  it("o destino vale na mesma chamada, sem cronômetro: só o quadro faz a viagem andar", () => {
     vi.useFakeTimers();
     try {
       useOfficeStore.setState({ mode: "demo", buildingView: "operacao", focusedRoomId: "hall", framing: "room", hoveredRoomId: "hall", hoveredBotId: "x", selectedHumanId: "y" });
       useOfficeStore.getState().goToView("exterior");
-      expect(useOfficeStore.getState()).toMatchObject({ buildingView: "exterior", focusedRoomId: null, framing: "floor", hoveredRoomId: null, hoveredBotId: null, selectedHumanId: null });
+      expect(useOfficeStore.getState()).toMatchObject({ buildingView: "exterior", traveling: true, focusedRoomId: null, framing: "floor", hoveredRoomId: null, hoveredBotId: null, selectedHumanId: null });
       expect(vi.getTimerCount()).toBe(0);
-      expect(useOfficeStore.getState()).not.toHaveProperty("pendingView");
-      expect(useOfficeStore.getState()).not.toHaveProperty("commitView");
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("a câmera já está no enquadramento do andar novo quando a chamada volta", () => {
+  it("a câmera sai de onde está e chega exatamente no enquadramento do andar novo", () => {
     officeRuntime.viewport = { width: 1440, height: 900 };
     useOfficeStore.setState({ mode: "demo", buildingView: "diretoria", framing: "floor" });
-    officeRuntime.view = { x: 99, z: 99, zoom: 3 };
+    officeRuntime.view = { x: 9, z: 9, zoom: 20 };
     useOfficeStore.getState().goToView("terreo");
+    expect(officeRuntime.view).toEqual({ x: 9, z: 9, zoom: 20 });
+    let frames = 0;
+    while (officeRuntime.travel.flight && frames < 200) {
+      aimCamera();
+      stepTravel(1 / 60);
+      frames += 1;
+    }
+    expect(frames).toBeGreaterThan(20);
     expect(officeRuntime.view).toEqual(floorFit(officeRuntime.viewport));
-    expect(officeRuntime.goal).toEqual(officeRuntime.view);
+    expect(useOfficeStore.getState()).toMatchObject({ traveling: false, mountedFloors: ["terreo"] });
+  });
+
+  it("no meio do caminho, a câmera está entre a saída e a chegada, e a tela mudada no caminho vale", () => {
+    officeRuntime.viewport = { width: 1440, height: 900 };
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", framing: "floor" });
+    officeRuntime.view = { x: 0, z: 0, zoom: 30 };
+    useOfficeStore.getState().goToView("exterior");
+    for (let frame = 0; frame < 15; frame += 1) {
+      aimCamera();
+      stepTravel(1 / 60);
+    }
+    const middle = officeRuntime.view.zoom;
+    const arrival = floorFit(officeRuntime.viewport).zoom;
+    expect(middle).toBeLessThan(30);
+    expect(middle).toBeGreaterThan(arrival);
+    officeRuntime.viewport = { width: 844, height: 390 };
+    while (officeRuntime.travel.flight) {
+      aimCamera();
+      stepTravel(1 / 60);
+    }
+    expect(officeRuntime.view).toEqual(floorFit({ width: 844, height: 390 }));
+  });
+
+  it("pedir outro andar no meio redireciona do ponto em que está, sem fila", () => {
+    officeRuntime.viewport = { width: 1440, height: 900 };
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", framing: "floor" });
+    useOfficeStore.getState().goToView("diretoria");
+    for (let frame = 0; frame < 12; frame += 1) {
+      aimCamera();
+      stepTravel(1 / 60);
+    }
+    const { cut } = officeRuntime.travel;
+    useOfficeStore.getState().goToView("terreo");
+    expect(officeRuntime.travel.flight!.plan.points[0]).toBe(cut);
+    expect(officeRuntime.travel.flight!.plan.target).toBe("terreo");
+    expect(officeRuntime.travel.flight!.plan.redirected).toBe(true);
+    while (officeRuntime.travel.flight) {
+      aimCamera();
+      stepTravel(1 / 60);
+    }
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "terreo", mountedFloors: ["terreo"] });
+    expect(officeRuntime.travel.cut).toBe(restCut("terreo"));
+  });
+
+  it("gesto de zoom no botão espera a chegada", () => {
+    officeRuntime.viewport = { width: 1440, height: 900 };
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", framing: "floor" });
+    useOfficeStore.getState().goToView("terreo");
+    zoomStep(2);
+    expect(useOfficeStore.getState().framing).toBe("floor");
   });
 
   it("pedir o andar em tela não troca nada: só volta ao enquadramento dele, sem saltar", () => {
@@ -304,7 +441,7 @@ describe("navegação entre andares", () => {
     useOfficeStore.getState().selectBot("argos");
     expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", focusedRoomId: seatOf.roomId, framing: "room" });
     expect(useHQStore.getState().selectedBotId).toBe("argos");
-    expect(officeRuntime.view).toEqual(officeRuntime.goal);
+    expect(useOfficeStore.getState().traveling).toBe(true);
   });
 
   it("selecionar bot sem posto não muda de andar", () => {

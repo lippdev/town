@@ -44,6 +44,10 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       const store = useOfficeStore.getState();
       return {
         buildingView: store.buildingView,
+        traveling: store.traveling,
+        mountedFloors: store.mountedFloors,
+        shownFloor: store.shownFloor,
+        travel: { cut: officeRuntime.travel.cut, elevation: officeRuntime.travel.elevation, root: officeRuntime.travel.root, plate: officeRuntime.travel.plate, progress: officeRuntime.travel.progress },
         focusedRoomId: store.focusedRoomId,
         scenery: [...sceneryActors].map(([id, actor]) => ({ id, phase: actor.phase, position: actor.position, heading: actor.heading, chair: actor.chair })),
         chiefStatus: store.chiefStatus,
@@ -92,6 +96,10 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       camera.updateMatrixWorld();
       gl.render(scene, camera);
       return gl.domElement.toDataURL("image/png");
+    },
+    /** Congela a viagem nesta fração do tempo (null solta): é o que deixa fotografar o meio dela. */
+    holdTravel: (fraction: number | null) => {
+      officeRuntime.travel.hold = fraction;
     },
     /** Pixel do meio da pessoa, onde ela estiver agora. */
     humanPoint: (id: string) => {
