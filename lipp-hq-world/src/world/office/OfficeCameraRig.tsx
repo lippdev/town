@@ -2,13 +2,11 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, cityBoundsAt, floorAtLevel, neighborView, viewElevation, viewRoomAt } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, floorAtLevel, neighborView, viewRoomAt } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import {
   FORWARD,
   clampView,
-  keepGroundInside,
-  fitView,
   panView,
   pickBoxAt,
   screenToGround,
@@ -16,8 +14,7 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { CITY_BOUNDS } from "./officeCity";
-import { FLOOR_MARGIN, currentInsets, floorFit, panBounds, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
+import { aimCamera, panBounds, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 /** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
@@ -70,9 +67,9 @@ function who(id: string | null): { botId: string | null; humanId: string | null 
  */
 function pickAt(px: number, py: number): { botId: string | null; humanId: string | null; roomId: string | null } {
   const { view, viewport } = officeRuntime;
-  const { focusedRoomId: focused, buildingView, pendingView } = useOfficeStore.getState();
-  // No meio de uma troca, ou com o prédio fechado, não há sala nem gente para achar.
-  if (pendingView || buildingView === "exterior") return { botId: null, humanId: null, roomId: null };
+  const { focusedRoomId: focused, buildingView } = useOfficeStore.getState();
+  // Com o prédio fechado, não há sala nem gente para achar.
+  if (buildingView === "exterior") return { botId: null, humanId: null, roomId: null };
   if (focused) {
     const { bounds } = BUILDING_ROOMS_BY_ID[focused]!;
     const wall = pickBoxAt(px, py, view, viewport, [
@@ -85,10 +82,9 @@ function pickAt(px: number, py: number): { botId: string | null; humanId: string
   return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(), ...humanBoxes()])), roomId: viewRoomAt(buildingView, ground.x, ground.z)?.id ?? null };
 }
 
-/** O pavimento da fachada sob o pixel, com o prédio fechado e sem troca em curso. */
+/** O pavimento da fachada sob o pixel, com o prédio fechado. */
 function levelAt(px: number, py: number): number | null {
-  const { buildingView, pendingView } = useOfficeStore.getState();
-  if (pendingView || buildingView !== "exterior") return null;
+  if (useOfficeStore.getState().buildingView !== "exterior") return null;
   const hit = pickBoxAt(px, py, officeRuntime.view, officeRuntime.viewport, FACADE_BOUNDS_LEVELS);
   return hit === null ? null : Number(hit);
 }
@@ -105,19 +101,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
   useFrame((_, delta) => {
     const runtime = officeRuntime;
     runtime.viewport = { width: size.width, height: size.height };
-    const store = useOfficeStore.getState();
-    const insets = currentInsets();
-    const floor = floorFit(runtime.viewport);
-    runtime.floorZoom = floor.zoom;
-
-    const room = store.focusedRoomId ? BUILDING_ROOMS_BY_ID[store.focusedRoomId] : null;
-    // Com troca em curso, a sala pedida pode ser do próximo andar: a câmera espera por ela.
-    if (store.framing === "floor") runtime.goal = floor;
-    else if (store.framing === "room" && room && !store.pendingView) runtime.goal = fitView(room.bounds, runtime.viewport, insets, { margin: FLOOR_MARGIN });
-
-    // Enquadrando o andar alto, ele manda: no celular, o limite da cidade cortaria a ponta do piso.
-    const elevation = viewElevation(store.buildingView);
-    if (store.mode === "demo" && !(store.framing === "floor" && elevation > 0)) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
+    aimCamera();
 
     const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
     runtime.placed = true;
@@ -147,7 +131,6 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
     const limits = () => zoomLimits(officeRuntime.floorZoom);
     const moveGoal = (next: typeof officeRuntime.goal) => {
-      if (useOfficeStore.getState().pendingView) return;
       const { min, max } = limits();
       officeRuntime.goal = clampView(next, panBounds(), min, max);
       useOfficeStore.getState().markFree();
@@ -155,7 +138,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const isBackground = (event: Event) => !(event.target as HTMLElement).closest("button, a, input, textarea");
 
     const onDown = (event: PointerEvent) => {
-      if (useOfficeStore.getState().pendingView || !isBackground(event)) return;
+      if (!isBackground(event)) return;
       stage.setPointerCapture?.(event.pointerId);
       pointers.set(event.pointerId, local(event));
       if (pointers.size === 1) {
@@ -182,7 +165,6 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onMove = (event: PointerEvent) => {
-      if (useOfficeStore.getState().pendingView) { pointers.clear(); return; }
       const point = local(event);
       const last = pointers.get(event.pointerId);
       if (!last) {
@@ -217,7 +199,6 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (dragged || pointers.size > 0) return;
       const point = local(event);
       const store = useOfficeStore.getState();
-      if (store.pendingView) return;
       const level = levelAt(point.x, point.y);
       const floor = level === null ? null : floorAtLevel(level);
       if (floor) {
@@ -251,9 +232,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
 
     const onWheel = (event: WheelEvent) => {
       if (!isBackground(event)) return;
-      // Mesmo com troca em curso a página não pode dar zoom: o gesto é da cena.
       event.preventDefault();
-      if (useOfficeStore.getState().pendingView) return;
       const point = local(event);
       const { min, max } = limits();
       const unit = event.deltaMode === 1 ? 16 : 1;
@@ -275,10 +254,8 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (event.key === "Escape") {
         // O menu da conta ouve o Esc por conta própria: a cena não reage junto.
         if (stage.ownerDocument.querySelector("[data-account-menu]")) return;
-        // Com troca em curso, Esc cancela a troca, inclusive a que uma seleção pediu.
-        if (store.pendingView) store.goToView(store.buildingView);
         // Primeiro fecha a gaveta; só depois volta ao andar.
-        else if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
+        if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
         else if (store.framing !== "floor") store.backToFloor();
         // Já vendo o andar inteiro, mais um Esc sai do prédio.
@@ -287,7 +264,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       }
       if ((event.key === "PageUp" || event.key === "PageDown") && store.mode === "demo") {
         event.preventDefault();
-        store.goToView(neighborView(store.pendingView ?? store.buildingView, event.key === "PageUp" ? 1 : -1));
+        store.goToView(neighborView(store.buildingView, event.key === "PageUp" ? 1 : -1));
         return;
       }
       const pan: Record<string, [number, number]> = {

@@ -1,16 +1,17 @@
 import { Group } from "three";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHQStore } from "@/state/useHQStore";
 import { buildFacade } from "@/world/office/buildingFacade";
 import { HumanActor, type ActorFigure } from "@/world/office/HumanActor";
 import { BUILDING_LEVELS, FLOOR_LEVEL, STORY, cityBoundsAt, floorAtLevel, initialBuildingView, neighborView, viewElevation, viewRoomAt, viewRooms, visibleLevels } from "@/world/office/officeBuilding";
 import { parsePreset } from "@/avatar/human/preset";
 import { buildLobby } from "@/world/office/buildingInteriors";
+import { placeChief } from "@/world/office/officeChief";
 import { CITY_BOUNDS } from "@/world/office/officeCity";
 import { pathLength, pathPose } from "@/world/office/officeHumans";
 import { FLOOR_BOUNDS, OFFICE_SEATS, corridorBounds } from "@/world/office/officeLayout";
 import { ELEVATOR_CORE_X, ELEVATOR_XS, LOBBY_SCENERY, LOBBY_WALK, RECEPTION } from "@/world/office/officeLobby";
-import { useOfficeStore } from "@/world/office/officeStore";
+import { floorFit, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
 
 describe("vistas do prédio", () => {
   it("a frota real sempre fica no escritório, mesmo pedindo outro andar", () => {
@@ -130,60 +131,84 @@ describe("navegação entre andares", () => {
   const seatOf = OFFICE_SEATS.find((seat) => seat.kind === "posto")!;
   const start = useOfficeStore.getState();
   afterEach(() => {
-    useOfficeStore.setState({ ...start, seating: { seats: {}, unseated: [] }, mode: "demo", buildingView: "exterior", pendingView: null });
+    useOfficeStore.setState({ ...start, seating: { seats: {}, unseated: [] }, mode: "demo", buildingView: "exterior" });
     useHQStore.getState().clearSelection();
+    officeRuntime.viewport = { width: 1, height: 1 };
   });
 
-  it("trocar limpa foco, seleção e o que estava apontado", () => {
-    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", focusedRoomId: "hall", framing: "room", hoveredRoomId: "hall", hoveredBotId: "x", selectedHumanId: "y" });
-    useOfficeStore.getState().goToView("exterior");
-    const now = useOfficeStore.getState();
-    expect(now).toMatchObject({ pendingView: "exterior", focusedRoomId: null, framing: "floor", hoveredRoomId: null, hoveredBotId: null, selectedHumanId: null });
-    expect(now.buildingView).toBe("operacao");
-    useOfficeStore.getState().commitView();
-    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "exterior", pendingView: null });
+  it("trocar muda o andar na mesma chamada, sem estado de espera e sem cronômetro", () => {
+    vi.useFakeTimers();
+    try {
+      useOfficeStore.setState({ mode: "demo", buildingView: "operacao", focusedRoomId: "hall", framing: "room", hoveredRoomId: "hall", hoveredBotId: "x", selectedHumanId: "y" });
+      useOfficeStore.getState().goToView("exterior");
+      expect(useOfficeStore.getState()).toMatchObject({ buildingView: "exterior", focusedRoomId: null, framing: "floor", hoveredRoomId: null, hoveredBotId: null, selectedHumanId: null });
+      expect(vi.getTimerCount()).toBe(0);
+      expect(useOfficeStore.getState()).not.toHaveProperty("pendingView");
+      expect(useOfficeStore.getState()).not.toHaveProperty("commitView");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it("pedir o andar em tela não troca nada", () => {
-    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", pendingView: "exterior" });
+  it("a câmera já está no enquadramento do andar novo quando a chamada volta", () => {
+    officeRuntime.viewport = { width: 1440, height: 900 };
+    useOfficeStore.setState({ mode: "demo", buildingView: "diretoria", framing: "floor" });
+    officeRuntime.view = { x: 99, z: 99, zoom: 3 };
+    useOfficeStore.getState().goToView("terreo");
+    expect(officeRuntime.view).toEqual(floorFit(officeRuntime.viewport));
+    expect(officeRuntime.goal).toEqual(officeRuntime.view);
+  });
+
+  it("pedir o andar em tela não troca nada: só volta ao enquadramento dele, sem saltar", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", framing: "free" });
+    officeRuntime.view = { x: 1, z: 2, zoom: 40 };
     useOfficeStore.getState().goToView("operacao");
-    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", pendingView: null });
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", framing: "floor" });
+    expect(officeRuntime.view).toEqual({ x: 1, z: 2, zoom: 40 });
   });
 
   it("na frota real não há troca", () => {
     useOfficeStore.setState({ mode: "live", buildingView: "operacao" });
     useOfficeStore.getState().goToView("exterior");
-    expect(useOfficeStore.getState().pendingView).toBeNull();
+    expect(useOfficeStore.getState().buildingView).toBe("operacao");
   });
 
-  it("selecionar um bot de fora do prédio leva ao andar e à sala dele, sem perder a seleção", () => {
+  it("selecionar um bot de fora do prédio leva direto ao andar e à sala dele, sem perder a seleção", () => {
     useOfficeStore.setState({ mode: "demo", buildingView: "exterior", seating: { seats: { argos: seatOf.id }, unseated: [] } });
     useOfficeStore.getState().selectBot("argos");
-    expect(useOfficeStore.getState()).toMatchObject({ pendingView: "operacao", focusedRoomId: seatOf.roomId, framing: "room" });
-    useOfficeStore.getState().commitView();
-    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", focusedRoomId: seatOf.roomId });
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", focusedRoomId: seatOf.roomId, framing: "room" });
     expect(useHQStore.getState().selectedBotId).toBe("argos");
+    expect(officeRuntime.view).toEqual(officeRuntime.goal);
   });
 
-  it("selecionar bot no andar atual cancela a saída pendente", () => {
-    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", pendingView: "terreo", seating: { seats: { argos: seatOf.id }, unseated: [] } });
+  it("selecionar bot sem posto não muda de andar", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "terreo", seating: { seats: {}, unseated: ["argos"] } });
     useOfficeStore.getState().selectBot("argos");
-    useOfficeStore.getState().commitView();
-    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", pendingView: null, focusedRoomId: seatOf.roomId, framing: "room" });
+    expect(useOfficeStore.getState().buildingView).toBe("terreo");
     expect(useHQStore.getState().selectedBotId).toBe("argos");
   });
 
-  it("selecionar humano no andar atual cancela a saída pendente", () => {
-    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", pendingView: "diretoria" });
-    useOfficeStore.getState().selectHuman("pessoa-local");
-    useOfficeStore.getState().commitView();
-    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", pendingView: null, selectedHumanId: "pessoa-local" });
+  it("selecionar quem está em outro andar leva direto ao andar dessa pessoa", () => {
+    const chief = placeChief();
+    useOfficeStore.setState({ mode: "demo", buildingView: "terreo", humans: [chief] });
+    useOfficeStore.getState().selectHuman(chief.id);
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "diretoria", selectedHumanId: chief.id, focusedRoomId: chief.roomId, framing: "room" });
   });
 
-  it("selecionar na frota real nunca pede troca", () => {
+  it("selecionar no andar atual não mexe na câmera de uma vez", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", seating: { seats: { argos: seatOf.id }, unseated: [] } });
+    officeRuntime.view = { x: 1, z: 2, zoom: 40 };
+    useOfficeStore.getState().selectBot("argos");
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", focusedRoomId: seatOf.roomId });
+    expect(officeRuntime.view).toEqual({ x: 1, z: 2, zoom: 40 });
+  });
+
+  it("selecionar na frota real nunca muda de andar", () => {
     useOfficeStore.setState({ mode: "live", buildingView: "operacao", seating: { seats: { argos: seatOf.id }, unseated: [] } });
     useOfficeStore.getState().selectBot("argos");
-    expect(useOfficeStore.getState().pendingView).toBeNull();
+    expect(useOfficeStore.getState().buildingView).toBe("operacao");
+    useOfficeStore.getState().selectHuman("chefe");
+    expect(useOfficeStore.getState().buildingView).toBe("operacao");
   });
 });
 

@@ -13,7 +13,6 @@ import { placeEveryone } from "@/world/office/officeChief";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
-import { FloorFade } from "./BuildingControls";
 import { OfficeHud } from "./OfficeHud";
 import { OfficeLabels } from "./OfficeLabels";
 import "@fontsource-variable/onest";
@@ -106,7 +105,6 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
           </Canvas>
         )}
         <OfficeLabels />
-        <FloorFade />
       </div>
       <OfficeHud live={mode === "live"} />
       {mode === "live" && <HermesConnection />}
