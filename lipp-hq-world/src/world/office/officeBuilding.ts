@@ -1,6 +1,7 @@
 import { CITY_VIEW } from "./officeCity";
 import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt, type OfficeBounds } from "./officeLayout";
 import { AZIMUTH, ELEVATION, type PickBox } from "./officeCamera";
+import { LOBBY_ROOMS, LOBBY_SCENERY, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 import type { OfficeMode } from "./officeRoute";
 
 /**
@@ -10,7 +11,7 @@ import type { OfficeMode } from "./officeRoute";
  * `worldToScreen`, o raio do clique, `roomAt`, as cadeiras e as sombras seguem valendo sem
  * nenhum deslocamento. O custo é o entorno precisar saber a elevação do andar em tela.
  */
-export type FloorId = "operacao";
+export type FloorId = "terreo" | "operacao";
 export type BuildingView = "exterior" | FloorId;
 
 /** Altura de um pavimento na fachada: 3 m de parede mais a laje. */
@@ -29,14 +30,15 @@ export const FACADE_BOUNDS: OfficeBounds = {
   maxZ: FLOOR_BOUNDS.maxZ + 0.25,
 };
 
-export const FLOOR_LEVEL: Record<FloorId, number> = { operacao: 1 };
+export const FLOOR_LEVEL: Record<FloorId, number> = { terreo: 0, operacao: 1 };
 
 export const FLOOR_LABEL: Record<FloorId, { name: string; short: string }> = {
   operacao: { name: "Operação", short: "1" },
+  terreo: { name: "Térreo", short: "T" },
 };
 
 /** Ordem do seletor, como num painel de elevador: de cima para baixo, com o exterior à parte. */
-export const FLOOR_ORDER: readonly FloorId[] = ["operacao"];
+export const FLOOR_ORDER: readonly FloorId[] = ["operacao", "terreo"];
 export const BUILDING_VIEWS: readonly BuildingView[] = ["exterior", ...FLOOR_ORDER];
 
 export const isBuildingView = (value: string | null): value is BuildingView => BUILDING_VIEWS.includes(value as BuildingView);
@@ -65,7 +67,8 @@ export function viewFit(view: BuildingView): { bounds: OfficeBounds; top?: numbe
   if (view === "exterior") {
     return { bounds: { minX: FACADE_BOUNDS.minX, maxX: FACADE_BOUNDS.maxX, minZ: FACADE_BOUNDS.minZ, maxZ: CITY_VIEW.maxZ - 2.5 }, top: BUILDING_HEIGHT + CROWN_HEIGHT };
   }
-  return { bounds: FLOOR_BOUNDS };
+  // No térreo a rua faz parte: é por ela que se chega.
+  return { bounds: view === "terreo" ? CITY_VIEW : FLOOR_BOUNDS };
 }
 
 /**
@@ -84,14 +87,24 @@ export function neighborView(view: BuildingView, direction: 1 | -1): BuildingVie
 }
 
 /** Salas do andar em tela. O exterior não tem sala nenhuma. */
-export function viewRooms(view: BuildingView) {
-  return view === "operacao" ? OFFICE_ROOMS : [];
+export function viewRooms(view: BuildingView): readonly BuildingRoom[] {
+  if (view === "operacao") return OFFICE_ROOMS;
+  return view === "terreo" ? LOBBY_ROOMS : [];
 }
 
-export const BUILDING_ROOMS_BY_ID = OFFICE_ROOMS_BY_ID;
+export const BUILDING_ROOMS_BY_ID: Record<string, BuildingRoom> = {
+  ...OFFICE_ROOMS_BY_ID,
+  ...Object.fromEntries(LOBBY_ROOMS.map((room) => [room.id, room])),
+};
 
-export function viewRoomAt(view: BuildingView, x: number, z: number) {
-  return view === "operacao" ? roomAt(x, z) : null;
+export function viewRoomAt(view: BuildingView, x: number, z: number): BuildingRoom | null {
+  if (view === "operacao") return roomAt(x, z);
+  return viewRooms(view).find(({ bounds }) => x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ) ?? null;
+}
+
+/** Gente de cenário do andar em tela. */
+export function sceneryOfView(view: BuildingView): readonly SceneryHuman[] {
+  return view === "terreo" ? LOBBY_SCENERY : [];
 }
 
 /** Uma caixa de clique por pavimento da fachada; o id é o número dele. */

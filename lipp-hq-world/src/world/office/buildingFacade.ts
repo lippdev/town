@@ -150,7 +150,7 @@ export function buildFacade(): FacadeBuild {
 }
 
 /** A placa do alto do prédio, desenhada aqui: nenhuma fonte ou imagem de fora. */
-export function buildingSignTexture() {
+export function buildingSignTexture(text = "LIPP HQ") {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 128;
@@ -158,10 +158,10 @@ export function buildingSignTexture() {
   context.fillStyle = "#14171d";
   context.fillRect(0, 0, 768, 128);
   context.fillStyle = "#ffe7c4";
-  context.font = "800 100px system-ui, sans-serif";
+  context.font = `800 ${text.length > 8 ? 76 : 100}px system-ui, sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText("LIPP HQ", 384, 70);
+  context.fillText(text, 384, 70);
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   return texture;
