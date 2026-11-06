@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
@@ -27,10 +27,13 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
-import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, viewRoomAt, type BuildingView, type FloorId } from "./officeBuilding";
 import { buildDirectorate, buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
-import { DIRECTORATE_SEATS, DIRECTORATE_SIGNS } from "./officeDirectorate";
-import { LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
+import { ROBOT_URL, loadGltf, loadPart } from "@/avatar/human/humanAssets";
+import { loadHumanBase } from "@/avatar/human/HumanFigure";
+import { resolveHuman } from "@/avatar/human/preset";
+import { DIRECTORATE_SCENERY, DIRECTORATE_SEATS, DIRECTORATE_SIGNS } from "./officeDirectorate";
+import { LOBBY_SCENERY, LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
 import { SceneryHumans } from "./SceneryHumans";
 import { buildingSignTexture } from "./buildingFacade";
 import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, type OfficeSeat } from "./officeLayout";
@@ -131,7 +134,8 @@ function RaisedWalls({ build, materials }: { build: OfficeBuild; materials: Reco
       const group = groups.current[room.id];
       if (!group) continue;
       const goal = room.id === focused ? 1 : 0;
-      const current = progress.current[room.id] ?? 0;
+      // A primeira vez é sem animar: quem chega de outro andar encontra a sala já aberta.
+      const current = progress.current[room.id] ?? goal;
       const next = reduced ? goal : current + Math.sign(goal - current) * Math.min(Math.abs(goal - current), delta * 3.2);
       progress.current[room.id] = next;
       group.visible = next > 0.001;
@@ -342,12 +346,31 @@ function LoadWatch() {
   return null;
 }
 
-/** A sombra é refeita sem pressa: o andar que acabou de entrar não pode herdar a do anterior. */
-function ShadowRefresh() {
+/** No mesmo quadro da troca: o andar que acabou de entrar não pode herdar a sombra do anterior. */
+function ShadowRefresh({ view }: { view: BuildingView }) {
   const gl = useThree((state) => state.gl);
-  useEffect(() => {
+  useLayoutEffect(() => {
     gl.shadowMap.needsUpdate = true;
-  }, [gl]);
+  }, [gl, view]);
+  return null;
+}
+
+/**
+ * Deixa pronto o que os andares fora de tela vão pedir: na hora da troca, nada espera a rede nem
+ * monta a mobília. Andar fora de tela continua desmontado; só os arquivos e as malhas ficam à mão.
+ */
+function PrepareBuilding() {
+  useEffect(() => {
+    buildLobby();
+    buildDirectorate();
+    buildOperationCore();
+    void loadGltf(ROBOT_URL).catch(() => undefined);
+    void loadHumanBase().catch(() => undefined);
+    useGLTF.preload(PROP_URL.planta);
+    useGLTF.preload(PROP_URL.luminaria);
+    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset)];
+    for (const preset of presets) for (const part of resolveHuman(preset).parts) void loadPart(part.file).catch(() => undefined);
+  }, []);
   return null;
 }
 
@@ -382,7 +405,6 @@ function FloorSign({ spec }: { spec: FloorSignSpec }) {
 function KitFloor({ floor, build, signs, seats, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; seats?: readonly OfficeSeat[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
   return (
     <>
-      <ShadowRefresh />
       <group name={`andar-${floor}`}>
         <BatchMeshes batch={build.fixed} materials={materials} />
       </group>
@@ -398,7 +420,6 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
   const build = officeBuild();
   return (
     <>
-      <ShadowRefresh />
       <group name="office-fixed">
         <BatchMeshes batch={build.fixed} materials={materials} />
       </group>
@@ -416,6 +437,7 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   const mode = useOfficeStore((state) => state.mode);
   return (
     <>
+      <ShadowRefresh view={view} />
       {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
       {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
       {view === "diretoria" && <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />}
@@ -438,7 +460,6 @@ function reportWorldFailure(message: string) {
 /** Tudo o que a cena desenha. */
 export function OfficeScene({ stage }: { stage: HTMLElement }) {
   const mode = useOfficeStore((state) => state.mode);
-  const view = useOfficeStore((state) => state.buildingView);
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   return (
     <>
@@ -450,16 +471,15 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <OfficeWorld quality={quality} />
         </Suspense>
       </PartBoundary>
-      {view === "operacao" && (
-        <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
-          <OfficeRobots world={officeBuild()} />
-        </PartBoundary>
-      )}
+      <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
+        <OfficeRobots world={officeBuild()} />
+      </PartBoundary>
       <PartBoundary onError={(message) => useOfficeStore.getState().setHumansError(message)}>
         <OfficeHumans />
       </PartBoundary>
       {mode === "demo" && (
         <PartBoundary onError={() => undefined}>
+          <PrepareBuilding />
           <BuildingSurroundings />
           <SceneryHumans />
           <ChiefScene />

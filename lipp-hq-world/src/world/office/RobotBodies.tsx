@@ -136,6 +136,7 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const bots = useOfficeStore((state) => state.bots);
   const seating = useOfficeStore((state) => state.seating);
   const mode = useOfficeStore((state) => state.mode);
+  const view = useOfficeStore((state) => state.buildingView);
   const [model, setModel] = useState<{ scene: Object3D; clips: AnimationClip[] } | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const mark = useGroundMark();
@@ -169,7 +170,8 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
     return new Map(buildFlightPlans(seated, world).map((plan) => [plan.botId, plan]));
   }, [mode, reduced, seatedKey, world]);
 
-  if (!model) return null;
+  // Fica montado em todo andar, com o modelo à mão: ao voltar à Operação, os robôs já entram.
+  if (!model || view !== "operacao") return null;
   return (
     <>
       {bots.map((bot) => {

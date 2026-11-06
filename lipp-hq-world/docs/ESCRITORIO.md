@@ -42,8 +42,11 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
 - *O custo:* tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
   do grupo por causa do roteiro, e o limite da cidade, que encolhe do lado para onde o chão anda
   na tela (`cityBoundsAt`). A cidade só recebe sombra com o chão colado no andar.
-- *Troca:* escurece 170 ms, troca o que está montado com a câmera já no lugar e clareia. Não há
-  animação contínua de abertura da fachada nem de elevador. Com movimento reduzido é imediata.
+- *Troca:* direta. Clique, tecla ou seleção mudam `buildingView` na mesma hora, com a câmera já
+  enquadrada, e o andar novo aparece no próximo quadro. Não há escuro, cobertura, espera nem
+  animação no lugar deles, e o Canvas e o resto da tela não são recriados: a URL muda por
+  `replaceState`. Os andares fora de tela ficam desmontados, mas modelos e peças já estão
+  carregados desde a abertura da demonstração, então nada espera a rede na hora da troca.
 
 O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe
