@@ -29,8 +29,11 @@ async function check(name, fn) {
 
 async function open(url, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
+  // A prova nunca fala com um Hermes de verdade, mesmo abrindo a frota real.
+  await context.route("**/api/hq/**", (route) => route.fulfill({ status: 503, body: "" }));
   const page = await context.newPage();
   page.on("console", (message) => {
+    if (message.location().url.includes("/api/hq/")) return;
     if (["error", "warning"].includes(message.type()) && !IGNORED.some((pattern) => pattern.test(message.text()))) problems.push(message.text());
   });
   page.on("pageerror", (error) => problems.push(String(error)));
@@ -41,8 +44,8 @@ async function open(url, options = {}) {
 const state = (page) => page.evaluate(() => window.__HQ_OFFICE_QA__.state());
 const settled = (page) =>
   page.waitForFunction(() => {
-    const { view, goal, pendingView } = window.__HQ_OFFICE_QA__.state();
-    return !pendingView && Math.abs(view.x - goal.x) + Math.abs(view.z - goal.z) < 0.01 && Math.abs(view.zoom - goal.zoom) < 0.2;
+    const { view, goal } = window.__HQ_OFFICE_QA__.state();
+    return Math.abs(view.x - goal.x) + Math.abs(view.z - goal.z) < 0.01 && Math.abs(view.zoom - goal.zoom) < 0.2;
   }, null, { timeout: 15000 });
 const shot = async (page, name) => {
   await page.waitForTimeout(700);
@@ -280,7 +283,6 @@ await check("trocas repetidas em seguida terminam num estado só", async () => {
   await settled(page);
   const now = await state(page);
   assert.equal(now.buildingView, FLOORS.at(-1));
-  assert.equal(now.pendingView, null);
 });
 
 await check("custo de cada vista, para o relatório: não é promessa de quadros por segundo", async () => {
@@ -335,13 +337,12 @@ await check("celular: o seletor cabe e o enquadramento acompanha", async () => {
   await phone.context().close();
 });
 
-await check("movimento reduzido: a troca é imediata e sem escuro", async () => {
+await check("movimento reduzido: a troca é a mesma, direta", async () => {
   const calm = await open(DEMO, { reducedMotion: "reduce" });
   await settled(calm);
   for (const floor of FLOORS) {
     await calm.click(`[data-floor-selector] [data-view="${floor}"]`);
-    await calm.waitForFunction((want) => window.__HQ_OFFICE_QA__.state().buildingView === want, floor, { timeout: 500 });
-    assert.equal(await calm.getAttribute("[data-floor-fade]", "data-floor-fade"), "false");
+    assert.equal((await state(calm)).buildingView, floor);
     await settled(calm);
     await shot(calm, `reduzido-${floor}`);
   }
