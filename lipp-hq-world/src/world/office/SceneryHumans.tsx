@@ -38,6 +38,7 @@ export function SceneryHumans() {
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Carrega antes de precisar: quem entra no andar não vê a cena sem ninguém.
   useEffect(() => {
+    if (base) return;
     let alive = true;
     loadHumanBase().then(
       (loaded) => {
@@ -48,7 +49,7 @@ export function SceneryHumans() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [view, base]);
   if (!base) return null;
   return (
     <>

@@ -372,8 +372,6 @@ function PrepareBuilding() {
     buildOperationCore();
     void loadGltf(ROBOT_URL).catch(() => undefined);
     void loadHumanBase().catch(() => undefined);
-    useGLTF.preload(PROP_URL.planta);
-    useGLTF.preload(PROP_URL.luminaria);
     const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset)];
     for (const preset of presets) for (const part of resolveHuman(preset).parts) void loadPart(part.file).catch(() => undefined);
   }, []);
@@ -385,7 +383,11 @@ function FloorProps({ floor, props, quality }: { floor: FloorId; props: PropPlac
   const plants = useMemo(() => props.filter((item) => item.kind === "planta"), [props]);
   const lamps = useMemo(() => props.filter((item) => item.kind === "luminaria"), [props]);
   return (
-    <PartBoundary onError={(message) => console.warn("[escritório] planta/luminária fora da cena:", message)}>
+    <PartBoundary key={floor} onError={(message) => {
+      useGLTF.clear(PROP_URL.planta);
+      useGLTF.clear(PROP_URL.luminaria);
+      console.warn("[escritório] planta/luminária fora da cena:", message);
+    }}>
       <Suspense fallback={null}>
         {plants.length > 0 && <InstancedProp url={PROP_URL.planta} placements={plants} quality={quality} floor={floor} />}
         {lamps.length > 0 && <InstancedProp url={PROP_URL.luminaria} placements={lamps} quality={quality} floor={floor} />}

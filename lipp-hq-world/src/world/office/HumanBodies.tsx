@@ -114,11 +114,11 @@ export function OfficeHumans() {
   const wanted = everyone.length > 0;
 
   useEffect(() => {
-    if (!wanted) return;
+    if (!wanted || base) return;
     let alive = true;
     loadHumanBase().then(
       (loaded) => {
-        if (alive) setBase(loaded);
+        if (alive) { setBase(loaded); useOfficeStore.getState().setHumansError(null); }
       },
       (error: unknown) => {
         if (alive) useOfficeStore.getState().setHumansError(error instanceof Error ? error.message : String(error));
@@ -127,7 +127,7 @@ export function OfficeHumans() {
     return () => {
       alive = false;
     };
-  }, [wanted]);
+  }, [wanted, view, base]);
 
   if (!base) return null;
   return (
