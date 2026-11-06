@@ -1316,9 +1316,5 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
   .office-floor span { display: none; }
   .office-hud:has(.drawer) .office-floors { visibility: hidden; }
 }
-.office-floor-fade { position: absolute; inset: 0; z-index: 4; background: #0c111c; opacity: 0; pointer-events: none; transition: opacity 240ms ease; }
-.office-floor-fade.on { opacity: 1; transition-duration: 160ms; }
-@media (prefers-reduced-motion: reduce) { .office-floor-fade { transition: none; } }
-.office-labels[data-switching="true"] { visibility: hidden; }
 .office-floor-tag { position: absolute; left: 0; top: 0; will-change: transform; padding: 4px 9px; border-radius: 7px; background: rgba(22, 22, 21, 0.92); color: #ffe7c4; font-size: 12.5px; font-weight: 600; white-space: nowrap; pointer-events: none; }
 .office-scenery-tag { position: absolute; left: 0; top: 0; will-change: transform; padding: 2px 7px; border-radius: 6px; background: rgba(22, 22, 21, 0.82); color: #c9c6bd; font-size: 11px; white-space: nowrap; pointer-events: none; }
