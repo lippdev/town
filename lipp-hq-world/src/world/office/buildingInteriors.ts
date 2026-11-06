@@ -1,8 +1,8 @@
 import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
 import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
 import { screenUv } from "./officeTextures";
-import type { FloorId } from "./officeBuilding";
-import { ELEVATOR_CORE, ELEVATOR_STOPS, ELEVATOR_XS, RECEPTION, type ElevatorStop } from "./officeLobby";
+import { EXPANSION_CORRIDOR, expansionFloor, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
+import { ELEVATOR_CORE, ELEVATOR_STOPS, ELEVATOR_XS, RECEPTION, expansionStop, type ElevatorStop, type FloorSignSpec } from "./officeLobby";
 import { BACK_WALL_CUT, CORRIDOR, DESK_REACH, ENTRANCE, FACING, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS, type OfficeBounds } from "./officeLayout";
 import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
 
@@ -139,8 +139,7 @@ function landingDoor(b: KitBuilder, x: number, stop: ElevatorStop, open: boolean
  * de andar é o seletor. Mas a porta leva a algum lugar: atrás dela há recuo, poço, cabine e
  * cabos, e a caixa é a mesma em todo andar, para o elevador nunca mudar de lugar na torre.
  */
-export function elevatorCore(b: KitBuilder, floor: FloorId) {
-  const stop: ElevatorStop = ELEVATOR_STOPS[floor];
+export function elevatorCore(b: KitBuilder, stop: ElevatorStop) {
   const { bounds, wallFace, front, back, top, pitch, partition, openingHead } = ELEVATOR_CORE;
   const width = bounds.maxX - bounds.minX;
   const centerX = (bounds.minX + bounds.maxX) / 2;
@@ -199,8 +198,7 @@ export function elevatorCore(b: KitBuilder, floor: FloorId) {
 }
 
 /** Vãos da parede do fundo: a parede abre de verdade, e a porta fica atrás dela. */
-function elevatorOpenings(floor: FloorId): Pick<WallPlan, "doors" | "head"> {
-  const stop: ElevatorStop = ELEVATOR_STOPS[floor];
+function elevatorOpenings(stop: ElevatorStop): Pick<WallPlan, "doors" | "head"> {
   return { doors: stop.doors.map((index) => ({ at: ELEVATOR_XS[index]!, width: stop.opening })), head: ELEVATOR_CORE.openingHead };
 }
 
@@ -329,7 +327,7 @@ let operationCore: FloorBuild | null = null;
 export function buildOperationCore(): FloorBuild {
   if (operationCore) return operationCore;
   const b = new KitBuilder();
-  elevatorCore(b, "operacao");
+  elevatorCore(b, ELEVATOR_STOPS.operacao);
   operationCore = { fixed: b.build(), props: b.props, footprints: b.footprints };
   return operationCore;
 }
@@ -402,7 +400,7 @@ function anteroom(b: KitBuilder) {
     b.box([0, 1.5, 0], [2.8, 3.0, 0.04], { ...WOOD, color: "#6e5140" });
     b.box([0, 1.9, 0.03], [2.5, 0.5, 0.02], { color: "#14171d", cast: false });
   });
-  elevatorCore(b, "diretoria");
+  elevatorCore(b, ELEVATOR_STOPS.diretoria);
   // Banco e jardim baixo a leste: dão fim ao corredor sem parede nem móvel alto.
   b.at([4.35, 0, -5.9], 0, () => {
     b.box([0, 0.26, 0], [3, 0.12, 0.62], { surface: "fabric", color: "#6e7076" });
@@ -469,7 +467,7 @@ export function buildDirectorate(): FloorBuild {
   if (directorate) return directorate;
   const b = new KitBuilder();
   floorSlab(b, "#cfc6b7");
-  backWall(b, "north", { windows: [[-9.6, -5.2]], ...elevatorOpenings("diretoria") });
+  backWall(b, "north", { windows: [[-9.6, -5.2]], ...elevatorOpenings(ELEVATOR_STOPS.diretoria) });
   backWall(b, "west", { windows: [[0.8, 3.8], [-7.4, -3.4]] });
   frontWall(b, "south");
   frontWall(b, "east");
@@ -486,13 +484,13 @@ export function buildLobby(): FloorBuild {
   if (lobby) return lobby;
   const b = new KitBuilder();
   floorSlab(b);
-  backWall(b, "north", { windows: [[-10.8, -8.4], [9.15, 10.85]], ...elevatorOpenings("terreo") });
+  backWall(b, "north", { windows: [[-10.8, -8.4], [9.15, 10.85]], ...elevatorOpenings(ELEVATOR_STOPS.terreo) });
   backWall(b, "west", { windows: [[-7.6, -2.8], [2.6, 7.4]] });
   frontWall(b, "south", [{ at: -ENTRANCE.x, width: 2.5 }]);
   frontWall(b, "east");
   doorway(b);
   receptionDesk(b);
-  elevatorCore(b, "terreo");
+  elevatorCore(b, ELEVATOR_STOPS.terreo);
   turnstiles(b);
   lounge(b);
   cafe(b);
@@ -501,3 +499,115 @@ export function buildLobby(): FloorBuild {
   return lobby;
 }
 
+const CHAIR_TONE = "#4a4f57";
+
+/** Um móvel de andar reservado. Tudo vazio: sem tela, sem teclado, sem papel na mesa. */
+function expansionPiece(b: KitBuilder, piece: ExpansionPiece) {
+  switch (piece.kind) {
+    case "floor":
+      woodFloor(b, piece.bounds, piece.color);
+      break;
+    case "partition": {
+      const height = piece.height ?? BACK_WALL_CUT;
+      const lowest = Math.min(piece.from, piece.to);
+      const highest = Math.max(piece.from, piece.to);
+      innerWall(b, piece.axis, piece.at, lowest, highest, height, piece.doors ?? []);
+      break;
+    }
+    case "island":
+      b.at([piece.x, 0, piece.z], 0, () => {
+        deskTop(b, 0, 0, piece.width, piece.depth);
+        for (const offset of piece.seats) {
+          b.at([offset, 0, -piece.depth / 2 - DESK_REACH], FACING.south, () => chair(b, piece.color ?? CHAIR_TONE));
+          b.at([offset, 0, piece.depth / 2 + DESK_REACH], FACING.north, () => chair(b, piece.color ?? CHAIR_TONE));
+        }
+      });
+      break;
+    case "round":
+      b.at([piece.x, 0, piece.z], 0, () => {
+        b.cylinder([0, DESK_TOP - 0.02, 0], piece.radius, 0.05, WOOD, 28);
+        b.cylinder([0, (DESK_TOP - 0.04) / 2, 0], 0.05, DESK_TOP - 0.04, { color: "#282e35", cast: false }, 10);
+        b.cylinder([0, 0.03, 0], 0.36, 0.04, { color: "#282e35", cast: false }, 18);
+        b.solid("mesa redonda", 0, 0, piece.radius * 2, piece.radius * 2);
+        const reach = piece.radius + 0.38;
+        for (const [x, z, yaw] of [[-reach, 0, Math.PI / 2], [reach, 0, -Math.PI / 2], [0, -reach, 0], [0, reach, Math.PI]] as const) {
+          b.at([x, 0, z], yaw, () => chair(b, piece.color ?? CHAIR_TONE));
+        }
+      });
+      break;
+    case "desk":
+      b.at([piece.x, 0, piece.z], piece.yaw, () => {
+        deskTop(b, 0, DESK_REACH + 0.4, piece.width, 0.8);
+        chair(b, piece.chair ?? CHAIR_TONE);
+      });
+      break;
+    case "lounge": {
+      rug(b, piece.x, piece.z, 5, 3.8, piece.rug);
+      b.at([piece.x, 0, piece.z - 1.1], 0, () => sofa(b, piece.pillow));
+      b.at([piece.x, 0, piece.z + 0.2], 0, () => lowTable(b, 1.3, 0.7));
+      for (const [index, color] of piece.armchairs.entries()) {
+        const side = index === 0 ? -1 : 1;
+        b.at([piece.x + side * 1.9, 0, piece.z + 0.3], -side * (Math.PI / 2), () => armchair(b, color));
+      }
+      break;
+    }
+    case "cabinet":
+      b.at([piece.x, 0, piece.z], piece.yaw, () => cabinet(b, piece.width));
+      break;
+    case "board":
+      b.at([piece.x, 0, piece.z], piece.yaw, () => {
+        b.box([0, 1.55, 0.02], [piece.width, 1.2, 0.04], { color: "#3a3d42", cast: false });
+        b.box([0, 1.55, 0.045], [piece.width - 0.1, 1.1, 0.01], { color: "#e8e6df", cast: false });
+        b.solid("quadro", 0, 0, piece.width, 0.1);
+      });
+      break;
+    case "counter":
+      b.at([piece.x, 0, piece.z], 0, () => {
+        b.box([0, 0.45, 0], [0.8, 0.9, piece.length], WOOD);
+        b.box([0, 0.925, 0], [0.92, 0.05, piece.length + 0.1], { color: "#e2d8c4" });
+        b.solid("balcão", 0, 0, 0.92, piece.length + 0.1);
+      });
+      break;
+    case "planter":
+      b.box([piece.x, 0.2, piece.z], [piece.width, 0.4, piece.depth], { color: "#3b3e42" });
+      b.box([piece.x, 0.42, piece.z], [piece.width - 0.2, 0.04, piece.depth - 0.2], { color: "#4f7a55", cast: false });
+      b.solid("jardim", piece.x, piece.z, piece.width, piece.depth);
+      for (const offset of [-piece.depth / 3, 0, piece.depth / 3]) b.prop("planta", [piece.x, 0.44, piece.z + offset], 0.9);
+      break;
+    case "plant":
+      b.prop("planta", [piece.x, 0.02, piece.z], piece.width);
+      break;
+  }
+}
+
+const expansions = new Map<string, FloorBuild>();
+
+/** Um andar reservado: laje, paredes e núcleo iguais, a planta vem da tabela. Só monta quando alguém vai até lá. */
+export function buildExpansion(id: string): FloorBuild {
+  const cached = expansions.get(id);
+  if (cached) return cached;
+  const floor: ExpansionFloor = expansionFloor(id)!;
+  const stop = expansionStop(floor.openShaft);
+  const b = new KitBuilder();
+  floorSlab(b, floor.slab);
+  backWall(b, "north", { windows: floor.northWindows, ...elevatorOpenings(stop) });
+  backWall(b, "west", { windows: floor.westWindows });
+  frontWall(b, "south");
+  frontWall(b, "east");
+  elevatorCore(b, stop);
+  for (const piece of floor.pieces) expansionPiece(b, piece);
+  // O caminho dos elevadores até as zonas: passadeira, como a do térreo.
+  const { minX: fromX, maxX: toX, minZ: fromZ, maxZ: toZ } = EXPANSION_CORRIDOR;
+  b.box([(fromX + toX) / 2, 0.008, (fromZ + toZ) / 2], [toX - fromX, 0.012, toZ - fromZ], { surface: "fabric", color: "#6b6764", cast: false });
+  const build = { fixed: b.build(), props: b.props, footprints: b.footprints };
+  expansions.set(id, build);
+  return build;
+}
+
+/** A placa do andar, na parede do fundo: é dela que se lê que o espaço está reservado. */
+export function expansionSigns(floor: ExpansionFloor): FloorSignSpec[] {
+  return [
+    { text: "ELEVADORES", at: [ELEVATOR_XS[1], 2.83, minZ + 0.05], width: 1.7, height: 0.28 },
+    { text: floor.title.toLocaleUpperCase("pt-BR"), at: [-0.2, 1.75, minZ + 0.08], width: 3.4, height: 0.42 },
+  ];
+}

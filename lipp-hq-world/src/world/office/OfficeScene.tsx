@@ -28,7 +28,8 @@ import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
 import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
-import { buildDirectorate, buildLobby, buildOperationCore, type FloorBuild } from "./buildingInteriors";
+import { buildDirectorate, buildExpansion, buildLobby, buildOperationCore, expansionSigns, type FloorBuild } from "./buildingInteriors";
+import { EXPANSION_FLOORS } from "./officeExpansion";
 import { ROBOT_URL, loadGltf, loadPart } from "@/avatar/human/humanAssets";
 import { loadHumanBase } from "@/avatar/human/HumanFigure";
 import { resolveHuman } from "@/avatar/human/preset";
@@ -476,6 +477,11 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
           <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />
         </FloorGroup>
       )}
+      {EXPANSION_FLOORS.filter((floor) => mounted.includes(floor.id)).map((floor) => (
+        <FloorGroup key={floor.id} floor={floor.id}>
+          <KitFloor floor={floor.id} build={buildExpansion(floor.id)} signs={expansionSigns(floor)} quality={quality} materials={materials} />
+        </FloorGroup>
+      ))}
       {/* Um único par de render targets: remontar ContactShadows por andar vaza GPU no drei. */}
       <group visible={shown !== null}>
         <HideGround hidden />
