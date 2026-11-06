@@ -38,8 +38,10 @@ const BODY_COLORS = ["#6f7480", "#8a7f73", "#5f6b78", "#7d6f6a", "#6a7770", "#8c
 const LIT = "#f2c777";
 const DARK_GLASS = "#22303f";
 
-class ColorMerge {
+export class ColorMerge {
   private readonly parts: BufferGeometry[] = [];
+  /** Vértices já somados: é o que deixa cortar a malha pronta com `setDrawRange`. */
+  vertices = 0;
 
   add(geometry: BufferGeometry, x: number, y: number, z: number, color: string) {
     geometry.deleteAttribute("uv");
@@ -49,7 +51,9 @@ class ColorMerge {
     const colors = new Float32Array(count * 3);
     for (let index = 0; index < count; index += 1) colors.set([r, g, b], index * 3);
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
-    this.parts.push(geometry.index ? geometry.toNonIndexed() : geometry);
+    const part = geometry.index ? geometry.toNonIndexed() : geometry;
+    this.vertices += part.getAttribute("position").count;
+    this.parts.push(part);
   }
 
   /** `top` é a face de cima: é o que encosta nas outras camadas do chão. */
@@ -66,6 +70,13 @@ class ColorMerge {
     const pane = new PlaneGeometry(0.7, 0.8);
     if (facing === "x") pane.rotateY(Math.PI / 2);
     this.add(pane, x, y + 0.4, z, color);
+  }
+
+  /** Face voltada para +z ou +x, com a base em `y`. Só o que a câmera vê: seis vértices. */
+  quad(x: number, y: number, z: number, facing: "x" | "z", width: number, height: number, color: string) {
+    const quad = new PlaneGeometry(width, height);
+    if (facing === "x") quad.rotateY(Math.PI / 2);
+    this.add(quad, x, y + height / 2, z, color);
   }
 
   build() {
