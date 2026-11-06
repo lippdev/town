@@ -5,7 +5,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
-import { humanActors, humanFigures, officeRuntime, robotActors, useOfficeStore } from "./officeStore";
+import { humanActors, humanFigures, officeRuntime, robotActors, sceneryActors, useOfficeStore } from "./officeStore";
 
 declare global {
   interface Window {
@@ -46,6 +46,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         buildingView: store.buildingView,
         pendingView: store.pendingView,
         focusedRoomId: store.focusedRoomId,
+        scenery: [...sceneryActors].map(([id, actor]) => ({ id, phase: actor.phase, position: actor.position })),
         framing: store.framing,
         load: store.load,
         figuresError: store.figuresError,
@@ -93,6 +94,11 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     humanPoint: (id: string) => {
       const position = humanActors.get(id)?.position;
       return position ? worldToScreen([position.x, position.y + 0.7, position.z], officeRuntime.view, officeRuntime.viewport) : null;
+    },
+    /** Pixel do meio de uma figura de cenário: o harness prova que clicar nela não abre nada. */
+    sceneryPoint: (id: string) => {
+      const position = sceneryActors.get(id)?.position;
+      return position ? worldToScreen([position.x, position.y + 1.0, position.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
     /** Pixel do meio do robô na tela, onde ele estiver agora, para o harness clicar nele. */
     botPoint: (botId: string) => {

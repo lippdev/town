@@ -55,7 +55,7 @@ const goTo = async (page, view) => {
 /** Todo controle da cena alcançável por Tab. */
 const sceneFocusables = (page) => page.evaluate(() => [...document.querySelectorAll(".office-labels button, .office-labels a")].filter((node) => getComputedStyle(node).visibility !== "hidden").map((node) => node.dataset.room ?? node.dataset.bot ?? node.dataset.human ?? node.textContent));
 
-const FLOORS = (process.env.HQ_FLOORS ?? "operacao").split(",");
+const FLOORS = (process.env.HQ_FLOORS ?? "operacao,terreo").split(",");
 
 const page = await open(DEMO);
 
@@ -101,6 +101,36 @@ await check("na Operação, os sete bots e as etiquetas das salas estão lá", a
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
   const tags = await sceneFocusables(page);
   for (const id of ["engenharia", "hall", "argos"]) assert.ok(tags.includes(id), `${id} sumiu: ${tags}`);
+});
+
+await check("no térreo, a atendente é cenário: etiqueta explícita, sem gaveta e fora do Tab", async () => {
+  await goTo(page, "terreo");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.some((person) => person.id === "atendente"), null, { timeout: 30000 });
+  const now = await state(page);
+  assert.deepEqual(now.rigs, []);
+  assert.equal(now.humans.filter((human) => human.id === "atendente").length, 0);
+  assert.match(await page.textContent('[data-scenery="atendente"]'), /cenogr/);
+  const tags = await sceneFocusables(page);
+  assert.ok(!tags.includes("atendente") && !tags.includes("argos") && !tags.includes("engenharia"), `vazou: ${tags}`);
+  assert.ok(tags.includes("recepcao"));
+  const point = await page.evaluate(() => window.__HQ_OFFICE_QA__.sceneryPoint("atendente"));
+  await page.mouse.click(point.x, point.y);
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator("[data-human-panel], [data-demo-panel]").count(), 0);
+  assert.equal((await state(page)).selectedHumanId, null);
+  await shot(page, "terreo-zona");
+  await page.keyboard.press("Escape");
+  await settled(page);
+  await page.mouse.move(4, 4);
+  await shot(page, "terreo");
+  const near = await page.evaluate(() => window.__HQ_OFFICE_QA__.sceneryPoint("atendente"));
+  await page.mouse.move(near.x, near.y);
+  await page.mouse.wheel(0, -900);
+  await settled(page);
+  await page.mouse.move(4, 4);
+  await shot(page, "terreo-atendente");
+  await page.keyboard.press("Escape");
+  await settled(page);
 });
 
 await check("escolher um bot na lista, de fora do prédio, leva à sala dele e abre a gaveta", async () => {
