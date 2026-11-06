@@ -12,13 +12,20 @@ import path from "node:path";
 import { chromium } from "playwright";
 
 const BASE = process.env.HQ_URL ?? "http://127.0.0.1:5173";
-const ANGLE = process.env.HQ_ANGLE ?? "metal";
+const ANGLE = process.env.HQ_ANGLE ?? (process.platform === "darwin" ? "metal" : "swiftshader");
+const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
+/** Numa máquina sem GPU um quadro custa segundos: o relógio do harness acompanha por HQ_TIMEOUT_SCALE. */
+const SCALE = Number(process.env.HQ_TIMEOUT_SCALE ?? 1);
+const after = (ms) => Math.round(ms * SCALE);
 const OUT = process.argv[2] ?? "qa/office-building";
 const DEMO = "/?escritorio=completo&modo=demonstracao";
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/];
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch({ args: [`--use-angle=${ANGLE}`, "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({
+  executablePath: CHROME,
+  args: ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle", `--use-angle=${ANGLE}`, "--enable-unsafe-swiftshader", "--disable-gpu-sandbox", "--ignore-gpu-blocklist"],
+});
 const problems = [];
 const checks = [];
 async function check(name, fn) {
@@ -38,7 +45,7 @@ async function open(url, options = {}) {
   });
   page.on("pageerror", (error) => problems.push(String(error)));
   await page.goto(`${BASE}${url}`);
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: 90000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: after(90000) });
   return page;
 }
 const state = (page) => page.evaluate(() => window.__HQ_OFFICE_QA__.state());
@@ -46,10 +53,10 @@ const settled = (page) =>
   page.waitForFunction(() => {
     const { view, goal, traveling } = window.__HQ_OFFICE_QA__.state();
     return !traveling && Math.abs(view.x - goal.x) + Math.abs(view.z - goal.z) < 0.01 && Math.abs(view.zoom - goal.zoom) < 0.2;
-  }, null, { timeout: 15000 });
+  }, null, { timeout: after(15000) });
 const shot = async (page, name) => {
   await page.waitForTimeout(700);
-  await page.screenshot({ path: path.join(OUT, `${name}.png`) });
+  await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: after(30000) });
 };
 const goTo = async (page, view) => {
   await page.click(`[data-floor-selector] [data-view="${view}"]`);
@@ -101,7 +108,7 @@ await check("clicar no pavimento aceso entra no andar; pavimento decorativo não
   const level = await page.evaluate(() => window.__HQ_OFFICE_QA__.levelPoint(1));
   await page.mouse.move(level.x, level.y);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: path.join(OUT, "exterior-pavimento-apontado.png") });
+  await page.screenshot({ path: path.join(OUT, "exterior-pavimento-apontado.png"), timeout: after(30000) });
   await page.mouse.click(level.x, level.y);
   await settled(page);
   assert.equal((await state(page)).buildingView, "operacao");
@@ -131,7 +138,7 @@ await check("o elevador tem caixa atrás da porta nos três andares; de perto, p
 });
 
 await check("na Operação, os sete bots e as etiquetas das salas estão lá", async () => {
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: after(30000) });
   const tags = await sceneFocusables(page);
   assert.ok(!tags.includes("sala-chefe") && !tags.includes("recepcao"), `vazou: ${tags}`);
   for (const id of ["engenharia", "hall", "argos"]) assert.ok(tags.includes(id), `${id} sumiu: ${tags}`);
@@ -139,7 +146,7 @@ await check("na Operação, os sete bots e as etiquetas das salas estão lá", a
 
 await check("no térreo, a atendente é cenário: etiqueta explícita, sem gaveta e fora do Tab", async () => {
   await goTo(page, "terreo");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.some((person) => person.id === "atendente"), null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.some((person) => person.id === "atendente"), null, { timeout: after(30000) });
   const now = await state(page);
   assert.deepEqual(now.rigs, []);
   assert.equal(now.humans.filter((human) => human.id === "atendente").length, 0);
@@ -169,14 +176,14 @@ await check("no térreo, a atendente é cenário: etiqueta explícita, sem gavet
 
 await check("o chefe existe uma vez só, e só tem corpo na Diretoria", async () => {
   await goTo(page, "operacao");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: after(30000) });
   let chiefs = (await state(page)).humans.filter((human) => human.id === "chefe");
   assert.equal(chiefs.length, 1);
   assert.equal(chiefs[0].floor, "diretoria");
   assert.equal(chiefs[0].mounted, false);
   assert.ok(!(await sceneFocusables(page)).includes("chefe"));
   await goTo(page, "diretoria");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.length === 2 && window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.worn?.parts, null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.length === 2 && window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.worn?.parts, null, { timeout: after(30000) });
   chiefs = (await state(page)).humans.filter((human) => human.id === "chefe");
   assert.equal(chiefs.length, 1);
   assert.equal(chiefs[0].mounted, true);
@@ -207,7 +214,7 @@ await check("escolher o chefe na lista, de outro andar, leva à sala dele sentad
   await page.waitForFunction(() => {
     const chief = window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe");
     return chief?.mounted && chief.phase === "seated" && chief.visible;
-  }, null, { timeout: 45000 });
+  }, null, { timeout: after(45000) });
   const now = await state(page);
   assert.equal(now.buildingView, "diretoria");
   assert.equal(now.focusedRoomId, "sala-chefe");
@@ -227,14 +234,14 @@ await check("clicar no chefe na cena abre a gaveta dele; a ronda fica no andar",
   await page.waitForSelector('[data-human-panel="chefe"]');
   await settled(page);
   await page.click('button:has-text("Andar pela Diretoria")');
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "ronda", null, { timeout: 20000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "ronda", null, { timeout: after(20000) });
   const moved = (await state(page)).humans.find((human) => human.id === "chefe");
   assert.equal(moved.mounted, true);
   // Sair no meio da ronda encerra o passeio: ele não anda por outro andar.
   await goTo(page, "operacao");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: after(8000) });
   await goTo(page, "diretoria");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.phase === "seated", null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.phase === "seated", null, { timeout: after(10000) });
 });
 
 await check("rever a chegada sai para a rua e devolve o chefe à mesa, uma vez só", async () => {
@@ -244,16 +251,16 @@ await check("rever a chegada sai para a rua e devolve o chefe à mesa, uma vez s
   await page.click('button:has-text("Rever a chegada")');
   await settled(page);
   assert.equal((await state(page)).buildingView, "exterior");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "chegando", null, { timeout: 3000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "chegando", null, { timeout: after(3000) });
   await goTo(page, "diretoria");
   // Ainda chegando: a cadeira espera, sem etiqueta boiando nem corpo para clicar.
   const away = (await state(page)).humans.find((human) => human.id === "chefe");
   if ((await state(page)).chiefStatus !== "mesa") assert.equal(await page.locator('[data-human="chefe"]').count(), 0, `status ${away.phase}`);
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 20000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: after(20000) });
   await page.waitForFunction(() => {
     const chief = window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe");
     return chief.mounted && chief.visible && chief.phase === "seated";
-  }, null, { timeout: 10000 });
+  }, null, { timeout: after(10000) });
   assert.equal(await page.locator('[data-human="chefe"]').count(), 1);
 });
 
@@ -262,7 +269,7 @@ await check("o rosto de quem está em cena fica livre de cima: fotos de perto", 
   for (const [id, method] of Object.entries(closeups)) {
     await goTo(page, "exterior");
     await goTo(page, "diretoria");
-    await page.waitForFunction(([who, how]) => window.__HQ_OFFICE_QA__[how](who), [id, method], { timeout: 30000 });
+    await page.waitForFunction(([who, how]) => window.__HQ_OFFICE_QA__[how](who), [id, method], { timeout: after(30000) });
     await page.waitForTimeout(600);
     const point = await page.evaluate(([who, how]) => window.__HQ_OFFICE_QA__[how](who), [id, method]);
     await page.mouse.move(point.x, point.y);
