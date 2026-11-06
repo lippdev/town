@@ -42,11 +42,20 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
 - *O custo:* tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
   do grupo por causa do roteiro, e o limite da cidade, que encolhe do lado para onde o chão anda
   na tela (`cityBoundsAt`). A cidade só recebe sombra com o chão colado no andar.
-- *Troca:* direta. Clique, tecla ou seleção mudam `buildingView` na mesma hora, com a câmera já
-  enquadrada, e o andar novo aparece no próximo quadro. Não há escuro, cobertura, espera nem
-  animação no lugar deles, e o Canvas e o resto da tela não são recriados: a URL muda por
-  `replaceState`. Os andares fora de tela ficam desmontados, mas modelos e peças já estão
-  carregados desde a abertura da demonstração, então nada espera a rede na hora da troca.
+- *Viagem:* entre 480 e 650 ms, com a cena sempre em tela e no mesmo Canvas. O prédio fica parado
+  e quem anda é o corte (`floorTravel.ts`): sair de um andar é erguer a fachada em volta dele até uma
+  laje fechá-lo, passar pela torre e, em cima do andar novo, baixar a fachada com a laje abrindo.
+  Assim só um andar fica à mostra por vez, e a troca acontece com a laje fechada: nenhum piso
+  flutua ou atravessa outro, e nada é fatiado no meio dos móveis.
+  - A âncora (o que fica em y = 0) é o andar à mostra e só muda com a laje fechada, junto com a
+    câmera: a sombra do andar continua valendo a viagem inteira, sem refazer quadro a quadro.
+  - Câmera e chegada usam o `goal` de cada quadro: gaveta aberta ou tela redimensionada no caminho
+    mudam o destino sem salto. Outro pedido no meio parte do ponto em que está, sem fila e sem
+    cronômetro; voltar ao andar que ainda está à mostra só desfaz o que andou.
+  - Na viagem a cena não responde a ponteiro e os rótulos saem do Tab; a barra lateral e o seletor
+    continuam respondendo. URL (`replaceState`), seletor e seleção valem na hora, sem navegar.
+  - Movimento reduzido: troca na mesma ação, sem quadro no caminho.
+  - Os andares fora de tela ficam desmontados; modelos e peças já estão à mão desde a abertura.
 
 A **torre** tem 14 pavimentos: Térreo (0), Operação (1), Diretoria (13) e 11 só de fachada, que
 não clicam nem têm sala (`decorativeLevels`). A arquitetura é art déco própria do Lipp HQ: base

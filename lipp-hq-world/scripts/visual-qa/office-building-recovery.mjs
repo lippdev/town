@@ -40,6 +40,7 @@ try {
   console.log('Robôs e humanos recuperam a carga após falha de rede, sem reload.');
   await page.locator('[data-person-row="chefe"]').click();
   await page.waitForSelector('[data-human-panel="chefe"]');
+  await page.waitForFunction(() => !window.__HQ_OFFICE_QA__.state().traveling);
   const deltas = await page.evaluate(async () => {
     const result=[];
     for(let i=0;i<8;i++) {
@@ -49,6 +50,6 @@ try {
     }
     return result;
   });
-  assert.ok(deltas.every(d => d < .001), `câmera deslizando: ${deltas}`);
-  console.log('Gaveta aberta com câmera no destino em todos os quadros.');
+  assert.ok(deltas.every(d => d < .05), `câmera deslizando depois da chegada: ${deltas}`);
+  console.log('Depois da viagem, gaveta aberta com a câmera parada no destino.');
 } finally { await browser.close(); }

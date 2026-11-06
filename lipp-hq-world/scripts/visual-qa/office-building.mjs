@@ -44,8 +44,8 @@ async function open(url, options = {}) {
 const state = (page) => page.evaluate(() => window.__HQ_OFFICE_QA__.state());
 const settled = (page) =>
   page.waitForFunction(() => {
-    const { view, goal } = window.__HQ_OFFICE_QA__.state();
-    return Math.abs(view.x - goal.x) + Math.abs(view.z - goal.z) < 0.01 && Math.abs(view.zoom - goal.zoom) < 0.2;
+    const { view, goal, traveling } = window.__HQ_OFFICE_QA__.state();
+    return !traveling && Math.abs(view.x - goal.x) + Math.abs(view.z - goal.z) < 0.01 && Math.abs(view.zoom - goal.zoom) < 0.2;
   }, null, { timeout: 15000 });
 const shot = async (page, name) => {
   await page.waitForTimeout(700);
@@ -232,7 +232,7 @@ await check("clicar no chefe na cena abre a gaveta dele; a ronda fica no andar",
   assert.equal(moved.mounted, true);
   // Sair no meio da ronda encerra o passeio: ele não anda por outro andar.
   await goTo(page, "operacao");
-  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 5000 });
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 8000 });
   await goTo(page, "diretoria");
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.phase === "seated", null, { timeout: 10000 });
 });
@@ -368,7 +368,7 @@ await check("celular: o seletor cabe e o enquadramento acompanha", async () => {
   await phone.context().close();
 });
 
-await check("movimento reduzido: a troca é a mesma, direta", async () => {
+await check("movimento reduzido: a troca é direta, sem viagem", async () => {
   const calm = await open(DEMO, { reducedMotion: "reduce" });
   await settled(calm);
   for (const floor of FLOORS) {
