@@ -93,7 +93,7 @@ function Facade() {
       if (!plate.current || !plateMaterial.current) return;
       plate.current.visible = section !== null && opacity > 0.01;
       if (!section) return;
-      plate.current.position.set((section.minX + section.maxX) / 2, cut - root - sink + 0.005 - PLATE_DEPTH / 2, (section.minZ + section.maxZ) / 2);
+      plate.current.position.set((section.minX + section.maxX) / 2, cut - sink + 0.005 - PLATE_DEPTH / 2, (section.minZ + section.maxZ) / 2);
       plate.current.scale.set(section.maxX - section.minX, PLATE_DEPTH, section.maxZ - section.minZ);
       plateMaterial.current.opacity = opacity;
       plateMaterial.current.depthWrite = opacity > 0.99;

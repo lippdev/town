@@ -98,7 +98,7 @@ try {
       while (qa.state().traveling && frames.length < 600) {
         await new Promise(requestAnimationFrame);
         const now = qa.state();
-        frames.push({ t: performance.now() - start, ...now.travel, shown: now.shownFloor, x: now.view.x, z: now.view.z, zoom: now.view.zoom });
+        frames.push({ plateBounds: qa.cutPlateBounds(), t: performance.now() - start, ...now.travel, shown: now.shownFloor, x: now.view.x, z: now.view.z, zoom: now.view.zoom });
       }
       const last = qa.state();
       return { first: { view: first.buildingView, traveling: first.traveling, url: new URL(location.href).searchParams.get("andar") }, frames, ms: performance.now() - start, end: { view: last.buildingView, mounted: last.mountedFloors, shown: last.shownFloor, away: Math.abs(last.view.x - last.goal.x) + Math.abs(last.view.z - last.goal.z) + Math.abs(last.view.zoom - last.goal.zoom), travel: last.travel } };
@@ -114,6 +114,11 @@ try {
     const moving = result.frames.slice(1, -1);
     const middle = moving.filter(({ progress }) => progress > 0.05 && progress < 0.95);
     assert.ok(middle.length >= 3, "sem quadro no meio do caminho");
+    for (const frame of middle) {
+      if (frame.plateBounds && frame.plate > 0.05) {
+        assert.ok(Math.abs(frame.plateBounds.top - (frame.cut - frame.root - 0.05 + 0.005)) < 0.01, `laje fora do corte: ${JSON.stringify(frame)}`);
+      }
+    }
     for (let index = 1; index < result.frames.length; index += 1) {
       const a = result.frames[index - 1];
       const b = result.frames[index];
@@ -366,7 +371,7 @@ try {
         while (performance.now() - start < until) {
           await new Promise(requestAnimationFrame);
           const now = qa.state();
-          frames.push({ t: performance.now() - start, zoom: now.view.zoom, x: now.view.x, z: now.view.z, elevation: now.travel.elevation });
+          frames.push({ plateBounds: qa.cutPlateBounds(), t: performance.now() - start, zoom: now.view.zoom, x: now.view.x, z: now.view.z, elevation: now.travel.elevation });
         }
       };
       document.querySelector('[data-view="diretoria"]').click();
@@ -378,7 +383,7 @@ try {
       while (qa.state().traveling) {
         await new Promise(requestAnimationFrame);
         const now = qa.state();
-        frames.push({ t: performance.now() - start, zoom: now.view.zoom, x: now.view.x, z: now.view.z, elevation: now.travel.elevation });
+        frames.push({ plateBounds: qa.cutPlateBounds(), t: performance.now() - start, zoom: now.view.zoom, x: now.view.x, z: now.view.z, elevation: now.travel.elevation });
       }
       return { frames, askedAt, done: performance.now() - start, end: qa.state() };
     });

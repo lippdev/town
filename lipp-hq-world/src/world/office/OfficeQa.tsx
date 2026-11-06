@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { OrthographicCamera, type Scene, type WebGLRenderer } from "three";
+import { Box3, OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
@@ -16,6 +16,12 @@ declare global {
 
 function officeQaApi(gl: WebGLRenderer, scene: Scene) {
   return {
+    cutPlateBounds: () => {
+      const plate = scene.getObjectByName("laje-do-corte");
+      if (!plate?.visible) return null;
+      const box = new Box3().setFromObject(plate);
+      return { top: box.max.y, bottom: box.min.y };
+    },
     renderInfo: () => {
       let lights = 0;
       let shadowLights = 0;
