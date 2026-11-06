@@ -126,7 +126,7 @@ function Passerby({ walker, base, reduced }: { walker: Walker; base: HumanBase; 
 }
 
 /** Cidade, trânsito e gente na rua. Não mexe em nada do escritório. */
-export function OfficeCity() {
+export function OfficeCity({ elevated = false, receiveShadow = true }: { elevated?: boolean; receiveShadow?: boolean }) {
   const reduced = usePrefersReduced();
   const geometry = useMemo(() => buildCityGeometry(), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -145,13 +145,14 @@ export function OfficeCity() {
   }, []);
   return (
     <>
-      <mesh geometry={geometry} name="cidade" receiveShadow>
+      <mesh geometry={geometry} name="cidade" receiveShadow={receiveShadow}>
         <meshStandardMaterial vertexColors roughness={0.9} />
       </mesh>
       {TRAFFIC.map((car) => (
         <TrafficCar key={car.color} car={car} reduced={reduced} />
       ))}
-      {base && WALKERS.map((walker) => <Passerby key={walker.id} walker={walker} base={base} reduced={reduced} />)}
+      {/* De muito alto a gente some na calçada: não vale o custo de animar. */}
+      {base && !elevated && WALKERS.map((walker) => <Passerby key={walker.id} walker={walker} base={base} reduced={reduced} />)}
     </>
   );
 }
