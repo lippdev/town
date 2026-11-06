@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { AZIMUTH, ELEVATION, NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
 import { viewFit } from "@/world/office/officeBuilding";
 import { BUILDING_HEIGHT, STORY } from "@/world/office/officeBuilding";
-import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, buildCityGeometry, cityPlan, occlusionCap } from "@/world/office/officeCity";
+import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, ROADS, buildCity, buildCityGeometry, cityPlan, elevatedLines, occlusionCap } from "@/world/office/officeCity";
 
 /** Aumentar este número é uma decisão: a cidade é uma malha só, mas cada vértice sai toda vez. */
-const CITY_VERTEX_BUDGET = 70_000;
+const CITY_VERTEX_BUDGET = 45_000;
+/** A luz acesa é pouca e agrupada: um andar ou uma coluna, com muitos prédios apagados. */
+const CITY_LIT_VERTEX_BUDGET = 6_000;
 
 const SCREENS: Viewport[] = [
   { width: 1440, height: 900 },
@@ -77,6 +79,38 @@ describe("geometria da cidade", () => {
   it("continua leve: uma malha só, bem menos que os 200 mil vértices da cidade em grade", () => {
     const vertices = geometry.getAttribute("position").count;
     expect(vertices).toBeLessThan(CITY_VERTEX_BUDGET);
+  });
+
+  it("acende pouco: a malha das janelas acesas não vira outra cidade", () => {
+    const { body, lit } = buildCity();
+    expect(lit.getAttribute("position").count).toBeLessThan(CITY_LIT_VERTEX_BUDGET);
+    body.dispose();
+    lit.dispose();
+  });
+});
+
+describe("trilho elevado", () => {
+  const lines = elevatedLines();
+
+  it("não cobre a torre nem a rua da entrada na câmera fixa", () => {
+    expect(lines.length).toBeGreaterThan(0);
+    for (const { deck, top } of lines) expect(occlusionCap(deck)).toBeGreaterThan(top + 0.7);
+  });
+
+  it("passa por cima dos carros e os pilares não caem em rua nenhuma da torre", () => {
+    for (const { pillars, bottom } of lines) {
+      expect(bottom).toBeGreaterThan(5);
+      expect(pillars.length).toBeGreaterThan(8);
+      for (const { minX, maxX, minZ, maxZ } of pillars) {
+        for (const road of [ROADS.south, ROADS.north]) expect(minZ < road.to && maxZ > road.from).toBe(false);
+        for (const road of [ROADS.east, ROADS.west]) expect(minX < road.to && maxX > road.from).toBe(false);
+      }
+    }
+  });
+
+  it("as duas linhas se cruzam sem encostar", () => {
+    const [upper, lower] = lines;
+    expect(upper!.bottom).toBeGreaterThan(lower!.top + 0.7 + 1);
   });
 });
 

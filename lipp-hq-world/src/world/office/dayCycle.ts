@@ -12,8 +12,8 @@ export const DAY_START = 6 * 60;
 /** De quanto em quanto tempo a cena relê o relógio. */
 export const CLOCK_POLL_MS = 30_000;
 export const NIGHT_BACKGROUND = "#111828";
-/** Cor do ar à noite: é para onde vai a cidade ao longe. */
-export const NIGHT_AIR = "#151c28";
+/** Cor do ar à noite: é para onde vai a cidade ao longe. Mais clara que o céu, para ler como névoa. */
+export const NIGHT_AIR = "#222d40";
 
 const clockFormat = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 

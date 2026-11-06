@@ -319,7 +319,7 @@ function lightsFor(seed: number, stories: number, detail: Detail): Lights {
   const tone = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
   const dark = { floors: [], columns: 0, from: 0, to: 0, tone };
   const roll = shuffled(seed + 0.47);
-  if (roll < 0.34) return dark;
+  if (roll < 0.28) return dark;
   const at = (salt: number) => Math.floor(shuffled(seed + salt) * stories);
   // O andar da diretoria de cada um: nos altos, o último pavimento é o que mais fica aceso.
   if (roll < 0.5 && detail < 2 && stories >= 6) return { ...dark, floors: [stories - 1 - Math.floor(shuffled(seed + 0.53) * 2)] };
@@ -433,8 +433,8 @@ const LANDMARKS: Readonly<Record<string, { style: LandmarkStyle; half: number; s
   "west:2|lot": { style: "mast", half: 6, stories: 10, top: 10 * STORY + 9.5 },
 };
 /** Cobre velho, bem apagado: é o único tom fora da ardósia, e de dia um verde mais vivo roubava a cena. */
-const PATINA = "#31454a";
-const DIAL = "#a8a494";
+const PATINA = "#2e3e43";
+const DIAL = "#8f8c80";
 const DIAL_LIT = "#d4b67e";
 const BEACON = "#ff5a3c";
 
@@ -604,6 +604,69 @@ function cityBlocks(): BlockSpec[] {
   return xs.flatMap((x) => zs.map((z) => ({ x: x.span, z: z.span, key: `${x.key}|${z.key}` })));
 }
 
+/**
+ * O trilho elevado, sobre o canteiro de duas avenidas da frente: cruza o primeiro plano nos dois
+ * cantos da tela e dá profundidade sem passar perto da torre. Os pilares só caem no meio de
+ * quarteirão: nas esquinas passam os carros, inclusive os da rua da entrada, que vão de ponta a ponta.
+ */
+const ELEVATED_HALF_WIDTH = 2.1;
+const PILLAR_SPAN = 14;
+const PILLAR_HALF = 0.8;
+
+export interface ElevatedLine {
+  deck: Lot;
+  bottom: number;
+  top: number;
+  pillars: Lot[];
+}
+
+export function elevatedLines(): ElevatedLine[] {
+  const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
+  const pillarsAlong = (spans: readonly Span[]) =>
+    spans.flatMap(([from, to]) => {
+      const count = Math.floor((to - from - 2) / PILLAR_SPAN);
+      return Array.from({ length: count + 1 }, (_, index) => (from + to) / 2 + (index - count / 2) * PILLAR_SPAN);
+    });
+  const xSpans: Span[] = [...axis(ROADS.east.to, maxX, 1, STREETS.east).spans, [ROADS.west.to, ROADS.east.from], ...axis(ROADS.west.from, minX, -1, STREETS.west).spans];
+  const zSpans: Span[] = [...axis(ROADS.south.to, maxZ, 1, STREETS.south).spans, [ROADS.north.to, ROADS.south.from], ...axis(ROADS.north.from, minZ, -1, STREETS.north).spans];
+  const avenue = (streets: { span: Span; width: number }[], skip: number) => {
+    const wide = streets.filter(({ width }) => width >= 6)[skip]!;
+    return (wide.span[0] + wide.span[1]) / 2;
+  };
+  const alongZ = avenue(axis(ROADS.south.to, maxZ, 1, STREETS.south).streets, 0);
+  const alongX = avenue(axis(ROADS.east.to, maxX, 1, STREETS.east).streets, 0);
+  return [
+    {
+      // Corre em x, um andar acima da outra: as duas se cruzam sem encostar.
+      deck: { minX, maxX, minZ: alongZ - ELEVATED_HALF_WIDTH, maxZ: alongZ + ELEVATED_HALF_WIDTH },
+      bottom: 9,
+      top: 9.8,
+      pillars: pillarsAlong(xSpans).map((x) => ({ minX: x - PILLAR_HALF, maxX: x + PILLAR_HALF, minZ: alongZ - PILLAR_HALF, maxZ: alongZ + PILLAR_HALF })),
+    },
+    {
+      deck: { minX: alongX - ELEVATED_HALF_WIDTH, maxX: alongX + ELEVATED_HALF_WIDTH, minZ, maxZ },
+      bottom: 6.2,
+      top: 7,
+      pillars: pillarsAlong(zSpans).map((z) => ({ minX: alongX - PILLAR_HALF, maxX: alongX + PILLAR_HALF, minZ: z - PILLAR_HALF, maxZ: z + PILLAR_HALF })),
+    },
+  ];
+}
+
+/** Viga, guarda-corpo e uma luz baixa a cada vão: uma linha só, que lê de longe à noite. */
+function elevated(city: ColorMerge, glow: ColorMerge) {
+  for (const { deck, bottom, top, pillars } of elevatedLines()) {
+    for (const pillar of pillars) city.prism(pillar.minX, pillar.maxX, pillar.minZ, pillar.maxZ, 0, bottom, FACADES[1], mix(FACADES[1], "#14171d", 0.12), FACADES[1]);
+    city.prism(deck.minX, deck.maxX, deck.minZ, deck.maxZ, bottom, top, CORNICE, CORNICE, ROOF);
+    const alongX = deck.maxX - deck.minX > deck.maxZ - deck.minZ;
+    const rail = alongX ? { ...deck, minZ: deck.maxZ - 0.2 } : { ...deck, minX: deck.maxX - 0.2 };
+    city.prism(rail.minX, rail.maxX, rail.minZ, rail.maxZ, top, top + 0.7, FACADES[0], FACADES[0], FACADES[0]);
+    for (const pillar of pillars) {
+      if (alongX) glow.quad((pillar.minX + pillar.maxX) / 2, bottom + 0.3, deck.maxZ + 0.03, "z", 0.8, 0.16, LIT_TONES[1]);
+      else glow.quad(deck.maxX + 0.03, bottom + 0.3, (pillar.minZ + pillar.maxZ) / 2, "x", 0.8, 0.16, LIT_TONES[1]);
+    }
+  }
+}
+
 /** Respiro em volta da torre: os quarteirões colados a ela são baixos ou abertos. */
 const BREATHING = 26;
 
@@ -691,6 +754,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
     city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, GROUND.walk);
   }
   buildings.forEach((plan, index) => building(city, glow, plan, 300 + index * 2.3));
+  elevated(city, glow);
   for (const block of parks) park(city, block);
   for (const { x: [fromX, toX], z: [fromZ, toZ] } of plazas) city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.lawn, GROUND.plaza);
 
