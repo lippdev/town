@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
-import { CITY_BOUNDS, CITY_VIEW } from "./officeCity";
+import { initialBuildingView, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
+import { CITY_BOUNDS } from "./officeCity";
 import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
@@ -20,6 +21,17 @@ export const FLOOR_MARGIN = 0.04;
 
 interface OfficeState {
   mode: OfficeMode;
+  /** O que está montado na cena. Na frota real é sempre o escritório. */
+  buildingView: BuildingView;
+  /** Para onde a troca em curso está indo. Enquanto houver, nada na cena responde ao clique. */
+  pendingView: BuildingView | null;
+  /** Pavimento apontado na fachada, com o prédio fechado. */
+  hoveredLevel: number | null;
+  /** Pede a troca e limpa o que era do andar anterior. Na frota real, não faz nada. */
+  goToView: (view: BuildingView) => void;
+  /** Conclui a troca: quem chama é quem escureceu a tela. */
+  commitView: () => void;
+  setHoveredLevel: (level: number | null) => void;
   focusedRoomId: string | null;
   framing: Framing;
   hoveredRoomId: string | null;
@@ -65,8 +77,42 @@ interface OfficeState {
   markFree: () => void;
 }
 
+/** Selecionar quem está em outro andar leva até lá. Na frota real, tudo é o mesmo andar. */
+function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Pick<OfficeState, "pendingView"> | Record<string, never> {
+  return state.mode === "demo" && state.buildingView !== floor ? { pendingView: floor } : {};
+}
+
 export const useOfficeStore = create<OfficeState>((set, get) => ({
   mode: "demo",
+  buildingView: "operacao",
+  pendingView: null,
+  hoveredLevel: null,
+  goToView: (view) => {
+    const state = get();
+    if (state.mode !== "demo") return;
+    useHQStore.getState().clearSelection();
+    set({
+      selectedHumanId: null,
+      focusedRoomId: null,
+      framing: "floor",
+      hoveredRoomId: null,
+      hoveredBotId: null,
+      hoveredHumanId: null,
+      hoveredLevel: null,
+      // Pedir o andar em tela cancela a troca e só volta ao enquadramento dele.
+      pendingView: view === state.buildingView ? null : view,
+    });
+  },
+  commitView: () => {
+    const { pendingView } = get();
+    if (!pendingView) return;
+    // O andar novo entra pronto: a câmera não atravessa a cena.
+    officeRuntime.placed = false;
+    set({ buildingView: pendingView, pendingView: null, hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null });
+  },
+  setHoveredLevel: (hoveredLevel) => {
+    if (get().hoveredLevel !== hoveredLevel) set({ hoveredLevel });
+  },
   focusedRoomId: null,
   framing: "floor",
   hoveredRoomId: null,
@@ -90,7 +136,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   load: "loading",
   loadError: null,
   figuresError: null,
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => set({ mode, buildingView: initialBuildingView(mode, window.location.search), pendingView: null }),
   setRoster: (bots, seating) => set({ bots, seating }),
   setHovered: (hoveredRoomId, hoveredBotId, hoveredHumanId = null) => {
     const state = get();
@@ -108,7 +154,9 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   selectHuman: (id) => {
     // Pessoa e bot não dividem a gaveta: abrir uma fecha o outro.
     useHQStore.getState().clearSelection();
-    set({ selectedHumanId: id, focusedRoomId: "hall", framing: "room" });
+    const human = get().humans.find((candidate) => candidate.id === id);
+    const floor = human?.floor ?? "operacao";
+    set({ selectedHumanId: id, focusedRoomId: human?.roomId ?? "hall", framing: "room", ...arrival(get(), floor) });
   },
   clearHuman: () => set({ selectedHumanId: null }),
   setInsets: (insets) => {
@@ -128,7 +176,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     const seatId = get().seating.seats[botId];
     const seat = seatId ? OFFICE_SEATS_BY_ID[seatId] : undefined;
     // Bot sem posto não tem sala para focar: a gaveta abre e a câmera fica onde está.
-    if (seat) set({ focusedRoomId: seat.roomId, framing: "room" });
+    if (seat) set({ focusedRoomId: seat.roomId, framing: "room", ...arrival(get(), "operacao") });
   },
   markFree: () => set({ framing: "free" }),
 }));
@@ -155,12 +203,15 @@ export function currentInsets(): Insets {
   return { ...insets, right: useHQStore.getState().viewInsetRight };
 }
 
-/** Na demonstração a cidade em volta também pode ser vista. */
-export const panBounds = () => (useOfficeStore.getState().mode === "demo" ? CITY_BOUNDS : FLOOR_BOUNDS);
+/** Do lado de fora, a cidade em volta também pode ser vista; dentro, o arrasto fica no andar. */
+export const panBounds = () => {
+  const { mode, buildingView } = useOfficeStore.getState();
+  return mode === "demo" && buildingView === "exterior" ? CITY_BOUNDS : FLOOR_BOUNDS;
+};
 
 export function floorFit(viewport: Viewport): OfficeView {
-  const demo = useOfficeStore.getState().mode === "demo";
-  return fitView(demo ? CITY_VIEW : FLOOR_BOUNDS, viewport, currentInsets(), { margin: FLOOR_MARGIN });
+  const { bounds, top } = viewFit(useOfficeStore.getState().buildingView);
+  return fitView(bounds, viewport, currentInsets(), { margin: FLOOR_MARGIN, ...(top === undefined ? {} : { top }) });
 }
 
 /** Botões + e −: zoom em torno do meio da área livre. */
