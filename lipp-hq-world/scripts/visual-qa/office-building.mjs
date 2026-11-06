@@ -120,7 +120,7 @@ await check("o elevador tem caixa atrás da porta nos três andares; de perto, p
     await settled(page);
     assert.equal((await state(page)).buildingView, floor);
   }
-  await goTo(page, "exterior");
+  await goTo(page, "operacao");
 });
 
 await check("na Operação, os sete bots e as etiquetas das salas estão lá", async () => {
