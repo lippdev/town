@@ -25,6 +25,26 @@ continuam iguais e não carregam nada desta página.
   rótulo muda com o estado, então "trabalhando" não tem animação própria e `SitDown` não é
   digitação. As telas dos monitores são cenário e não mostram dado de bot.
 
+## O prédio (só na demonstração)
+
+A demonstração abre com o prédio do Lipp HQ fechado, na cidade. O seletor discreto no canto (ou
+apontar e clicar no pavimento na fachada, ou PageUp/PageDown, ou `?andar=` na URL) abre o corte
+de um andar. Só o andar em tela tem móveis e personagens; a fachada é uma malha leve. A frota do
+Hermes não tem nada disso: fica no escritório, sem seletor, cidade nem fachada.
+
+**O andar em tela fica sempre em y = 0; é o entorno que desce.** A cidade e os pavimentos abaixo
+do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
+
+- *Por quê:* `worldToScreen`, o raio do clique, `roomAt`, cadeiras, voos e o mapa de sombra são
+  todos escritos para o chão em y = 0. Mover a câmera ou o andar para a altura real obrigaria
+  cada um deles a aprender um deslocamento, com risco de divergência entre o que se vê e o que
+  se clica.
+- *O custo:* tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
+  do grupo por causa do roteiro, e o limite da cidade, que encolhe do lado para onde o chão anda
+  na tela (`cityBoundsAt`). A cidade só recebe sombra com o chão colado no andar.
+- *Troca:* escurece 170 ms, troca o que está montado com a câmera já no lugar e clareia. Não há
+  animação contínua de abertura da fachada nem de elevador. Com movimento reduzido é imediata.
+
 ## Como usar
 
 | Ação | Como |
