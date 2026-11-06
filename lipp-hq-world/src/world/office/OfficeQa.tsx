@@ -44,7 +44,6 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       const store = useOfficeStore.getState();
       return {
         buildingView: store.buildingView,
-        pendingView: store.pendingView,
         focusedRoomId: store.focusedRoomId,
         scenery: [...sceneryActors].map(([id, actor]) => ({ id, phase: actor.phase, position: actor.position, heading: actor.heading, chair: actor.chair })),
         chiefStatus: store.chiefStatus,

@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
-import { initialBuildingView, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, cityBoundsAt, initialBuildingView, viewElevation, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
 import { CITY_BOUNDS } from "./officeCity";
 import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
-import { clampView, fitView, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
+import { clampView, fitView, keepGroundInside, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
 import type { RobotLooks } from "@/avatar/robot/robotLook";
 import type { HumanActor } from "./HumanActor";
@@ -23,14 +23,10 @@ interface OfficeState {
   mode: OfficeMode;
   /** O que está montado na cena. Na frota real é sempre o escritório. */
   buildingView: BuildingView;
-  /** Para onde a troca em curso está indo. Enquanto houver, nada na cena responde ao clique. */
-  pendingView: BuildingView | null;
   /** Pavimento apontado na fachada, com o prédio fechado. */
   hoveredLevel: number | null;
-  /** Pede a troca e limpa o que era do andar anterior. Na frota real, não faz nada. */
+  /** Troca de andar na hora e limpa o que era do anterior. Na frota real, não faz nada. */
   goToView: (view: BuildingView) => void;
-  /** Conclui a troca: quem chama é quem escureceu a tela. */
-  commitView: () => void;
   setHoveredLevel: (level: number | null) => void;
   focusedRoomId: string | null;
   framing: Framing;
@@ -78,14 +74,24 @@ interface OfficeState {
 }
 
 /** Selecionar quem está em outro andar leva até lá. Na frota real, tudo é o mesmo andar. */
-function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Pick<OfficeState, "pendingView"> | Record<string, never> {
-  return state.mode === "demo" ? { pendingView: state.buildingView === floor ? null : floor } : {};
+function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Pick<OfficeState, "buildingView"> | Record<string, never> {
+  return state.mode === "demo" && state.buildingView !== floor ? { buildingView: floor } : {};
+}
+
+/** Depois de mudar de andar: a câmera já está no lugar e a URL já diz onde se está, sem navegar. */
+function arrived(view: BuildingView) {
+  aimCamera();
+  officeRuntime.view = { ...officeRuntime.goal };
+  if (typeof window !== "undefined") {
+    const url = new URL(window.location.href);
+    url.searchParams.set("andar", view);
+    window.history.replaceState(window.history.state, "", url);
+  }
 }
 
 export const useOfficeStore = create<OfficeState>((set, get) => ({
   mode: "demo",
   buildingView: "operacao",
-  pendingView: null,
   hoveredLevel: null,
   goToView: (view) => {
     const state = get();
@@ -99,21 +105,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
       hoveredBotId: null,
       hoveredHumanId: null,
       hoveredLevel: null,
-      // Pedir o andar em tela cancela a troca e só volta ao enquadramento dele.
-      pendingView: view === state.buildingView ? null : view,
+      buildingView: view,
     });
-  },
-  commitView: () => {
-    const { pendingView } = get();
-    if (!pendingView) return;
-    // O andar novo entra pronto: a câmera não atravessa a cena.
-    officeRuntime.placed = false;
-    set({ buildingView: pendingView, pendingView: null, hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null });
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("andar", pendingView);
-      window.history.replaceState(window.history.state, "", url);
-    }
+    // Pedir o andar em tela só volta ao enquadramento dele.
+    if (view !== state.buildingView) arrived(view);
   },
   setHoveredLevel: (hoveredLevel) => {
     if (get().hoveredLevel !== hoveredLevel) set({ hoveredLevel });
@@ -141,7 +136,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   load: "loading",
   loadError: null,
   figuresError: null,
-  setMode: (mode) => set({ mode, buildingView: initialBuildingView(mode, window.location.search), pendingView: null }),
+  setMode: (mode) => set({ mode, buildingView: initialBuildingView(mode, window.location.search) }),
   setRoster: (bots, seating) => set({ bots, seating }),
   setHovered: (hoveredRoomId, hoveredBotId, hoveredHumanId = null) => {
     const state = get();
@@ -160,8 +155,9 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     // Pessoa e bot não dividem a gaveta: abrir uma fecha o outro.
     useHQStore.getState().clearSelection();
     const human = get().humans.find((candidate) => candidate.id === id);
-    const floor = human?.floor ?? "operacao";
-    set({ selectedHumanId: id, focusedRoomId: human?.roomId ?? "hall", framing: "room", ...arrival(get(), floor) });
+    const moving = arrival(get(), human?.floor ?? "operacao");
+    set({ selectedHumanId: id, focusedRoomId: human?.roomId ?? "hall", framing: "room", ...moving });
+    if (moving.buildingView) arrived(moving.buildingView);
   },
   clearHuman: () => set({ selectedHumanId: null }),
   setInsets: (insets) => {
@@ -181,7 +177,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     const seatId = get().seating.seats[botId];
     const seat = seatId ? OFFICE_SEATS_BY_ID[seatId] : undefined;
     // Bot sem posto não tem sala para focar: a gaveta abre e a câmera fica onde está.
-    if (seat) set({ focusedRoomId: seat.roomId, framing: "room", ...arrival(get(), "operacao") });
+    if (!seat) return;
+    const moving = arrival(get(), "operacao");
+    set({ focusedRoomId: seat.roomId, framing: "room", ...moving });
+    if (moving.buildingView) arrived(moving.buildingView);
   },
   markFree: () => set({ framing: "free" }),
 }));
@@ -221,9 +220,25 @@ export function floorFit(viewport: Viewport): OfficeView {
   return fitView(bounds, viewport, currentInsets(), { margin: FLOOR_MARGIN, ...(top === undefined ? {} : { top }) });
 }
 
+/**
+ * Para onde a câmera deve olhar agora. O quadro chama, e a troca de andar também: rótulos e clique
+ * leem `officeRuntime`, e não podem ver o andar novo com a câmera do anterior.
+ */
+export function aimCamera() {
+  const runtime = officeRuntime;
+  const store = useOfficeStore.getState();
+  const floor = floorFit(runtime.viewport);
+  runtime.floorZoom = floor.zoom;
+  const room = store.focusedRoomId ? BUILDING_ROOMS_BY_ID[store.focusedRoomId] : null;
+  if (store.framing === "floor") runtime.goal = floor;
+  else if (store.framing === "room" && room) runtime.goal = fitView(room.bounds, runtime.viewport, currentInsets(), { margin: FLOOR_MARGIN });
+  // Enquadrando o andar alto, ele manda: no celular, o limite da cidade cortaria a ponta do piso.
+  const elevation = viewElevation(store.buildingView);
+  if (store.mode === "demo" && !(store.framing === "floor" && elevation > 0)) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
+}
+
 /** Botões + e −: zoom em torno do meio da área livre. */
 export function zoomStep(factor: number) {
-  if (useOfficeStore.getState().pendingView) return;
   const { goal, viewport, floorZoom } = officeRuntime;
   const insets = currentInsets();
   const px = insets.left + (viewport.width - insets.left - insets.right) / 2;
