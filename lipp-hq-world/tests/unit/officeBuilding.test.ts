@@ -43,6 +43,7 @@ describe("vistas do prédio", () => {
   it("só pavimento com interior responde ao clique", () => {
     expect(floorAtLevel(FLOOR_LEVEL.operacao)).toBe("operacao");
     expect(floorAtLevel(FLOOR_LEVEL.terreo)).toBe("terreo");
+    expect(floorAtLevel(BUILDING_LEVELS - 1)).toBe("diretoria");
     expect(floorAtLevel(BUILDING_LEVELS - 2)).toBeNull();
   });
 
@@ -56,7 +57,8 @@ describe("vistas do prédio", () => {
   it("subir e descer param nas pontas", () => {
     expect(neighborView("exterior", 1)).toBe("exterior");
     expect(neighborView("exterior", -1)).not.toBe("exterior");
-    expect(neighborView("operacao", 1)).toBe("exterior");
+    expect(neighborView("diretoria", 1)).toBe("exterior");
+    expect(neighborView("terreo", -1)).toBe("terreo");
   });
 });
 

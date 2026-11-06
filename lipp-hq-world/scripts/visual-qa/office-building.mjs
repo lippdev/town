@@ -7,7 +7,7 @@
  * Cada página usa um perfil novo: nada toca no que você salvou no navegador.
  */
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 
@@ -55,7 +55,7 @@ const goTo = async (page, view) => {
 /** Todo controle da cena alcançável por Tab. */
 const sceneFocusables = (page) => page.evaluate(() => [...document.querySelectorAll(".office-labels button, .office-labels a")].filter((node) => getComputedStyle(node).visibility !== "hidden").map((node) => node.dataset.room ?? node.dataset.bot ?? node.dataset.human ?? node.textContent));
 
-const FLOORS = (process.env.HQ_FLOORS ?? "operacao,terreo").split(",");
+const FLOORS = (process.env.HQ_FLOORS ?? "diretoria,operacao,terreo").split(",");
 
 const page = await open(DEMO);
 
@@ -100,6 +100,7 @@ await check("clicar no pavimento aceso entra no andar; pavimento decorativo não
 await check("na Operação, os sete bots e as etiquetas das salas estão lá", async () => {
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
   const tags = await sceneFocusables(page);
+  assert.ok(!tags.includes("sala-chefe") && !tags.includes("recepcao"), `vazou: ${tags}`);
   for (const id of ["engenharia", "hall", "argos"]) assert.ok(tags.includes(id), `${id} sumiu: ${tags}`);
 });
 
@@ -131,6 +132,112 @@ await check("no térreo, a atendente é cenário: etiqueta explícita, sem gavet
   await shot(page, "terreo-atendente");
   await page.keyboard.press("Escape");
   await settled(page);
+});
+
+await check("o chefe existe uma vez só, e só tem corpo na Diretoria", async () => {
+  await goTo(page, "operacao");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
+  let chiefs = (await state(page)).humans.filter((human) => human.id === "chefe");
+  assert.equal(chiefs.length, 1);
+  assert.equal(chiefs[0].floor, "diretoria");
+  assert.equal(chiefs[0].mounted, false);
+  assert.ok(!(await sceneFocusables(page)).includes("chefe"));
+  await goTo(page, "diretoria");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().scenery.length === 2 && window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.worn?.parts, null, { timeout: 30000 });
+  chiefs = (await state(page)).humans.filter((human) => human.id === "chefe");
+  assert.equal(chiefs.length, 1);
+  assert.equal(chiefs[0].mounted, true);
+  const now = await state(page);
+  assert.deepEqual(now.rigs, []);
+  assert.ok(now.scenery.every((person) => ["diretora-simulada", "diretor-simulado"].includes(person.id)));
+  assert.equal(now.scenery.find((person) => person.id === "diretor-simulado").phase, "seated");
+  assert.ok((await page.textContent('[data-scenery="diretor-simulado"]')).includes("simulado"));
+  assert.ok(!(await sceneFocusables(page)).some((tag) => /diretora-|diretor-/.test(tag)));
+});
+
+await check("clicar num diretor simulado não abre nada", async () => {
+  for (const id of ["diretora-simulada", "diretor-simulado"]) {
+    const point = await page.evaluate((who) => window.__HQ_OFFICE_QA__.sceneryPoint(who), id);
+    await page.mouse.click(point.x, point.y);
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator("[data-human-panel], [data-demo-panel]").count(), 0, id);
+    assert.equal((await state(page)).selectedHumanId, null);
+    await page.keyboard.press("Escape");
+    await settled(page);
+  }
+});
+
+await check("escolher o chefe na lista, de outro andar, leva à sala dele sentado na cadeira dele", async () => {
+  await goTo(page, "terreo");
+  await page.click('[data-person-row="chefe"]');
+  await settled(page);
+  await page.waitForFunction(() => {
+    const chief = window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe");
+    return chief?.mounted && chief.phase === "seated" && chief.visible;
+  }, null, { timeout: 45000 });
+  const now = await state(page);
+  assert.equal(now.buildingView, "diretoria");
+  assert.equal(now.focusedRoomId, "sala-chefe");
+  assert.equal(now.selectedHumanId, "chefe");
+  await page.waitForSelector('[data-human-panel="chefe"]');
+  await shot(page, "chefe-selecionado");
+});
+
+await check("clicar no chefe na cena abre a gaveta dele; a ronda fica no andar", async () => {
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await settled(page);
+  await page.mouse.move(4, 4);
+  await shot(page, "diretoria");
+  const point = await page.evaluate(() => window.__HQ_OFFICE_QA__.humanPoint("chefe"));
+  await page.mouse.click(point.x, point.y);
+  await page.waitForSelector('[data-human-panel="chefe"]');
+  await settled(page);
+  await page.click('button:has-text("Andar pela Diretoria")');
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "ronda", null, { timeout: 20000 });
+  const moved = (await state(page)).humans.find((human) => human.id === "chefe");
+  assert.equal(moved.mounted, true);
+  // Sair no meio da ronda encerra o passeio: ele não anda por outro andar.
+  await goTo(page, "operacao");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 5000 });
+  await goTo(page, "diretoria");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe")?.phase === "seated", null, { timeout: 10000 });
+});
+
+await check("rever a chegada sai para a rua e devolve o chefe à mesa, uma vez só", async () => {
+  await page.click('[data-person-row="chefe"]');
+  await page.waitForSelector('[data-human-panel="chefe"]');
+  await settled(page);
+  await page.click('button:has-text("Rever a chegada")');
+  await settled(page);
+  assert.equal((await state(page)).buildingView, "exterior");
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "chegando", null, { timeout: 3000 });
+  await goTo(page, "diretoria");
+  // Ainda chegando: a cadeira espera, sem etiqueta boiando nem corpo para clicar.
+  const away = (await state(page)).humans.find((human) => human.id === "chefe");
+  if ((await state(page)).chiefStatus !== "mesa") assert.equal(await page.locator('[data-human="chefe"]').count(), 0, `status ${away.phase}`);
+  await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().chiefStatus === "mesa", null, { timeout: 20000 });
+  await page.waitForFunction(() => {
+    const chief = window.__HQ_OFFICE_QA__.state().humans.find((human) => human.id === "chefe");
+    return chief.mounted && chief.visible && chief.phase === "seated";
+  }, null, { timeout: 10000 });
+  assert.equal(await page.locator('[data-human="chefe"]').count(), 1);
+});
+
+await check("o rosto de quem está em cena fica livre de cima: fotos de perto", async () => {
+  const closeups = { chefe: "humanPoint", "diretora-simulada": "sceneryPoint", "diretor-simulado": "sceneryPoint" };
+  for (const [id, method] of Object.entries(closeups)) {
+    await goTo(page, "exterior");
+    await goTo(page, "diretoria");
+    await page.waitForFunction(([who, how]) => window.__HQ_OFFICE_QA__[how](who), [id, method], { timeout: 30000 });
+    await page.waitForTimeout(600);
+    const point = await page.evaluate(([who, how]) => window.__HQ_OFFICE_QA__[how](who), [id, method]);
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.wheel(0, -700);
+    await settled(page);
+    await page.mouse.move(4, 4);
+    await shot(page, `perto-${id}`);
+  }
 });
 
 await check("escolher um bot na lista, de fora do prédio, leva à sala dele e abre a gaveta", async () => {
@@ -174,6 +281,31 @@ await check("trocas repetidas em seguida terminam num estado só", async () => {
   const now = await state(page);
   assert.equal(now.buildingView, FLOORS.at(-1));
   assert.equal(now.pendingView, null);
+});
+
+await check("custo de cada vista, para o relatório: não é promessa de quadros por segundo", async () => {
+  const numbers = {};
+  for (const view of ["exterior", ...FLOORS]) {
+    await goTo(page, view);
+    await page.mouse.move(4, 4);
+    await page.waitForTimeout(1500);
+    numbers[view] = await page.evaluate(async () => {
+      const { calls, triangles } = window.__HQ_OFFICE_QA__.renderInfo();
+      const fps = await new Promise((resolve) => {
+        const start = performance.now();
+        let frames = 0;
+        const tick = () => {
+          frames += 1;
+          if (performance.now() - start >= 3000) resolve(Math.round((frames * 1000) / (performance.now() - start)));
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      return { calls, triangles, fps };
+    });
+  }
+  console.log(JSON.stringify(numbers));
+  writeFileSync(path.join(OUT, "custo.json"), JSON.stringify(numbers, null, 2));
 });
 
 await page.context().close();
