@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { Building2 } from "lucide-react";
 import { FLOOR_LABEL, FLOOR_LEVEL, FLOOR_ORDER, type BuildingView } from "@/world/office/officeBuilding";
 import { useOfficeStore } from "@/world/office/officeStore";
@@ -37,22 +37,15 @@ export function FloorSelector() {
  */
 export function FloorFade() {
   const pending = useOfficeStore((state) => state.pendingView);
-  const [dark, setDark] = useState(false);
-  const timer = useRef(0);
+  const dark = pending !== null;
   useEffect(() => {
     if (!pending) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       useOfficeStore.getState().commitView();
       return;
     }
-    setDark(true);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      useOfficeStore.getState().commitView();
-      // Dois quadros para o andar novo chegar à tela antes de clarear.
-      requestAnimationFrame(() => requestAnimationFrame(() => setDark(false)));
-    }, FADE_MS);
-    return () => window.clearTimeout(timer.current);
+    const timer = window.setTimeout(() => useOfficeStore.getState().commitView(), FADE_MS);
+    return () => window.clearTimeout(timer);
   }, [pending]);
   return <div className={dark ? "office-floor-fade on" : "office-floor-fade"} aria-hidden data-floor-fade={dark} />;
 }

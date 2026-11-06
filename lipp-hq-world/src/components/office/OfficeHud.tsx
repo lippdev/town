@@ -623,7 +623,7 @@ export function OfficeHud({ live }: { live: boolean }) {
   }, [rosterOpen]);
 
   return (
-    <div className="office-hud" data-sidebar-open={rosterOpen} ref={layer}>
+    <div className="office-hud" data-sidebar-open={rosterOpen} data-office-view={view} ref={layer}>
       <TopBar connection={shown} title={VIEW_TITLE[view]} />
       <Roster
         open={rosterOpen}

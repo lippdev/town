@@ -79,7 +79,7 @@ interface OfficeState {
 
 /** Selecionar quem está em outro andar leva até lá. Na frota real, tudo é o mesmo andar. */
 function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Pick<OfficeState, "pendingView"> | Record<string, never> {
-  return state.mode === "demo" && state.buildingView !== floor ? { pendingView: floor } : {};
+  return state.mode === "demo" ? { pendingView: state.buildingView === floor ? null : floor } : {};
 }
 
 export const useOfficeStore = create<OfficeState>((set, get) => ({
@@ -109,6 +109,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     // O andar novo entra pronto: a câmera não atravessa a cena.
     officeRuntime.placed = false;
     set({ buildingView: pendingView, pendingView: null, hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null });
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("andar", pendingView);
+      window.history.replaceState(window.history.state, "", url);
+    }
   },
   setHoveredLevel: (hoveredLevel) => {
     if (get().hoveredLevel !== hoveredLevel) set({ hoveredLevel });
@@ -218,6 +223,7 @@ export function floorFit(viewport: Viewport): OfficeView {
 
 /** Botões + e −: zoom em torno do meio da área livre. */
 export function zoomStep(factor: number) {
+  if (useOfficeStore.getState().pendingView) return;
   const { goal, viewport, floorZoom } = officeRuntime;
   const insets = currentInsets();
   const px = insets.left + (viewport.width - insets.left - insets.right) / 2;

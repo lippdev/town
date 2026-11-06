@@ -147,6 +147,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
     const limits = () => zoomLimits(officeRuntime.floorZoom);
     const moveGoal = (next: typeof officeRuntime.goal) => {
+      if (useOfficeStore.getState().pendingView) return;
       const { min, max } = limits();
       officeRuntime.goal = clampView(next, panBounds(), min, max);
       useOfficeStore.getState().markFree();
@@ -154,7 +155,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const isBackground = (event: Event) => !(event.target as HTMLElement).closest("button, a, input, textarea");
 
     const onDown = (event: PointerEvent) => {
-      if (!isBackground(event)) return;
+      if (useOfficeStore.getState().pendingView || !isBackground(event)) return;
       stage.setPointerCapture?.(event.pointerId);
       pointers.set(event.pointerId, local(event));
       if (pointers.size === 1) {
@@ -181,6 +182,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onMove = (event: PointerEvent) => {
+      if (useOfficeStore.getState().pendingView) { pointers.clear(); return; }
       const point = local(event);
       const last = pointers.get(event.pointerId);
       if (!last) {
@@ -248,7 +250,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onWheel = (event: WheelEvent) => {
-      if (!isBackground(event)) return;
+      if (useOfficeStore.getState().pendingView || !isBackground(event)) return;
       event.preventDefault();
       const point = local(event);
       const { min, max } = limits();
@@ -263,6 +265,8 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onKey = (event: KeyboardEvent) => {
+      const workspace = stage.parentElement?.querySelector<HTMLElement>("[data-office-view]");
+      if (workspace && workspace.dataset.officeView !== "escritorio") return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, [data-scene-keys-off]")) return;
       const store = useOfficeStore.getState();
