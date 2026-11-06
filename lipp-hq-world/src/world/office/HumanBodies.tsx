@@ -32,6 +32,7 @@ function OfficeHumanBody({ human, base, reduced }: { human: OfficeHuman; base: H
       { walkSpeed: base.clips.walkSpeed },
       reduced,
     );
+    created.settle(useOfficeStore.getState().humanGoals[id] ?? "standing");
     humanActors.set(id, created);
     setActor(created);
     return () => {
@@ -86,7 +87,10 @@ function HumanRing() {
   const id = selected ?? hovered;
   useFrame(() => {
     const position = id ? humanActors.get(id)?.position : null;
-    if (group.current && position) group.current.position.set(position.x, 0.07, position.z);
+    if (!group.current) return;
+    // Quem está em outro andar não tem corpo: o anel espera a troca terminar.
+    group.current.visible = Boolean(position);
+    if (position) group.current.position.set(position.x, 0.07, position.z);
   });
   if (!id) return null;
   return (
@@ -101,10 +105,12 @@ function HumanRing() {
 
 /** Pessoas salvas no editor. Falha aqui nunca derruba o andar nem os bots. */
 export function OfficeHumans() {
-  const humans = useOfficeStore((state) => state.humans);
+  const everyone = useOfficeStore((state) => state.humans);
+  const view = useOfficeStore((state) => state.buildingView);
+  const humans = everyone.filter((human) => human.floor === view);
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const wanted = humans.length > 0;
+  const wanted = everyone.length > 0;
 
   useEffect(() => {
     if (!wanted) return;

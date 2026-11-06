@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, roomAt } from "./officeLayout";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, cityBoundsAt, floorAtLevel, neighborView, viewElevation, viewRoomAt } from "./officeBuilding";
+import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import {
   FORWARD,
   clampView,
@@ -31,7 +32,9 @@ const KEY_PAN = 60;
  * alto da cabeça, de onde o robô estiver agora; na sala em foco, só os daquela sala.
  */
 function botBoxes(onlyRoom?: string): PickBox[] {
-  const { seating } = useOfficeStore.getState();
+  const { seating, buildingView } = useOfficeStore.getState();
+  // Bot só existe no escritório: fora dele, um clique nunca acha quem não está na tela.
+  if (buildingView !== "operacao") return [];
   return Object.entries(seating.seats).flatMap(([botId, seatId]) => {
     const seat = OFFICE_SEATS_BY_ID[seatId];
     if (!seat || (onlyRoom && seat.roomId !== onlyRoom)) return [];
@@ -45,10 +48,11 @@ function botBoxes(onlyRoom?: string): PickBox[] {
 
 /** Pessoa anda: a caixa dela sai de onde ela está agora. */
 function humanBoxes(onlyRoom?: string): PickBox[] {
-  if (onlyRoom && onlyRoom !== "hall") return [];
-  return [...humanActors].map(([id, actor]) => {
+  const { humans } = useOfficeStore.getState();
+  return [...humanActors].flatMap(([id, actor]) => {
+    if (onlyRoom && humans.find((human) => human.id === id)?.roomId !== onlyRoom) return [];
     const { x, z } = actor.position;
-    return { id, minX: x - 0.3, maxX: x + 0.3, minY: 0, maxY: 1.55, minZ: z - 0.3, maxZ: z + 0.3 };
+    return [{ id, minX: x - 0.3, maxX: x + 0.3, minY: 0, maxY: 1.55, minZ: z - 0.3, maxZ: z + 0.3 }];
   });
 }
 
@@ -64,9 +68,11 @@ function who(id: string | null): { botId: string | null; humanId: string | null 
  */
 function pickAt(px: number, py: number): { botId: string | null; humanId: string | null; roomId: string | null } {
   const { view, viewport } = officeRuntime;
-  const focused = useOfficeStore.getState().focusedRoomId;
+  const { focusedRoomId: focused, buildingView, pendingView } = useOfficeStore.getState();
+  // No meio de uma troca, ou com o prédio fechado, não há sala nem gente para achar.
+  if (pendingView || buildingView === "exterior") return { botId: null, humanId: null, roomId: null };
   if (focused) {
-    const { bounds } = OFFICE_ROOMS_BY_ID[focused]!;
+    const { bounds } = BUILDING_ROOMS_BY_ID[focused]!;
     const wall = pickBoxAt(px, py, view, viewport, [
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.maxX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.minZ },
       { id: focused, minX: bounds.minX - 0.2, maxX: bounds.minX, minY: 0, maxY: 3, minZ: bounds.minZ - 0.2, maxZ: bounds.maxZ },
@@ -74,7 +80,15 @@ function pickAt(px: number, py: number): { botId: string | null; humanId: string
     if (wall) return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(focused), ...humanBoxes(focused)])), roomId: wall };
   }
   const ground = screenToGround(px, py, view, viewport);
-  return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(), ...humanBoxes()])), roomId: roomAt(ground.x, ground.z)?.id ?? null };
+  return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(), ...humanBoxes()])), roomId: viewRoomAt(buildingView, ground.x, ground.z)?.id ?? null };
+}
+
+/** O pavimento da fachada sob o pixel, com o prédio fechado e sem troca em curso. */
+function levelAt(px: number, py: number): number | null {
+  const { buildingView, pendingView } = useOfficeStore.getState();
+  if (pendingView || buildingView !== "exterior") return null;
+  const hit = pickBoxAt(px, py, officeRuntime.view, officeRuntime.viewport, FACADE_BOUNDS_LEVELS);
+  return hit === null ? null : Number(hit);
 }
 
 /**
@@ -94,11 +108,12 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const floor = floorFit(runtime.viewport);
     runtime.floorZoom = floor.zoom;
 
-    const room = store.focusedRoomId ? OFFICE_ROOMS_BY_ID[store.focusedRoomId] : null;
+    const room = store.focusedRoomId ? BUILDING_ROOMS_BY_ID[store.focusedRoomId] : null;
+    // Com troca em curso, a sala pedida pode ser do próximo andar: a câmera espera por ela.
     if (store.framing === "floor") runtime.goal = floor;
-    else if (store.framing === "room" && room) runtime.goal = fitView(room.bounds, runtime.viewport, insets, { margin: FLOOR_MARGIN });
+    else if (store.framing === "room" && room && !store.pendingView) runtime.goal = fitView(room.bounds, runtime.viewport, insets, { margin: FLOOR_MARGIN });
 
-    if (store.mode === "demo") runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, CITY_BOUNDS);
+    if (store.mode === "demo") runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, viewElevation(store.buildingView)));
 
     const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
     runtime.placed = true;
@@ -152,8 +167,13 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
 
     const hover = (point: { x: number; y: number }) => {
       const { botId, humanId, roomId } = pickAt(point.x, point.y);
-      useOfficeStore.getState().setHovered(roomId, botId, humanId);
-      stage.style.cursor = botId || humanId || roomId ? "pointer" : "grab";
+      const store = useOfficeStore.getState();
+      store.setHovered(roomId, botId, humanId);
+      // Só pavimento com interior responde: os outros são fachada.
+      const level = levelAt(point.x, point.y);
+      const usable = level !== null && floorAtLevel(level) ? level : null;
+      store.setHoveredLevel(usable);
+      stage.style.cursor = botId || humanId || roomId || usable !== null ? "pointer" : "grab";
     };
 
     const onMove = (event: PointerEvent) => {
@@ -191,6 +211,13 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (dragged || pointers.size > 0) return;
       const point = local(event);
       const store = useOfficeStore.getState();
+      if (store.pendingView) return;
+      const level = levelAt(point.x, point.y);
+      const floor = level === null ? null : floorAtLevel(level);
+      if (floor) {
+        store.goToView(floor);
+        return;
+      }
       const { botId, humanId, roomId } = pickAt(point.x, point.y);
       if (botId) {
         store.selectBot(botId);
@@ -226,7 +253,10 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       moveGoal(zoomViewAt(officeRuntime.goal, next, point.x, point.y, officeRuntime.viewport));
     };
 
-    const onLeave = () => useOfficeStore.getState().setHovered(null, null);
+    const onLeave = () => {
+      useOfficeStore.getState().setHovered(null, null);
+      useOfficeStore.getState().setHoveredLevel(null);
+    };
 
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -236,7 +266,14 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         // Primeiro fecha a gaveta; só depois volta ao andar.
         if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
-        else store.backToFloor();
+        else if (store.framing !== "floor") store.backToFloor();
+        // Já vendo o andar inteiro, mais um Esc sai do prédio.
+        else store.goToView("exterior");
+        return;
+      }
+      if ((event.key === "PageUp" || event.key === "PageDown") && store.mode === "demo") {
+        event.preventDefault();
+        store.goToView(neighborView(store.pendingView ?? store.buildingView, event.key === "PageUp" ? 1 : -1));
         return;
       }
       const pan: Record<string, [number, number]> = {

@@ -27,12 +27,13 @@ import { useHQStore } from "@/state/useHQStore";
 import { effectiveQuality, type GraphicsQuality } from "@/world/quality";
 import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
-import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt } from "./officeLayout";
+import { BUILDING_ROOMS_BY_ID } from "./officeBuilding";
+import { BACK_WALL_CUT, FLOOR_BOUNDS, OFFICE_ROOMS, roomAt } from "./officeLayout";
 import { buildOffice, type OfficeBuild } from "./officeRooms";
 import { HumanChairs } from "./HumanChairs";
 import { screenAtlas, signAtlas } from "./officeTextures";
 import { ChiefScene } from "./ChiefScene";
-import { OfficeCity } from "./CityScene";
+import { BuildingSurroundings } from "./BuildingScene";
 import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
 import { OfficeRobots } from "./RobotBodies";
@@ -286,7 +287,7 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
 function RoomGlow() {
   const hoveredRoomId = useOfficeStore((state) => state.hoveredRoomId);
   const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
-  const room = hoveredRoomId && hoveredRoomId !== focusedRoomId ? OFFICE_ROOMS_BY_ID[hoveredRoomId] : null;
+  const room = hoveredRoomId && hoveredRoomId !== focusedRoomId ? BUILDING_ROOMS_BY_ID[hoveredRoomId] : null;
   if (!room) return null;
   const { minX, maxX, minZ, maxZ } = room.bounds;
   return (
@@ -336,13 +337,23 @@ function LoadWatch() {
   return null;
 }
 
-function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
-  const materials = useOfficeMaterials();
+/** A sombra é refeita sem pressa: o andar que acabou de entrar não pode herdar a do anterior. */
+function ShadowRefresh() {
+  const gl = useThree((state) => state.gl);
+  useEffect(() => {
+    gl.shadowMap.needsUpdate = true;
+  }, [gl]);
+  return null;
+}
+
+/** O escritório dos bots: o andar da Operação. */
+function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
   const build = officeBuild();
   const plants = useMemo(() => build.props.filter((item) => item.kind === "planta"), [build]);
   const lamps = useMemo(() => build.props.filter((item) => item.kind === "luminaria"), [build]);
   return (
     <>
+      <ShadowRefresh />
       <group name="office-fixed">
         <BatchMeshes batch={build.fixed} materials={materials} />
       </group>
@@ -355,6 +366,17 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
         </Suspense>
       </PartBoundary>
       <ContactShadows position={[0, 0.012, 0]} scale={[FLOOR_BOUNDS.maxX * 2 + 3, FLOOR_BOUNDS.maxZ * 2 + 3]} opacity={0.36} blur={2.4} far={3.5} resolution={1024} frames={1} />
+    </>
+  );
+}
+
+/** Materiais ficam; o andar é o único pedaço do prédio com móveis, e só ele está montado. */
+function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
+  const materials = useOfficeMaterials();
+  const view = useOfficeStore((state) => state.buildingView);
+  return (
+    <>
+      {view === "operacao" && <OperacaoFloor quality={quality} materials={materials} />}
       <SceneReady />
     </>
   );
@@ -369,6 +391,7 @@ function reportWorldFailure(message: string) {
 /** Tudo o que a cena desenha. */
 export function OfficeScene({ stage }: { stage: HTMLElement }) {
   const mode = useOfficeStore((state) => state.mode);
+  const view = useOfficeStore((state) => state.buildingView);
   const quality = useHQStore((state) => effectiveQuality(state.graphicsMode, state.autoQuality));
   return (
     <>
@@ -380,15 +403,17 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <OfficeWorld quality={quality} />
         </Suspense>
       </PartBoundary>
-      <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
-        <OfficeRobots world={officeBuild()} />
-      </PartBoundary>
+      {view === "operacao" && (
+        <PartBoundary onError={(message) => useOfficeStore.getState().setFiguresError(message)}>
+          <OfficeRobots world={officeBuild()} />
+        </PartBoundary>
+      )}
       <PartBoundary onError={(message) => useOfficeStore.getState().setHumansError(message)}>
         <OfficeHumans />
       </PartBoundary>
       {mode === "demo" && (
         <PartBoundary onError={() => undefined}>
-          <OfficeCity />
+          <BuildingSurroundings />
           <ChiefScene />
         </PartBoundary>
       )}

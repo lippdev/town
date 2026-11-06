@@ -1296,3 +1296,28 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .office-section-body[data-collapsed="true"] { grid-template-rows: 0fr; padding-bottom: 0; opacity: 0; }
 .office-section-body > .office-team-list { min-height: 0; padding-bottom: 0; overflow: clip; overflow-clip-margin: 4px; }
 @media (prefers-reduced-motion: reduce) { .office-section-toggle svg, .office-section-body { transition: none; } }
+
+/* Prédio: seletor de andares, troca e etiqueta do pavimento apontado. */
+.office-floors { position: absolute; top: 64px; right: 12px; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid var(--ui-line); border-radius: 10px; background: rgba(22, 22, 21, 0.9); }
+.office-floor { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--ui-dim); font: inherit; font-size: 12.5px; cursor: pointer; }
+.office-floor b { display: inline-flex; align-items: center; justify-content: center; width: 20px; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+.office-floor svg { width: 20px; flex-shrink: 0; }
+.office-floor:hover { background: rgba(127, 127, 127, 0.14); color: var(--ui-text); }
+.office-floor:focus-visible { outline: 2px solid #ffd9a0; outline-offset: 1px; }
+.office-floor[aria-current="true"] { background: rgba(255, 217, 160, 0.16); color: #ffe7c4; }
+.office-floor.exterior { order: -100; margin-bottom: 3px; }
+.office-hud:has(.drawer) .office-floors { right: calc(min(400px, 100vw - 32px) + 16px); }
+.office-hud:has(.conv) > .office-floors,
+.office-hud:has(.org) > .office-floors,
+.office-hud:has(.kanban.embedded) > .office-floors { visibility: hidden; }
+@media (max-width: 600px) {
+  .office-floors { top: 60px; right: 8px; }
+  .office-floor { min-width: 36px; min-height: 36px; justify-content: center; padding: 0; }
+  .office-floor span { display: none; }
+  .office-hud:has(.drawer) .office-floors { visibility: hidden; }
+}
+.office-floor-fade { position: absolute; inset: 0; z-index: 4; background: #0c111c; opacity: 0; pointer-events: none; transition: opacity 240ms ease; }
+.office-floor-fade.on { opacity: 1; transition-duration: 160ms; }
+@media (prefers-reduced-motion: reduce) { .office-floor-fade { transition: none; } }
+.office-labels[data-switching="true"] { visibility: hidden; }
+.office-floor-tag { position: absolute; left: 0; top: 0; will-change: transform; padding: 4px 9px; border-radius: 7px; background: rgba(22, 22, 21, 0.92); color: #ffe7c4; font-size: 12.5px; font-weight: 600; white-space: nowrap; pointer-events: none; }

@@ -7,11 +7,13 @@ import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { useHQStore } from "@/state/useHQStore";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
+import { BUILDING_ROOMS_BY_ID } from "@/world/office/officeBuilding";
 import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
+import { FloorSelector } from "./BuildingControls";
 import { OfficeAccountMenu } from "./OfficeAccountMenu";
 import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
@@ -287,7 +289,7 @@ function FocusBar() {
   const focusedRoomId = useOfficeStore((state) => state.focusedRoomId);
   const seating = useOfficeStore((state) => state.seating);
   const bots = useOfficeStore((state) => state.bots);
-  const room = focusedRoomId ? OFFICE_ROOMS_BY_ID[focusedRoomId] : null;
+  const room = focusedRoomId ? BUILDING_ROOMS_BY_ID[focusedRoomId] : null;
   if (!room) return null;
   const here = botsInRoom(seating, room.id).map((id) => bots.find((bot) => bot.id === id)).filter((bot): bot is OfficeBot => Boolean(bot));
   return (
@@ -320,6 +322,7 @@ function CameraBar() {
   const graphicsMode = useHQStore((state) => state.graphicsMode);
   const setGraphicsMode = useHQStore((state) => state.setGraphicsMode);
   const autoQuality = useHQStore((state) => state.autoQuality);
+  const outside = useOfficeStore((state) => state.buildingView === "exterior");
   return (
     <div className="office-bottom" data-office-inset="bottom">
       <div className="office-camera" role="group" aria-label="Câmera">
@@ -335,10 +338,10 @@ function CameraBar() {
           disabled={framing === "floor"}
           onClick={() => useOfficeStore.getState().backToFloor()}
         >
-          <Maximize size={13} aria-hidden /> Ver o andar inteiro
+          <Maximize size={13} aria-hidden /> {outside ? "Ver o prédio inteiro" : "Ver o andar inteiro"}
         </button>
       </div>
-      <p className="office-hint">Clique em um personagem para abrir · arraste para mover · role para aproximar · Esc volta</p>
+      <p className="office-hint">{outside ? "Aponte um andar e clique, ou use o seletor · arraste para mover · role para aproximar" : "Clique em um personagem para abrir · arraste para mover · role para aproximar · Esc volta"}</p>
       <div className="office-quality" role="group" aria-label="Qualidade gráfica">
         <span>Gráficos</span>
         {GRAPHICS_MODES.map((mode) => (
@@ -636,6 +639,7 @@ export function OfficeHud({ live }: { live: boolean }) {
       {view === "equipe" && <OfficeOrgChart bots={bots} sheets={sheets} onOpen={openConversation} />}
       {view === "conversas" && <OfficeConversations bot={conversationBot} bots={bots} live={live} portraits={portraits} demo={demo} />}
       <FocusBar />
+      {!live && <FloorSelector />}
       <OfflineNotice connection={shown} />
       <CameraBar />
       {live ? <BotDrawer characterTab={false} /> : <DemoPanel onConversation={openConversation} />}

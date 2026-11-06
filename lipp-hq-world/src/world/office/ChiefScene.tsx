@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Mesh, type MeshStandardMaterial } from "three";
+import { viewElevation } from "./officeBuilding";
 import { buildCarGeometry, CURB_LANE_Z } from "./officeCity";
 import { ARRIVAL, CHIEF_ID, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, arrivalPath, carTravel, patrolLegs } from "./officeChief";
 import type { Point } from "./officeHumans";
@@ -72,6 +73,7 @@ function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
 export function ChiefScene() {
   const human = useOfficeStore((state) => state.humans.find((candidate) => candidate.id === CHIEF_ID));
   const status = useOfficeStore((state) => state.chiefStatus);
+  const view = useOfficeStore((state) => state.buildingView);
   const car = useRef<Mesh>(null);
   const geometry = useMemo(() => buildCarGeometry("#1d2230"), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -80,7 +82,7 @@ export function ChiefScene() {
 
   useFrame((_, delta) => {
     const actor = humanActors.get(CHIEF_ID);
-    if (!actor || !human || !car.current) return;
+    if (!human || !car.current) return;
     const store = useOfficeStore.getState();
     const state = script.current;
     const go = (step: Step) => {
@@ -91,7 +93,7 @@ export function ChiefScene() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced && state.step === "driving") {
       car.current.position.set(ARRIVAL.stopX, -0.05, CURB_LANE_Z);
-      actor.holder.visible = true;
+      if (actor) actor.holder.visible = true;
       store.setHumanGoal(CHIEF_ID, "seated");
       store.setChiefStatus("mesa");
       go("working");
@@ -99,7 +101,7 @@ export function ChiefScene() {
     }
 
     const request = store.chiefRequest;
-    if (request) {
+    if (request && actor) {
       if (request === "reuniao" && state.step === "working") {
         store.setChiefRequest(null);
         store.setChiefStatus("reuniao");
@@ -111,16 +113,20 @@ export function ChiefScene() {
       }
     }
 
-    switch (state.step) {
-      case "driving": {
-        const point = carTravel(state.time);
-        car.current.position.set(point.x, -0.05, CURB_LANE_Z);
+    // O carro anda com o andar do chefe fora de cena; o resto do roteiro espera o corpo dele.
+    if (state.step === "driving") {
+      const point = carTravel(state.time);
+      car.current.position.set(point.x, -0.05, CURB_LANE_Z);
+      if (actor) {
         actor.holder.visible = false;
         actor.moveTo({ x: point.x, z: CURB_LANE_Z });
-        if (store.chiefStatus !== "chegando") store.setChiefStatus("chegando");
-        if (point.done) go("door");
-        break;
       }
+      if (store.chiefStatus !== "chegando") store.setChiefStatus("chegando");
+      if (point.done) go("door");
+      return;
+    }
+    if (!actor) return;
+    switch (state.step) {
       case "door":
         if (state.time > ARRIVAL.doorSeconds) {
           actor.moveTo(ARRIVAL.door);
@@ -193,10 +199,13 @@ export function ChiefScene() {
 
   return (
     <>
-      <mesh ref={car} geometry={geometry} rotation={[0, Math.PI / 2, 0]} name="carro-do-chefe" position={[ARRIVAL.startX, -0.05, CURB_LANE_Z]}>
-        <meshStandardMaterial vertexColors roughness={0.35} metalness={0.45} />
-      </mesh>
-      {seat && <DeskSign seat={seat} meeting={status === "reuniao"} />}
+      {/* O carro é da rua: desce com a cidade quando o andar em tela é alto. */}
+      <group position={[0, -viewElevation(view), 0]}>
+        <mesh ref={car} geometry={geometry} rotation={[0, Math.PI / 2, 0]} name="carro-do-chefe" position={[ARRIVAL.startX, -0.05, CURB_LANE_Z]}>
+          <meshStandardMaterial vertexColors roughness={0.35} metalness={0.45} />
+        </mesh>
+      </group>
+      {seat && human?.floor === view && <DeskSign seat={seat} meeting={status === "reuniao"} />}
     </>
   );
 }

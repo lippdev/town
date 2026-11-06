@@ -103,6 +103,13 @@ export class HumanActor {
     return this.seat?.id ?? null;
   }
 
+  /** Pessoa que volta à cena já está onde devia: sem refazer o caminho até a cadeira. */
+  settle(goal: HumanGoal) {
+    if (goal === "seated" && !this.seat) return;
+    this.goal = goal;
+    if (goal === "seated") this.jump();
+  }
+
   /** Coloca a pessoa num ponto, sem andar. Quem chega de fora da cena começa assim. */
   moveTo(point: Point) {
     this.x = point.x;
