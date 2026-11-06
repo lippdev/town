@@ -1,5 +1,6 @@
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { CLOCK_POLL_MS, NIGHT_BACKGROUND, currentMinutes, daylightAt, skyFor } from "./dayCycle";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
   DirectionalLight,
@@ -9,6 +10,7 @@ import type {
   Mesh} from "three";
 import {
   BufferAttribute,
+  Color,
   BufferGeometry,
   Euler,
   Matrix4,
@@ -281,22 +283,51 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
   const hemi = useRef<HemisphereLight>(null);
   const sun = useRef<DirectionalLight>(null);
   const fill = useRef<DirectionalLight>(null);
-  // No esconderijo a noite cai sobre tudo. Muda só a força, com a laje fechada: nenhum sombreador é refeito.
-  const lastMood = useRef(false);
+  const background = useMemo(() => new Color(NIGHT_BACKGROUND), []);
+  useEffect(() => {
+    scene.background = background;
+    return () => {
+      scene.background = null;
+    };
+  }, [scene, background]);
+  // O céu segue o relógio de Brasília e o esconderijo escurece tudo. Só muda força e cor,
+  // com a laje fechada: nenhum sombreador é refeito.
+  const lastMood = useRef("");
   useFrame(() => {
-    const cave = useOfficeStore.getState().shownFloor === "esconderijo";
-    if (cave === lastMood.current) return;
-    lastMood.current = cave;
-    if (hemi.current) hemi.current.intensity = cave ? 0.5 : 0.55;
-    if (sun.current) sun.current.intensity = cave ? 1.5 : 3.3;
-    if (fill.current) fill.current.intensity = cave ? 0.65 : 0.8;
-    scene.environmentIntensity = cave ? 0.42 : 0.45;
+    const { shownFloor, daylight } = useOfficeStore.getState();
+    const cave = shownFloor === "esconderijo";
+    const mood = `${cave}:${daylight.toFixed(3)}`;
+    if (mood === lastMood.current) return;
+    lastMood.current = mood;
+    const sky = skyFor(daylight);
+    // No esconderijo a luz que chega é a de dentro: perto da noite, qualquer que seja a hora.
+    const caveDim = cave ? 0.45 : 1;
+    background.set(cave ? NIGHT_BACKGROUND : sky.background);
+    if (hemi.current) {
+      hemi.current.intensity = cave ? 0.5 : sky.hemi;
+      hemi.current.color.set(sky.hemiSky);
+      hemi.current.groundColor.set(sky.hemiGround);
+    }
+    if (sun.current) {
+      sun.current.intensity = sky.sun * caveDim;
+      sun.current.color.set(sky.sunColor);
+    }
+    if (fill.current) {
+      fill.current.intensity = cave ? 0.65 : sky.fill;
+      fill.current.color.set(sky.fillColor);
+    }
+    scene.environmentIntensity = cave ? 0.42 : sky.environment;
+    gl.toneMappingExposure = cave ? 1 : sky.exposure;
+    for (const name of ["fachada-acesa", "cidade-acesa"]) {
+      const lit = scene.getObjectByName(name) as Mesh | undefined;
+      const material = lit?.material as { color?: Color } | undefined;
+      material?.color?.setScalar(sky.litWindows);
+    }
   });
   return (
     <>
       {/* Penumbra suave só na qualidade alta: o sombreador é o que mais pesa por pixel. */}
       {quality === "alta" && <SoftShadows size={7} samples={6} focus={0.5} />}
-      <color attach="background" args={["#111828"]} />
       <hemisphereLight ref={hemi} args={["#cad9f5", "#5a4131", 0.55]} />
       {/* Um sol e um preenchimento para o andar inteiro; nenhuma luz por sala. */}
       <directionalLight
@@ -319,6 +350,17 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
       <directionalLight ref={fill} position={[3, 18, 24]} intensity={0.8} color="#bccff2" />
     </>
   );
+}
+
+/** Relê o relógio de vez em quando; `?hora=` fixa a hora para conferir qualquer momento. */
+function DayClock() {
+  useEffect(() => {
+    const tick = () => useOfficeStore.getState().setDaylight(daylightAt(currentMinutes(window.location.search)));
+    tick();
+    const timer = window.setInterval(tick, CLOCK_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+  return null;
 }
 
 function RoomGlow() {
@@ -533,6 +575,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
     <>
       <OfficeCameraRig stage={stage} />
       <Lighting quality={quality} />
+      <DayClock />
       <QualityController shadowEvery={SHADOW_EVERY} />
       <PartBoundary onError={reportWorldFailure}>
         <Suspense fallback={<LoadWatch />}>

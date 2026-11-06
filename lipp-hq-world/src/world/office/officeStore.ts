@@ -30,6 +30,9 @@ interface OfficeState {
   mountedFloors: FloorId[];
   /** O único andar à mostra agora; a viagem o muda com a laje fechada. */
   shownFloor: FloorId | null;
+  /** Luz do dia agora: 1 em pleno dia, 0 à noite. Vem do relógio de Brasília. */
+  daylight: number;
+  setDaylight: (daylight: number) => void;
   /** Em movimento entre vistas: a cena não responde a ponteiro, e a barra lateral segue respondendo. */
   traveling: boolean;
   /** Pavimento apontado na fachada, com o prédio fechado. */
@@ -140,6 +143,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   buildingView: "operacao",
   mountedFloors: ["operacao"],
   shownFloor: "operacao",
+  daylight: 0,
+  setDaylight: (daylight) => {
+    if (get().daylight !== daylight) set({ daylight });
+  },
   traveling: false,
   hoveredLevel: null,
   goToView: (view) => {

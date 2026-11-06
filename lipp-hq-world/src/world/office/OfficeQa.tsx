@@ -58,6 +58,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         focusedRoomId: store.focusedRoomId,
         scenery: [...sceneryActors].map(([id, actor]) => ({ id, phase: actor.phase, position: actor.position, heading: actor.heading, chair: actor.chair })),
         chiefStatus: store.chiefStatus,
+        daylight: store.daylight,
         framing: store.framing,
         load: store.load,
         figuresError: store.figuresError,
