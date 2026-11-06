@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useEffect, useRef, useState } from "react";
 import { ChevronDown, House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { buildRosterSections } from "@/agents/organization";
 import { lookFor } from "@/avatar/robot/robotLook";
@@ -20,7 +20,7 @@ import { OfficeKanban } from "./OfficeKanban";
 import { OfficeOrgChart } from "./OfficeOrgChart";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
-import { useOfficeStore, zoomStep } from "@/world/office/officeStore";
+import { officeRuntime, useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
 const ROSTER_MIN_WIDTH = 1180;
@@ -363,10 +363,13 @@ function CameraBar() {
 function useDrawerInset(open: boolean) {
   const setViewInsetRight = useHQStore((state) => state.setViewInsetRight);
   const node = useRef<HTMLElement | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = node.current;
     if (!open || !element) return;
-    const measure = () => setViewInsetRight(Math.max(0, window.innerWidth - element.getBoundingClientRect().left));
+    const measure = () => {
+      setViewInsetRight(Math.max(0, window.innerWidth - element.getBoundingClientRect().left));
+      officeRuntime.placed = false;
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -375,6 +378,7 @@ function useDrawerInset(open: boolean) {
       observer.disconnect();
       window.removeEventListener("resize", measure);
       setViewInsetRight(0);
+      officeRuntime.placed = false;
     };
   }, [open, setViewInsetRight]);
   return node;

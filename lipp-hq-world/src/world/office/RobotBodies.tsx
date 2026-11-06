@@ -144,7 +144,7 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
 
   useEffect(() => {
     useOfficeStore.getState().setFiguresError(null);
-    if (!wanted) return;
+    if (!wanted || model) return;
     let alive = true;
     loadGltf(ROBOT_URL).then(
       (gltf) => {
@@ -160,7 +160,7 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
     return () => {
       alive = false;
     };
-  }, [wanted]);
+  }, [wanted, view, model]);
 
   const seatedKey = JSON.stringify(seating.seats);
   const plans = useMemo(() => {

@@ -321,6 +321,15 @@ describe("navegação entre andares", () => {
     expect(useOfficeStore.getState()).toMatchObject({ buildingView: "diretoria", selectedHumanId: chief.id, focusedRoomId: chief.roomId, framing: "room" });
   });
 
+  it("seleções entre andares limpam o hover da cena anterior", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", humans: [placeChief()], hoveredRoomId: "comando", hoveredBotId: "argos", hoveredLevel: 1 });
+    useOfficeStore.getState().selectHuman("chefe");
+    expect(useOfficeStore.getState()).toMatchObject({ hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null });
+    useOfficeStore.setState({ hoveredRoomId: "sala-chefe", hoveredHumanId: "chefe", seating: { seats: { argos: seatOf.id }, unseated: [] } });
+    useOfficeStore.getState().selectBot("argos");
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", hoveredRoomId: null, hoveredHumanId: null });
+  });
+
   it("selecionar no andar atual não mexe na câmera de uma vez", () => {
     useOfficeStore.setState({ mode: "demo", buildingView: "operacao", seating: { seats: { argos: seatOf.id }, unseated: [] } });
     officeRuntime.view = { x: 1, z: 2, zoom: 40 };
