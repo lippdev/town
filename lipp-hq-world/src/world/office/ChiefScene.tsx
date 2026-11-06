@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Mesh, type MeshStandardMaterial } from "three";
-import { viewElevation } from "./officeBuilding";
+import { FloorGroup, GroundGroup } from "./BuildingScene";
 import { buildCarGeometry, CURB_LANE_Z } from "./officeCity";
 import { ARRIVAL, CHIEF_ID, CLIMB_SECONDS, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, carTravel } from "./officeChief";
 import { directoratePatrol } from "./officeDirectorate";
@@ -75,7 +75,7 @@ function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
 export function ChiefScene() {
   const human = useOfficeStore((state) => state.humans.find((candidate) => candidate.id === CHIEF_ID));
   const status = useOfficeStore((state) => state.chiefStatus);
-  const view = useOfficeStore((state) => state.buildingView);
+  const mounted = useOfficeStore((state) => state.humans.find((candidate) => candidate.id === CHIEF_ID)?.floor === undefined ? false : state.mountedFloors.includes(state.humans.find((candidate) => candidate.id === CHIEF_ID)!.floor));
   const car = useRef<Mesh>(null);
   const geometry = useMemo(() => buildCarGeometry("#1d2230"), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -204,12 +204,16 @@ export function ChiefScene() {
   return (
     <>
       {/* O carro é da rua: desce com a cidade quando o andar em tela é alto. */}
-      <group position={[0, -viewElevation(view), 0]}>
+      <GroundGroup>
         <mesh ref={car} geometry={geometry} rotation={[0, Math.PI / 2, 0]} name="carro-do-chefe" position={[ARRIVAL.startX, -0.05, CURB_LANE_Z]}>
           <meshStandardMaterial vertexColors roughness={0.35} metalness={0.45} />
         </mesh>
-      </group>
-      {seat && human?.floor === view && <DeskSign seat={seat} meeting={status === "reuniao"} />}
+      </GroundGroup>
+      {seat && human && mounted && (
+        <FloorGroup floor={human.floor}>
+          <DeskSign seat={seat} meeting={status === "reuniao"} />
+        </FloorGroup>
+      )}
     </>
   );
 }

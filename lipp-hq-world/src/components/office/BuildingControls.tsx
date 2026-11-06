@@ -4,8 +4,8 @@ import { useOfficeStore } from "@/world/office/officeStore";
 
 /**
  * O seletor de andares, como um painel de elevador. Discreto e só na demonstração: a frota
- * real não tem prédio. O atalho PageUp/PageDown faz o mesmo. A troca é direta:
- * o andar novo aparece no próximo quadro, sem escuro nem espera.
+ * real não tem prédio. O atalho PageUp/PageDown faz o mesmo. A cena leva o caminho até lá sem
+ * sair da tela, e o painel já responde na hora: pedir outro andar no meio redireciona.
  */
 export function FloorSelector() {
   const view = useOfficeStore((state) => state.buildingView);

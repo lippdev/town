@@ -14,7 +14,7 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { aimCamera, panBounds, humanActors, officeRuntime, robotActors, useOfficeStore, zoomStep } from "./officeStore";
+import { aimCamera, applyTravel, panBounds, humanActors, officeRuntime, robotActors, stepTravel, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 /** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
@@ -96,6 +96,7 @@ function levelAt(px: number, py: number): number | null {
 export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
   const camera = useThree((state) => state.camera) as OrthographicCamera;
   const size = useThree((state) => state.size);
+  const gl = useThree((state) => state.gl);
   const reducedMotion = useRef(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   useFrame((_, delta) => {
@@ -103,15 +104,23 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     runtime.viewport = { width: size.width, height: size.height };
     aimCamera();
 
-    const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
+    if (runtime.travel.flight) {
+      stepTravel(delta);
+    } else {
+      const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
+      const { view, goal } = runtime;
+      view.x += (goal.x - view.x) * step;
+      view.z += (goal.z - view.z) * step;
+      view.zoom += (goal.zoom - view.zoom) * step;
+    }
     runtime.placed = true;
-    const { view, goal } = runtime;
-    view.x += (goal.x - view.x) * step;
-    view.z += (goal.z - view.z) * step;
-    view.zoom += (goal.zoom - view.zoom) * step;
+    // Câmera, âncora, fachada e andar mudam juntos, antes de desenhar: nenhum quadro vê um sem o outro.
+    if (applyTravel()) gl.shadowMap.needsUpdate = true;
+    const { view } = runtime;
+    const lift = runtime.travel.elevation - runtime.travel.root;
 
-    camera.position.set(view.x - FORWARD[0] * DISTANCE, -FORWARD[1] * DISTANCE, view.z - FORWARD[2] * DISTANCE);
-    camera.lookAt(view.x, 0, view.z);
+    camera.position.set(view.x - FORWARD[0] * DISTANCE, lift - FORWARD[1] * DISTANCE, view.z - FORWARD[2] * DISTANCE);
+    camera.lookAt(view.x, lift, view.z);
     if (camera.zoom !== view.zoom) {
       camera.zoom = view.zoom;
       camera.updateProjectionMatrix();
@@ -136,9 +145,11 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       useOfficeStore.getState().markFree();
     };
     const isBackground = (event: Event) => !(event.target as HTMLElement).closest("button, a, input, textarea");
+    /** Na viagem a cena não tem chão parado para apontar: o gesto espera a chegada. A barra lateral não. */
+    const moving = () => officeRuntime.travel.flight !== null;
 
     const onDown = (event: PointerEvent) => {
-      if (!isBackground(event)) return;
+      if (!isBackground(event) || moving()) return;
       stage.setPointerCapture?.(event.pointerId);
       pointers.set(event.pointerId, local(event));
       if (pointers.size === 1) {
@@ -154,6 +165,12 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const hover = (point: { x: number; y: number }) => {
+      if (moving()) {
+        useOfficeStore.getState().setHovered(null, null);
+        useOfficeStore.getState().setHoveredLevel(null);
+        stage.style.cursor = "";
+        return;
+      }
       const { botId, humanId, roomId } = pickAt(point.x, point.y);
       const store = useOfficeStore.getState();
       store.setHovered(roomId, botId, humanId);
@@ -172,6 +189,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         else useOfficeStore.getState().setHovered(null, null);
         return;
       }
+      if (moving()) return;
       pointers.set(event.pointerId, point);
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
@@ -196,7 +214,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const onUp = (event: PointerEvent) => {
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
-      if (dragged || pointers.size > 0) return;
+      if (dragged || pointers.size > 0 || moving()) return;
       const point = local(event);
       const store = useOfficeStore.getState();
       const level = levelAt(point.x, point.y);
@@ -233,6 +251,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const onWheel = (event: WheelEvent) => {
       if (!isBackground(event)) return;
       event.preventDefault();
+      if (moving()) return;
       const point = local(event);
       const { min, max } = limits();
       const unit = event.deltaMode === 1 ? 16 : 1;
@@ -267,6 +286,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         store.goToView(neighborView(store.buildingView, event.key === "PageUp" ? 1 : -1));
         return;
       }
+      if (moving()) return;
       const pan: Record<string, [number, number]> = {
         ArrowLeft: [KEY_PAN, 0],
         ArrowRight: [-KEY_PAN, 0],

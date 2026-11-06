@@ -6,6 +6,7 @@ import { resolveHuman } from "@/avatar/human/preset";
 import { HumanActor } from "./HumanActor";
 import { HUMAN_SCALE, type OfficeHuman } from "./officeHumans";
 import { humanActors, humanFigures, officeRuntime, useOfficeStore } from "./officeStore";
+import { FloorGroup } from "./BuildingScene";
 
 /** Quantos quadros entre um mapa de sombra e outro enquanto alguém anda. */
 const WALKING_SHADOW_EVERY = 6;
@@ -90,7 +91,7 @@ function HumanRing() {
     const position = actor?.position ?? null;
     if (!group.current) return;
     // Quem está em outro andar não tem corpo, e quem está chegando ainda não apareceu: o anel espera.
-    group.current.visible = Boolean(position) && actor!.holder.visible;
+    group.current.visible = Boolean(position) && actor!.holder.visible && officeRuntime.travel.flight === null;
     if (position) group.current.position.set(position.x, 0.07, position.z);
   });
   if (!id) return null;
@@ -108,7 +109,8 @@ function HumanRing() {
 export function OfficeHumans() {
   const everyone = useOfficeStore((state) => state.humans);
   const view = useOfficeStore((state) => state.buildingView);
-  const humans = everyone.filter((human) => human.floor === view);
+  const mounted = useOfficeStore((state) => state.mountedFloors);
+  const humans = everyone.filter((human) => mounted.includes(human.floor));
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const wanted = everyone.length > 0;
@@ -133,7 +135,9 @@ export function OfficeHumans() {
   return (
     <>
       {humans.map((human) => (
-        <OfficeHumanBody key={human.id} human={human} base={base} reduced={reduced} />
+        <FloorGroup key={human.id} floor={human.floor}>
+          <OfficeHumanBody human={human} base={base} reduced={reduced} />
+        </FloorGroup>
       ))}
       <HumanRing />
     </>

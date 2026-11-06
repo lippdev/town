@@ -30,6 +30,7 @@ export function OfficeLabels() {
   const hoveredHumanId = useOfficeStore((state) => state.hoveredHumanId);
   const buildingView = useOfficeStore((state) => state.buildingView);
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
+  const traveling = useOfficeStore((state) => state.traveling);
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
   // Chegando, ele ainda não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
   const chiefAway = chiefStatus === "chegando" || chiefStatus === "entrando";
@@ -91,7 +92,7 @@ export function OfficeLabels() {
   });
 
   return (
-    <div className="office-labels" ref={layer}>
+    <div className="office-labels" ref={layer} data-traveling={traveling ? "true" : undefined}>
       <div className={focusedRoomId ? "office-shade on" : "office-shade"} ref={shade} aria-hidden />
       {viewRooms(buildingView).map((room) => {
         // Só o local apontado revela a identificação sobre a cena.

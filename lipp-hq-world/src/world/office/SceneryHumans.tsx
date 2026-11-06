@@ -3,7 +3,8 @@ import { useFrame } from "@react-three/fiber";
 import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/HumanFigure";
 import { resolveHuman } from "@/avatar/human/preset";
 import { HumanActor } from "./HumanActor";
-import { sceneryOfView } from "./officeBuilding";
+import { FloorGroup } from "./BuildingScene";
+import { sceneryOfView, type FloorId } from "./officeBuilding";
 import type { SceneryHuman } from "./officeLobby";
 import { sceneryActors, useOfficeStore } from "./officeStore";
 
@@ -33,7 +34,7 @@ function SceneryBody({ person, base, reduced }: { person: SceneryHuman; base: Hu
  */
 export function SceneryHumans() {
   const view = useOfficeStore((state) => state.buildingView);
-  const people = sceneryOfView(view);
+  const mounted = useOfficeStore((state) => state.mountedFloors);
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Carrega antes de precisar: quem entra no andar não vê a cena sem ninguém.
@@ -53,8 +54,12 @@ export function SceneryHumans() {
   if (!base) return null;
   return (
     <>
-      {people.map((person) => (
-        <SceneryBody key={person.id} person={person} base={base} reduced={reduced} />
+      {mounted.map((floor: FloorId) => (
+        <FloorGroup key={floor} floor={floor}>
+          {sceneryOfView(floor).map((person) => (
+            <SceneryBody key={person.id} person={person} base={base} reduced={reduced} />
+          ))}
+        </FloorGroup>
       ))}
     </>
   );
