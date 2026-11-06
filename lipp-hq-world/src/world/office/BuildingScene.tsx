@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import { BUILDING_HEIGHT, FACADE_BOUNDS, STORY, viewElevation, visibleLevels } from "./officeBuilding";
+import { BUILDING_HEIGHT, CROWN_STEPS, FACADE_BOUNDS, STORY, viewElevation, visibleLevels } from "./officeBuilding";
 import { buildFacade, buildingSignTexture } from "./buildingFacade";
 import { OfficeCity } from "./CityScene";
 import { useOfficeStore } from "./officeStore";
@@ -11,7 +11,7 @@ function LevelBand({ level }: { level: number }) {
   const { minX, maxX, minZ, maxZ } = FACADE_BOUNDS;
   return (
     <mesh position={[(minX + maxX) / 2, (level + 0.5) * STORY, (minZ + maxZ) / 2]} renderOrder={2} name="pavimento-apontado">
-      <boxGeometry args={[maxX - minX + 0.12, STORY - 0.1, maxZ - minZ + 0.12]} />
+      <boxGeometry args={[maxX - minX + 0.6, STORY - 0.1, maxZ - minZ + 0.6]} />
       <meshBasicMaterial color="#ffd9a0" transparent opacity={0.28} depthWrite={false} toneMapped={false} />
     </mesh>
   );
@@ -51,8 +51,8 @@ function Facade() {
         </mesh>
       </group>
       {closed && (
-        <mesh position={[(minX + maxX) / 2, BUILDING_HEIGHT + 1.5, maxZ + 0.13]} name="placa-do-predio">
-          <planeGeometry args={[13.5, 2.25]} />
+        <mesh position={[(minX + maxX) / 2, BUILDING_HEIGHT + 1.85, maxZ - CROWN_STEPS[0]!.inset + 0.2]} name="placa-do-predio">
+          <planeGeometry args={[11.4, 1.9]} />
           <meshBasicMaterial map={sign} toneMapped={false} />
         </mesh>
       )}
