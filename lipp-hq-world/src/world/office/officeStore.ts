@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_ROOMS_BY_ID, cityBoundsAt, initialBuildingView, viewElevation, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, FLOOR_LEVEL, STORY, cityBoundsAt, initialBuildingView, viewElevation, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
+import { cutAt, lerp, planTravel, plateOpacity, restCut, shownAt, travelProgress, type TravelPlan } from "./floorTravel";
 import { CITY_BOUNDS } from "./officeCity";
 import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, keepGroundInside, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
+import type { Group } from "three";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
 import type { RobotLooks } from "@/avatar/robot/robotLook";
 import type { HumanActor } from "./HumanActor";
@@ -21,11 +23,17 @@ export const FLOOR_MARGIN = 0.04;
 
 interface OfficeState {
   mode: OfficeMode;
-  /** O que está montado na cena. Na frota real é sempre o escritório. */
+  /** Onde se está, ou para onde se está indo: URL, seletor e rótulos seguem isto na mesma hora. */
   buildingView: BuildingView;
+  /** Andares com móveis e gente na cena: o de destino e, na viagem, o que ainda está à mostra. */
+  mountedFloors: FloorId[];
+  /** O único andar à mostra agora; a viagem o muda com a laje fechada. */
+  shownFloor: FloorId | null;
+  /** Em movimento entre vistas: a cena não responde a ponteiro, e a barra lateral segue respondendo. */
+  traveling: boolean;
   /** Pavimento apontado na fachada, com o prédio fechado. */
   hoveredLevel: number | null;
-  /** Troca de andar na hora e limpa o que era do anterior. Na frota real, não faz nada. */
+  /** Parte para outra vista e limpa o que era do anterior. Na frota real, não faz nada. */
   goToView: (view: BuildingView) => void;
   setHoveredLevel: (level: number | null) => void;
   focusedRoomId: string | null;
@@ -78,20 +86,52 @@ function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: Floor
   return state.mode === "demo" && state.buildingView !== floor ? { buildingView: floor, hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null } : {};
 }
 
-/** Depois de mudar de andar: a câmera já está no lugar e a URL já diz onde se está, sem navegar. */
+const floorOf = (view: BuildingView): FloorId | null => (view === "exterior" ? null : view);
+const prefersStillness = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Depois de pedir outra vista: a URL já diz para onde se vai, sem navegar; a câmera parte no próximo quadro. */
 function arrived(view: BuildingView) {
   aimCamera();
-  officeRuntime.view = { ...officeRuntime.goal };
   if (typeof window !== "undefined") {
     const url = new URL(window.location.href);
     url.searchParams.set("andar", view);
     window.history.replaceState(window.history.state, "", url);
   }
+  if (prefersStillness()) {
+    settleAt(view);
+    officeRuntime.view = { ...officeRuntime.goal };
+    return;
+  }
+  const travel = officeRuntime.travel;
+  const plan = planTravel({ cut: travel.cut, shown: travel.shown, moving: travel.flight !== null, elevation: travel.elevation }, view);
+  travel.flight = { plan, elapsed: 0, fromView: { ...officeRuntime.view }, fromElevation: travel.elevation, started: false };
+  const floors = new Set<FloorId>();
+  if (travel.shown) floors.add(travel.shown);
+  const destination = floorOf(view);
+  if (destination) floors.add(destination);
+  useOfficeStore.setState({ traveling: true, mountedFloors: [...floors] });
+}
+
+/** Vista parada, sem nada a meio caminho. */
+function settleAt(view: BuildingView) {
+  const travel = officeRuntime.travel;
+  travel.flight = null;
+  travel.cut = restCut(view);
+  travel.elevation = viewElevation(view);
+  travel.shown = floorOf(view);
+  travel.plate = 0;
+  travel.progress = 1;
+  travel.root = viewElevation(view);
+  const shown = floorOf(view);
+  useOfficeStore.setState({ traveling: false, mountedFloors: shown ? [shown] : [], shownFloor: shown });
 }
 
 export const useOfficeStore = create<OfficeState>((set, get) => ({
   mode: "demo",
   buildingView: "operacao",
+  mountedFloors: ["operacao"],
+  shownFloor: "operacao",
+  traveling: false,
   hoveredLevel: null,
   goToView: (view) => {
     const state = get();
@@ -107,7 +147,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
       hoveredLevel: null,
       buildingView: view,
     });
-    // Pedir o andar em tela só volta ao enquadramento dele.
+    // Pedir o andar em tela, ou o destino da viagem, só volta ao enquadramento dele.
     if (view !== state.buildingView) arrived(view);
   },
   setHoveredLevel: (hoveredLevel) => {
@@ -136,7 +176,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   load: "loading",
   loadError: null,
   figuresError: null,
-  setMode: (mode) => set({ mode, buildingView: initialBuildingView(mode, window.location.search) }),
+  setMode: (mode) => {
+    const buildingView = initialBuildingView(mode, window.location.search);
+    set({ mode, buildingView });
+    settleAt(buildingView);
+  },
   setRoster: (bots, seating) => set({ bots, seating }),
   setHovered: (hoveredRoomId, hoveredBotId, hoveredHumanId = null) => {
     const state = get();
@@ -185,6 +229,15 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   markFree: () => set({ framing: "free" }),
 }));
 
+interface Flight {
+  plan: TravelPlan;
+  elapsed: number;
+  fromView: OfficeView;
+  fromElevation: number;
+  /** O primeiro quadro só monta o andar novo: o tempo conta a partir do seguinte. */
+  started: boolean;
+}
+
 /** Estado da câmera a cada quadro, fora do React para não renderizar nada por isso. */
 export const officeRuntime = {
   view: { x: 0, z: 0, zoom: 30 } as OfficeView,
@@ -193,6 +246,19 @@ export const officeRuntime = {
   floorZoom: 30,
   /** Foi posicionada ao menos uma vez: o primeiro quadro entra sem animar. */
   placed: false,
+  /** Onde o prédio está agora: na frota real, sempre parado na Operação. */
+  travel: {
+    cut: FLOOR_LEVEL.operacao * STORY,
+    elevation: FLOOR_LEVEL.operacao * STORY,
+    /** Elevação em que a cena está ancorada: a do andar à mostra, que fica sempre em y = 0. */
+    root: FLOOR_LEVEL.operacao * STORY,
+    shown: "operacao" as FloorId | null,
+    plate: 0,
+    progress: 1,
+    flight: null as Flight | null,
+    /** Só o harness: congela a viagem nesta fração do tempo, para fotografar o meio dela. */
+    hold: null as number | null,
+  },
   /** Quem se mexe na cena: id → ponto da etiqueta, atualizado a cada quadro. */
   liveAnchors: new Map<string, readonly [number, number, number]>(),
 };
@@ -237,8 +303,69 @@ export function aimCamera() {
   if (store.mode === "demo" && !(store.framing === "floor" && (elevation > 0 || store.buildingView === "exterior"))) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
 }
 
+/** O que acompanha a viagem: registrados pelos componentes, movidos só por `applyTravel`. */
+export const travelSinks = {
+  /** Grupos do chão da cidade: ficam em y = -âncora. */
+  ground: new Set<Group>(),
+  /** Grupos de cada andar: só o andar à mostra fica visível. */
+  floors: new Map<Group, FloorId>(),
+  /** Fachada e laje do corte. */
+  listeners: new Set<() => void>(),
+};
+
+/** Aplica o estado da viagem à cena. Devolve se o andar à mostra mudou: a sombra precisa ser refeita. */
+export function applyTravel(): boolean {
+  const { root, shown } = officeRuntime.travel;
+  for (const group of travelSinks.ground) group.position.y = -root;
+  for (const [group, floor] of travelSinks.floors) group.visible = floor === shown;
+  for (const listener of travelSinks.listeners) listener();
+  if (useOfficeStore.getState().shownFloor === shown) return false;
+  useOfficeStore.setState({ shownFloor: shown });
+  return true;
+}
+
+const LONGEST_TRAVEL_FRAME = 0.05;
+
+/**
+ * Um quadro da viagem. A chegada é o `goal` de agora, refeito a cada quadro: abrir a gaveta ou
+ * redimensionar a tela no caminho muda o destino sem salto. Não há cronômetro: sem quadro, nada anda.
+ */
+export function stepTravel(delta: number) {
+  const runtime = officeRuntime;
+  const travel = runtime.travel;
+  const flight = travel.flight;
+  if (!flight) return;
+  if (flight.started) flight.elapsed += Math.min(delta, LONGEST_TRAVEL_FRAME) * 1000;
+  flight.started = true;
+  const { plan } = flight;
+  if (travel.hold !== null) flight.elapsed = plan.duration * travel.hold;
+  if (flight.elapsed >= plan.duration) {
+    settleAt(plan.target);
+    runtime.view = { ...runtime.goal };
+    return;
+  }
+  const progress = travelProgress(plan, flight.elapsed);
+  const target = viewElevation(plan.target);
+  travel.progress = progress;
+  travel.cut = cutAt(plan, progress);
+  travel.elevation = lerp(flight.fromElevation, target, progress);
+  travel.shown = shownAt(plan, progress);
+  travel.plate = plateOpacity(travel.cut, travel.shown);
+  // Com a laje fechada ninguém vê a âncora mudar: ela vai junto com a câmera, no mesmo quadro.
+  travel.root = travel.shown ? FLOOR_LEVEL[travel.shown] * STORY : target;
+  const { fromView } = flight;
+  const { goal } = runtime;
+  runtime.view = {
+    x: lerp(fromView.x, goal.x, progress),
+    z: lerp(fromView.z, goal.z, progress),
+    // Em escala: dobrar o zoom leva o mesmo tempo em qualquer ponto do caminho.
+    zoom: Math.exp(lerp(Math.log(fromView.zoom), Math.log(goal.zoom), progress)),
+  };
+}
+
 /** Botões + e −: zoom em torno do meio da área livre. */
 export function zoomStep(factor: number) {
+  if (officeRuntime.travel.flight) return;
   const { goal, viewport, floorZoom } = officeRuntime;
   const insets = currentInsets();
   const px = insets.left + (viewport.width - insets.left - insets.right) / 2;
