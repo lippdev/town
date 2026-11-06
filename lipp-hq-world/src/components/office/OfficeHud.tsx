@@ -341,9 +341,11 @@ function CameraBar() {
           type="button"
           className="office-button"
           disabled={framing === "floor"}
+          aria-label={outside ? "Ver o prédio inteiro" : "Ver o andar inteiro"}
+          title={outside ? "Ver o prédio inteiro" : "Ver o andar inteiro"}
           onClick={() => useOfficeStore.getState().backToFloor()}
         >
-          <Maximize size={13} aria-hidden /> {outside ? "Ver o prédio inteiro" : "Ver o andar inteiro"}
+          <Maximize size={13} aria-hidden /> <span className="office-btn-label">{outside ? "Ver o prédio inteiro" : "Ver o andar inteiro"}</span>
         </button>
       </div>
       <p className="office-hint">{outside ? "Aponte um andar e clique, ou use o seletor · arraste para mover · role para aproximar" : "Clique em um personagem para abrir · arraste para mover · role para aproximar · Esc volta"}</p>
@@ -352,7 +354,7 @@ function CameraBar() {
         {GRAPHICS_MODES.map((mode) => (
           <button key={mode} type="button" className={graphicsMode === mode ? "active" : undefined} aria-pressed={graphicsMode === mode} onClick={() => setGraphicsMode(mode)}>
             {GRAPHICS_LABEL[mode]}
-            {mode === "auto" && graphicsMode === "auto" ? ` (${GRAPHICS_LABEL[autoQuality]})` : ""}
+            {mode === "auto" && graphicsMode === "auto" ? <span className="office-quality-auto"> ({GRAPHICS_LABEL[autoQuality]})</span> : null}
           </button>
         ))}
       </div>

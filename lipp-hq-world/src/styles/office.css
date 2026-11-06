@@ -1280,6 +1280,20 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .org-unassigned .org-members { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 @media (max-width: 600px) { .org { left: 0; } .org-scroll { padding-inline: 14px; } }
 
+/* Celular: o que não cabe sai inteiro, em vez de aparecer cortado.
+   A etiqueta "Demonstração" ao lado do título já diz o modo, e o rótulo
+   "Gráficos" não precisa aparecer para os três botões fazerem sentido. */
+@media (max-width: 600px) {
+  .office-demo-note { display: none; }
+  .office-quality > span { display: none; }
+  /* Sem o rótulo, o botão da câmera fica só com o ícone: os três modos
+     gráficos precisam caber, senão o "Leve" sai da tela justamente onde
+     ele mais importa. O nome continua no aria-label e no title. */
+  .office-btn-label, .office-quality-auto { display: none; }
+  .office-quality { gap: 4px; padding: 4px; }
+  .office-bottom { gap: 8px; }
+}
+
 /* Sidebar: os agentes em seções, na mesma organização do painel Equipe. */
 .office-section-toggle { display: flex; align-items: center; gap: 6px; width: 100%; height: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
 .office-section-toggle:disabled { cursor: default; }
