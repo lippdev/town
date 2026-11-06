@@ -1,7 +1,11 @@
+import { CylinderGeometry, ExtrudeGeometry, Shape, type BufferGeometry } from "three";
 import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
 import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
 import { screenUv } from "./officeTextures";
 import { EXPANSION_CORRIDOR, expansionFloor, expansionSeats, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
+import { batEmblemGeometry, capeGeometry, cowlGeometry } from "./hideoutGear";
+import { BATTLE_CONSOLE, GIANT_COIN, HIDEOUT_DOOR, SIGNAL_LAMP, SUIT_CASE, TRAINING_MAT, TURNTABLE } from "./officeHideout";
+import { SECRET_CLOCK, SECRET_SHELF } from "./officeSecrets";
 import { ELEVATOR_CORE, ELEVATOR_STOPS, ELEVATOR_XS, RECEPTION, expansionStop, type ElevatorStop, type FloorSignSpec } from "./officeLobby";
 import { BACK_WALL_CUT, CORRIDOR, DESK_REACH, ENTRANCE, FACING, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS, type OfficeBounds } from "./officeLayout";
 import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, laptop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
@@ -351,6 +355,52 @@ function woodFloor(b: KitBuilder, room: OfficeBounds, color: string) {
   b.box([(room.minX + room.maxX) / 2, -0.015, (room.minZ + room.maxZ) / 2], [room.maxX - room.minX, 0.06, room.maxZ - room.minZ], { surface: "wood", tile: FLOOR_TILE, color, cast: false });
 }
 
+const SHELF_ROWS = [0.12, 0.67, 1.22, 1.77, 2.38];
+
+/** O que a estante esconde: batente aceso e degraus que somem na parede, sem furar a torre. */
+function secretPassage(b: KitBuilder) {
+  const { z, width, height } = SECRET_SHELF;
+  const x = minX + 0.1;
+  b.at([x, 0, z], 0, () => {
+    b.box([0, height / 2, 0], [0.04, height, width], { color: "#07080b", cast: false });
+    for (const side of [-1, 1]) b.box([0.03, height / 2, side * (width / 2 - 0.04)], [0.02, height, 0.04], { surface: "glow", color: "#e0a84f", cast: false });
+    b.box([0.03, height - 0.03, 0], [0.02, 0.04, width], { surface: "glow", color: "#e0a84f", cast: false });
+    for (let step = 0; step < 6; step += 1) {
+      const inset = step * 0.075;
+      b.box([0.024, 0.14 + step * 0.26, 0], [0.008, 0.032, width - 0.2 - inset * 2], { surface: "glow", color: step % 2 === 0 ? "#3d78c4" : "#2b5fa8", cast: false });
+    }
+  });
+}
+
+let secretShelf: Batch | null = null;
+/** A seção que gira, com a origem nas dobradiças. Fechada, é igual às outras. */
+export function buildSecretShelf(): { body: Batch } {
+  if (!secretShelf) {
+    const { width, hingeZ, z } = SECRET_SHELF;
+    const body = new KitBuilder();
+    // O fundo da estante fica na linha das dobradiças: é em volta dele que ela gira.
+    body.at([0.22, 0, z - hingeZ], 0, () => bookshelf(body, 2.5, width, SHELF_ROWS));
+    secretShelf = body.build();
+  }
+  return { body: secretShelf };
+}
+
+function wallClock(b: KitBuilder) {
+  const { x, y, z, radius } = SECRET_CLOCK;
+  b.at([x, y, z], 0, () => {
+    const face = new CylinderGeometry(radius, radius, 0.05, 28);
+    face.rotateX(Math.PI / 2);
+    b.mesh(face, [0, 0, 0], { color: "#e2d8c4", cast: false });
+    const rim = new CylinderGeometry(radius + 0.045, radius + 0.045, 0.04, 28);
+    rim.rotateX(Math.PI / 2);
+    b.mesh(rim, [0, 0, -0.015], { color: "#6e5140", cast: false });
+    for (let hour = 0; hour < 12; hour += 1) {
+      const angle = (hour / 12) * Math.PI * 2;
+      b.box([Math.sin(angle) * radius * 0.84, Math.cos(angle) * radius * 0.84, 0.03], [0.018, 0.05, 0.01], { color: "#26292e", cast: false });
+    }
+  });
+}
+
 function chiefRoom(b: KitBuilder) {
   woodFloor(b, CHIEF_ROOM, "#8a6a4f");
   innerWall(b, "z", CHIEF_ROOM.maxX, minZ, CHIEF_ROOM.maxZ, FRONT_WALL_CUT, [{ at: CHIEF_DOOR.z, width: CHIEF_DOOR.width }]);
@@ -365,8 +415,12 @@ function chiefRoom(b: KitBuilder) {
   // O que fica atrás dele: aparador sob a janela e estante na parede oeste.
   b.at([CHIEF_SEAT.x, 0, minZ + 0.42], 0, () => cabinet(b, 3.4));
   b.box([CHIEF_SEAT.x - 0.9, 0.9, minZ + 0.42], [0.34, 0.05, 0.26], { color: "#c9b89a", cast: false });
-  b.at([minX + 0.42, 0, -6.6], 0, () => bookshelf(b, 2.5, 3.6, [0.12, 0.67, 1.22, 1.77, 2.38]));
+  // A estante tem três seções: a do meio é a porta, e mora em `buildSecretShelf`, para poder girar.
+  for (const z of [-7.8, -5.4]) b.at([minX + 0.42, 0, z], 0, () => bookshelf(b, 2.5, 1.2, SHELF_ROWS));
+  b.solid("estante", minX + 0.42, -6.6, 0.56, 1.2);
+  secretPassage(b);
   b.prop("planta", [CHIEF_SEAT.x + 2.4, 0.02, minZ + 0.55], 0.95);
+  wallClock(b);
 
   // Reunião privada, a sudoeste: quatro lugares em volta de uma mesa redonda.
   const table = { x: -9.1, z: -2.55 };
@@ -621,4 +675,240 @@ export function expansionSigns(floor: ExpansionFloor): FloorSignSpec[] {
     { text: "ELEVADORES", at: [ELEVATOR_XS[1], 2.83, minZ + 0.05], width: 1.7, height: 0.28 },
     { text: floor.title.toLocaleUpperCase("pt-BR"), at: [-0.2, 1.75, minZ + 0.08], width: 3.4, height: 0.42 },
   ];
+}
+
+const CAVE_WALL = "#4a4d55";
+const CAVE_METAL = "#23262c";
+const CAVE_DARK = "#14161a";
+const BLUE = "#5aa9ff";
+const AMBER = "#e0a84f";
+
+/** Parede de rocha escura, sem janela: nada da cidade entra aqui. */
+function caveShell(b: KitBuilder) {
+  floorSlab(b, "#1f2125");
+  const half = { x: WIDTH / 2 + 0.16, z: DEPTH / 2 + 0.16 };
+  b.box([0, WALL_HEIGHT / 2, minZ - INSET], [half.x * 2, WALL_HEIGHT, WALL_THICKNESS], { surface: "stone", color: CAVE_WALL, tile: [2.4, 1.6] });
+  b.box([minX - INSET, WALL_HEIGHT / 2, 0], [WALL_THICKNESS, WALL_HEIGHT, half.z * 2], { surface: "stone", color: CAVE_WALL, tile: [2.4, 1.6] });
+  b.box([0, FRONT_WALL_CUT / 2, maxZ + INSET], [half.x * 2, FRONT_WALL_CUT, WALL_THICKNESS], { color: "#17191d" });
+  b.box([maxX + INSET, FRONT_WALL_CUT / 2, 0], [WALL_THICKNESS, FRONT_WALL_CUT, half.z * 2], { color: "#17191d" });
+  // Fita baixa, a linha azul que dá a escala do lugar.
+  b.box([0, 0.2, minZ + 0.03], [WIDTH - 0.2, 0.025, 0.01], { surface: "glow", color: "#2b5fa8", cast: false });
+  b.box([minX + 0.03, 0.2, 0], [0.01, 0.025, DEPTH - 0.2], { surface: "glow", color: "#2b5fa8", cast: false });
+}
+
+/** A mesa em arco do terminal. Os monitores são outra malha, com a textura própria deles. */
+function investigationDesk(b: KitBuilder) {
+  const { x, z, width, depth } = BATTLE_CONSOLE;
+  b.at([x, 0, z], 0, () => {
+    b.box([0, 0.42, 0], [width, 0.84, depth], { color: CAVE_METAL });
+    b.box([0, 0.875, 0.02], [width + 0.08, 0.06, depth + 0.1], { color: "#32363e" });
+    b.box([0, 0.14, depth / 2 + 0.005], [width - 0.3, 0.02, 0.01], { surface: "glow", color: BLUE, cast: false });
+    for (const [kx, kw] of [[-1.6, 1.1], [0, 1.5], [1.6, 1.1]] as const) {
+      b.box([kx, 0.915, 0.18], [kw, 0.018, 0.34], { color: "#14161a", cast: false });
+      for (let row = 0; row < 3; row += 1) b.box([kx, 0.927, 0.08 + row * 0.1], [kw - 0.14, 0.004, 0.03], { surface: "glow", color: row === 1 ? AMBER : BLUE, cast: false });
+    }
+    b.solid("terminal", 0, 0, width + 0.08, depth + 0.1);
+  });
+  // O rack atrás das telas: é ele que dá peso à parede de monitores.
+  b.box([x, 1.72, minZ + 0.1], [6.5, 2.1, 0.12], { color: CAVE_DARK });
+  b.box([x, 2.8, minZ + 0.14], [6.5, 0.05, 0.1], { surface: "glow", color: BLUE, cast: false });
+}
+
+const SCREEN_PANELS = [
+  { x: -2.3, y: 1.72, width: 1.65, height: 1.1 },
+  { x: 0, y: 1.72, width: 2.8, height: 1.8 },
+  { x: 2.3, y: 1.72, width: 1.65, height: 1.1 },
+] as const;
+
+/** Os três painéis do terminal, com a textura deles dividida em três. A cena desenha nessa textura. */
+export function buildTerminalScreens(): Batch {
+  const b = new KitBuilder();
+  const { x } = BATTLE_CONSOLE;
+  SCREEN_PANELS.forEach((panel, index) => {
+    const u0 = index / 3;
+    b.plane([x + panel.x, panel.y, minZ + 0.17], panel.width, panel.height, [u0, 0, u0 + 1 / 3, 1], "screen");
+  });
+  return b.build();
+}
+
+/** A vitrine: base, vidro e o traje reserva, com capuz e capa do mesmo molde do que o morcego usa. */
+function suitCase(b: KitBuilder) {
+  const { x, z, width, depth, height } = SUIT_CASE;
+  b.at([x, 0, z], 0, () => {
+    b.box([0, 0.09, 0], [width, 0.18, depth], { color: CAVE_METAL });
+    b.box([0, 0.19, 0], [width - 0.08, 0.02, depth - 0.08], { surface: "glow", color: "#8f6a2c", cast: false });
+    // Sem tampa: de cima, ela esconderia justo o capuz. Só o aro de cima, com a luz.
+    for (const side of [-1, 1]) {
+      b.box([0, height, side * (depth / 2 - 0.04)], [width, 0.08, 0.08], { color: CAVE_METAL });
+      b.box([side * (width / 2 - 0.04), height, 0], [0.08, 0.08, depth], { color: CAVE_METAL });
+      b.box([0, height - 0.05, side * (depth / 2 - 0.09)], [width - 0.2, 0.02, 0.02], { surface: "glow", color: "#fff0d0", cast: false });
+    }
+    for (const side of [-1, 1]) for (const front of [-1, 1]) b.box([side * (width / 2 - 0.03), height / 2, front * (depth / 2 - 0.03)], [0.06, height, 0.06], { color: "#14161a" });
+    for (const [px, pz, yaw, span] of [[0, depth / 2 - 0.02, 0, width], [width / 2 - 0.02, 0, Math.PI / 2, depth], [-width / 2 + 0.02, 0, Math.PI / 2, depth]] as const) {
+      b.plane([px, height / 2 + 0.09, pz], span - 0.1, height - 0.2, [0, 0, 1, 1], "glass", yaw, "#bcd6e6");
+    }
+    // Manequim: pernas, tronco largo e braços afastados, proporção de herói de quadrinho.
+    const suit = { color: "#1b1d23" };
+    for (const side of [-1, 1]) {
+      b.rounded([side * 0.16, 0.66, 0], [0.2, 0.92, 0.24], 0.07, suit);
+      b.rounded([side * 0.16, 0.26, 0.05], [0.22, 0.14, 0.36], 0.05, { color: "#101116" });
+      b.rounded([side * 0.44, 1.32, 0.02], [0.15, 0.72, 0.17], 0.06, suit);
+      b.rounded([side * 0.45, 0.94, 0.02], [0.16, 0.2, 0.18], 0.05, { color: "#101116" });
+    }
+    b.rounded([0, 1.42, 0], [0.72, 0.82, 0.32], 0.1, suit);
+    const belt = new CylinderGeometry(0.31, 0.31, 0.09, 14);
+    belt.scale(1, 1, 0.58);
+    b.mesh(belt, [0, 1.07, 0], { color: "#c7983d" });
+    const emblem = batEmblemGeometry(0.52, 0.015);
+    b.mesh(emblem, [0, 1.56, 0.163], { color: "#c7983d", cast: false });
+    b.cylinder([0, 1.92, 0], 0.08, 0.14, { color: "#d4966e", cast: false }, 10);
+    const dome = cowlGeometry(0.2);
+    b.mesh(dome, [0, 2.09, 0], { color: "#14161a" });
+    const cape = capeGeometry(0.98, 1.62);
+    b.mesh(cape, [0, 1.84, -0.18], { color: "#101116" });
+    b.solid("vitrine", 0, 0, width, depth);
+  });
+}
+
+function signalLamp(b: KitBuilder) {
+  const { x, z } = SIGNAL_LAMP;
+  b.at([x, 0, z], -0.95, () => {
+    b.cylinder([0, 0.06, 0], 0.46, 0.12, { color: CAVE_METAL }, 18);
+    b.box([0, 0.5, 0], [0.12, 0.8, 0.12], { color: "#14161a" });
+    const drum = new CylinderGeometry(0.34, 0.26, 0.56, 18);
+    drum.rotateX(Math.PI / 2 - 0.32);
+    b.mesh(drum, [0, 1.04, 0], { color: "#3a3e46" });
+    const lens = new CylinderGeometry(0.3, 0.3, 0.03, 18);
+    lens.rotateX(Math.PI / 2 - 0.32);
+    b.mesh(lens, [0, 1.13, 0.28], { color: "#c6d6e6", cast: false });
+    b.solid("holofote", 0, 0, 0.92, 0.92);
+  });
+}
+
+/** Tatame, boneco de pancada e banco de pesos: treino que se reconhece de cima, sem peça de GLB. */
+function trainingArea(b: KitBuilder) {
+  const { x, z, width, depth } = TRAINING_MAT;
+  b.box([x, 0.04, z], [width, 0.05, depth], { surface: "fabric", color: "#1c2c44", cast: false });
+  b.box([x, 0.068, z], [width - 0.5, 0.008, depth - 0.5], { color: "#2b4166", cast: false });
+  b.box([x, 0.074, z], [width - 0.7, 0.008, depth - 0.7], { surface: "fabric", color: "#1c2c44", cast: false });
+  const emblem = batEmblemGeometry(2.4, 0.004);
+  emblem.rotateX(-Math.PI / 2);
+  b.mesh(emblem, [x, 0.082, z], { color: "#2b4166", cast: false });
+  // Boneco de madeira: é a silhueta do treino.
+  b.at([x - 1.4, 0, z - 1.3], 0.8, () => {
+    b.cylinder([0, 0.8, 0], 0.17, 1.5, { ...WOOD, color: "#7a5a3c" }, 12);
+    b.cylinder([0, 0.06, 0], 0.34, 0.1, { color: CAVE_DARK }, 14);
+    for (const [y, yaw] of [[1.2, 0.5], [1.05, -0.5], [0.72, 0]] as const) {
+      b.at([0, y, 0], yaw, () => b.box([0, 0, 0.26], [0.06, 0.06, 0.52], { ...WOOD, color: "#5f4530" }));
+    }
+    b.solid("boneco", 0, 0, 0.7, 0.7);
+  });
+  // Banco com barra: a barra atravessa, e os discos marcam as pontas.
+  b.at([x + 1.5, 0, z + 1.5], 0.4, () => {
+    b.box([0, 0.3, 0], [0.42, 0.1, 1.3], { surface: "fabric", color: "#2a2d33" });
+    for (const end of [-0.45, 0.45]) b.box([0, 0.14, end], [0.5, 0.26, 0.08], { color: CAVE_DARK });
+    b.box([0, 0.78, -0.45], [1.5, 0.03, 0.03], { color: "#9aa0a8" });
+    for (const side of [-1, 1]) {
+      b.box([side * 0.31, 0.45, -0.5], [0.05, 0.66, 0.05], { color: CAVE_DARK });
+      const plate = new CylinderGeometry(0.19, 0.19, 0.05, 16);
+      plate.rotateZ(Math.PI / 2);
+      b.mesh(plate, [side * 0.68, 0.78, -0.45], { color: "#3a3e46" });
+    }
+    b.solid("banco de treino", 0, 0, 1.5, 1.3);
+  });
+}
+
+/** Berço da moeda: a moeda em si gira, e fica em outra malha. */
+function coinCradle(b: KitBuilder) {
+  const { x, z, radius } = GIANT_COIN;
+  b.at([x, 0, z], Math.PI / 4, () => {
+    b.box([0, 0.1, 0], [radius * 1.5, 0.2, 0.7], { color: CAVE_METAL });
+    b.box([0, 0.21, 0], [radius * 1.2, 0.02, 0.12], { surface: "glow", color: AMBER, cast: false });
+    b.solid("moeda", 0, 0, radius * 1.5, 0.7);
+  });
+}
+
+/** Marcas de garagem: faixa de manobra até a porta e o trilho do carro, no chão. */
+function garageMarks(b: KitBuilder) {
+  const { x, z } = TURNTABLE;
+  b.box([x + 0.05, 0.03, z - 3.6], [0.1, 0.012, 1.4], { color: "#c7983d", cast: false });
+  b.box([HIDEOUT_DOOR.x, 0.024, -6.2], [2.1, 0.008, 4.8], { color: "#292c32", cast: false });
+  for (const side of [-1, 1]) b.box([HIDEOUT_DOOR.x + side * 1.05, 0.03, -6.2], [0.04, 0.01, 4.8], { surface: "glow", color: AMBER, cast: false });
+}
+
+let hideout: FloorBuild | null = null;
+/** O esconderijo. Só o que é autoral fica aqui; o que veio do kit CC0 entra pela tabela `HIDEOUT_KIT`. */
+export function buildHideout(): FloorBuild {
+  if (hideout) return hideout;
+  const b = new KitBuilder();
+  caveShell(b);
+  investigationDesk(b);
+  suitCase(b);
+  signalLamp(b);
+  trainingArea(b);
+  coinCradle(b);
+  garageMarks(b);
+  // O portal aceso: é a saída, e precisa ser achada sem ler nada.
+  for (const side of [-1, 1]) b.box([HIDEOUT_DOOR.x + side * 1.5, 1.45, HIDEOUT_DOOR.z + 0.2], [0.05, 2.9, 0.03], { surface: "glow", color: AMBER, cast: false });
+  b.box([HIDEOUT_DOOR.x, 2.92, HIDEOUT_DOOR.z + 0.2], [3.05, 0.05, 0.03], { surface: "glow", color: AMBER, cast: false });
+  // Sem estes móveis no mapa, ninguém na cena saberia que estão ali.
+  b.solid("plataforma", TURNTABLE.x, TURNTABLE.z, TURNTABLE.radius * 2, TURNTABLE.radius * 2);
+  hideout = { fixed: b.build(), props: b.props, footprints: b.footprints };
+  return hideout;
+}
+
+/** Extrusão de um perfil lateral (x é a frente, y é a altura), do lado de `from` até `to`. */
+function sideProfile(points: ReadonlyArray<readonly [number, number]>, from: number, to: number): BufferGeometry {
+  const shape = new Shape();
+  points.forEach(([x, y], index) => (index === 0 ? shape.moveTo(x, y) : shape.lineTo(x, y)));
+  const geometry = new ExtrudeGeometry(shape, { depth: to - from, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.015, bevelSegments: 1 });
+  geometry.translate(0, 0, from);
+  // O carro olha para +z: o perfil desenhado em x vira o comprimento dele.
+  geometry.rotateY(-Math.PI / 2);
+  return geometry;
+}
+
+let car: Batch | null = null;
+/**
+ * O carro, autoral: nenhum modelo aberto tem esta silhueta e nenhum com ela tem licença que permita
+ * redistribuir. Nariz longo e baixo, cabine recuada e aletas com recorte de asa. Fica centrado em
+ * (0, 0), com a frente em +z; as rodas vêm do kit e a plataforma gira tudo junto.
+ */
+export function buildHideoutCar(): Batch {
+  if (car) return car;
+  const b = new KitBuilder();
+  const body = "#22262e";
+  const panel = "#30353f";
+  // Corpo central, do nariz à traseira.
+  b.mesh(sideProfile([[2.35, 0.3], [2.35, 0.42], [1.2, 0.68], [0.3, 0.74], [-1.5, 0.82], [-2.25, 0.72], [-2.25, 0.3]], -0.5, 0.5), [0, 0, 0], { color: body });
+  // Paralamas largos, que seguem as rodas.
+  for (const side of [-1, 1]) {
+    const [from, to] = side < 0 ? [-0.98, -0.5] : [0.5, 0.98];
+    b.mesh(sideProfile([[2.15, 0.26], [2.15, 0.46], [1.7, 0.72], [0.75, 0.74], [0.3, 0.56], [-0.5, 0.56], [-0.95, 0.8], [-2.1, 0.8], [-2.2, 0.26]], from, to), [0, 0, 0], { color: panel });
+    // Aleta de asa: sobe atrás, com dois recortes na borda de fuga.
+    b.mesh(sideProfile([[-0.45, 0.78], [-1.15, 1.2], [-2.05, 1.72], [-2.4, 1.52], [-2.1, 1.3], [-2.3, 1.1], [-2.05, 0.95], [-2.2, 0.78]], side * 0.86 - 0.025, side * 0.86 + 0.025), [0, 0, 0], { color: body });
+  }
+  // Cabine: uma bolha baixa, recuada, em vidro quase preto.
+  b.mesh(sideProfile([[0.72, 0.72], [0.1, 1.14], [-0.72, 1.14], [-1.02, 0.8]], -0.42, 0.42), [0, 0, 0], { color: "#0d2740" });
+  // Turbina na traseira e farol: os dois pontos que puxam o olho.
+  const turbine = new CylinderGeometry(0.34, 0.27, 0.38, 18);
+  turbine.rotateX(Math.PI / 2);
+  b.mesh(turbine, [0, 0.62, -2.3], { color: "#2a2d33" });
+  const fire = new CylinderGeometry(0.24, 0.24, 0.02, 18);
+  fire.rotateX(Math.PI / 2);
+  b.mesh(fire, [0, 0.62, -2.5], { surface: "glow", color: AMBER, cast: false });
+  const emblem = batEmblemGeometry(0.62, 0.01);
+  emblem.rotateX(-1.35);
+  b.mesh(emblem, [0, 0.635, 1.72], { color: "#c7983d", cast: false });
+  b.box([0, 0.36, 2.38], [1.1, 0.04, 0.02], { surface: "glow", color: "#3d78c4", cast: false });
+  car = b.build();
+  return car;
+}
+
+/** O que acende com o motor: farol e a linha de luz debaixo do carro. */
+export function buildHideoutCarLights(): Batch {
+  const b = new KitBuilder();
+  for (const side of [-1, 1]) b.box([side * 0.68, 0.46, 2.26], [0.42, 0.07, 0.03], { surface: "glow", color: "#fff0d0", cast: false });
+  for (const side of [-1, 1]) b.box([side * 0.99, 0.2, 0], [0.02, 0.02, 3.8], { surface: "glow", color: BLUE, cast: false });
+  return b.build();
 }

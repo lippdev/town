@@ -135,6 +135,11 @@ export class KitBuilder {
     this.add(new CylinderGeometry(radius, radiusBottom, height, segments), at, options);
   }
 
+  /** Geometria pronta (perfis extrudados e afins): entra na mesma malha, e o kit passa a ser o dono dela. */
+  mesh(geometry: BufferGeometry, at: Vec3, options: PartOptions = {}) {
+    this.add(geometry, at, options);
+  }
+
   /**
    * Plano voltado para +Z, com pedaço do atlas em `uv` (u0, v0, u1, v1). `rotationY`
    * gira o plano em torno do próprio centro.
