@@ -250,8 +250,10 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onWheel = (event: WheelEvent) => {
-      if (useOfficeStore.getState().pendingView || !isBackground(event)) return;
+      if (!isBackground(event)) return;
+      // Mesmo com troca em curso a página não pode dar zoom: o gesto é da cena.
       event.preventDefault();
+      if (useOfficeStore.getState().pendingView) return;
       const point = local(event);
       const { min, max } = limits();
       const unit = event.deltaMode === 1 ? 16 : 1;
@@ -271,8 +273,12 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (target?.closest("input, textarea, [data-scene-keys-off]")) return;
       const store = useOfficeStore.getState();
       if (event.key === "Escape") {
+        // O menu da conta ouve o Esc por conta própria: a cena não reage junto.
+        if (stage.ownerDocument.querySelector("[data-account-menu]")) return;
+        // Com troca em curso, Esc cancela a troca, inclusive a que uma seleção pediu.
+        if (store.pendingView) store.goToView(store.buildingView);
         // Primeiro fecha a gaveta; só depois volta ao andar.
-        if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
+        else if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
         else if (store.framing !== "floor") store.backToFloor();
         // Já vendo o andar inteiro, mais um Esc sai do prédio.
