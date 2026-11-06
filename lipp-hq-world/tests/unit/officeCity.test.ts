@@ -88,6 +88,21 @@ describe("composição da cidade", () => {
     expect(Math.max(...heights)).toBeLessThan(BUILDING_HEIGHT);
   });
 
+  it("nem coroa nem espigão de vizinho chegam à última laje da torre", () => {
+    for (const { top, height } of buildings) {
+      expect(top).toBeLessThan(BUILDING_HEIGHT);
+      expect(top).toBeGreaterThanOrEqual(height);
+    }
+  });
+
+  it("a cidade sobe em recuos: há agulhas e sentinelas, e coroa só onde não cobre a torre", () => {
+    const styles = new Set(buildings.map(({ style }) => style));
+    for (const style of ["sentinel", "needle", "municipal", "foundry", "tenement"] as const) expect(styles).toContain(style);
+    const crowned = buildings.filter(({ crowned }) => crowned);
+    expect(crowned.length).toBeGreaterThan(10);
+    for (const lot of crowned) expect(occlusionCap(lot)).toBe(Infinity);
+  });
+
   it("os pavimentos têm a medida da torre", () => {
     for (const height of heights) expect((height / STORY) % 1).toBeCloseTo(0, 6);
   });
@@ -113,8 +128,8 @@ describe("composição da cidade", () => {
   it("nenhum prédio cobre a torre, a calçada ou a rua da entrada na câmera fixa", () => {
     const perMeter = (Math.cos(ELEVATION) * Math.sin(AZIMUTH)) / Math.sin(ELEVATION);
     const { minX, maxX, minZ, maxZ } = PROTECTED_GROUND;
-    for (const { minX: a, maxX: b, minZ: c, maxZ: d, height } of buildings) {
-      const reach = (height + 1.4) * perMeter;
+    for (const { minX: a, maxX: b, minZ: c, maxZ: d, height, top } of buildings) {
+      const reach = Math.max(top, height + 1.4) * perMeter;
       // A sombra do prédio na direção da câmera, passo a passo.
       for (let t = 0; t <= reach; t += 0.25) {
         const overlaps = a - t < maxX && b - t > minX && c - t < maxZ && d - t > minZ;

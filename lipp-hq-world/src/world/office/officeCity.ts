@@ -121,12 +121,16 @@ function mix(color: string, to: string, amount: number) {
 }
 
 /** Ardósia, carvão, azul-escuro e pedra fria: quatro tons vizinhos, mais escuros que a pedra da torre. */
-const FACADES = ["#4a525d", "#3b424d", "#2f3b4c", "#242930"] as const;
+const FACADES = ["#4f5764", "#434a56", "#364355", "#333944"] as const;
 /** Teto de uma cor só: de cima, cada prédio é uma mancha limpa, não um remendo. */
-const ROOF = "#2c3037";
+const ROOF = "#363b45";
 const CORNICE = "#171a1f";
+/** Zinco das coroas e mansardas; a pedra clara é só para frisos e marcos. */
+const ZINC = "#2a353d";
+const LIMESTONE = "#626870";
 const GLASS = "#161c24";
-const LIT_TONES = ["#f5b342", "#e6c88b"] as const;
+/** Um pouco abaixo do âmbar da torre: a janela mais viva da cena continua sendo a dela. */
+const LIT_TONES = ["#dfa648", "#d2b57e"] as const;
 
 /** Tamanhos de quarteirão e larguras de rua de cada lado da torre: sem passo fixo, sem tapete. */
 const STREETS = {
@@ -168,11 +172,16 @@ export function occlusionCap(lot: Lot, ground: OfficeBounds = PROTECTED_GROUND):
   return reach / HIDES_PER_METER;
 }
 
-/** Centros mais altos, todos atrás ou ao lado da torre: é onde o olho aceita a massa. */
+/**
+ * Centros mais altos. Os dois primeiros são os ombros da torre, um de cada lado dela na tela: a
+ * cidade sobe em volta e o olho desce para a torre. Os outros formam a linha do céu lá atrás.
+ */
 const CLUSTERS = [
-  { x: -78, z: -82, radius: 52, stories: 11.5 },
-  { x: -128, z: 18, radius: 34, stories: 8 },
-  { x: 26, z: -124, radius: 36, stories: 9 },
+  { x: -58, z: -10, radius: 30, stories: 12.5 },
+  { x: -4, z: -64, radius: 30, stories: 12.5 },
+  { x: -78, z: -82, radius: 42, stories: 10 },
+  { x: -128, z: 18, radius: 34, stories: 9 },
+  { x: 26, z: -124, radius: 36, stories: 10 },
 ] as const;
 
 /** Nenhum vizinho alcança o corpo da torre, de 14 pavimentos mais a coroa. */
@@ -184,11 +193,20 @@ function districtStories(x: number, z: number, seed: number) {
     const distance = Math.hypot(x - center.x, z - center.z) / center.radius;
     peak = Math.max(peak, center.stories * Math.exp(-distance * distance));
   }
-  // Variação de lote a lote; de vez em quando, um prédio bem mais alto que os vizinhos.
-  const wobble = 0.68 + shuffled(seed) * 0.5;
-  const hero = shuffled(seed + 0.37) > 0.9 ? 1.45 : 1;
-  return Math.min(TALLEST_STORIES, Math.max(2, Math.round(peak * wobble * hero + shuffled(seed + 0.71) * 1.5)));
+  // Variação de lote a lote, sem o prédio solto bem mais alto que os vizinhos: a massa é que lê.
+  const wobble = 0.8 + shuffled(seed) * 0.36;
+  return Math.min(TALLEST_STORIES, Math.max(2, Math.round(peak * wobble + shuffled(seed + 0.71))));
 }
+
+/**
+ * Atrás da torre, no eixo da câmera, a altura sobe devagar: é um vale que deixa a coroa contra
+ * telhados baixos, e não contra uma parede do mesmo tamanho dela.
+ */
+function valleyStories(x: number, z: number) {
+  const behind = Math.abs(x - z) < VALLEY_HALF_WIDTH && x + z < 0;
+  return behind ? 4 + Math.floor(-(x + z) / 36) : TALLEST_STORIES;
+}
+const VALLEY_HALF_WIDTH = 26;
 
 /** Corta o quarteirão em lotes de tamanho desigual, sempre pelo lado maior. */
 function splitLots(lot: Lot, seed: number, max: number, out: Lot[] = []): Lot[] {
@@ -211,8 +229,68 @@ function splitLots(lot: Lot, seed: number, max: number, out: Lot[] = []): Lot[] 
   return out;
 }
 
+/** As tipologias: a cidade se repete nelas, e é a repetição que deixa o conjunto limpo. */
+export type BuildingStyle = "sentinel" | "needle" | "municipal" | "foundry" | "tenement";
+
 export interface CityBuilding extends Lot {
+  /** Até a última laje, sempre um número inteiro de pavimentos. */
   height: number;
+  /** Até a ponta: coroa e espigão incluídos. É o que a câmera enxerga por cima. */
+  top: number;
+  style: BuildingStyle;
+  crowned: boolean;
+}
+
+/** Coroa de degraus e pináculo da sentinela; espigão da agulha. */
+const SENTINEL_CROWN = 4.4;
+const NEEDLE_SPIRE = 3.5;
+
+/** Escolhe a tipologia pela altura e pelo lote, na mesma ordem em que a cidade vai do miolo à borda. */
+function styleOf(lot: Lot, stories: number, distance: number): BuildingStyle {
+  const short = Math.min(lot.maxX - lot.minX, lot.maxZ - lot.minZ);
+  const long = Math.max(lot.maxX - lot.minX, lot.maxZ - lot.minZ);
+  if (stories >= 9 && short >= 10) return "sentinel";
+  if (stories >= 6) return "needle";
+  if (stories >= 4 && long >= 13) return "municipal";
+  if (distance > 105 && long >= 12) return "foundry";
+  return "tenement";
+}
+
+/** Os volumes de um prédio, de baixo para cima: cada um recua sobre o anterior. */
+function tiersOf(style: BuildingStyle, lot: Lot, stories: number): { lot: Lot; stories: number }[] {
+  const inset = (from: Lot, by: number): Lot => ({ minX: from.minX + by, maxX: from.maxX - by, minZ: from.minZ + by, maxZ: from.maxZ - by });
+  const short = Math.min(lot.maxX - lot.minX, lot.maxZ - lot.minZ);
+  if (style === "sentinel") {
+    const middle = inset(lot, 1.5);
+    return [
+      { lot, stories: 3 },
+      { lot: middle, stories: stories - 5 },
+      { lot: inset(middle, 1.8), stories: 2 },
+    ];
+  }
+  if (style === "needle" && short >= 7) {
+    const base = Math.max(2, Math.round(stories * 0.4));
+    const shaft = inset(lot, Math.min(1.2, (short - 4) / 2));
+    const crown = Math.min(shaft.maxX - shaft.minX, shaft.maxZ - shaft.minZ) >= 6 ? 2 : 0;
+    const tiers = [
+      { lot, stories: base },
+      { lot: shaft, stories: stories - base - crown },
+    ];
+    if (crown) tiers.push({ lot: inset(shaft, 1), stories: crown });
+    return tiers;
+  }
+  return [{ lot, stories }];
+}
+
+/** Pirâmide de faces planas, com a ponta no meio do retângulo. */
+function pyramid(width: number, height: number, length: number) {
+  const cone = new ConeGeometry(Math.SQRT1_2, 1, 4, 1, true);
+  cone.rotateY(Math.PI / 4);
+  cone.scale(width, height, length);
+  const faceted = cone.toNonIndexed();
+  faceted.computeVertexNormals();
+  cone.dispose();
+  return faceted;
 }
 
 /** Perto, cada pavimento marcado; no meio, um sim, outro não; longe, só os rasgos de vidro. */
@@ -222,6 +300,8 @@ const SPANDREL_EVERY = [1, 2, 0] as const;
 /** Quanto do rasgo é vidro: o resto do vão é pilastra, sempre mais larga que a da torre. */
 const GLASS_SHARE = 0.56;
 const CORNER_PIER = 0.5;
+/** A vidraça acesa é mais estreita que o rasgo: a luz fica no ritmo fino da janela da torre. */
+const LIT_PANE = 0.9;
 /** O peitoril e a verga: é a mesma folga no vidro, na luz e na faixa de pavimento. */
 const SILL = 0.35;
 
@@ -272,6 +352,7 @@ function facade(city: ColorMerge, glow: ColorMerge, { face, at, start, span, bot
   const count = Math.max(1, Math.round(inner / BAY_BY_DETAIL[detail]));
   const step = inner / count;
   const glassWidth = step * GLASS_SHARE;
+  const pane = Math.min(glassWidth, LIT_PANE);
   const first = start + CORNER_PIER;
   const center = (column: number) => first + (column + 0.5) * step;
   const height = stories * STORY;
@@ -280,14 +361,14 @@ function facade(city: ColorMerge, glow: ColorMerge, { face, at, start, span, bot
   // Janela acesa vai para a malha própria: de dia ela apaga sem mexer no resto.
   for (const story of lights.floors) {
     if (story < firstStory || story >= firstStory + stories) continue;
-    for (let column = 0; column < count; column += 1) place(center(column), story * STORY + SILL, glassWidth, STORY - SILL * 2, lights.tone, 0.03, glow);
+    for (let column = 0; column < count; column += 1) place(center(column), story * STORY + SILL, pane, STORY - SILL * 2, lights.tone, 0.03, glow);
   }
   if (lights.columns > 0) {
     const from = Math.max(lights.from, firstStory);
     const to = Math.min(lights.to, firstStory + stories);
     for (let lit = 0; to > from && lit < lights.columns; lit += 1) {
       const column = Math.floor(shuffled(seed + 0.83 + lit * 0.17) * count);
-      place(center(column), from * STORY + SILL, glassWidth, (to - from) * STORY - SILL * 2, lights.tone, 0.03, glow);
+      place(center(column), from * STORY + SILL, pane, (to - from) * STORY - SILL * 2, lights.tone, 0.03, glow);
     }
   }
   const every = SPANDREL_EVERY[detail];
@@ -299,38 +380,41 @@ function facade(city: ColorMerge, glow: ColorMerge, { face, at, start, span, bot
   }
 }
 
-/** Um prédio: base, às vezes um corpo recuado e uma casa de máquinas. Só o que a câmera vê. */
-function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number, seed: number): number {
-  const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
+/** Um prédio segundo a tipologia dele: só o que a câmera vê, com o tom sorteado entre os vizinhos. */
+function building(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: number) {
+  const distance = Math.hypot((plan.minX + plan.maxX) / 2, (plan.minZ + plan.maxZ) / 2);
   const detail: Detail = distance < 70 ? 0 : distance < 118 ? 1 : 2;
   const side = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
-  const shade = mix(side, "#14171d", 0.22);
+  const shade = mix(side, "#14171d", 0.12);
+  const stories = Math.round(plan.height / STORY);
   const lights = lightsFor(seed, stories, detail);
-  const stack = (from: Lot, base: number, count: number, salt: number) => {
-    const top = base + count * STORY;
-    city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, ROOF);
-    const shared = { bottom: base, stories: count, detail, lights };
-    facade(city, glow, { ...shared, face: "z", at: from.maxZ, start: from.minX, span: from.maxX - from.minX, wall: side, seed: seed + salt });
-    facade(city, glow, { ...shared, face: "x", at: from.maxX, start: from.minZ, span: from.maxZ - from.minZ, wall: shade, seed: seed + salt + 3 });
-    if (detail < 2) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, CORNICE, CORNICE, ROOF);
-    return top;
-  };
-  const width = lot.maxX - lot.minX;
-  const length = lot.maxZ - lot.minZ;
-  const roomy = Math.min(width, length) > 8;
-  if (stories >= 6 && roomy && shuffled(seed + 0.83) > 0.35) {
-    const podium = 2 + Math.floor(shuffled(seed + 0.9) * 2);
-    let top = stack(lot, 0, podium, 1);
-    const inset = 1.2 + shuffled(seed + 0.4) * 1.4;
-    const upper = { minX: lot.minX + inset, maxX: lot.maxX - inset, minZ: lot.minZ + inset, maxZ: lot.maxZ - inset };
-    const crowned = stories >= 10 && Math.min(upper.maxX - upper.minX, upper.maxZ - upper.minZ) > 6;
-    top = stack(upper, top, stories - podium - (crowned ? 2 : 0), 2);
-    if (crowned) {
-      top = stack({ minX: upper.minX + 1.6, maxX: upper.maxX - 1.6, minZ: upper.minZ + 1.6, maxZ: upper.maxZ - 1.6 }, top, 2, 3);
-    }
-    return top;
+  // Só o que sobe marca a cornija em pedra: no prédio baixo ela afundaria o primeiro plano.
+  const cornice = stories >= 6 ? LIMESTONE : CORNICE;
+  let base = 0;
+  let last: Lot = plan;
+  for (const [index, tier] of tiersOf(plan.style, plan, stories).entries()) {
+    const top = base + tier.stories * STORY;
+    const { minX, maxX, minZ, maxZ } = tier.lot;
+    city.prism(minX, maxX, minZ, maxZ, base, top, side, shade, ROOF);
+    const shared = { bottom: base, stories: tier.stories, detail, lights };
+    facade(city, glow, { ...shared, face: "z", at: maxZ, start: minX, span: maxX - minX, wall: side, seed: seed + index });
+    facade(city, glow, { ...shared, face: "x", at: maxX, start: minZ, span: maxZ - minZ, wall: shade, seed: seed + index + 3 });
+    if (detail < 2) city.prism(minX - 0.12, maxX + 0.12, minZ - 0.12, maxZ + 0.12, top - 0.02, top + 0.25, cornice, cornice, ROOF);
+    base = top;
+    last = tier.lot;
   }
-  return stack(lot, 0, stories, 1);
+  if (!plan.crowned) return;
+  const x = (last.minX + last.maxX) / 2;
+  const z = (last.minZ + last.maxZ) / 2;
+  const width = last.maxX - last.minX;
+  const length = last.maxZ - last.minZ;
+  if (plan.style === "sentinel") {
+    city.prism(x - width * 0.32, x + width * 0.32, z - length * 0.32, z + length * 0.32, base, base + 1.2, ZINC, ZINC, ZINC);
+    city.prism(x - width * 0.18, x + width * 0.18, z - length * 0.18, z + length * 0.18, base + 1.2, base + 2.4, ZINC, ZINC, ZINC);
+    city.add(new ConeGeometry(0.35, 2, 4), x, base + 3.4, z, LIMESTONE);
+  } else {
+    city.add(pyramid(width, NEEDLE_SPIRE, length), x, base + NEEDLE_SPIRE / 2, z, ZINC);
+  }
 }
 
 function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
@@ -395,25 +479,35 @@ export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; blo
     }
     const inner = { minX: fromX + 1.5, maxX: toX - 1.5, minZ: fromZ + 1.5, maxZ: toZ - 1.5 };
     const center = Math.hypot((fromX + toX) / 2, (fromZ + toZ) / 2);
-    const lots = splitLots(inner, 37 + blockIndex * 3.3, center < 70 ? 11 : 15);
+    const lots = splitLots(inner, 37 + blockIndex * 3.3, center < 70 ? 13 : center < 118 ? 16 : 20);
     lots.forEach((lot, lotIndex) => {
       const seed = 100 + blockIndex * 17.7 + lotIndex * 3.1;
       // De vez em quando um miolo aberto: quarteirão sem furo nenhum parece bloco maciço.
       if (shuffled(seed + 0.13) > 0.93) return;
-      const gap = shuffled(seed + 0.77) > 0.5 ? 0.25 : 0.1;
-      const building = { minX: lot.minX + gap, maxX: lot.maxX - gap, minZ: lot.minZ + gap, maxZ: lot.maxZ - gap };
-      let stories = districtStories((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2, seed);
-      const ring = Math.max(Math.abs((lot.minX + lot.maxX) / 2), Math.abs((lot.minZ + lot.maxZ) / 2));
-      if (ring < BREATHING + 14) stories = Math.min(stories, 3 + Math.floor(Math.max(0, ring - BREATHING) / 5));
-      const cap = occlusionCap(building);
+      // A folga entre lotes é uma viela de verdade: é o que separa um volume do outro na tela.
+      const gap = shuffled(seed + 0.77) > 0.5 ? 0.7 : 0.4;
+      const footprint = { minX: lot.minX + gap, maxX: lot.maxX - gap, minZ: lot.minZ + gap, maxZ: lot.maxZ - gap };
+      const x = (lot.minX + lot.maxX) / 2;
+      const z = (lot.minZ + lot.maxZ) / 2;
+      let stories = Math.min(districtStories(x, z, seed), valleyStories(x, z));
+      const ring = Math.max(Math.abs(x), Math.abs(z));
+      if (ring < BREATHING + 14) stories = Math.min(stories, 5 + Math.floor(Math.max(0, ring - BREATHING) / 3));
+      const cap = occlusionCap(footprint);
       stories = Math.min(stories, Math.floor((cap - 0.3 - EXTRAS) / STORY));
-      if (stories >= 1) buildings.push({ ...building, height: stories * STORY });
+      if (stories < 1) return;
+      const height = stories * STORY;
+      const style = styleOf(footprint, stories, Math.hypot(x, z));
+      // Coroa só onde nada dela pode cobrir o lote da torre: na frente, a linha fica reta.
+      const crownFits = cap === Infinity && (style === "sentinel" || style === "needle");
+      const crowned = crownFits && shuffled(seed + 0.29) > 0.3;
+      const top = height + (crowned ? (style === "sentinel" ? SENTINEL_CROWN : NEEDLE_SPIRE) : 0);
+      buildings.push({ ...footprint, height, top, style, crowned });
     });
   });
   return { buildings, parks, blocks };
 }
 
-/** Cornija e casa de máquinas: o teto do prédio passa um pouco da altura dos pavimentos. */
+/** A cornija: o teto do prédio passa um pouco da altura dos pavimentos. */
 const EXTRAS = 1.4;
 
 /** A cidade em duas malhas: o corpo, que recebe luz, e as janelas acesas, que brilham por conta própria. */
@@ -443,7 +537,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
     const [fromZ, toZ] = block.z;
     city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, GROUND.walk);
   }
-  buildings.forEach((lot, index) => building(city, glow, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
+  buildings.forEach((plan, index) => building(city, glow, plan, 300 + index * 2.3));
   parks.forEach((park, index) => {
     const [fromX, toX] = park.x;
     const [fromZ, toZ] = park.z;
