@@ -41,6 +41,13 @@ for (const [name, hour] of Object.entries(HOURS)) {
   await page.screenshot({ path: path.join(out, `exterior-${name}.png`) });
   const { calls, triangles, geometries, textures, lights } = await page.evaluate(() => window.__HQ_OFFICE_QA__.renderInfo());
   cost[name] = { calls, triangles, geometries, textures, lights };
+  // De longe é onde a névoa e a linha do céu aparecem: o enquadramento normal só mostra o entorno.
+  const box = await page.locator("canvas").first().boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 1600);
+  await page.waitForTimeout(1400);
+  await page.mouse.move(4, 4);
+  await page.screenshot({ path: path.join(out, `longe-${name}.png`) });
   if (name === "noite") {
     for (const floor of ["terreo", "operacao"]) {
       await page.click(`[data-floor-selector] [data-view="${floor}"]`);

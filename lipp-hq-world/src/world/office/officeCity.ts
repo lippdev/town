@@ -36,7 +36,7 @@ export const EAST_WALK_X = 13;
 const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015 } as const;
 const DARK_GLASS = "#22303f";
 /** O chão é neutro e escuro: quem aparece são os volumes. A calçada da torre é a mais clara. */
-const GROUND = { asphalt: "#26282e", walk: "#55575c", towerWalk: "#7d7e80", mark: "#8c8a80" } as const;
+const GROUND = { asphalt: "#1a1d22", walk: "#464b54", towerWalk: "#6a6e75", mark: "#7c7b74" } as const;
 
 export class ColorMerge {
   private readonly parts: BufferGeometry[] = [];
@@ -121,12 +121,12 @@ function mix(color: string, to: string, amount: number) {
 }
 
 /** Ardósia, carvão, azul-escuro e pedra fria: quatro tons vizinhos, mais escuros que a pedra da torre. */
-const FACADES = ["#3f4552", "#4a505c", "#384354", "#555a63"] as const;
+const FACADES = ["#4a525d", "#3b424d", "#2f3b4c", "#242930"] as const;
 /** Teto de uma cor só: de cima, cada prédio é uma mancha limpa, não um remendo. */
-const ROOF = "#2a2d34";
-const CORNICE = "#22252b";
-const GLASS = "#141a23";
-const LIT_TONES = ["#f4b860", "#f0c67a"] as const;
+const ROOF = "#2c3037";
+const CORNICE = "#171a1f";
+const GLASS = "#161c24";
+const LIT_TONES = ["#f5b342", "#e6c88b"] as const;
 
 /** Tamanhos de quarteirão e larguras de rua de cada lado da torre: sem passo fixo, sem tapete. */
 const STREETS = {
@@ -215,28 +215,86 @@ export interface CityBuilding extends Lot {
   height: number;
 }
 
-/** Fachada de um pavimento por vez, com detalhe conforme a distância: perto, janela; longe, faixa. */
-function facade(city: ColorMerge, glow: ColorMerge, face: "x" | "z", at: number, start: number, span: number, bottom: number, stories: number, glass: string, seed: number, near: boolean, far: number) {
-  const place = (along: number, y: number, width: number, height: number, color: string, relief = 0, into = city) => {
+/** Perto, cada pavimento marcado; no meio, um sim, outro não; longe, só os rasgos de vidro. */
+type Detail = 0 | 1 | 2;
+const BAY_BY_DETAIL = [2.4, 3, 4.4] as const;
+const SPANDREL_EVERY = [1, 2, 0] as const;
+/** Quanto do rasgo é vidro: o resto do vão é pilastra, sempre mais larga que a da torre. */
+const GLASS_SHARE = 0.56;
+const CORNER_PIER = 0.5;
+/** O peitoril e a verga: é a mesma folga no vidro, na luz e na faixa de pavimento. */
+const SILL = 0.35;
+
+/** As janelas acesas de um prédio: andares inteiros ou colunas, nunca pontos soltos. */
+interface Lights {
+  floors: number[];
+  columns: number;
+  from: number;
+  to: number;
+  tone: string;
+}
+
+function lightsFor(seed: number, stories: number, detail: Detail): Lights {
+  const tone = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
+  const dark = { floors: [], columns: 0, from: 0, to: 0, tone };
+  const roll = shuffled(seed + 0.47);
+  if (roll < 0.42) return dark;
+  const at = (salt: number) => Math.floor(shuffled(seed + salt) * stories);
+  if (roll < 0.76 && detail < 2) return { ...dark, floors: stories >= 6 && roll > 0.62 ? [at(0.51), at(0.57)] : [at(0.51)] };
+  const from = at(0.63);
+  return { ...dark, columns: stories >= 6 && roll > 0.9 ? 2 : 1, from, to: from + 2 + Math.floor(shuffled(seed + 0.69) * 4) };
+}
+
+interface FaceSpec {
+  face: "x" | "z";
+  at: number;
+  start: number;
+  span: number;
+  bottom: number;
+  stories: number;
+  wall: string;
+  seed: number;
+  detail: Detail;
+  lights: Lights;
+}
+
+/**
+ * Fachada vertical: rasgos de vidro de cima a baixo entre pilastras, como na torre, e uma faixa por
+ * pavimento. As faixas moram no múltiplo do pavimento a partir do chão: alinham de um prédio a outro.
+ */
+function facade(city: ColorMerge, glow: ColorMerge, { face, at, start, span, bottom, stories, wall, seed, detail, lights }: FaceSpec) {
+  const place = (along: number, y: number, width: number, height: number, color: string, relief: number, into = city) => {
     if (face === "z") into.quad(along, y, at + relief, "z", width, height, color);
     else into.quad(at + relief, y, along, "x", width, height, color);
   };
-  const bay = 2.6 + shuffled(seed) * 1.4;
-  const count = Math.max(1, Math.round(span / bay));
-  const step = span / count;
-  const lit = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
-  const inner = span - 0.8;
-  if (inner <= 0.4) return;
-  // Longe, um pavimento sim, outro não: lê igual e custa metade.
-  const every = far > 0.55 ? 2 : 1;
-  for (let story = 0; story < stories; story += every) {
-    const y = bottom + story * STORY + 0.85;
-    place(start + span / 2, y, inner, 1.9 * (every === 2 ? 1.4 : 1), glass);
-    if (!near && far > 0.55) continue;
-    for (let column = 0; column < count; column += 1) {
-      if (shuffled(seed + story * 7.1 + column * 13.3) < 0.8) continue;
-      // Janela acesa vai para a malha própria: de dia ela apaga sem mexer no resto.
-      place(start + (column + 0.5) * step, y, Math.min(step * 0.62, 1.8), 1.7, lit, 0.03, glow);
+  const inner = span - CORNER_PIER * 2;
+  if (inner <= 1) return;
+  const count = Math.max(1, Math.round(inner / BAY_BY_DETAIL[detail]));
+  const step = inner / count;
+  const glassWidth = step * GLASS_SHARE;
+  const first = start + CORNER_PIER;
+  const center = (column: number) => first + (column + 0.5) * step;
+  const height = stories * STORY;
+  const firstStory = Math.round(bottom / STORY);
+  for (let column = 0; column < count; column += 1) place(center(column), bottom + SILL, glassWidth, height - SILL * 2, GLASS, 0.02);
+  // Janela acesa vai para a malha própria: de dia ela apaga sem mexer no resto.
+  for (const story of lights.floors) {
+    if (story < firstStory || story >= firstStory + stories) continue;
+    for (let column = 0; column < count; column += 1) place(center(column), story * STORY + SILL, glassWidth, STORY - SILL * 2, lights.tone, 0.03, glow);
+  }
+  if (lights.columns > 0) {
+    const from = Math.max(lights.from, firstStory);
+    const to = Math.min(lights.to, firstStory + stories);
+    for (let lit = 0; to > from && lit < lights.columns; lit += 1) {
+      const column = Math.floor(shuffled(seed + 0.83 + lit * 0.17) * count);
+      place(center(column), from * STORY + SILL, glassWidth, (to - from) * STORY - SILL * 2, lights.tone, 0.03, glow);
+    }
+  }
+  const every = SPANDREL_EVERY[detail];
+  if (every > 0) {
+    const spandrel = mix(wall, GLASS, 0.55);
+    for (let story = firstStory + 1; story < firstStory + stories; story += 1) {
+      if (story % every === 0) place(start + span / 2, story * STORY - SILL, inner, SILL * 2, spandrel, 0.04);
     }
   }
 }
@@ -244,18 +302,17 @@ function facade(city: ColorMerge, glow: ColorMerge, face: "x" | "z", at: number,
 /** Um prédio: base, às vezes um corpo recuado e uma casa de máquinas. Só o que a câmera vê. */
 function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number, seed: number): number {
   const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
-  const far = Math.min(1, distance / 170);
-  const near = distance < 62;
+  const detail: Detail = distance < 70 ? 0 : distance < 118 ? 1 : 2;
   const side = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
   const shade = mix(side, "#14171d", 0.22);
-  const roof = ROOF;
-  const glass = GLASS;
+  const lights = lightsFor(seed, stories, detail);
   const stack = (from: Lot, base: number, count: number, salt: number) => {
     const top = base + count * STORY;
-    city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, roof);
-    facade(city, glow, "z", from.maxZ + 0.02, from.minX, from.maxX - from.minX, base, count, glass, seed + salt, near, far);
-    facade(city, glow, "x", from.maxX + 0.02, from.minZ, from.maxZ - from.minZ, base, count, glass, seed + salt + 3, near, far);
-    if (far < 0.6) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, CORNICE, CORNICE, roof);
+    city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, ROOF);
+    const shared = { bottom: base, stories: count, detail, lights };
+    facade(city, glow, { ...shared, face: "z", at: from.maxZ, start: from.minX, span: from.maxX - from.minX, wall: side, seed: seed + salt });
+    facade(city, glow, { ...shared, face: "x", at: from.maxX, start: from.minZ, span: from.maxZ - from.minZ, wall: shade, seed: seed + salt + 3 });
+    if (detail < 2) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, CORNICE, CORNICE, ROOF);
     return top;
   };
   const width = lot.maxX - lot.minX;
@@ -273,19 +330,13 @@ function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number,
     }
     return top;
   }
-  const top = stack(lot, 0, stories, 1);
-  if (near && stories >= 3 && shuffled(seed + 0.61) > 0.5) {
-    const x = lot.minX + width * 0.35;
-    const z = lot.minZ + length * 0.4;
-    city.prism(x - 1, x + 1, z - 1, z + 1, top, top + 1.1, CORNICE, CORNICE, roof);
-  }
-  return top;
+  return stack(lot, 0, stories, 1);
 }
 
 function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
   city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 6), x, 0.5 * scale, z, "#2e2622");
-  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#2f4a38");
-  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#36543f");
+  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#2d4234");
+  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#34503c");
 }
 
 /** Marcas no meio da via: de perto, tracejadas; lá longe, mais espaçadas. */
@@ -298,7 +349,7 @@ function lane(city: ColorMerge, along: "x" | "z", at: number, from: number, to: 
   }
 }
 
-const GARDEN = "#39503f";
+const GARDEN = "#2d4234";
 
 /** Quarteirões deliberadamente abertos, pelo índice em cada eixo. A cidade respira neles. */
 const PARKS: ReadonlySet<string> = new Set(["east:1|west:1", "west:2|north:2", "east:3|south:1", "west:4|south:2", "east:2|north:3", "west:5|north:0", "lot|south:3"]);

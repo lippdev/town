@@ -9,6 +9,9 @@ import { NIGHT_AIR } from "./dayCycle";
  */
 export const CITY_AIR = { value: new Color(NIGHT_AIR) };
 
+/** Abaixo desta força as janelas da cidade nem são desenhadas. */
+export const CITY_LIT_MIN = 0.2;
+
 /** Até aqui o ar não aparece: a torre e o entorno ficam nítidos. */
 const CLEAR_UNTIL = 42;
 const FULL_AT = 190;

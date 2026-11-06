@@ -13,7 +13,7 @@ export const DAY_START = 6 * 60;
 export const CLOCK_POLL_MS = 30_000;
 export const NIGHT_BACKGROUND = "#111828";
 /** Cor do ar à noite: é para onde vai a cidade ao longe. */
-export const NIGHT_AIR = "#1b2436";
+export const NIGHT_AIR = "#151c28";
 
 const clockFormat = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -83,7 +83,7 @@ export interface SkyLook {
 
 /** A noite é exatamente a cena de antes; o dia é o mesmo escritório com céu claro e sol alto. */
 const NIGHT: SkyLook = { background: NIGHT_BACKGROUND, hemiSky: "#cad9f5", hemiGround: "#5a4131", hemi: 0.55, sun: 3.3, sunColor: "#ffd5a0", fill: 0.8, fillColor: "#bccff2", environment: 0.45, litWindows: 1, exposure: 1, air: NIGHT_AIR };
-const DAY: SkyLook = { background: "#9ec4ec", hemiSky: "#eef4ff", hemiGround: "#9a8266", hemi: 1.35, sun: 4.6, sunColor: "#fff4e0", fill: 1.1, fillColor: "#e2ecfb", environment: 0.7, litWindows: 0.12, exposure: 1.45, air: "#8fa5bd" };
+const DAY: SkyLook = { background: "#9ec4ec", hemiSky: "#eef4ff", hemiGround: "#9a8266", hemi: 1.35, sun: 4.6, sunColor: "#fff4e0", fill: 1.1, fillColor: "#e2ecfb", environment: 0.7, litWindows: 0.12, exposure: 1.45, air: "#8fa8c4" };
 /** O entardecer passa por um céu alaranjado em vez de só misturar azul com azul-escuro. */
 const DUSK_TINT = new Color("#d98a5a");
 /** Ao longe o entardecer é mais apagado que o céu: é ar, não sol. */
