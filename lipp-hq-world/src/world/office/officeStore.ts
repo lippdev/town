@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_ROOMS_BY_ID, FLOOR_LEVEL, STORY, cityBoundsAt, initialBuildingView, viewElevation, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, FLOOR_LEVEL, HIDEOUT, STORY, cityBoundsAt, initialBuildingView, urlViewOf, viewElevation, viewFit, type BuildingView, type FloorId } from "./officeBuilding";
 import { cutAt, lerp, planTravel, plateOpacity, restCut, shownAt, travelProgress, type TravelPlan } from "./floorTravel";
 import { CITY_BOUNDS } from "./officeCity";
+import { useSecretStore, type SecretSpotId } from "./officeSecrets";
 import type { ChiefRequest, ChiefStatus } from "./officeChief";
 import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { clampView, fitView, keepGroundInside, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
@@ -92,9 +93,10 @@ const prefersStillness = () => typeof window !== "undefined" && window.matchMedi
 /** Depois de pedir outra vista: a URL já diz para onde se vai, sem navegar; a câmera parte no próximo quadro. */
 function arrived(view: BuildingView) {
   aimCamera();
+  useSecretStore.getState().viewChanged(view);
   if (typeof window !== "undefined") {
     const url = new URL(window.location.href);
-    url.searchParams.set("andar", view);
+    url.searchParams.set("andar", urlViewOf(view));
     window.history.replaceState(window.history.state, "", url);
   }
   if (prefersStillness()) {
@@ -110,6 +112,13 @@ function arrived(view: BuildingView) {
   const destination = floorOf(view);
   if (destination) floors.add(destination);
   useOfficeStore.setState({ traveling: true, mountedFloors: [...floors] });
+}
+
+/** Gesto num segredo, venha do clique ou do teclado. O segredo diz para onde; quem leva é o prédio. */
+export function triggerSpot(spot: SecretSpotId) {
+  const result = useSecretStore.getState().activate(spot);
+  if (result === "entrar") useOfficeStore.getState().goToView(HIDEOUT);
+  else if (result === "sair") useOfficeStore.getState().goToView("diretoria");
 }
 
 /** Vista parada, sem nada a meio caminho. */

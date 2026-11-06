@@ -3,6 +3,7 @@ import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt, type OfficeBoun
 import { AZIMUTH, ELEVATION, type PickBox } from "./officeCamera";
 import { DIRECTORATE_ROOMS, DIRECTORATE_SCENERY } from "./officeDirectorate";
 import { EXPANSION_FLOORS, expansionFloor, expansionRooms, expansionScenery, type ExpansionFloorId } from "./officeExpansion";
+import { HIDEOUT_LEVEL, HIDEOUT_ROOMS, HIDEOUT_SCENERY } from "./officeHideout";
 import { LOBBY_ROOMS, LOBBY_SCENERY, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 import type { OfficeMode } from "./officeRoute";
 
@@ -13,7 +14,9 @@ import type { OfficeMode } from "./officeRoute";
  * `worldToScreen`, o raio do clique, `roomAt`, as cadeiras e as sombras seguem valendo sem
  * nenhum deslocamento. O custo é o entorno precisar saber a elevação do andar em tela.
  */
-export type FloorId = "terreo" | "operacao" | "diretoria" | ExpansionFloorId;
+export type FloorId = "terreo" | "operacao" | "diretoria" | ExpansionFloorId | typeof HIDEOUT;
+/** Fora do seletor, das teclas de andar, da fachada e da URL: só se chega pela estante da Diretoria. */
+export const HIDEOUT = "esconderijo";
 export type BuildingView = "exterior" | FloorId;
 
 /** Altura de um pavimento na fachada: 3 m de parede mais a laje. */
@@ -50,6 +53,7 @@ export const FLOOR_LEVEL = {
   terreo: 0,
   operacao: 1,
   diretoria: BUILDING_LEVELS - 1,
+  [HIDEOUT]: HIDEOUT_LEVEL,
   ...Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, floor.level])),
 } as Record<FloorId, number>;
 
@@ -57,6 +61,7 @@ export const FLOOR_LABEL = {
   diretoria: { name: "Diretoria", short: "D" },
   operacao: { name: "Operação", short: "1" },
   terreo: { name: "Térreo", short: "T" },
+  [HIDEOUT]: { name: "Esconderijo", short: "E" },
   ...Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, { name: floor.title, short: String(floor.level) }])),
 } as Record<FloorId, { name: string; short: string }>;
 
@@ -74,6 +79,9 @@ export function initialBuildingView(mode: OfficeMode, search: string): BuildingV
   const asked = new URLSearchParams(search).get(VIEW_QUERY);
   return isBuildingView(asked) ? asked : "exterior";
 }
+
+/** O que a URL mostra: o esconderijo não tem endereço, e recarregar volta à estante de onde se veio. */
+export const urlViewOf = (view: BuildingView): BuildingView => (view === HIDEOUT ? "diretoria" : view);
 
 /** Quanto o entorno desce para o andar em tela ficar em y = 0. */
 export function viewElevation(view: BuildingView): number {
@@ -113,6 +121,8 @@ export function decorativeLevels(): number[] {
 
 /** Andar acima ou abaixo: o exterior fica no alto da lista, como quem sai do prédio. */
 export function neighborView(view: BuildingView, direction: 1 | -1): BuildingView {
+  // O esconderijo não está na fila dos andares: qualquer tecla leva de volta por onde se entrou.
+  if (view === HIDEOUT) return "diretoria";
   const index = BUILDING_VIEWS.indexOf(view);
   return BUILDING_VIEWS[Math.min(BUILDING_VIEWS.length - 1, Math.max(0, index - direction))]!;
 }
@@ -124,13 +134,14 @@ export function viewRooms(view: BuildingView): readonly BuildingRoom[] {
   if (view === "operacao") return OFFICE_ROOMS;
   if (view === "diretoria") return DIRECTORATE_ROOMS;
   if (view === "terreo") return LOBBY_ROOMS;
+  if (view === HIDEOUT) return HIDEOUT_ROOMS;
   const expansion = expansionFloor(view);
   return expansion ? EXPANSION_ROOMS[expansion.id] : [];
 }
 
 export const BUILDING_ROOMS_BY_ID: Record<string, BuildingRoom> = {
   ...OFFICE_ROOMS_BY_ID,
-  ...Object.fromEntries([...LOBBY_ROOMS, ...DIRECTORATE_ROOMS, ...Object.values(EXPANSION_ROOMS).flat()].map((room) => [room.id, room])),
+  ...Object.fromEntries([...LOBBY_ROOMS, ...DIRECTORATE_ROOMS, ...HIDEOUT_ROOMS, ...Object.values(EXPANSION_ROOMS).flat()].map((room) => [room.id, room])),
 };
 
 export function viewRoomAt(view: BuildingView, x: number, z: number): BuildingRoom | null {
@@ -142,6 +153,7 @@ export function viewRoomAt(view: BuildingView, x: number, z: number): BuildingRo
 export function sceneryOfView(view: BuildingView): readonly SceneryHuman[] {
   if (view === "diretoria") return DIRECTORATE_SCENERY;
   if (view === "terreo") return LOBBY_SCENERY;
+  if (view === HIDEOUT) return HIDEOUT_SCENERY;
   const expansion = expansionFloor(view);
   return expansion ? expansionScenery(expansion.id) : [];
 }

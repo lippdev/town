@@ -206,7 +206,7 @@ describe("fachada", () => {
 
   it("são 14 pavimentos: sete de verdade e sete só de fachada", () => {
     expect(BUILDING_LEVELS).toBe(14);
-    expect(FLOOR_LEVEL).toEqual({ terreo: 0, operacao: 1, diretoria: 13, "expansao-2": 2, "expansao-3": 3, "expansao-4": 4, "expansao-5": 5 });
+    expect(FLOOR_LEVEL).toEqual({ terreo: 0, operacao: 1, diretoria: 13, "expansao-2": 2, "expansao-3": 3, "expansao-4": 4, "expansao-5": 5, esconderijo: 6 });
     expect(decorativeLevels()).toEqual([6, 7, 8, 9, 10, 11, 12]);
     for (const level of decorativeLevels()) expect(floorAtLevel(level)).toBeNull();
   });
