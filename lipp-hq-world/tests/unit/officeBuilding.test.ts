@@ -165,6 +165,21 @@ describe("navegação entre andares", () => {
     expect(useHQStore.getState().selectedBotId).toBe("argos");
   });
 
+  it("selecionar bot no andar atual cancela a saída pendente", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", pendingView: "terreo", seating: { seats: { argos: seatOf.id }, unseated: [] } });
+    useOfficeStore.getState().selectBot("argos");
+    useOfficeStore.getState().commitView();
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", pendingView: null, focusedRoomId: seatOf.roomId, framing: "room" });
+    expect(useHQStore.getState().selectedBotId).toBe("argos");
+  });
+
+  it("selecionar humano no andar atual cancela a saída pendente", () => {
+    useOfficeStore.setState({ mode: "demo", buildingView: "operacao", pendingView: "diretoria" });
+    useOfficeStore.getState().selectHuman("pessoa-local");
+    useOfficeStore.getState().commitView();
+    expect(useOfficeStore.getState()).toMatchObject({ buildingView: "operacao", pendingView: null, selectedHumanId: "pessoa-local" });
+  });
+
   it("selecionar na frota real nunca pede troca", () => {
     useOfficeStore.setState({ mode: "live", buildingView: "operacao", seating: { seats: { argos: seatOf.id }, unseated: [] } });
     useOfficeStore.getState().selectBot("argos");

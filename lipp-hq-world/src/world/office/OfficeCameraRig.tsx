@@ -147,6 +147,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
     const limits = () => zoomLimits(officeRuntime.floorZoom);
     const moveGoal = (next: typeof officeRuntime.goal) => {
+      if (useOfficeStore.getState().pendingView) return;
       const { min, max } = limits();
       officeRuntime.goal = clampView(next, panBounds(), min, max);
       useOfficeStore.getState().markFree();
@@ -154,7 +155,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const isBackground = (event: Event) => !(event.target as HTMLElement).closest("button, a, input, textarea");
 
     const onDown = (event: PointerEvent) => {
-      if (!isBackground(event)) return;
+      if (useOfficeStore.getState().pendingView || !isBackground(event)) return;
       stage.setPointerCapture?.(event.pointerId);
       pointers.set(event.pointerId, local(event));
       if (pointers.size === 1) {
@@ -181,6 +182,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onMove = (event: PointerEvent) => {
+      if (useOfficeStore.getState().pendingView) { pointers.clear(); return; }
       const point = local(event);
       const last = pointers.get(event.pointerId);
       if (!last) {
@@ -249,7 +251,9 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
 
     const onWheel = (event: WheelEvent) => {
       if (!isBackground(event)) return;
+      // Mesmo com troca em curso a página não pode dar zoom: o gesto é da cena.
       event.preventDefault();
+      if (useOfficeStore.getState().pendingView) return;
       const point = local(event);
       const { min, max } = limits();
       const unit = event.deltaMode === 1 ? 16 : 1;
@@ -263,12 +267,18 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     };
 
     const onKey = (event: KeyboardEvent) => {
+      const workspace = stage.parentElement?.querySelector<HTMLElement>("[data-office-view]");
+      if (workspace && workspace.dataset.officeView !== "escritorio") return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, [data-scene-keys-off]")) return;
       const store = useOfficeStore.getState();
       if (event.key === "Escape") {
+        // O menu da conta ouve o Esc por conta própria: a cena não reage junto.
+        if (stage.ownerDocument.querySelector("[data-account-menu]")) return;
+        // Com troca em curso, Esc cancela a troca, inclusive a que uma seleção pediu.
+        if (store.pendingView) store.goToView(store.buildingView);
         // Primeiro fecha a gaveta; só depois volta ao andar.
-        if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
+        else if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
         else if (store.framing !== "floor") store.backToFloor();
         // Já vendo o andar inteiro, mais um Esc sai do prédio.

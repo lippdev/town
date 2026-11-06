@@ -113,6 +113,12 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     },
     /** Só para provar o que está montado: há um objeto com este nome na cena? */
     objectNamed: (name: string) => scene.getObjectByName(name) !== undefined,
+    objectVisible: (name: string) => {
+      const object = scene.getObjectByName(name);
+      if (!object) return false;
+      for (let current = object; current; current = current.parent!) if (!current.visible) return false;
+      return true;
+    },
     /** Pixel do meio de um pavimento na fachada, com o prédio fechado. */
     levelPoint: (level: number) => worldToScreen([FACADE_BOUNDS.maxX, (level + 0.5) * STORY, FACADE_BOUNDS.maxZ - 3], officeRuntime.view, officeRuntime.viewport),
     /** Pixel de um ponto livre do chão da sala. */

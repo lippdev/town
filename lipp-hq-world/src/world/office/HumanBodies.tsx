@@ -86,15 +86,16 @@ function HumanRing() {
   const group = useRef<Group | null>(null);
   const id = selected ?? hovered;
   useFrame(() => {
-    const position = id ? humanActors.get(id)?.position : null;
+    const actor = id ? humanActors.get(id) : null;
+    const position = actor?.position ?? null;
     if (!group.current) return;
-    // Quem está em outro andar não tem corpo: o anel espera a troca terminar.
-    group.current.visible = Boolean(position);
+    // Quem está em outro andar não tem corpo, e quem está chegando ainda não apareceu: o anel espera.
+    group.current.visible = Boolean(position) && actor!.holder.visible;
     if (position) group.current.position.set(position.x, 0.07, position.z);
   });
   if (!id) return null;
   return (
-    <group ref={group}>
+    <group ref={group} name="anel-pessoa">
       <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
         <ringGeometry args={[0.5, selected === id ? 0.62 : 0.56, 48]} />
         <meshBasicMaterial color="#f2f5fa" transparent opacity={selected === id ? 0.95 : 0.55} depthWrite={false} toneMapped={false} />

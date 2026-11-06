@@ -389,7 +389,6 @@ function KitFloor({ floor, build, signs, seats, quality, materials }: { floor: F
       {seats && <HumanChairs material={materials.matte} seats={seats} />}
       {signs.map((spec) => <FloorSign key={spec.text} spec={spec} />)}
       <FloorProps floor={floor} props={build.props} quality={quality} />
-      <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} />
     </>
   );
 }
@@ -406,7 +405,6 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
       <HumanChairs material={materials.matte} />
       <RaisedWalls build={build} materials={materials} />
       <FloorProps floor="operacao" props={build.props} quality={quality} />
-      <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} />
     </>
   );
 }
@@ -422,6 +420,10 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
       {view === "operacao" && mode === "demo" && <BatchMeshes batch={buildOperationCore().fixed} materials={materials} />}
       {view === "diretoria" && <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />}
       {view === "terreo" && <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />}
+      {/* Um único par de render targets: remontar ContactShadows por andar vaza GPU no drei. */}
+      <group visible={view !== "exterior"}>
+        <ContactShadows position={[0, 0.012, 0]} {...FLOOR_SHADOW} frames={view === "exterior" ? 0 : 1} />
+      </group>
       <SceneReady />
     </>
   );

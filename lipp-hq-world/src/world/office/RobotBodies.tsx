@@ -111,12 +111,15 @@ function RobotRing() {
   const group = useRef<Group | null>(null);
   useFrame(() => {
     const position = id ? robotActors.get(id)?.position : null;
-    if (group.current && position) group.current.position.set(position.x, 0.07, position.z);
+    if (group.current) {
+      group.current.visible = Boolean(position);
+      if (position) group.current.position.set(position.x, 0.07, position.z);
+    }
   });
-  if (!bot || !robotActors.has(bot.id)) return null;
+  if (!bot) return null;
   const selected = selectedBotId === bot.id;
   return (
-    <group ref={group}>
+    <group ref={group} visible={false} name="bot-selection-ring">
       <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
         <ringGeometry args={[0.46, selected ? 0.58 : 0.52, 48]} />
         <meshBasicMaterial color={bot.color} transparent opacity={selected ? 0.95 : 0.55} depthWrite={false} toneMapped={false} />
