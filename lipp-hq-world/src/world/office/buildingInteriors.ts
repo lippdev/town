@@ -1,7 +1,9 @@
-import { KitBuilder, type Batch, type Footprint, type PropPlacement } from "./officeKit";
+import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
+import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
+import { screenUv } from "./officeTextures";
 import { ELEVATOR_CORE_X, ELEVATOR_XS, RECEPTION } from "./officeLobby";
-import { BACK_WALL_CUT, CORRIDOR, ENTRANCE, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS } from "./officeLayout";
-import { FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, cabinet, chair, deskTop, lowTable, monitor, rug, sofa, wallRuns, windowUnit } from "./officeRooms";
+import { BACK_WALL_CUT, CORRIDOR, DESK_REACH, ENTRANCE, FACING, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS, type OfficeBounds } from "./officeLayout";
+import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
 
 /**
  * Os andares que não são o escritório dos bots. Usam as mesmas peças e os mesmos materiais dele,
@@ -212,6 +214,153 @@ export function buildOperationCore(): FloorBuild {
   b.at([0, 0, minZ + 0.02], 0, () => elevatorBank(b, [ELEVATOR_CORE_X], { portal: 1.4, panel: false }));
   operationCore = { fixed: b.build(), props: b.props, footprints: b.footprints };
   return operationCore;
+}
+
+/** Parede interna alinhada a um eixo, com vãos medidos no próprio eixo. */
+function innerWall(b: KitBuilder, axis: "x" | "z", at: number, from: number, to: number, height: number, doors: ReadonlyArray<{ at: number; width: number }> = [], color = WALL_FRONT) {
+  const mid = (from + to) / 2;
+  const relative = doors.map((door) => ({ at: door.at - mid, width: door.width }));
+  for (const [start, end] of wallRuns((to - from) / 2, relative)) {
+    const center = mid + (start + end) / 2;
+    if (axis === "x") b.box([center, height / 2, at], [end - start, height, WALL_THICKNESS], { color });
+    else b.box([at, height / 2, center], [WALL_THICKNESS, height, end - start], { color });
+  }
+  for (const door of doors) {
+    const strip = axis === "x" ? ([door.at, 0.022, at] as const) : ([at, 0.022, door.at] as const);
+    b.box(strip, axis === "x" ? [door.width - 0.06, 0.012, 0.16] : [0.16, 0.012, door.width - 0.06], { color: "#c2a26a", cast: false });
+  }
+}
+
+function woodFloor(b: KitBuilder, room: OfficeBounds, color: string) {
+  b.box([(room.minX + room.maxX) / 2, -0.015, (room.minZ + room.maxZ) / 2], [room.maxX - room.minX, 0.06, room.maxZ - room.minZ], { surface: "wood", tile: FLOOR_TILE, color, cast: false });
+}
+
+function chiefRoom(b: KitBuilder) {
+  woodFloor(b, CHIEF_ROOM, "#8a6a4f");
+  innerWall(b, "z", CHIEF_ROOM.maxX, minZ, CHIEF_ROOM.maxZ, FRONT_WALL_CUT, [{ at: CHIEF_DOOR.z, width: CHIEF_DOOR.width }]);
+  innerWall(b, "x", CHIEF_ROOM.maxZ, minX, CHIEF_ROOM.maxX, FRONT_WALL_CUT);
+
+  // A mesa. O monitor fica a oeste do eixo dele: a câmera vem de +x +z, e o rosto fica livre.
+  rug(b, CHIEF_SEAT.x, -5.6, 5.2, 4.2, "#5e5a5a");
+  workstation(b, CHIEF_SEAT, { width: CHIEF_DESK.width, depth: CHIEF_DESK.depth, pedestal: 1, monitors: [[-0.85, 2]], lamp: -1.2 });
+  // Duas visitas do outro lado da mesa, olhando para ele.
+  for (const x of [-0.8, 0.7]) b.at([CHIEF_SEAT.x + x, 0, CHIEF_SEAT.z + DESK_REACH + CHIEF_DESK.depth + 0.75], Math.PI, () => chair(b, "#5a4436"));
+
+  // O que fica atrás dele: aparador sob a janela e estante na parede oeste.
+  b.at([CHIEF_SEAT.x, 0, minZ + 0.42], 0, () => cabinet(b, 3.4));
+  b.box([CHIEF_SEAT.x - 0.9, 0.9, minZ + 0.42], [0.34, 0.05, 0.26], { color: "#c9b89a", cast: false });
+  b.at([minX + 0.42, 0, -6.6], 0, () => bookshelf(b, 2.5, 3.6, [0.12, 0.67, 1.22, 1.77, 2.38]));
+  b.prop("planta", [CHIEF_SEAT.x + 2.4, 0.02, minZ + 0.55], 0.95);
+
+  // Reunião privada, a sudoeste: quatro lugares em volta de uma mesa redonda.
+  const table = { x: -9.1, z: -2.55 };
+  rug(b, table.x, table.z, 3.6, 3.4, "#6f6d70");
+  b.at([table.x, 0, table.z], 0, () => {
+    b.cylinder([0, DESK_TOP - 0.02, 0], 0.72, 0.05, WOOD, 28);
+    b.cylinder([0, (DESK_TOP - 0.04) / 2, 0], 0.05, DESK_TOP - 0.04, { color: "#282e35", cast: false }, 10);
+    b.cylinder([0, 0.03, 0], 0.36, 0.04, { color: "#282e35", cast: false }, 18);
+    b.solid("mesa redonda", 0, 0, 1.44, 1.44);
+    for (const [x, z, yaw] of [[-1.1, 0, Math.PI / 2], [1.1, 0, -Math.PI / 2], [0, -1.1, 0], [0, 1.1, Math.PI]] as const) {
+      b.at([x, 0, z], yaw, () => chair(b, "#4a4038"));
+    }
+    b.box([0.15, DESK_TOP + 0.015, 0.05], [0.34, 0.02, 0.24], { color: "#c2a26a", cast: false });
+  });
+
+  // Lounge dele, a sudeste, entre a porta e a janela da cidade.
+  const lounge = { x: -4.85, z: -2.6 };
+  rug(b, lounge.x, lounge.z, 3.9, 3.3, "#6e6a6b");
+  b.at([lounge.x - 0.1, 0, lounge.z - 1.05], 0, () => sofa(b, "#c2a26a"));
+  b.at([lounge.x + 1.35, 0, lounge.z + 0.1], -Math.PI / 2, () => armchair(b, "#7c2d3a"));
+  b.at([lounge.x - 0.1, 0, lounge.z + 0.15], 0, () => {
+    lowTable(b, 1.2, 0.65);
+    b.box([0.1, 0.475, 0], [0.32, 0.03, 0.24], { color: "#b7aa8d", cast: false });
+  });
+  b.prop("planta", [CHIEF_ROOM.maxX - 0.6, 0.02, CHIEF_ROOM.maxZ - 0.6], 0.8);
+}
+
+function anteroom(b: KitBuilder) {
+  // Painel de madeira com a placa, entre o canto da sala e os elevadores.
+  b.at([-0.9, 0, minZ + 0.1], 0, () => {
+    b.box([0, 1.5, 0], [2.8, 3.0, 0.04], { ...WOOD, color: "#6e5140" });
+    b.box([0, 1.9, 0.03], [2.5, 0.5, 0.02], { color: "#14171d", cast: false });
+  });
+  b.at([0, 0, minZ + 0.02], 0, () => elevatorBank(b, ELEVATOR_XS));
+  // Banco e jardim baixo a leste: dão fim ao corredor sem parede nem móvel alto.
+  b.at([4.35, 0, -5.9], 0, () => {
+    b.box([0, 0.26, 0], [3, 0.12, 0.62], { surface: "fabric", color: "#6e7076" });
+    for (const side of [-1, 1]) b.box([side * 1.3, 0.1, 0], [0.1, 0.2, 0.5], { color: "#343943", cast: false });
+    b.solid("banco", 0, 0, 3, 0.62);
+  });
+  b.box([9.6, 0.2, -4.4], [2.4, 0.4, 7], { color: "#3b3e42" });
+  b.box([9.6, 0.42, -4.4], [2.2, 0.04, 6.8], { color: "#4f7a55", cast: false });
+  b.solid("jardim", 9.6, -4.4, 2.4, 7);
+  for (const [z, width] of [[-7, 1.05], [-4.6, 0.9], [-2.2, 1.1]] as const) b.prop("planta", [9.6, 0.44, z], width);
+}
+
+function boardRoom(b: KitBuilder) {
+  woodFloor(b, MEETING_ROOM, "#b6a593");
+  innerWall(b, "z", MEETING_ROOM.minX, MEETING_ROOM.minZ, maxZ, BACK_WALL_CUT);
+  innerWall(b, "x", MEETING_ROOM.minZ, MEETING_ROOM.minX, maxX, BACK_WALL_CUT, [{ at: MEETING_DOOR.x, width: MEETING_DOOR.width }]);
+  const { x, z, width, depth } = BOARD_TABLE;
+  rug(b, x, z, width + 2, depth + 3, "#6f6d70");
+  b.at([x, 0, z], 0, () => {
+    deskTop(b, 0, 0, width, depth);
+    b.box([0, DESK_TOP + 0.01, 0], [1.6, 0.012, 0.4], { color: "#3a3d42", cast: false });
+  });
+  // A cadeira do diretor simulado é a que mexe; ao lado dela, só as peças fixas.
+  for (const [index, offset] of BOARD_XS.entries()) {
+    if (index > 0) b.at([x + offset, 0, z - depth / 2 - DESK_REACH], FACING.south, () => chair(b, "#3b3f46"));
+    b.at([x + offset, 0, z + depth / 2 + DESK_REACH], FACING.north, () => chair(b, "#3b3f46"));
+  }
+  b.solid("cadeira", DIRECTOR_SEAT.x, DIRECTOR_SEAT.z, 0.62, 0.62);
+  // Tela baixa contra a parede cortada: acima dela, nada tapa a mesa.
+  b.at([MEETING_ROOM.minX + 0.45, 0, z], Math.PI / 2, () => {
+    cabinet(b, 3, 0.5, 0.4);
+    b.box([0, 0.86, 0], [1.9, 0.62, 0.06], { color: "#1f2329", cast: false });
+    b.plane([0, 0.86, 0.04], 1.8, 0.54, screenUv(1), "screen");
+  });
+  b.prop("planta", [maxX - 0.7, 0.02, maxZ - 0.7], 0.9);
+  b.prop("planta", [maxX - 0.7, 0.02, MEETING_ROOM.minZ + 0.7], 0.8);
+}
+
+function directorsLounge(b: KitBuilder) {
+  woodFloor(b, LOUNGE_ROOM, "#c9b398");
+  innerWall(b, "x", LOUNGE_ROOM.minZ, minX, LOUNGE_ROOM.maxX, BACK_WALL_CUT, [{ at: LOUNGE_DOOR.x, width: LOUNGE_DOOR.width }]);
+  rug(b, -6.6, 5.6, 5.6, 4.2, "#7b7671");
+  b.at([-6.6, 0, 4.3], 0, () => sofa(b, "#94a3b8"));
+  b.at([-9.1, 0, 5.8], Math.PI / 2, () => armchair(b, "#6e7076"));
+  b.at([-4.1, 0, 5.8], -Math.PI / 2, () => armchair(b, "#6e7076"));
+  b.at([-6.6, 0, 5.9], 0, () => {
+    lowTable(b, 1.5, 0.8);
+    b.box([-0.2, 0.475, 0.05], [0.3, 0.03, 0.22], { color: "#b7aa8d", cast: false });
+  });
+  // Café num balcão baixo, a leste. Só cenário.
+  b.at([-1.1, 0, 5.2], 0, () => {
+    b.box([0, 0.45, 0], [0.8, 0.9, 4.4], WOOD);
+    b.box([0, 0.925, 0], [0.92, 0.05, 4.5], { color: "#e2d8c4" });
+    b.solid("café", 0, 0, 0.92, 4.5);
+    b.box([0, 1.1, -1.2], [0.4, 0.3, 0.5], { color: "#2c2f33" });
+    for (const z of [0.1, 0.6, 1.1]) b.cylinder([0, 1, z], 0.05, 0.1, { color: "#ece6da", cast: false }, 10);
+  });
+  b.prop("planta", [-10.3, 0.02, 2.3], 0.9);
+  b.prop("planta", [-10.3, 0.02, 8.1], 0.95);
+}
+
+let directorate: FloorBuild | null = null;
+export function buildDirectorate(): FloorBuild {
+  if (directorate) return directorate;
+  const b = new KitBuilder();
+  floorSlab(b, "#cfc6b7");
+  backWall(b, "north", { windows: [[-9.6, -5.2]] });
+  backWall(b, "west", { windows: [[0.8, 3.8], [-7.4, -3.4]] });
+  frontWall(b, "south");
+  frontWall(b, "east");
+  chiefRoom(b);
+  anteroom(b);
+  boardRoom(b);
+  directorsLounge(b);
+  directorate = { fixed: b.build(), props: b.props, footprints: b.footprints };
+  return directorate;
 }
 
 let lobby: FloorBuild | null = null;

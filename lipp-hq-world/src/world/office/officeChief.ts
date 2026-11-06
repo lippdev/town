@@ -1,6 +1,7 @@
 import { newPreset, type HumanPreset } from "@/avatar/human/preset";
-import { ENTRANCE, OFFICE_ROOMS_BY_ID } from "./officeLayout";
-import type { Point } from "./officeHumans";
+import { CHIEF_SEAT, CHIEF_SPOT } from "./officeDirectorate";
+import { placeHumans, standPoint, type HumanPlacement, type OfficeHuman } from "./officeHumans";
+import { ENTRANCE } from "./officeLayout";
 
 export const CHIEF_ID = "chefe";
 
@@ -17,19 +18,39 @@ export const CHIEF_PRESET: HumanPreset = (() => {
   };
 })();
 
-/** O chefe vem primeiro, com o melhor lugar. Quem foi salvo no editor segue a ordem de sempre. */
-export const withChief = (saved: readonly HumanPreset[]): HumanPreset[] => [CHIEF_PRESET, ...saved.filter((preset) => preset.id !== CHIEF_ID)];
+/**
+ * O chefe fica na sala dele, na Diretoria; quem foi salvo no editor segue no hall, na ordem de
+ * sempre, e nenhum preset com o id dele vira um segundo chefe.
+ */
+export function placeChief(): OfficeHuman {
+  return {
+    id: CHIEF_ID,
+    name: CHIEF_PRESET.name,
+    preset: CHIEF_PRESET,
+    floor: "diretoria",
+    roomId: CHIEF_SEAT.roomId,
+    spot: CHIEF_SPOT,
+    chair: CHIEF_SEAT,
+    route: [CHIEF_SPOT, { x: CHIEF_SEAT.x + 0.3, z: standPoint(CHIEF_SEAT).z }, standPoint(CHIEF_SEAT)],
+    phase: 0.4,
+  };
+}
+
+export function placeEveryone(saved: readonly HumanPreset[], occupiedSeats: Iterable<string> = []): HumanPlacement {
+  const { placed, waiting } = placeHumans(saved.filter((preset) => preset.id !== CHIEF_ID), occupiedSeats);
+  return { placed: [placeChief(), ...placed], waiting };
+}
 
 export type ChiefStatus = "chegando" | "entrando" | "mesa" | "reuniao" | "levantando" | "ronda" | "voltando";
 export type ChiefRequest = "chegada" | "reuniao" | "ronda";
 
 export const CHIEF_STATUS_LABEL: Record<ChiefStatus, string> = {
   chegando: "Chegando de carro",
-  entrando: "Entrando no escritório",
+  entrando: "Subindo para a Diretoria",
   mesa: "Na mesa",
   reuniao: "Em reunião",
   levantando: "Levantando",
-  ronda: "Fazendo a ronda",
+  ronda: "Andando pela Diretoria",
   voltando: "Voltando para a mesa",
 };
 
@@ -50,7 +71,6 @@ export const ARRIVAL = {
   stopX: ENTRANCE.x - 1,
   speed: 7,
   doorSeconds: 0.7,
-  door: { x: ENTRANCE.x, z: 11.3 },
 } as const;
 
 /** Onde o carro está e se já parou: freia nos últimos metros. */
@@ -63,29 +83,5 @@ export function carTravel(seconds: number): { x: number; done: boolean } {
   return { x: ARRIVAL.stopX - ARRIVAL.speed * (1 - eased), done: braking >= 1 };
 }
 
-const hall = OFFICE_ROOMS_BY_ID.hall!.center;
-const local = (x: number, z: number): Point => ({ x: hall.x + x, z: hall.z + z });
-const NORTH_CORRIDOR = OFFICE_ROOMS_BY_ID.comando!.bounds.maxZ + 0.75;
-const WEST_CORRIDOR = ENTRANCE.x;
-const EAST_CORRIDOR = OFFICE_ROOMS_BY_ID.hall!.bounds.maxX + 0.75;
-
-/** Da porta do carro até o lugar dele no hall: entrada, corredor e porta oeste, sem cruzar móvel. */
-export function arrivalPath(spot: Point): Point[] {
-  return [ARRIVAL.door, { x: WEST_CORRIDOR, z: 8.8 }, { x: WEST_CORRIDOR, z: hall.z }, local(-3, 0), local(-1, 0.2), local(0.3, 0.45), spot];
-}
-
-/**
- * A ronda: sai do hall, olha as salas pelos corredores e volta. Só visual. Cada trecho termina
- * numa parada, e o último, no lugar dele.
- */
-export function patrolLegs(spot: Point): Point[][] {
-  const westDoor = { x: WEST_CORRIDOR, z: hall.z };
-  const north = { x: hall.x, z: NORTH_CORRIDOR };
-  const eastDoor = { x: EAST_CORRIDOR, z: hall.z + 1.2 };
-  return [
-    [spot, local(0.3, 0.45), local(-1, 0.2), local(-3, 0), westDoor],
-    [westDoor, { x: WEST_CORRIDOR, z: NORTH_CORRIDOR }, north],
-    [north, { x: EAST_CORRIDOR, z: NORTH_CORRIDOR }, eastDoor],
-    [eastDoor, local(3, 1.2), spot],
-  ];
-}
+/** Quanto dura "subindo": não há trajeto de elevador desenhado, só o tempo até a mesa. */
+export const CLIMB_SECONDS = 2.5;

@@ -422,7 +422,7 @@ function HumanPanel() {
         </div>}
         {!human.chair && <p className="panel-warn">Os bots ocuparam as cadeiras da bancada: não há onde sentar agora.</p>}
         <p className="panel-warn">
-          {human.id === CHIEF_ID ? "Exemplo, só na demonstração: a agenda é fictícia e ainda não lê o Outlook. A ronda é só visual." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
+          {human.id === CHIEF_ID ? "Exemplo, só na demonstração: a agenda é fictícia e ainda não lê o Outlook. A ronda é só visual e fica na Diretoria: o trajeto de elevador ainda não existe, então ele não aparece no térreo nem na Operação." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
         </p>
       </div>
     </aside>
@@ -449,8 +449,8 @@ function ChiefAgenda() {
       </ul>
       <div className="office-human-actions">
         <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("reuniao")}>Entrar em reunião</button>
-        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("ronda")}>Fazer a ronda</button>
-        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("chegada")}>Rever a chegada</button>
+        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("ronda")}>Andar pela Diretoria</button>
+        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => { request("chegada"); useOfficeStore.getState().goToView("exterior"); }}>Rever a chegada</button>
       </div>
     </section>
   );

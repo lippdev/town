@@ -53,6 +53,8 @@ export interface OfficeHuman {
   spot: Point;
   /** Cadeira livre da bancada do hall; nula se os bots ocuparam todas. */
   chair: OfficeSeat | null;
+  /** Caminho até a cadeira, quando ela não é a da bancada do hall. */
+  route?: readonly Point[];
   /** Só muda o instante da piscada, para não piscarem todos juntos. */
   phase: number;
 }

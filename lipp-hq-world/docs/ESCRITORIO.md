@@ -49,6 +49,14 @@ O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe
 comando. Os elevadores também são desenho; quem muda de andar é o seletor.
 
+A **Diretoria** é o último pavimento. O chefe fica na sala de canto, que tem mesa, reunião privada
+e lounge, e é o único ali com gaveta. As duas figuras simuladas são cenário, como a atendente:
+etiqueta explícita, nenhuma função, nenhum clique.
+
+Limites do chefe: ele chega de carro na rua, some por uns segundos e reaparece sentado na mesa.
+Não há trajeto da porta ao elevador nem subida animada, e ele não aparece no térreo nem na
+Operação. O passeio fica na Diretoria; sair do andar no meio dele o devolve à mesa.
+
 ## Como usar
 
 | Ação | Como |
