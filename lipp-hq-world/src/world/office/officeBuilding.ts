@@ -2,7 +2,7 @@ import { CITY_VIEW } from "./officeCity";
 import { FLOOR_BOUNDS, OFFICE_ROOMS, OFFICE_ROOMS_BY_ID, roomAt, type OfficeBounds } from "./officeLayout";
 import { AZIMUTH, ELEVATION, type PickBox } from "./officeCamera";
 import { DIRECTORATE_ROOMS, DIRECTORATE_SCENERY } from "./officeDirectorate";
-import { EXPANSION_FLOORS, expansionFloor, expansionRooms, type ExpansionFloorId } from "./officeExpansion";
+import { EXPANSION_FLOORS, expansionFloor, expansionRooms, expansionScenery, type ExpansionFloorId } from "./officeExpansion";
 import { LOBBY_ROOMS, LOBBY_SCENERY, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 import type { OfficeMode } from "./officeRoute";
 
@@ -141,7 +141,9 @@ export function viewRoomAt(view: BuildingView, x: number, z: number): BuildingRo
 /** Gente de cenário do andar em tela. */
 export function sceneryOfView(view: BuildingView): readonly SceneryHuman[] {
   if (view === "diretoria") return DIRECTORATE_SCENERY;
-  return view === "terreo" ? LOBBY_SCENERY : [];
+  if (view === "terreo") return LOBBY_SCENERY;
+  const expansion = expansionFloor(view);
+  return expansion ? expansionScenery(expansion.id) : [];
 }
 
 /** Uma caixa de clique por pavimento da fachada; o id é o número dele. */

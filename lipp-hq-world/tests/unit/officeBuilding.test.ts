@@ -7,7 +7,7 @@ import { BUILDING_HEIGHT, BUILDING_LEVELS, BUILDING_ROOMS_BY_ID, sceneryOfView, 
 import { TOWER_TOP, cutAt, planTravel, plateOpacity, restCut, sectionAt, shownAt, travelProgress } from "@/world/office/floorTravel";
 import { parsePreset } from "@/avatar/human/preset";
 import { buildDirectorate, buildExpansion, buildLobby, buildOperationCore } from "@/world/office/buildingInteriors";
-import { EXPANSION_CORRIDOR, EXPANSION_FLOORS, expansionFloor } from "@/world/office/officeExpansion";
+import { EXPANSION_CORRIDOR, EXPANSION_FLOORS, expansionFloor, expansionSeats } from "@/world/office/officeExpansion";
 import type { Batch } from "@/world/office/officeKit";
 import { buildOffice } from "@/world/office/officeRooms";
 import { placeChief } from "@/world/office/officeChief";
@@ -313,10 +313,10 @@ describe("andares de expansão", () => {
     }
   });
 
-  it("não inventa equipe nem gente: só disponível, reservado e apoio", () => {
+  it("não inventa equipe: as salas seguem reservadas, e quem aparece é figurante", () => {
     for (const id of ids) {
-      expect(sceneryOfView(id)).toEqual([]);
       for (const room of viewRooms(id)) expect(room.purpose).toContain("reservado");
+      for (const person of sceneryOfView(id)) expect(person.tag).toBe("Figurante · cenário");
     }
     expect(EXPANSION_FLOORS.map((floor) => floor.title)).toEqual(["Expansão · andar 2", "Expansão · andar 3", "Expansão · andar 4", "Expansão · andar 5"]);
     const fleetNames = /argos|forge|pulse|echo|scout|atlas|\bink\b/i;
@@ -367,6 +367,79 @@ describe("andares de expansão", () => {
     expect(kinds("expansao-3", "desk")).toBe(8);
     expect(kinds("expansao-4", "round")).toBe(2);
     expect(kinds("expansao-5", "desk")).toBe(4);
+  });
+
+  describe("figurantes", () => {
+    const CAMERA_SIDE = [-0.01, Math.PI / 2 + 0.3] as const;
+    const figures = ids.flatMap((id) => sceneryOfView(id).map((person) => ({ id, person })));
+
+    it("são de 3 a 5 por andar, com ids sem repetição no prédio", () => {
+      for (const id of ids) {
+        expect(sceneryOfView(id).length, id).toBeGreaterThanOrEqual(3);
+        expect(sceneryOfView(id).length, id).toBeLessThanOrEqual(5);
+      }
+      const every = [...figures.map(({ person }) => person.id), ...LOBBY_SCENERY.map((person) => person.id)];
+      expect(new Set(every).size).toBe(every.length);
+    });
+
+    it("têm peças do catálogo e nenhum tem a mesma aparência de outro no andar", () => {
+      for (const id of ids) {
+        const looks = sceneryOfView(id).map(({ preset }) => JSON.stringify([preset.parts, preset.colors]));
+        expect(new Set(looks).size, id).toBe(looks.length);
+      }
+      for (const { person } of figures) {
+        const { preset, problems } = parsePreset(person.preset);
+        expect(problems, person.id).toEqual([]);
+        expect(preset?.parts, person.id).toEqual(person.preset.parts);
+      }
+    });
+
+    it("não usam nome de bot, equipe nem frota", () => {
+      const fleetNames = /argos|forge|pulse|echo|scout|atlas|\bink\b|equipe|sess[aã]o/i;
+      for (const { person } of figures) {
+        expect(person.tag, person.id).not.toMatch(fleetNames);
+        expect(person.preset.name, person.id).toBe("Figurante");
+        expect(person.id, person.id).not.toMatch(fleetNames);
+      }
+    });
+
+    it("ficam de frente para a câmera, na sala certa do próprio andar", () => {
+      for (const { id, person } of figures) {
+        const yaw = person.chair?.yaw ?? person.restYaw ?? 0;
+        const toCamera = Math.abs(Math.atan2(Math.sin(yaw - Math.PI / 4), Math.cos(yaw - Math.PI / 4)));
+        expect(toCamera, `${person.id} de costas`).toBeLessThan(Math.PI / 2 + 0.2);
+        expect(yaw, person.id).toBeGreaterThanOrEqual(CAMERA_SIDE[0] - 0.3);
+        expect(yaw, person.id).toBeLessThanOrEqual(CAMERA_SIDE[1]);
+        expect(person.floor, person.id).toBe(id);
+        expect(viewRoomAt(id, person.spot.x, person.spot.z)?.id, person.id).toBe(person.roomId);
+      }
+    });
+
+    it("sentado: cadeira só dele, com a mesa à frente; em pé: em chão livre e fora do corredor", () => {
+      for (const { id, person } of figures) {
+        const { footprints } = buildExpansion(id);
+        const { x, z } = person.spot;
+        const inside = (item: (typeof footprints)[number], px: number, pz: number, margin = 0) => px > item.minX - margin && px < item.maxX + margin && pz > item.minZ - margin && pz < item.maxZ + margin;
+        if (person.chair) {
+          expect(footprints.filter((item) => item.label === "cadeira" && inside(item, x, z)).length, `${person.id}: cadeira dobrada`).toBe(1);
+          const ahead = { x: x + Math.sin(person.chair.yaw) * 0.6, z: z + Math.cos(person.chair.yaw) * 0.6 };
+          expect(footprints.some((item) => /mesa/.test(item.label) && inside(item, ahead.x, ahead.z, 0.05)), `${person.id}: sem mesa à frente`).toBe(true);
+        } else {
+          expect(footprints.find((item) => inside(item, x, z, 0.2))?.label, person.id).toBeUndefined();
+          const { minX, maxX, minZ, maxZ } = EXPANSION_CORRIDOR;
+          expect(x > minX && x < maxX && z > minZ && z < maxZ, `${person.id} no corredor`).toBe(false);
+        }
+      }
+    });
+
+    it("só o lugar ocupado ganha computador: a mesa dos outros segue sem nada", () => {
+      for (const id of ids) {
+        const floor = expansionFloor(id)!;
+        const seated = expansionSeats(floor).length;
+        expect(seated, id).toBeGreaterThan(0);
+        expect(seated, id).toBeLessThanOrEqual(floor.pieces.filter((piece) => piece.kind === "desk").length + floor.pieces.filter((piece) => piece.kind === "island").reduce((sum, piece) => sum + (piece.kind === "island" ? piece.seats.length : 0), 0) + floor.pieces.filter((piece) => piece.kind === "round").length * 4);
+      }
+    });
   });
 });
 

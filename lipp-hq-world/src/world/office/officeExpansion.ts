@@ -1,10 +1,12 @@
-import { FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
-import { zone, type BuildingRoom } from "./officeLobby";
+import { newPreset, type HumanPreset } from "@/avatar/human/preset";
+import { FLOOR_BOUNDS, type OfficeBounds, type OfficeSeat } from "./officeLayout";
+import { zone, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 
 /**
  * Os andares reservados para as próximas equipes, só na demonstração. Tudo aqui é dado: para uma
- * equipe ocupar um deles, basta trocar o nome das zonas e a mobília desta tabela. Não há nome de
- * equipe, gente, bot nem atividade: são salas prontas e vazias, e a etiqueta diz isso.
+ * equipe ocupar um deles, basta trocar o nome das zonas, a mobília e os figurantes desta tabela.
+ * Não há nome de equipe, bot, sessão nem atividade: quem aparece é figurante de cenário, e a
+ * etiqueta diz isso.
  */
 export type ExpansionFloorId = "expansao-2" | "expansao-3" | "expansao-4" | "expansao-5";
 
@@ -40,6 +42,24 @@ export interface ExpansionZoneSpec {
   bounds: OfficeBounds;
 }
 
+/**
+ * Figurante: só compõe a cena. Sentado, ocupa o lugar exato de uma cadeira da mobília, que dá vez à
+ * cadeira da pessoa. Só há lugares de frente para a câmera: de costas, ninguém veria o rosto.
+ */
+export interface ExpansionFigure {
+  key: string;
+  /** Zona do andar: a etiqueta só aparece com ela apontada ou em foco. */
+  zone: string;
+  x: number;
+  z: number;
+  /** Para onde olha, em radianos: 0 é o sul e π/2 é o leste, os dois lados da câmera. */
+  yaw: number;
+  seated: boolean;
+  parts: Partial<HumanPreset["parts"]>;
+  colors: Partial<HumanPreset["colors"]>;
+  expression?: HumanPreset["expression"];
+}
+
 export interface ExpansionFloor {
   id: ExpansionFloorId;
   level: number;
@@ -51,6 +71,7 @@ export interface ExpansionFloor {
   westWindows: ReadonlyArray<readonly [number, number]>;
   zones: readonly ExpansionZoneSpec[];
   pieces: readonly ExpansionPiece[];
+  figures: readonly ExpansionFigure[];
 }
 
 const { minX, maxX, minZ, maxZ } = FLOOR_BOUNDS;
@@ -75,8 +96,8 @@ const FLOORS: readonly ExpansionFloor[] = [
     westWindows: [[-7.4, -3.4], [3.4, 7.4]],
     zones: [
       hall("#9fb3c8"),
-      { key: "bancadas", name: "Bancadas disponíveis", color: "#c9a66b", bounds: { minX, maxX: 0.6, minZ, maxZ } },
-      { key: "lounge", name: "Lounge disponível", color: "#7f9f83", bounds: { minX: 2.4, maxX, minZ: 1.6, maxZ } },
+      { key: "bancadas", name: "Bancadas", color: "#c9a66b", bounds: { minX, maxX: 0.6, minZ, maxZ } },
+      { key: "lounge", name: "Lounge", color: "#7f9f83", bounds: { minX: 2.4, maxX, minZ: 1.6, maxZ } },
       { key: "apoio", name: "Apoio", color: SUPPORT_COLOR, bounds: { minX: 8.1, maxX, minZ, maxZ: 1.2 } },
     ],
     pieces: [
@@ -90,6 +111,13 @@ const FLOORS: readonly ExpansionFloor[] = [
       { kind: "plant", x: 10.5, z: 0.4, width: 0.85 },
       { kind: "plant", x: -10.4, z: 0, width: 0.95 },
     ],
+    figures: [
+      { key: "bancada-a", zone: "bancadas", x: -7.3, z: -4.83, yaw: 0, seated: true, parts: { hair: "Hair.003", top: "Top.002", glasses: "Glasses.001" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#d4966e", nose: "#d4966e", top: "#2f4256", bottom: "#23262c" } },
+      { key: "bancada-b", zone: "bancadas", x: -3.9, z: -4.83, yaw: 0, seated: true, parts: { hair: "Hair.006" }, colors: { hair: "#a8703a", eyebrow: "#a8703a", head: "#f5c6a5", nose: "#f5c6a5", top: "#f2efe8", bottom: "#2f4256" } },
+      { key: "bancada-c", zone: "bancadas", x: -6.8, z: 2.97, yaw: 0, seated: true, parts: { hair: "Hair.008", facialHair: "FacialHair.002" }, colors: { hair: "#3b2417", eyebrow: "#3b2417", facialHair: "#3b2417", head: "#8d5a3c", nose: "#8d5a3c", top: "#a83232", bottom: "#7a8087" } },
+      { key: "conversa-a", zone: "lounge", x: 3.3, z: 5.1, yaw: 1.83, seated: false, expression: "smile", parts: { hair: "Hair.004", bottom: "Bottom.003", shoes: "Shoes.002" }, colors: { hair: "#6b4426", eyebrow: "#6b4426", head: "#eab08c", nose: "#eab08c", top: "#7a8087", bottom: "#23262c", shoes: "#f2efe8" } },
+      { key: "conversa-b", zone: "lounge", x: 4, z: 4.4, yaw: -0.26, seated: false, parts: { hair: "Hair.001", top: "Top.002" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#5f3b28", nose: "#5f3b28", top: "#f59e0b", bottom: "#2f4256" } },
+    ],
   },
   {
     // Células: duas baias de quatro postos a oeste e uma sala de reunião a sudeste.
@@ -102,9 +130,9 @@ const FLOORS: readonly ExpansionFloor[] = [
     westWindows: [[-7.8, -2.2], [2.2, 7.8]],
     zones: [
       hall("#9fb3c8"),
-      { key: "baia-norte", name: "Baia disponível · norte", color: "#8fa8c9", bounds: { minX, maxX: -1.2, minZ, maxZ: -0.4 } },
-      { key: "baia-sul", name: "Baia disponível · sul", color: "#a39ac9", bounds: { minX, maxX: -1.2, minZ: 0.4, maxZ } },
-      { key: "reuniao", name: "Sala de reunião disponível", color: "#7f8fa8", bounds: { minX: 2.4, maxX, minZ: 2, maxZ } },
+      { key: "baia-norte", name: "Baia norte", color: "#8fa8c9", bounds: { minX, maxX: -1.2, minZ, maxZ: -0.4 } },
+      { key: "baia-sul", name: "Baia sul", color: "#a39ac9", bounds: { minX, maxX: -1.2, minZ: 0.4, maxZ } },
+      { key: "reuniao", name: "Sala de reunião", color: "#7f8fa8", bounds: { minX: 2.4, maxX, minZ: 2, maxZ } },
       { key: "apoio", name: "Apoio", color: SUPPORT_COLOR, bounds: { minX: 8.1, maxX, minZ, maxZ: 1.2 } },
     ],
     pieces: [
@@ -133,6 +161,12 @@ const FLOORS: readonly ExpansionFloor[] = [
       { kind: "plant", x: 10.4, z: 8.2, width: 0.85 },
       { kind: "plant", x: 0.4, z: 8.2, width: 0.9 },
     ],
+    figures: [
+      { key: "posto-norte", zone: "baia-norte", x: -8.4, z: -3, yaw: Math.PI / 2, seated: true, parts: { hair: "Hair.005", hat: "Hat.007" }, colors: { hair: "#3b2417", eyebrow: "#3b2417", head: "#eab08c", nose: "#eab08c", top: "#22c55e", bottom: "#23262c" } },
+      { key: "posto-sul", zone: "baia-sul", x: -8.4, z: 3, yaw: Math.PI / 2, seated: true, parts: { hair: "Hair.009" }, colors: { hair: "#d9b26a", eyebrow: "#a8703a", head: "#f5c6a5", nose: "#f5c6a5", top: "#2563eb", bottom: "#7a8087" } },
+      { key: "reuniao-a", zone: "reuniao", x: 5.4, z: 4.67, yaw: 0, seated: true, parts: { hair: "Hair.002", glasses: "Glasses.003" }, colors: { hair: "#8e8e93", eyebrow: "#8e8e93", head: "#d4966e", nose: "#d4966e", top: "#23262c", bottom: "#23262c" } },
+      { key: "reuniao-b", zone: "reuniao", x: 8.2, z: 4.67, yaw: 0, seated: true, expression: "smile", parts: { hair: "Hair.007", top: "Top.003" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#b97a52", nose: "#b97a52", top: "#a855f7", bottom: "#2f4256" } },
+    ],
   },
   {
     // Colaboração: oficina com lounge a oeste, duas mesas redondas ao sul e apoio a leste.
@@ -145,8 +179,8 @@ const FLOORS: readonly ExpansionFloor[] = [
     westWindows: [[1, 7.6]],
     zones: [
       hall("#9fb3c8"),
-      { key: "oficina", name: "Oficina disponível", color: "#c98f6b", bounds: { minX, maxX: -0.6, minZ, maxZ: 1.8 } },
-      { key: "mesas", name: "Mesas de trabalho disponíveis", color: "#a9b27a", bounds: { minX, maxX: 7.4, minZ: 2.4, maxZ } },
+      { key: "oficina", name: "Oficina", color: "#c98f6b", bounds: { minX, maxX: -0.6, minZ, maxZ: 1.8 } },
+      { key: "mesas", name: "Mesas de trabalho", color: "#a9b27a", bounds: { minX, maxX: 7.4, minZ: 2.4, maxZ } },
       { key: "apoio", name: "Apoio", color: SUPPORT_COLOR, bounds: { minX: 7.6, maxX, minZ: -5.4, maxZ } },
     ],
     pieces: [
@@ -161,6 +195,12 @@ const FLOORS: readonly ExpansionFloor[] = [
       { kind: "plant", x: 7.2, z: 8.3, width: 0.9 },
       { kind: "plant", x: -10.5, z: 8.3, width: 0.95 },
     ],
+    figures: [
+      { key: "quadro", zone: "oficina", x: -2.4, z: -7.3, yaw: -0.3, seated: false, expression: "smile", parts: { hair: "Hair.010" }, colors: { hair: "#b0413e", eyebrow: "#6b4426", head: "#f5c6a5", nose: "#f5c6a5", top: "#f2efe8", bottom: "#23262c" } },
+      { key: "mesa-a", zone: "mesas", x: -6.4, z: 4.7, yaw: 0, seated: true, parts: { hair: "Hair.003", facialHair: "FacialHair.005" }, colors: { hair: "#6b4426", eyebrow: "#6b4426", facialHair: "#6b4426", head: "#eab08c", nose: "#eab08c", top: "#2f4256", bottom: "#7a8087" } },
+      { key: "mesa-b", zone: "mesas", x: -7.5, z: 5.8, yaw: Math.PI / 2, seated: true, parts: { hair: "Hair.011", bow: "Bow.001" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#8d5a3c", nose: "#8d5a3c", bow: "#f59e0b", top: "#f59e0b", bottom: "#23262c" } },
+      { key: "mesa-c", zone: "mesas", x: 0.4, z: 4.7, yaw: 0, seated: true, parts: { hair: "Hair.001", glasses: "Glasses.001" }, colors: { hair: "#3b2417", eyebrow: "#3b2417", head: "#d4966e", nose: "#d4966e", top: "#a83232", bottom: "#2f4256" } },
+    ],
   },
   {
     // Foco: quatro cabines baixas a oeste, bancada central e jardim com lounge a sudeste.
@@ -173,8 +213,8 @@ const FLOORS: readonly ExpansionFloor[] = [
     westWindows: [],
     zones: [
       hall("#9fb3c8"),
-      { key: "cabines", name: "Cabines de foco disponíveis", color: "#8fb3a3", bounds: { minX, maxX: -6.2, minZ, maxZ } },
-      { key: "bancada", name: "Bancada disponível", color: "#c9a66b", bounds: { minX: -6, maxX: 3.4, minZ: -5, maxZ: 3 } },
+      { key: "cabines", name: "Cabines de foco", color: "#8fb3a3", bounds: { minX, maxX: -6.2, minZ, maxZ } },
+      { key: "bancada", name: "Bancada", color: "#c9a66b", bounds: { minX: -6, maxX: 3.4, minZ: -5, maxZ: 3 } },
       { key: "jardim", name: "Lounge e jardim", color: "#7f9f83", bounds: { minX: 3, maxX, minZ: 3.2, maxZ } },
     ],
     pieces: [
@@ -193,6 +233,12 @@ const FLOORS: readonly ExpansionFloor[] = [
       { kind: "planter", x: 4.4, z: 6.2, width: 1.6, depth: 4.6 },
       { kind: "plant", x: 10.5, z: 0, width: 0.9 },
     ],
+    figures: [
+      { key: "cabine", zone: "cabines", x: -9.6, z: -2.25, yaw: Math.PI / 2, seated: true, parts: { hair: "Hair.004", hat: "Hat.007" }, colors: { hair: "#a8703a", eyebrow: "#a8703a", head: "#f5c6a5", nose: "#f5c6a5", top: "#7a8087", bottom: "#23262c" } },
+      { key: "bancada-a", zone: "bancada", x: -2.6, z: -1.83, yaw: 0, seated: true, parts: { hair: "Hair.006", glasses: "Glasses.003" }, colors: { hair: "#8e8e93", eyebrow: "#8e8e93", head: "#b97a52", nose: "#b97a52", top: "#2f4256", bottom: "#2f4256" } },
+      { key: "bancada-b", zone: "bancada", x: 0.2, z: -1.83, yaw: 0, seated: true, parts: { hair: "Hair.002", top: "Top.002" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#eab08c", nose: "#eab08c", top: "#22c55e", bottom: "#23262c" } },
+      { key: "jardim", zone: "jardim", x: 5.9, z: 3.9, yaw: 0.55, seated: false, expression: "smile", parts: { hair: "Hair.008", top: "Top.003", bottom: "Bottom.002" }, colors: { hair: "#3b2417", eyebrow: "#3b2417", head: "#5f3b28", nose: "#5f3b28", top: "#ec4899", bottom: "#23262c" } },
+    ],
   },
 ];
 
@@ -202,9 +248,40 @@ export function expansionFloor(id: string): ExpansionFloor | undefined {
   return FLOORS.find((floor) => floor.id === id);
 }
 
-const PURPOSE = "Espaço reservado para uma equipe futura. Só cenário: sem gente, sem atividade.";
+const PURPOSE = "Espaço reservado para uma equipe futura. As figuras são cenário: sem equipe, sessão nem atividade real.";
 
 /** As zonas viram salas com o id do andar na frente: `expansao-3-apoio`, sem repetição no prédio. */
 export function expansionRooms(floor: ExpansionFloor): BuildingRoom[] {
   return floor.zones.map((spec) => zone(`${floor.id}-${spec.key}`, spec.name, spec.color, PURPOSE, spec.bounds));
+}
+
+const FIGURE_DATE = "2026-11-06T00:00:00.000Z";
+
+const figureSeat = (floor: ExpansionFloor, figure: ExpansionFigure): OfficeSeat => ({ id: `${floor.id}-${figure.key}`, roomId: `${floor.id}-${figure.zone}`, kind: "reuniao", x: figure.x, z: figure.z, yaw: figure.yaw });
+
+/** As cadeiras em que alguém senta: a mobília não desenha a fixa, e `HumanChairs` desenha esta. */
+export function expansionSeats(floor: ExpansionFloor): OfficeSeat[] {
+  return floor.figures.filter((figure) => figure.seated).map((figure) => figureSeat(floor, figure));
+}
+
+function figureHuman(floor: ExpansionFloor, figure: ExpansionFigure): SceneryHuman {
+  const id = `${floor.id}-${figure.key}`;
+  const base = newPreset(id, "Figurante", FIGURE_DATE);
+  return {
+    id,
+    tag: "Figurante · cenário",
+    floor: floor.id,
+    roomId: `${floor.id}-${figure.zone}`,
+    restYaw: figure.yaw,
+    preset: { ...base, expression: figure.expression ?? "neutral", parts: { ...base.parts, ...figure.parts }, colors: { ...base.colors, ...figure.colors } },
+    spot: { x: figure.x, z: figure.z },
+    chair: figure.seated ? figureSeat(floor, figure) : null,
+  };
+}
+
+const FIGURES = Object.fromEntries(FLOORS.map((floor) => [floor.id, floor.figures.map((figure) => figureHuman(floor, figure))])) as Record<ExpansionFloorId, SceneryHuman[]>;
+
+/** Figurantes de um andar: uma lista só por página, para a cena não refazer ninguém a cada leitura. */
+export function expansionScenery(id: ExpansionFloorId): readonly SceneryHuman[] {
+  return FIGURES[id];
 }

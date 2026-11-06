@@ -31,7 +31,7 @@ export function FloorSelector() {
         <span aria-hidden>Expansão</span>
         <div>
           {expansions.map((floor) => (
-            <button key={floor.id} type="button" className="office-floor mini" aria-current={view === floor.id ? "true" : undefined} data-view={floor.id} title={`${floor.title} · espaço reservado`} aria-label={`Andar ${floor.title}`} onClick={() => go(floor.id)}>
+            <button key={floor.id} type="button" className="office-floor mini" aria-current={view === floor.id ? "true" : undefined} data-view={floor.id} title={`${floor.title} · cenário simulado`} aria-label={`Andar ${floor.title}`} onClick={() => go(floor.id)}>
               <b aria-hidden>{floor.level}</b>
             </button>
           ))}

@@ -29,7 +29,7 @@ import { QualityController } from "@/world/scene/QualityController";
 import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey } from "./officeKit";
 import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
 import { buildDirectorate, buildExpansion, buildLobby, buildOperationCore, expansionSigns, type FloorBuild } from "./buildingInteriors";
-import { EXPANSION_FLOORS } from "./officeExpansion";
+import { EXPANSION_FLOORS, expansionScenery, expansionSeats } from "./officeExpansion";
 import { ROBOT_URL, loadGltf, loadPart } from "@/avatar/human/humanAssets";
 import { loadHumanBase } from "@/avatar/human/HumanFigure";
 import { resolveHuman } from "@/avatar/human/preset";
@@ -386,7 +386,7 @@ function PrepareBuilding() {
     buildOperationCore();
     void loadGltf(ROBOT_URL).catch(() => undefined);
     void loadHumanBase().catch(() => undefined);
-    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset)];
+    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset), ...EXPANSION_FLOORS.flatMap((floor) => expansionScenery(floor.id).map((person) => person.preset))];
     for (const preset of presets) for (const part of resolveHuman(preset).parts) void loadPart(part.file).catch(() => undefined);
   }, []);
   return null;
@@ -479,7 +479,7 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
       )}
       {EXPANSION_FLOORS.filter((floor) => mounted.includes(floor.id)).map((floor) => (
         <FloorGroup key={floor.id} floor={floor.id}>
-          <KitFloor floor={floor.id} build={buildExpansion(floor.id)} signs={expansionSigns(floor)} quality={quality} materials={materials} />
+          <KitFloor floor={floor.id} build={buildExpansion(floor.id)} signs={expansionSigns(floor)} seats={expansionSeats(floor)} quality={quality} materials={materials} />
         </FloorGroup>
       ))}
       {/* Um único par de render targets: remontar ContactShadows por andar vaza GPU no drei. */}

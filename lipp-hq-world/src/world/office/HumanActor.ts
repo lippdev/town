@@ -64,17 +64,20 @@ export class HumanActor {
   private hipsBack = 0;
   private x: number;
   private z: number;
-  private yaw: number = FACING.south;
+  private yaw: number;
+  private readonly restYaw: number;
   /** Onde está a cadeira desta pessoa: quem desenha a cadeira lê daqui. */
   chair: ChairPose | null;
 
   constructor(
     private readonly figure: ActorFigure,
-    human: Pick<OfficeHuman, "spot" | "chair" | "route">,
+    human: Pick<OfficeHuman, "spot" | "chair" | "route"> & { restYaw?: number },
     private readonly clips: ActorClips,
     private readonly reduced: boolean,
   ) {
     this.spot = human.spot;
+    this.restYaw = human.restYaw ?? FACING.south;
+    this.yaw = this.restYaw;
     this.seat = human.chair;
     this.chair = human.chair ? chairAtHome(human.chair) : null;
     this.x = human.spot.x;
@@ -170,7 +173,7 @@ export class HumanActor {
     } else {
       this.x = this.spot.x;
       this.z = this.spot.z;
-      this.yaw = FACING.south;
+      this.yaw = this.restYaw;
       this.hipsBack = 0;
       this.chair = chairAtHome(this.seat!);
       this.figure.play("idle", { instant: true, frozen: true });
@@ -211,7 +214,7 @@ export class HumanActor {
       default:
         break;
     }
-    if (this.phase === "standing") this.yaw = turnToward(this.yaw, FACING.south, TURN_PER_SECOND * step);
+    if (this.phase === "standing") this.yaw = turnToward(this.yaw, this.restYaw, TURN_PER_SECOND * step);
     this.place();
   }
 

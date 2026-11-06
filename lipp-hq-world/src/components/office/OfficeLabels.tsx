@@ -173,14 +173,15 @@ export function OfficeLabels() {
           Entrada
         </span>
       )}
-      {sceneryOfView(buildingView).map((person) => (
+      {/* Figurante de andar reservado só se identifica com a sala apontada ou em foco: a cena não vira uma lista de etiquetas. */}
+      {sceneryOfView(buildingView).filter((person) => !person.roomId || person.roomId === hoveredRoomId || person.roomId === focusedRoomId).map((person) => (
         <span key={person.id} className="office-scenery-tag" data-scenery={person.id} ref={place([person.spot.x, person.chair ? 1.55 : 1.85, person.spot.z])}>
           {person.tag}
         </span>
       ))}
       {expansion && !focusedRoomId && (
         <span className="office-scenery-tag office-expansion-tag" data-floor-title={expansion.id} ref={place([-0.2, 3.25, FLOOR_NORTH])}>
-          {expansion.title} · espaço reservado
+          {expansion.title} · cenário simulado
         </span>
       )}
       {buildingView === "exterior" && hoveredFloor && (
