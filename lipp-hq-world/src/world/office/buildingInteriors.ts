@@ -1,10 +1,10 @@
 import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
 import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
 import { screenUv } from "./officeTextures";
-import { EXPANSION_CORRIDOR, expansionFloor, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
+import { EXPANSION_CORRIDOR, expansionFloor, expansionSeats, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
 import { ELEVATOR_CORE, ELEVATOR_STOPS, ELEVATOR_XS, RECEPTION, expansionStop, type ElevatorStop, type FloorSignSpec } from "./officeLobby";
 import { BACK_WALL_CUT, CORRIDOR, DESK_REACH, ENTRANCE, FACING, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS, type OfficeBounds } from "./officeLayout";
-import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
+import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, laptop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
 
 /**
  * Os andares que não são o escritório dos bots. Usam as mesmas peças e os mesmos materiais dele,
@@ -501,8 +501,11 @@ export function buildLobby(): FloorBuild {
 
 const CHAIR_TONE = "#4a4f57";
 
-/** Um móvel de andar reservado. Tudo vazio: sem tela, sem teclado, sem papel na mesa. */
-function expansionPiece(b: KitBuilder, piece: ExpansionPiece) {
+/** Lugar de um figurante: a cadeira fixa dá a vez à dele, e só esse lugar tem o que fazer na mesa. */
+type TakenSeat = (x: number, z: number) => boolean;
+
+/** Um móvel de andar reservado. Só quem tem figurante ganha laptop; o resto da mesa fica vazio. */
+function expansionPiece(b: KitBuilder, piece: ExpansionPiece, taken: TakenSeat) {
   switch (piece.kind) {
     case "floor":
       woodFloor(b, piece.bounds, piece.color);
@@ -517,8 +520,10 @@ function expansionPiece(b: KitBuilder, piece: ExpansionPiece) {
     case "island":
       b.at([piece.x, 0, piece.z], 0, () => {
         deskTop(b, 0, 0, piece.width, piece.depth);
-        for (const offset of piece.seats) {
-          b.at([offset, 0, -piece.depth / 2 - DESK_REACH], FACING.south, () => chair(b, piece.color ?? CHAIR_TONE));
+        for (const [index, offset] of piece.seats.entries()) {
+          const north = -piece.depth / 2 - DESK_REACH;
+          if (taken(piece.x + offset, piece.z + north)) laptop(b, offset, -piece.depth / 2 + 0.28, index);
+          else b.at([offset, 0, north], FACING.south, () => chair(b, piece.color ?? CHAIR_TONE));
           b.at([offset, 0, piece.depth / 2 + DESK_REACH], FACING.north, () => chair(b, piece.color ?? CHAIR_TONE));
         }
       });
@@ -531,14 +536,17 @@ function expansionPiece(b: KitBuilder, piece: ExpansionPiece) {
         b.solid("mesa redonda", 0, 0, piece.radius * 2, piece.radius * 2);
         const reach = piece.radius + 0.38;
         for (const [x, z, yaw] of [[-reach, 0, Math.PI / 2], [reach, 0, -Math.PI / 2], [0, -reach, 0], [0, reach, Math.PI]] as const) {
-          b.at([x, 0, z], yaw, () => chair(b, piece.color ?? CHAIR_TONE));
+          if (taken(piece.x + x, piece.z + z)) b.box([x * 0.42, DESK_TOP + 0.012, z * 0.42], [0.24, 0.018, 0.32], { color: "#dcd8cf", cast: false });
+          else b.at([x, 0, z], yaw, () => chair(b, piece.color ?? CHAIR_TONE));
         }
       });
       break;
     case "desk":
       b.at([piece.x, 0, piece.z], piece.yaw, () => {
         deskTop(b, 0, DESK_REACH + 0.4, piece.width, 0.8);
-        chair(b, piece.chair ?? CHAIR_TONE);
+        // O monitor fica do lado oposto ao da câmera, como na mesa do chefe: o rosto continua livre.
+        if (taken(piece.x, piece.z)) monitor(b, 0.45, DESK_REACH + 0.6, piece.z < 0 ? 1 : 2);
+        else chair(b, piece.chair ?? CHAIR_TONE);
       });
       break;
     case "lounge": {
@@ -595,7 +603,10 @@ export function buildExpansion(id: string): FloorBuild {
   frontWall(b, "south");
   frontWall(b, "east");
   elevatorCore(b, stop);
-  for (const piece of floor.pieces) expansionPiece(b, piece);
+  const seats = expansionSeats(floor);
+  const taken: TakenSeat = (x, z) => seats.some((seat) => Math.abs(seat.x - x) < 0.01 && Math.abs(seat.z - z) < 0.01);
+  for (const piece of floor.pieces) expansionPiece(b, piece, taken);
+  for (const seat of seats) b.solid("cadeira", seat.x, seat.z, 0.62, 0.62);
   // O caminho dos elevadores até as zonas: passadeira, como a do térreo.
   const { minX: fromX, maxX: toX, minZ: fromZ, maxZ: toZ } = EXPANSION_CORRIDOR;
   b.box([(fromX + toX) / 2, 0.008, (fromZ + toZ) / 2], [toX - fromX, 0.012, toZ - fromZ], { surface: "fabric", color: "#6b6764", cast: false });

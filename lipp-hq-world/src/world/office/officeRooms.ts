@@ -103,7 +103,7 @@ export function keyboard(b: KitBuilder, x: number, z: number) {
   }
 }
 
-function laptop(b: KitBuilder, x: number, z: number, variant: number) {
+export function laptop(b: KitBuilder, x: number, z: number, variant: number) {
   b.box([x, DESK_TOP + 0.012, z], [0.36, 0.022, 0.25], { color: "#4a4f57", cast: false });
   b.at([x, DESK_TOP + 0.13, z + 0.13], Math.PI, () => {
     b.box([0, 0, 0], [0.36, 0.23, 0.014], { color: "#3a3f46", cast: false });
