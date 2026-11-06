@@ -35,6 +35,8 @@ export const EAST_WALK_X = 13;
 
 const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015 } as const;
 const DARK_GLASS = "#22303f";
+/** O chão é neutro e escuro: quem aparece são os volumes. A calçada da torre é a mais clara. */
+const GROUND = { asphalt: "#26282e", walk: "#55575c", towerWalk: "#7d7e80", mark: "#8c8a80" } as const;
 
 export class ColorMerge {
   private readonly parts: BufferGeometry[] = [];
@@ -118,10 +120,13 @@ function mix(color: string, to: string, amount: number) {
   return `#${new Color(color).lerp(new Color(to), amount).getHexString()}`;
 }
 
-/** Tijolo, pedra, areia, concreto e vidro azulado: famílias, não uma cor por prédio ao acaso. */
-const FACADES = ["#7a6256", "#8d8275", "#a79a84", "#6e747e", "#5a6b7c", "#8f7763", "#767066"] as const;
-const ROOFS = ["#4a4d53", "#55565a", "#44494f", "#5c5a56"] as const;
-const LIT_TONES = ["#f0c67a", "#e8b868", "#d9c79a"] as const;
+/** Ardósia, carvão, azul-escuro e pedra fria: quatro tons vizinhos, mais escuros que a pedra da torre. */
+const FACADES = ["#3f4552", "#4a505c", "#384354", "#555a63"] as const;
+/** Teto de uma cor só: de cima, cada prédio é uma mancha limpa, não um remendo. */
+const ROOF = "#2a2d34";
+const CORNICE = "#22252b";
+const GLASS = "#141a23";
+const LIT_TONES = ["#f4b860", "#f0c67a"] as const;
 
 /** Tamanhos de quarteirão e larguras de rua de cada lado da torre: sem passo fixo, sem tapete. */
 const STREETS = {
@@ -241,18 +246,16 @@ function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number,
   const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
   const far = Math.min(1, distance / 170);
   const near = distance < 62;
-  const paint = (color: string) => color;
-  const body = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
-  const side = paint(body);
-  const shade = paint(mix(body, "#20242c", 0.2));
-  const roof = paint(ROOFS[Math.floor(shuffled(seed + 0.53) * ROOFS.length)]!);
-  const glass = paint(shuffled(seed + 0.3) > 0.5 ? DARK_GLASS : "#2b3a4a");
+  const side = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
+  const shade = mix(side, "#14171d", 0.22);
+  const roof = ROOF;
+  const glass = GLASS;
   const stack = (from: Lot, base: number, count: number, salt: number) => {
     const top = base + count * STORY;
     city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, roof);
     facade(city, glow, "z", from.maxZ + 0.02, from.minX, from.maxX - from.minX, base, count, glass, seed + salt, near, far);
     facade(city, glow, "x", from.maxX + 0.02, from.minZ, from.maxZ - from.minZ, base, count, glass, seed + salt + 3, near, far);
-    if (far < 0.6) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, paint("#3d4046"), paint("#34373d"), roof);
+    if (far < 0.6) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, CORNICE, CORNICE, roof);
     return top;
   };
   const width = lot.maxX - lot.minX;
@@ -274,28 +277,28 @@ function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number,
   if (near && stories >= 3 && shuffled(seed + 0.61) > 0.5) {
     const x = lot.minX + width * 0.35;
     const z = lot.minZ + length * 0.4;
-    city.prism(x - 1, x + 1, z - 1, z + 1, top, top + 1.1, paint("#55585e"), paint("#46494f"), paint("#3c3f44"));
+    city.prism(x - 1, x + 1, z - 1, z + 1, top, top + 1.1, CORNICE, CORNICE, roof);
   }
   return top;
 }
 
 function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
-  city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 6), x, 0.5 * scale, z, "#5c4230");
-  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#3f7a4a");
-  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#4b8d57");
+  city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 6), x, 0.5 * scale, z, "#2e2622");
+  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#2f4a38");
+  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#36543f");
 }
 
 /** Marcas no meio da via: de perto, tracejadas; lá longe, mais espaçadas. */
 function lane(city: ColorMerge, along: "x" | "z", at: number, from: number, to: number) {
   for (let position = from; position < to;) {
     const end = Math.min(to, position + 1.4);
-    if (along === "x") city.flat(position, end, at - 0.05, at + 0.05, SURFACE.mark, "#d9d4c4");
-    else city.flat(at - 0.05, at + 0.05, position, end, SURFACE.mark, "#d9d4c4");
+    if (along === "x") city.flat(position, end, at - 0.05, at + 0.05, SURFACE.mark, GROUND.mark);
+    else city.flat(at - 0.05, at + 0.05, position, end, SURFACE.mark, GROUND.mark);
     position += Math.abs(position) + Math.abs(at) < 70 ? 3 : 7;
   }
 }
 
-const GARDEN = "#5c7a58";
+const GARDEN = "#39503f";
 
 /** Quarteirões deliberadamente abertos, pelo índice em cada eixo. A cidade respira neles. */
 const PARKS: ReadonlySet<string> = new Set(["east:1|west:1", "west:2|north:2", "east:3|south:1", "west:4|south:2", "east:2|north:3", "west:5|north:0", "lot|south:3"]);
@@ -367,9 +370,9 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
   const city = new ColorMerge();
   const glow = new ColorMerge();
   const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
-  city.slab(minX, maxX, minZ, maxZ, SURFACE.plate, 1.4, "#33363c");
+  city.slab(minX, maxX, minZ, maxZ, SURFACE.plate, 1.4, GROUND.asphalt);
   // Calçada em volta do prédio; a laje do escritório cobre o meio dela.
-  city.slab(ROADS.west.to, ROADS.east.from, ROADS.north.to, ROADS.south.from, SURFACE.walk, 0.05, "#a8a59c");
+  city.slab(ROADS.west.to, ROADS.east.from, ROADS.north.to, ROADS.south.from, SURFACE.walk, 0.05, GROUND.towerWalk);
 
   const { south, north, east, west } = ROADS;
   lane(city, "x", (south.from + south.to) / 2, minX + 1, maxX);
@@ -387,7 +390,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
   for (const block of blocks) {
     const [fromX, toX] = block.x;
     const [fromZ, toZ] = block.z;
-    city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, "#8f8c84");
+    city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, GROUND.walk);
   }
   buildings.forEach((lot, index) => building(city, glow, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
   parks.forEach((park, index) => {
