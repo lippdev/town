@@ -33,7 +33,7 @@ export const FAR_LANE_Z = 14.5;
 export const SOUTH_WALK_Z = 10.3;
 export const EAST_WALK_X = 13;
 
-const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015 } as const;
+const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015, lawn: -0.011, path: -0.007 } as const;
 const DARK_GLASS = "#22303f";
 /** O chão é neutro e escuro: quem aparece são os volumes. A calçada da torre é a mais clara. */
 const GROUND = { asphalt: "#1a1d22", walk: "#464b54", towerWalk: "#6a6e75", mark: "#7c7b74" } as const;
@@ -318,9 +318,11 @@ function lightsFor(seed: number, stories: number, detail: Detail): Lights {
   const tone = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
   const dark = { floors: [], columns: 0, from: 0, to: 0, tone };
   const roll = shuffled(seed + 0.47);
-  if (roll < 0.42) return dark;
+  if (roll < 0.34) return dark;
   const at = (salt: number) => Math.floor(shuffled(seed + salt) * stories);
-  if (roll < 0.76 && detail < 2) return { ...dark, floors: stories >= 6 && roll > 0.62 ? [at(0.51), at(0.57)] : [at(0.51)] };
+  // O andar da diretoria de cada um: nos altos, o último pavimento é o que mais fica aceso.
+  if (roll < 0.5 && detail < 2 && stories >= 6) return { ...dark, floors: [stories - 1 - Math.floor(shuffled(seed + 0.53) * 2)] };
+  if (roll < 0.76 && detail < 2) return { ...dark, floors: stories >= 6 && roll > 0.66 ? [at(0.51), at(0.57)] : [at(0.51)] };
   const from = at(0.63);
   return { ...dark, columns: stories >= 6 && roll > 0.9 ? 2 : 1, from, to: from + 2 + Math.floor(shuffled(seed + 0.69) * 4) };
 }
@@ -417,10 +419,47 @@ function building(city: ColorMerge, glow: ColorMerge, plan: CityBuilding, seed: 
   }
 }
 
+/** Conífera fechada: perto, com tronco e dois tempos; longe, só a copa. */
 function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
-  city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 6), x, 0.5 * scale, z, "#2e2622");
-  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#2d4234");
-  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#34503c");
+  if (detailed) city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 5, 1, true), x, 0.5 * scale, z, "#2e2622");
+  city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, detailed ? 7 : 5, 1, true), x, 1.5 * scale, z, "#2d4234");
+  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7, 1, true), x, 2.2 * scale, z, "#34503c");
+}
+
+/** Praça em ordem: gramado, duas alamedas em cruz e árvores em fila pela borda, em passo fixo. */
+function park(city: ColorMerge, { x: [fromX, toX], z: [fromZ, toZ] }: BlockSpec) {
+  const width = toX - fromX;
+  const length = toZ - fromZ;
+  if (width < 3 || length < 3) return;
+  const x = (fromX + toX) / 2;
+  const z = (fromZ + toZ) / 2;
+  city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.lawn, GARDEN);
+  const near = Math.hypot(x, z) < 70;
+  const step = near ? 5 : 11;
+  const scale = near ? 1 : 1.3;
+  const row = (along: "x" | "z", at: number, from: number, to: number) => {
+    // Praça curta demais para esta fila: ela sairia do quarteirão.
+    if (to < from) return;
+    const count = Math.max(1, Math.floor((to - from) / step));
+    for (let item = 0; item <= count; item += 1) {
+      const position = from + ((to - from) * item) / count;
+      // A alameda em cruz passa livre no meio da fila.
+      if (Math.abs(position - (along === "x" ? x : z)) < 1.2) continue;
+      if (along === "x") tree(city, position, at, scale, near);
+      else tree(city, at, position, scale, near);
+    }
+  };
+  if (Math.min(width, length) < 10) {
+    if (width >= length) row("x", z, fromX + 2.5, toX - 2.5);
+    else row("z", x, fromZ + 2.5, toZ - 2.5);
+    return;
+  }
+  city.flat(x - 0.6, x + 0.6, fromZ + 1, toZ - 1, SURFACE.path, GROUND.walk);
+  city.flat(fromX + 1, toX - 1, z - 0.6, z + 0.6, SURFACE.path, GROUND.walk);
+  row("x", fromZ + 2.4, fromX + 2.4, toX - 2.4);
+  row("x", toZ - 2.4, fromX + 2.4, toX - 2.4);
+  row("z", fromX + 2.4, fromZ + 2.4 + step, toZ - 2.4 - step);
+  row("z", toX - 2.4, fromZ + 2.4 + step, toZ - 2.4 - step);
 }
 
 /** Marcas no meio da via: de perto, tracejadas; lá longe, mais espaçadas. */
@@ -538,20 +577,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
     city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, GROUND.walk);
   }
   buildings.forEach((plan, index) => building(city, glow, plan, 300 + index * 2.3));
-  parks.forEach((park, index) => {
-    const [fromX, toX] = park.x;
-    const [fromZ, toZ] = park.z;
-    const x = (fromX + toX) / 2;
-    const z = (fromZ + toZ) / 2;
-    if (toX - fromX < 3 || toZ - fromZ < 3) return;
-    city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.walk + 0.004, GARDEN);
-    const near = Math.hypot(x, z) < 70;
-    const count = Math.min(near ? 14 : 8, Math.floor(((toX - fromX) * (toZ - fromZ)) / (near ? 28 : 70)));
-    for (let item = 0; item < count; item += 1) {
-      const seed = 700 + index * 11 + item * 5.3;
-      tree(city, fromX + 2 + shuffled(seed) * (toX - fromX - 4), fromZ + 2 + shuffled(seed + 0.5) * (toZ - fromZ - 4), near ? 1 : 1.3, near);
-    }
-  });
+  for (const block of parks) park(city, block);
 
   // Árvores das calçadas da torre, por fora de quem chega de carro.
   for (let x = -12; x <= 13; x += 4.5) {
