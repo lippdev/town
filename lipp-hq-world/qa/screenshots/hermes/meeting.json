@@ -7,22 +7,28 @@
     ],
     "finalPoses": {
       "argos": {
-        "x": 10.069693925347803,
-        "z": 7.290918223956592,
+        "x": 10.559846962673902,
+        "z": 5.8204591119782965,
         "state": "walking",
-        "hipsY": 0
+        "hipsY": 0,
+        "model": false,
+        "pose": null
       },
       "forge": {
         "x": 12.55,
         "z": 7.35,
-        "state": "meeting",
-        "hipsY": -0.313
+        "state": "walking",
+        "hipsY": 0,
+        "model": false,
+        "pose": null
       },
       "atlas": {
-        "x": 11.54993614635281,
-        "z": 7.346594472149808,
+        "x": 11.55,
+        "z": 7.35,
         "state": "meeting",
-        "hipsY": -0.34
+        "hipsY": -0.34,
+        "model": false,
+        "pose": null
       }
     },
     "startedOutsideMeetingRoom": 2,
