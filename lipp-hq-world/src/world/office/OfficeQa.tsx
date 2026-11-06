@@ -5,6 +5,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
+import { SECRET_SPOTS, useSecretStore } from "./officeSecrets";
 import { humanActors, humanFigures, officeRuntime, robotActors, sceneryActors, useOfficeStore } from "./officeStore";
 
 declare global {
@@ -84,6 +85,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         humansWaiting: store.humansWaiting,
         humansError: store.humansError,
         selectedHumanId: store.selectedHumanId,
+        secrets: (({ doorOpen, found, clockHint, file, signal, engine, coin, coinFlips, activeSpot }) => ({ doorOpen, found, clockHint, file, signal, engine, coin, coinFlips, activeSpot }))(useSecretStore.getState()),
       };
     },
     /** Ossos que encostam nos móveis, em metros do andar, lidos do esqueleto vivo. */
@@ -131,6 +133,11 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       if (!object) return false;
       for (let current = object; current; current = current.parent!) if (!current.visible) return false;
       return true;
+    },
+    /** Pixel do meio de um segredo: o harness clica na cena como quem usa o mouse. */
+    secretPoint: (id: string) => {
+      const box = SECRET_SPOTS.find((spot) => spot.id === id)!.box;
+      return worldToScreen([(box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2], officeRuntime.view, officeRuntime.viewport);
     },
     /** Pixel do meio de um pavimento na fachada, com o prédio fechado. */
     levelPoint: (level: number) => worldToScreen([FACADE_BOUNDS.maxX, (level + 0.5) * STORY, FACADE_BOUNDS.maxZ - 3], officeRuntime.view, officeRuntime.viewport),

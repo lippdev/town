@@ -20,7 +20,7 @@ export const LOUNGE_ROOM = { minX, maxX: 0, minZ: AXIS.maxZ, maxZ } as const;
 export const LOUNGE_DOOR = { x: -5, z: AXIS.maxZ, width: 2.2 } as const;
 
 export const DIRECTORATE_ROOMS: BuildingRoom[] = [
-  zone("sala-chefe", "Sala do chefe", "#c2a26a", "Escritório de canto, com mesa, reunião privada e lounge. A agenda é de exemplo.", CHIEF_ROOM),
+  zone("sala-chefe", "Sala do chefe", "#c2a26a", "Escritório de canto, com mesa, reunião privada e lounge. A agenda é de exemplo. Um dos livros da estante parece fora do lugar.", CHIEF_ROOM),
   zone("antessala", "Antessala", "#8fa3b8", "Chegada dos elevadores. Só cenário.", { minX: CHIEF_ROOM.maxX, maxX, minZ, maxZ: AXIS.minZ }),
   zone("reuniao-diretoria", "Sala de reunião", "#7f8fa8", "Mesa da diretoria. Só cenário: não há reunião de verdade aqui.", MEETING_ROOM),
   zone("lounge-diretoria", "Lounge", "#7f9f83", "Espera e café. Só cenário.", LOUNGE_ROOM),

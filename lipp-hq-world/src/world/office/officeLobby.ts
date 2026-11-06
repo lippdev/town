@@ -36,6 +36,8 @@ export interface SceneryHuman {
   restYaw?: number;
   /** Sala dela: com isso, a etiqueta só aparece com a sala apontada ou em foco. */
   roomId?: string;
+  /** Peças por cima da roupa, presas aos ossos. */
+  gear?: "morcego";
 }
 
 const SCENERY_DATE = "2026-11-05T00:00:00.000Z";

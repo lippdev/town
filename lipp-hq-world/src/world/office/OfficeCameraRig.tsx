@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, floorAtLevel, neighborView, viewRoomAt } from "./officeBuilding";
+import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, HIDEOUT, floorAtLevel, neighborView, viewRoomAt } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import {
   FORWARD,
@@ -14,7 +14,8 @@ import {
   zoomViewAt,
   type PickBox,
 } from "./officeCamera";
-import { aimCamera, applyTravel, panBounds, humanActors, officeRuntime, robotActors, stepTravel, useOfficeStore, zoomStep } from "./officeStore";
+import { secretSpotsOf, useSecretStore, type SecretSpotId } from "./officeSecrets";
+import { aimCamera, applyTravel, panBounds, humanActors, officeRuntime, robotActors, stepTravel, triggerSpot, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 /** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
@@ -80,6 +81,15 @@ function pickAt(px: number, py: number): { botId: string | null; humanId: string
   }
   const ground = screenToGround(px, py, view, viewport);
   return { ...who(pickBoxAt(px, py, view, viewport, [...botBoxes(), ...humanBoxes()])), roomId: viewRoomAt(buildingView, ground.x, ground.z)?.id ?? null };
+}
+
+/** O segredo sob o pixel, se houver. Só a estante aberta tem o que fazer com o livro de longe. */
+function spotAt(px: number, py: number): SecretSpotId | null {
+  const { buildingView, mode } = useOfficeStore.getState();
+  if (mode !== "demo") return null;
+  const spots = secretSpotsOf(buildingView);
+  if (spots.length === 0) return null;
+  return pickBoxAt(px, py, officeRuntime.view, officeRuntime.viewport, spots.map((spot) => ({ id: spot.id, ...spot.box }))) as SecretSpotId | null;
 }
 
 /** O pavimento da fachada sob o pixel, com o prédio fechado. */
@@ -168,12 +178,21 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
       if (moving()) {
         useOfficeStore.getState().setHovered(null, null);
         useOfficeStore.getState().setHoveredLevel(null);
+        useSecretStore.getState().setActiveSpot(null);
         stage.style.cursor = "";
         return;
       }
       const { botId, humanId, roomId } = pickAt(point.x, point.y);
       const store = useOfficeStore.getState();
       store.setHovered(roomId, botId, humanId);
+      // Bot ou pessoa na frente de um segredo ganham: é neles que se está clicando.
+      const spot = botId || humanId ? null : spotAt(point.x, point.y);
+      useSecretStore.getState().setActiveSpot(spot);
+      if (spot) {
+        stage.style.cursor = "pointer";
+        store.setHoveredLevel(null);
+        return;
+      }
       // Só pavimento com interior responde: os outros são fachada.
       const level = levelAt(point.x, point.y);
       const usable = level !== null && floorAtLevel(level) ? level : null;
@@ -224,6 +243,11 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         return;
       }
       const { botId, humanId, roomId } = pickAt(point.x, point.y);
+      const spot = botId || humanId ? null : spotAt(point.x, point.y);
+      if (spot) {
+        triggerSpot(spot);
+        return;
+      }
       if (botId) {
         store.selectBot(botId);
         return;
@@ -262,6 +286,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     const onLeave = () => {
       useOfficeStore.getState().setHovered(null, null);
       useOfficeStore.getState().setHoveredLevel(null);
+      useSecretStore.getState().setActiveSpot(null);
     };
 
     const onKey = (event: KeyboardEvent) => {
@@ -277,6 +302,8 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
         else if (store.framing !== "floor") store.backToFloor();
+        // Do esconderijo, sai por onde entrou.
+        else if (store.buildingView === HIDEOUT) store.goToView("diretoria");
         // Já vendo o andar inteiro, mais um Esc sai do prédio.
         else store.goToView("exterior");
         return;

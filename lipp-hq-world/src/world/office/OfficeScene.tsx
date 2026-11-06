@@ -2,7 +2,9 @@ import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type 
 import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
+  DirectionalLight,
   Group,
+  HemisphereLight,
   InstancedMesh,
   Mesh} from "three";
 import {
@@ -30,10 +32,12 @@ import { batchKey, SURFACE_KEYS, type Batch, type PropPlacement, type SurfaceKey
 import { BUILDING_ROOMS_BY_ID, viewRoomAt, type FloorId } from "./officeBuilding";
 import { buildDirectorate, buildExpansion, buildLobby, buildOperationCore, expansionSigns, type FloorBuild } from "./buildingInteriors";
 import { EXPANSION_FLOORS, expansionScenery, expansionSeats } from "./officeExpansion";
+import { HideoutFloor, SecretDirectoratePieces, SkySignal } from "./HideoutScene";
 import { ROBOT_URL, loadGltf, loadPart } from "@/avatar/human/humanAssets";
 import { loadHumanBase } from "@/avatar/human/HumanFigure";
 import { resolveHuman } from "@/avatar/human/preset";
 import { DIRECTORATE_SCENERY, DIRECTORATE_SEATS, DIRECTORATE_SIGNS } from "./officeDirectorate";
+import { HIDEOUT_SCENERY, HIDEOUT_SIGNS } from "./officeHideout";
 import { LOBBY_SCENERY, LOBBY_SIGNS, type FloorSignSpec } from "./officeLobby";
 import { SceneryHumans } from "./SceneryHumans";
 import { buildingSignTexture } from "./buildingFacade";
@@ -274,15 +278,30 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
     };
   }, [gl, scene]);
   const span = Math.max(FLOOR_BOUNDS.maxX, FLOOR_BOUNDS.maxZ) + 5;
+  const hemi = useRef<HemisphereLight>(null);
+  const sun = useRef<DirectionalLight>(null);
+  const fill = useRef<DirectionalLight>(null);
+  // No esconderijo a noite cai sobre tudo. Muda só a força, com a laje fechada: nenhum sombreador é refeito.
+  const lastMood = useRef(false);
+  useFrame(() => {
+    const cave = useOfficeStore.getState().shownFloor === "esconderijo";
+    if (cave === lastMood.current) return;
+    lastMood.current = cave;
+    if (hemi.current) hemi.current.intensity = cave ? 0.5 : 0.55;
+    if (sun.current) sun.current.intensity = cave ? 1.5 : 3.3;
+    if (fill.current) fill.current.intensity = cave ? 0.65 : 0.8;
+    scene.environmentIntensity = cave ? 0.42 : 0.45;
+  });
   return (
     <>
       {/* Penumbra suave só na qualidade alta: o sombreador é o que mais pesa por pixel. */}
       {quality === "alta" && <SoftShadows size={7} samples={6} focus={0.5} />}
       <color attach="background" args={["#111828"]} />
-      <hemisphereLight args={["#cad9f5", "#5a4131", 0.55]} />
+      <hemisphereLight ref={hemi} args={["#cad9f5", "#5a4131", 0.55]} />
       {/* Um sol e um preenchimento para o andar inteiro; nenhuma luz por sala. */}
       <directionalLight
         key={quality}
+        ref={sun}
         position={[9.6, 15, -15]}
         intensity={3.3}
         color="#ffd5a0"
@@ -297,7 +316,7 @@ function Lighting({ quality }: { quality: GraphicsQuality }) {
         shadow-normalBias={0.02}
         shadow-bias={-0.0002}
       />
-      <directionalLight position={[3, 18, 24]} intensity={0.8} color="#bccff2" />
+      <directionalLight ref={fill} position={[3, 18, 24]} intensity={0.8} color="#bccff2" />
     </>
   );
 }
@@ -386,7 +405,7 @@ function PrepareBuilding() {
     buildOperationCore();
     void loadGltf(ROBOT_URL).catch(() => undefined);
     void loadHumanBase().catch(() => undefined);
-    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset), ...EXPANSION_FLOORS.flatMap((floor) => expansionScenery(floor.id).map((person) => person.preset))];
+    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset), ...EXPANSION_FLOORS.flatMap((floor) => expansionScenery(floor.id).map((person) => person.preset)), ...HIDEOUT_SCENERY.map((person) => person.preset)];
     for (const preset of presets) for (const part of resolveHuman(preset).parts) void loadPart(part.file).catch(() => undefined);
   }, []);
   return null;
@@ -470,11 +489,18 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
       {mounted.includes("diretoria") && (
         <FloorGroup floor="diretoria">
           <KitFloor floor="diretoria" build={buildDirectorate()} signs={DIRECTORATE_SIGNS} seats={DIRECTORATE_SEATS} quality={quality} materials={materials} />
+          <SecretDirectoratePieces materials={materials} />
         </FloorGroup>
       )}
       {mounted.includes("terreo") && (
         <FloorGroup floor="terreo">
           <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />
+        </FloorGroup>
+      )}
+      {mounted.includes("esconderijo") && (
+        <FloorGroup floor="esconderijo">
+          <HideoutFloor materials={materials} />
+          {HIDEOUT_SIGNS.map((spec) => <FloorSign key={spec.text} spec={spec} />)}
         </FloorGroup>
       )}
       {EXPANSION_FLOORS.filter((floor) => mounted.includes(floor.id)).map((floor) => (
@@ -525,6 +551,7 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <BuildingSurroundings />
           <SceneryHumans />
           <ChiefScene />
+          <SkySignal />
         </PartBoundary>
       )}
       <RoomGlow />

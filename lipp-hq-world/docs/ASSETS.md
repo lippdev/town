@@ -35,3 +35,14 @@ Se um pacote for incorporado no futuro:
 1. Converter para GLB otimizado.
 2. Registrar abaixo nome, URL, autor, licença, versão e arquivos usados.
 3. Manter a geometria procedural como fallback quando o arquivo não carregar.
+
+## Assets externos incorporados
+
+| Conjunto | Licença | Arquivo | Registro |
+| - | - | - | - |
+| Protótipo Engenharia (Poly Haven, Quaternius) | CC0 | `public/prototipo/` | `public/prototipo/CREDITOS.md` e `proveniencia.json` |
+| Avatares | ver registro | `public/avatares/` | `public/avatares/CREDITOS.md` e `proveniencia.json` |
+| Esconderijo: MegaKit Standard (Quaternius), Space Kit e Car Kit (Kenney) | CC0 | `public/esconderijo/kit.glb`, 389 KB | `public/esconderijo/CREDITOS.md` e `proveniencia.json` |
+
+O kit do esconderijo é refeito por `scripts/assets/build-esconderijo-kit.mjs` a partir dos pacotes originais.
+Se ele não baixar, a parte autoral da caverna continua de pé, sem derrubar o andar.

@@ -106,6 +106,42 @@ A **Diretoria** é o último pavimento. O chefe fica na sala de canto, que tem m
 e lounge, e é o único ali com gaveta. As duas figuras simuladas são cenário, como a atendente:
 etiqueta explícita, nenhuma função, nenhum clique.
 
+O **esconderijo** é um easter egg só da demonstração, inspirado na Batcaverna, atrás da estante da
+sala do chefe. Mora no pavimento 6, que continua só de fachada por fora. Fica de fora do seletor, de
+PageUp/PageDown, do clique na fachada e da URL: `?andar=esconderijo` é ignorado, e lá dentro a URL diz
+`andar=diretoria`, então recarregar volta à estante. Nada é salvo: recarregar esquece tudo.
+
+- **Como achar:** na Diretoria, aponte para a estante na parede oeste da sala do chefe. Um livro claro
+  sai um pouco da fileira, e a legenda diz "Um livro fora do lugar". A descrição da sala também dá a
+  pista, e o relógio de parede, parado em 10:47, faz o livro brilhar ao ser clicado.
+- **Mouse ou toque:** clicar no livro abre a estante. Clicar de novo desce.
+- **Teclado:** Tab até o livro, Enter abre e Enter desce. Os botões só aparecem com foco.
+- **Voltar:** a porta acesa no fundo, "Voltar à Diretoria" no seletor, Esc ou PageUp/PageDown. Quem subiu
+  encontra a estante aberta; ir para outro lugar do prédio a fecha. Depois de achado, o seletor
+  oferece o esconderijo até recarregar.
+
+Dentro há central de investigação, vitrine do traje, treino e garagem. O vigia de costas para a câmera
+é figurante, com as regras dos outros: fora de Pessoas, sem clique, sem comando. Tudo é cenário, e as
+telas dizem que os arquivos são cenográficos. Os easter eggs têm efeito real e voltam atrás:
+
+| Onde | Gesto | O que acontece |
+| - | - | - |
+| Terminal | Clique | Troca os três painéis de arquivo |
+| Holofote | Clique | Liga o sinal na parede e, no prédio fechado, no céu da cidade |
+| Carro | Clique | Liga o motor: farol, luz de baixo e uma volta da plataforma |
+| Moeda gigante | Clique | Dá cara ou coroa, alternando; a moeda mostra a face |
+| Relógio da Diretoria | Clique | Vai à meia-noite e acende o livro |
+
+Com movimento reduzido, nada gira e tudo muda na hora. Não há luz nova na cena: o azul e o âmbar são
+planos somados (`HIDEOUT_GLOWS`), e a noite do andar só reduz a força das luzes de sempre, com a laje
+fechada, sem refazer sombreador. Peças de pacote em `public/esconderijo/CREDITOS.md`. O kit só baixa
+quando a estante abre pela primeira vez, e a frota real nunca baixa. Prova em `pnpm qa:esconderijo`.
+
+Evidências e custo medido em `docs/escritorio-evidencias/esconderijo/`.
+
+Limites do esconderijo: ninguém anda lá dentro, a passagem é um vão pintado na parede, sem furar a torre,
+e o carro não sai da plataforma.
+
 Limites do chefe: ele chega de carro na rua, some por uns segundos e reaparece sentado na mesa.
 Não há trajeto da porta ao elevador nem subida animada, e ele não aparece no térreo nem na
 Operação. O passeio fica na Diretoria; sair do andar no meio dele o devolve à mesa.
