@@ -292,6 +292,17 @@ export function currentInsets(): Insets {
 }
 
 /** Do lado de fora, a cidade em volta também pode ser vista; dentro, o arrasto fica no andar. */
+/** Fração do caminho que um quadro percorre até o destino da câmera. */
+const CAMERA_EASE_PER_SECOND = 7;
+
+/**
+ * Suavização da câmera em tempo real, e não em número de quadros: um aparelho lento precisa
+ * chegar ao destino no mesmo relógio, não ficar deslizando. Um solavanco grande só aproxima mais.
+ */
+export function cameraEaseStep(delta: number) {
+  return 1 - Math.exp(-CAMERA_EASE_PER_SECOND * delta);
+}
+
 export const panBounds = () => {
   const { mode, buildingView } = useOfficeStore.getState();
   return mode === "demo" && (buildingView === "exterior" || buildingView === "terreo") ? CITY_BOUNDS : FLOOR_BOUNDS;

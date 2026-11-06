@@ -15,12 +15,11 @@ import {
   type PickBox,
 } from "./officeCamera";
 import { secretSpotsOf, useSecretStore, type SecretSpotId } from "./officeSecrets";
-import { aimCamera, applyTravel, panBounds, humanActors, officeRuntime, robotActors, stepTravel, triggerSpot, useOfficeStore, zoomStep } from "./officeStore";
+import { aimCamera, applyTravel, cameraEaseStep, panBounds, humanActors, officeRuntime, robotActors, stepTravel, triggerSpot, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 /** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
 const DISTANCE = 200;
-const EASE_PER_SECOND = 7;
 /** Arrastar menos que isto ainda é clique. */
 const CLICK_SLOP = 5;
 const KEY_PAN = 60;
@@ -117,7 +116,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
     if (runtime.travel.flight) {
       stepTravel(delta);
     } else {
-      const step = !runtime.placed || reducedMotion.current ? 1 : 1 - Math.exp(-EASE_PER_SECOND * Math.min(delta, 0.05));
+      const step = !runtime.placed || reducedMotion.current ? 1 : cameraEaseStep(delta);
       const { view, goal } = runtime;
       view.x += (goal.x - view.x) * step;
       view.z += (goal.z - view.z) * step;
