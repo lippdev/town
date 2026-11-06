@@ -1,0 +1,71 @@
+{
+  "output": {
+    "file": "esconderijo/kit.glb",
+    "bytes": 389092,
+    "sha256": "63f4f8049432c81eb0e4c21195d98ea3660ea5ecfe4bcdb2ccc43d4932571d1a"
+  },
+  "verifiedOn": "2026-11-06",
+  "build": "scripts/assets/build-esconderijo-kit.mjs + @gltf-transform/cli@4.5.1 (merge, optimize --compress meshopt --texture-compress webp --texture-size 512 --flatten false --join false --instance false --palette false --simplify false)",
+  "sources": [
+    {
+      "asset": "Modular SciFi MegaKit [Standard]",
+      "author": "Quaternius",
+      "version": "upload de 2025-04-22",
+      "license": "CC0-1.0",
+      "licenseEvidence": "License_Standard.txt do pacote e painel da página itch",
+      "page": "https://quaternius.com/packs/modularscifimegakit.html",
+      "url": "https://quaternius.itch.io/modular-sci-fi-megakit",
+      "file": "Modular SciFi MegaKit[Standard].zip",
+      "bytes": 48559316,
+      "sha256": "6fae60cf5189e44dff0bd91097f094a765acc6d57d64a85a0cc0dd56e03035e3",
+      "used": [
+        "Prop_Computer",
+        "Prop_Chest",
+        "Prop_Crate4",
+        "Prop_Barrel_Large",
+        "Prop_Fan_Small",
+        "Prop_PipeHolder",
+        "Prop_Light_Floor",
+        "Platform_Round1",
+        "Platform_DarkPlates",
+        "Platform_Squares",
+        "Platform_Metal",
+        "Door_Frame_Square",
+        "Door_DarkMetal",
+        "Column_Hollow"
+      ]
+    },
+    {
+      "asset": "Space Kit 2.0",
+      "author": "Kenney",
+      "version": "2.0",
+      "license": "CC0-1.0",
+      "licenseEvidence": "License.txt do pacote",
+      "page": "https://kenney.nl/assets/space-kit",
+      "url": "https://kenney.nl/assets/space-kit",
+      "file": "kenney_space-kit.zip",
+      "bytes": 6677531,
+      "sha256": "d5d7cdf2635ed5a43a9187deaf409b6f47484e402321128341d3c3698e9ef4d9",
+      "used": [
+        "rock_largeA",
+        "rock_largeB",
+        "rock"
+      ]
+    },
+    {
+      "asset": "Car Kit 3.1",
+      "author": "Kenney",
+      "version": "3.1",
+      "license": "CC0-1.0",
+      "licenseEvidence": "License.txt do pacote",
+      "page": "https://kenney.nl/assets/car-kit",
+      "url": "https://kenney.nl/assets/car-kit",
+      "file": "kenney_car-kit.zip",
+      "bytes": 4814237,
+      "sha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+      "used": [
+        "wheel-dark"
+      ]
+    }
+  ]
+}
