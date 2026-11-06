@@ -25,6 +25,14 @@ continuam iguais e não carregam nada desta página.
   rótulo muda com o estado, então "trabalhando" não tem animação própria e `SitDown` não é
   digitação. As telas dos monitores são cenário e não mostram dado de bot.
 
+## Dia e noite
+
+O céu e as luzes seguem o relógio de Brasília (`America/Sao_Paulo`): noite das 18h às 5h, dia das
+6h às 17h, com uma hora de transição em cada ponta. A cena relê o relógio a cada 30 s. De dia o
+céu clareia, o sol sobe de intensidade, a exposição aumenta e as janelas acesas da cidade e da
+fachada apagam; à noite é a cena de sempre. `?hora=HH:MM` fixa a hora para conferir qualquer
+momento. Tudo em `src/world/office/dayCycle.ts`. O esconderijo ignora a hora: lá é sempre noite.
+
 ## O prédio (só na demonstração)
 
 A demonstração abre com a torre do Lipp HQ fechada, na cidade. O seletor discreto no canto (ou

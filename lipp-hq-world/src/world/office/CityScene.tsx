@@ -5,7 +5,7 @@ import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/Human
 import { newPreset, resolveHuman, type HumanPreset } from "@/avatar/human/preset";
 import { HUMAN_SCALE, turnToward } from "./officeHumans";
 import { officeRuntime } from "./officeStore";
-import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCityGeometry } from "./officeCity";
+import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCity } from "./officeCity";
 
 const TURN_PER_SECOND = 5;
 const LONGEST_FRAME = 0.05;
@@ -134,8 +134,11 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
     if (city.current) city.current.receiveShadow = officeRuntime.travel.root === 0;
   });
   const reduced = usePrefersReduced();
-  const geometry = useMemo(() => buildCityGeometry(), []);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  const built = useMemo(() => buildCity(), []);
+  useEffect(() => () => {
+    built.body.dispose();
+    built.lit.dispose();
+  }, [built]);
   const [base, setBase] = useState<HumanBase | null>(null);
   useEffect(() => {
     let alive = true;
@@ -151,8 +154,12 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
   }, []);
   return (
     <>
-      <mesh ref={city} geometry={geometry} name="cidade">
+      <mesh ref={city} geometry={built.body} name="cidade">
         <meshStandardMaterial vertexColors roughness={0.9} />
+      </mesh>
+      {/* As janelas acesas não dependem da luz da cena; a hora do dia ajusta a cor do material. */}
+      <mesh geometry={built.lit} name="cidade-acesa">
+        <meshBasicMaterial vertexColors />
       </mesh>
       {TRAFFIC.map((car) => (
         <TrafficCar key={car.color} car={car} reduced={reduced} />
