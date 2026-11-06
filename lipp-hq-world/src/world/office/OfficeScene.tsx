@@ -46,6 +46,7 @@ import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
 import { OfficeRobots } from "./RobotBodies";
 import { thinIslands } from "./thinIslands";
+import type { OfficeMode } from "./officeRoute";
 import { useOfficeStore } from "./officeStore";
 
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
@@ -53,11 +54,16 @@ const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/lumin
 /** A sombra muda pouco com todos sentados: refazê-la raramente é o maior corte de custo. */
 const SHADOW_EVERY = { alta: 20, leve: 60 };
 
-/** A mobília é uma só por página; não há por que remontar a cada tentativa. */
-let built: OfficeBuild | null = null;
+/** A mobília é uma só por modo; não há por que remontar a cada tentativa. Só o prédio tem elevador. */
+const built = new Map<OfficeMode, OfficeBuild>();
 function officeBuild(): OfficeBuild {
-  built ??= buildOffice();
-  return built;
+  const { mode } = useOfficeStore.getState();
+  let build = built.get(mode);
+  if (!build) {
+    build = buildOffice({ elevatorOpening: mode === "demo" });
+    built.set(mode, build);
+  }
+  return build;
 }
 
 function useReducedMotion() {
