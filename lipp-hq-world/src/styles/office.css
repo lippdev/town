@@ -1318,3 +1318,8 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 }
 .office-floor-tag { position: absolute; left: 0; top: 0; will-change: transform; padding: 4px 9px; border-radius: 7px; background: rgba(22, 22, 21, 0.92); color: #ffe7c4; font-size: 12.5px; font-weight: 600; white-space: nowrap; pointer-events: none; }
 .office-scenery-tag { position: absolute; left: 0; top: 0; will-change: transform; padding: 2px 7px; border-radius: 6px; background: rgba(22, 22, 21, 0.82); color: #c9c6bd; font-size: 11px; white-space: nowrap; pointer-events: none; }
+
+/* Na viagem entre andares os rótulos esperam a chegada: apontariam para um chão que está passando. */
+.office-labels { transition: opacity 0.16s ease; }
+.office-labels[data-traveling="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
+@media (prefers-reduced-motion: reduce) { .office-labels { transition: none; } }
