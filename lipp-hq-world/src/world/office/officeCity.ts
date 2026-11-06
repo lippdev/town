@@ -1,24 +1,23 @@
 import { BoxGeometry, BufferAttribute, Color, ConeGeometry, CylinderGeometry, PlaneGeometry, type BufferGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { AZIMUTH, ELEVATION } from "./officeCamera";
 import { ENTRANCE, FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
 import { ELEVATOR_CORE } from "./officeLobby";
 
 /**
- * A cidade em volta do escritório, só na demonstração: tudo numa malha só, com a cor nos
- * vértices, então custa uma chamada de desenho. A câmera olha de +x +z: prédio alto só atrás
- * do escritório; na frente, baixo, para não cobrir a rua.
+ * A cidade em volta da torre, só na demonstração: tudo numa malha só, com a cor nos vértices,
+ * então custa uma chamada de desenho. A câmera olha de +x +z, e isso manda na composição: o alto
+ * fica atrás da torre, e na frente a altura é limitada pelo que esconderia o lote (`occlusionCap`).
+ * As medidas são as da torre: um pavimento tem a mesma altura lá e aqui.
  */
 /** Chega até onde a torre inteira cabe em tela: do alto dela se vê mais chão. Mais para o fundo, onde a tela aponta. */
 export const CITY_BOUNDS: OfficeBounds = { minX: -160, maxX: 128, minZ: -160, maxZ: 126 };
 
-/** O entorno desenhado à mão. Daqui para fora os quarteirões são gerados. */
-const CITY_CORE: OfficeBounds = { minX: -34, maxX: 30, minZ: -30, maxZ: 28 };
-const OUTER_ROAD_WIDTH = 3.5;
-const OUTER_BLOCK = 26;
-const LOT = 9;
-
 /** O que a câmera enquadra de início: o prédio e a rua da entrada. */
 export const CITY_VIEW: OfficeBounds = { minX: FLOOR_BOUNDS.minX - 1, maxX: FLOOR_BOUNDS.maxX + 1, minZ: FLOOR_BOUNDS.minZ - 1, maxZ: 15.5 };
+
+/** Altura de um pavimento, igual à da torre. Aqui para o prédio não depender da cidade e vice-versa. */
+const STORY = 3.4;
 
 export const ROADS = {
   south: { from: 11.5, to: 15.5 },
@@ -35,9 +34,6 @@ export const SOUTH_WALK_Z = 10.3;
 export const EAST_WALK_X = 13;
 
 const SURFACE = { plate: -0.06, road: -0.05, mark: -0.045, walk: -0.015 } as const;
-const FRONT_HEIGHT = 2.6;
-const BODY_COLORS = ["#6f7480", "#8a7f73", "#5f6b78", "#7d6f6a", "#6a7770", "#8c8880"] as const;
-const LIT = "#f2c777";
 const DARK_GLASS = "#22303f";
 
 export class ColorMerge {
@@ -81,6 +77,25 @@ export class ColorMerge {
     this.add(quad, x, y + height / 2, z, color);
   }
 
+  /** Volume só com o que a câmera vê: topo e faces +x e +z, dezoito vértices em vez de 36. */
+  prism(minX: number, maxX: number, minZ: number, maxZ: number, bottom: number, top: number, side: string, shade: string, roof: string) {
+    const width = maxX - minX;
+    const length = maxZ - minZ;
+    const height = top - bottom;
+    this.quad((minX + maxX) / 2, bottom, maxZ, "z", width, height, side);
+    this.quad(maxX, bottom, (minZ + maxZ) / 2, "x", length, height, shade);
+    const cover = new PlaneGeometry(width, length);
+    cover.rotateX(-Math.PI / 2);
+    this.add(cover, (minX + maxX) / 2, top, (minZ + maxZ) / 2, roof);
+  }
+
+  /** Marca ou piso sem espessura, seis vértices. */
+  flat(minX: number, maxX: number, minZ: number, maxZ: number, y: number, color: string) {
+    const cover = new PlaneGeometry(maxX - minX, maxZ - minZ);
+    cover.rotateX(-Math.PI / 2);
+    this.add(cover, (minX + maxX) / 2, y, (minZ + maxZ) / 2, color);
+  }
+
   build() {
     const merged = mergeGeometries(this.parts);
     for (const part of this.parts) part.dispose();
@@ -94,166 +109,310 @@ function shuffled(seed: number) {
   return ((Math.sin(seed * 127.1) * 43758.5453) % 1 + 1) % 1;
 }
 
-function building(city: ColorMerge, minX: number, maxX: number, minZ: number, maxZ: number, height: number, seed: number) {
-  const x = (minX + maxX) / 2;
-  const z = (minZ + maxZ) / 2;
-  const width = maxX - minX;
-  const length = maxZ - minZ;
-  const color = BODY_COLORS[Math.floor(shuffled(seed) * BODY_COLORS.length)]!;
-  city.box(x, 0, z, width, height, length, color);
-  city.box(x, height, z, width + 0.2, 0.14, length + 0.2, "#4b4f57");
-  // Janela só nas duas faces que a câmera vê.
-  const floors = Math.max(1, Math.floor((height - 0.7) / 1.25));
-  for (let floor = 0; floor < floors; floor += 1) {
-    const y = 0.7 + floor * 1.25;
-    const columnsZ = Math.floor(width / 1.3);
-    for (let column = 0; column < columnsZ; column += 1) {
-      const lit = shuffled(seed + floor * 7 + column * 13) > 0.72;
-      city.pane(minX + (column + 0.5) * (width / columnsZ), y, maxZ + 0.03, "z", lit ? LIT : DARK_GLASS);
-    }
-    const columnsX = Math.floor(length / 1.3);
-    for (let column = 0; column < columnsX; column += 1) {
-      const lit = shuffled(seed + floor * 11 + column * 17) > 0.72;
-      city.pane(maxX + 0.03, y, minZ + (column + 0.5) * (length / columnsX), "x", lit ? LIT : DARK_GLASS);
+type Span = readonly [number, number];
+type Lot = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+const WEST_TO = -160;
+
+/** Mistura duas cores: quanto mais longe, mais perto do tom do ar, e a torre salta. */
+function mix(color: string, to: string, amount: number) {
+  return `#${new Color(color).lerp(new Color(to), amount).getHexString()}`;
+}
+
+const AIR = "#3d4656";
+/** Tijolo, pedra, areia, concreto e vidro azulado: famílias, não uma cor por prédio ao acaso. */
+const FACADES = ["#7a6256", "#8d8275", "#a79a84", "#6e747e", "#5a6b7c", "#8f7763", "#767066"] as const;
+const ROOFS = ["#4a4d53", "#55565a", "#44494f", "#5c5a56"] as const;
+const LIT_TONES = ["#f0c67a", "#e8b868", "#d9c79a"] as const;
+
+/** Tamanhos de quarteirão e larguras de rua de cada lado da torre: sem passo fixo, sem tapete. */
+const STREETS = {
+  east: { blocks: [11.5, 24, 17, 30, 20, 26], roads: [4, 6, 3.5, 3.5, 6, 3.5] },
+  west: { blocks: [18, 26, 20, 32, 22, 24, 20], roads: [3.5, 6, 3.5, 3.5, 6, 3.5] },
+  south: { blocks: [8.5, 22, 28, 16, 24, 20], roads: [3.5, 6, 3.5, 3.5, 6] },
+  north: { blocks: [16, 30, 18, 26, 22, 24, 20], roads: [3.5, 3.5, 6, 3.5, 3.5, 6] },
+} as const;
+
+/** Quarteirões e ruas de um eixo, partindo do fim das ruas da torre até a ponta da cidade. */
+function axis(from: number, limit: number, direction: 1 | -1, { blocks, roads }: { blocks: readonly number[]; roads: readonly number[] }) {
+  const spans: Span[] = [];
+  const streets: { span: Span; width: number }[] = [];
+  let at = from;
+  for (let index = 0; index < blocks.length; index += 1) {
+    const end = at + direction * blocks[index]!;
+    const clipped = direction > 0 ? Math.min(end, limit) : Math.max(end, limit);
+    spans.push(direction > 0 ? [at, clipped] : [clipped, at]);
+    if (clipped === limit) break;
+    const width = roads[index] ?? 3.5;
+    const after = end + direction * width;
+    streets.push({ span: direction > 0 ? [end, Math.min(after, limit)] : [Math.max(after, limit), end], width });
+    at = after;
+    if (direction > 0 ? at >= limit : at <= limit) break;
+  }
+  return { spans, streets };
+}
+
+/** O que precisa ficar à vista: a torre com a calçada dela e a rua da entrada. */
+export const PROTECTED_GROUND: OfficeBounds = { minX: ROADS.west.to, maxX: ROADS.east.from, minZ: ROADS.north.to, maxZ: ROADS.south.to };
+/** Quanto um metro de altura esconde de chão, em x e em z, com a câmera fixa em 45°/30°. */
+const HIDES_PER_METER = (Math.cos(ELEVATION) * Math.sin(AZIMUTH)) / Math.sin(ELEVATION);
+
+/** A maior altura em que um prédio não cobre o lote da torre; infinita para quem nunca o alcança. */
+export function occlusionCap(lot: Lot, ground: OfficeBounds = PROTECTED_GROUND): number {
+  const reach = Math.max(lot.minX - ground.maxX, lot.minZ - ground.maxZ, 0);
+  // Andando para o fundo da tela, a projeção dele nunca passa pelo lote: fica de lado ou atrás.
+  if (lot.maxX - reach < ground.minX || lot.maxZ - reach < ground.minZ) return Infinity;
+  return reach / HIDES_PER_METER;
+}
+
+/** Centros mais altos, todos atrás ou ao lado da torre: é onde o olho aceita a massa. */
+const CLUSTERS = [
+  { x: -78, z: -82, radius: 52, stories: 11.5 },
+  { x: -128, z: 18, radius: 34, stories: 8 },
+  { x: 26, z: -124, radius: 36, stories: 9 },
+] as const;
+
+/** Nenhum vizinho alcança o corpo da torre, de 14 pavimentos mais a coroa. */
+const TALLEST_STORIES = 11;
+
+function districtStories(x: number, z: number, seed: number) {
+  let peak = 2.5;
+  for (const center of CLUSTERS) {
+    const distance = Math.hypot(x - center.x, z - center.z) / center.radius;
+    peak = Math.max(peak, center.stories * Math.exp(-distance * distance));
+  }
+  // Variação de lote a lote; de vez em quando, um prédio bem mais alto que os vizinhos.
+  const wobble = 0.68 + shuffled(seed) * 0.5;
+  const hero = shuffled(seed + 0.37) > 0.9 ? 1.45 : 1;
+  return Math.min(TALLEST_STORIES, Math.max(2, Math.round(peak * wobble * hero + shuffled(seed + 0.71) * 1.5)));
+}
+
+/** Corta o quarteirão em lotes de tamanho desigual, sempre pelo lado maior. */
+function splitLots(lot: Lot, seed: number, max: number, out: Lot[] = []): Lot[] {
+  const width = lot.maxX - lot.minX;
+  const length = lot.maxZ - lot.minZ;
+  if (Math.max(width, length) <= max) {
+    out.push(lot);
+    return out;
+  }
+  const at = 0.36 + shuffled(seed) * 0.28;
+  if (width >= length) {
+    const cut = lot.minX + width * at;
+    splitLots({ ...lot, maxX: cut }, seed * 1.31 + 2, max, out);
+    splitLots({ ...lot, minX: cut }, seed * 1.17 + 5, max, out);
+  } else {
+    const cut = lot.minZ + length * at;
+    splitLots({ ...lot, maxZ: cut }, seed * 1.31 + 7, max, out);
+    splitLots({ ...lot, minZ: cut }, seed * 1.17 + 11, max, out);
+  }
+  return out;
+}
+
+export interface CityBuilding extends Lot {
+  height: number;
+}
+
+/** Fachada de um pavimento por vez, com detalhe conforme a distância: perto, janela; longe, faixa. */
+function facade(city: ColorMerge, face: "x" | "z", at: number, start: number, span: number, bottom: number, stories: number, glass: string, seed: number, near: boolean, far: number) {
+  const place = (along: number, y: number, width: number, height: number, color: string, relief = 0) => {
+    if (face === "z") city.quad(along, y, at + relief, "z", width, height, color);
+    else city.quad(at + relief, y, along, "x", width, height, color);
+  };
+  const bay = 2.6 + shuffled(seed) * 1.4;
+  const count = Math.max(1, Math.round(span / bay));
+  const step = span / count;
+  const lit = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
+  const inner = span - 0.8;
+  if (inner <= 0.4) return;
+  // Longe, um pavimento sim, outro não: lê igual e custa metade.
+  const every = far > 0.55 ? 2 : 1;
+  for (let story = 0; story < stories; story += every) {
+    const y = bottom + story * STORY + 0.85;
+    place(start + span / 2, y, inner, 1.9 * (every === 2 ? 1.4 : 1), glass);
+    if (!near && far > 0.55) continue;
+    for (let column = 0; column < count; column += 1) {
+      if (shuffled(seed + story * 7.1 + column * 13.3) < 0.8) continue;
+      place(start + (column + 0.5) * step, y, Math.min(step * 0.62, 1.8), 1.7, lit, 0.03);
     }
   }
 }
 
-function tree(city: ColorMerge, x: number, z: number, scale = 1) {
+/** Um prédio: base, às vezes um corpo recuado e uma casa de máquinas. Só o que a câmera vê. */
+function building(city: ColorMerge, lot: Lot, stories: number, seed: number): number {
+  const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
+  const far = Math.min(1, distance / 170);
+  const near = distance < 62;
+  const haze = far * far * 0.62;
+  const paint = (color: string) => mix(color, AIR, haze);
+  const body = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
+  const side = paint(body);
+  const shade = paint(mix(body, "#20242c", 0.2));
+  const roof = paint(ROOFS[Math.floor(shuffled(seed + 0.53) * ROOFS.length)]!);
+  const glass = paint(shuffled(seed + 0.3) > 0.5 ? DARK_GLASS : "#2b3a4a");
+  const stack = (from: Lot, base: number, count: number, salt: number) => {
+    const top = base + count * STORY;
+    city.prism(from.minX, from.maxX, from.minZ, from.maxZ, base, top, side, shade, roof);
+    facade(city, "z", from.maxZ + 0.02, from.minX, from.maxX - from.minX, base, count, glass, seed + salt, near, far);
+    facade(city, "x", from.maxX + 0.02, from.minZ, from.maxZ - from.minZ, base, count, glass, seed + salt + 3, near, far);
+    if (far < 0.6) city.prism(from.minX - 0.1, from.maxX + 0.1, from.minZ - 0.1, from.maxZ + 0.1, top, top + 0.22, paint("#3d4046"), paint("#34373d"), roof);
+    return top;
+  };
+  const width = lot.maxX - lot.minX;
+  const length = lot.maxZ - lot.minZ;
+  const roomy = Math.min(width, length) > 8;
+  if (stories >= 6 && roomy && shuffled(seed + 0.83) > 0.35) {
+    const podium = 2 + Math.floor(shuffled(seed + 0.9) * 2);
+    let top = stack(lot, 0, podium, 1);
+    const inset = 1.2 + shuffled(seed + 0.4) * 1.4;
+    const upper = { minX: lot.minX + inset, maxX: lot.maxX - inset, minZ: lot.minZ + inset, maxZ: lot.maxZ - inset };
+    const crowned = stories >= 10 && Math.min(upper.maxX - upper.minX, upper.maxZ - upper.minZ) > 6;
+    top = stack(upper, top, stories - podium - (crowned ? 2 : 0), 2);
+    if (crowned) {
+      top = stack({ minX: upper.minX + 1.6, maxX: upper.maxX - 1.6, minZ: upper.minZ + 1.6, maxZ: upper.maxZ - 1.6 }, top, 2, 3);
+    }
+    return top;
+  }
+  const top = stack(lot, 0, stories, 1);
+  if (near && stories >= 3 && shuffled(seed + 0.61) > 0.5) {
+    const x = lot.minX + width * 0.35;
+    const z = lot.minZ + length * 0.4;
+    city.prism(x - 1, x + 1, z - 1, z + 1, top, top + 1.1, paint("#55585e"), paint("#46494f"), paint("#3c3f44"));
+  }
+  return top;
+}
+
+function tree(city: ColorMerge, x: number, z: number, scale = 1, detailed = true) {
   city.add(new CylinderGeometry(0.09 * scale, 0.12 * scale, 1 * scale, 6), x, 0.5 * scale, z, "#5c4230");
   city.add(new ConeGeometry(0.75 * scale, 1.5 * scale, 7), x, 1.5 * scale, z, "#3f7a4a");
-  city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#4b8d57");
+  if (detailed) city.add(new ConeGeometry(0.55 * scale, 1.2 * scale, 7), x, 2.2 * scale, z, "#4b8d57");
 }
 
-function lane(city: ColorMerge, axis: "x" | "z", at: number, from: number, to: number) {
-  for (let position = from; position < to; position += 3) {
+/** Marcas no meio da via: de perto, tracejadas; lá longe, mais espaçadas. */
+function lane(city: ColorMerge, along: "x" | "z", at: number, from: number, to: number) {
+  for (let position = from; position < to;) {
     const end = Math.min(to, position + 1.4);
-    if (axis === "x") city.slab(position, end, at - 0.05, at + 0.05, SURFACE.mark, 0.004, "#d9d4c4");
-    else city.slab(at - 0.05, at + 0.05, position, end, SURFACE.mark, 0.004, "#d9d4c4");
+    if (along === "x") city.flat(position, end, at - 0.05, at + 0.05, SURFACE.mark, "#d9d4c4");
+    else city.flat(at - 0.05, at + 0.05, position, end, SURFACE.mark, "#d9d4c4");
+    position += Math.abs(position) + Math.abs(at) < 70 ? 3 : 7;
   }
 }
 
-type Span = readonly [number, number];
+const GARDEN = "#5c7a58";
 
-/** Ruas e quarteirões de um eixo, do entorno até a ponta da cidade. */
-function outerStreets(coreMin: number, coreMax: number, min: number, max: number) {
-  const roads: Span[] = [];
-  const blocks: Span[] = [];
-  const step = OUTER_ROAD_WIDTH + OUTER_BLOCK;
-  for (let at = coreMax; at < max; at += step) {
-    roads.push([at, at + OUTER_ROAD_WIDTH]);
-    blocks.push([at + OUTER_ROAD_WIDTH, Math.min(max, at + step)]);
-  }
-  for (let at = coreMin; at > min; at -= step) {
-    roads.push([at - OUTER_ROAD_WIDTH, at]);
-    blocks.push([Math.max(min, at - step), at - OUTER_ROAD_WIDTH]);
-  }
-  return { roads, blocks };
+/** Quarteirões deliberadamente abertos, pelo índice em cada eixo. A cidade respira neles. */
+const PARKS: ReadonlySet<string> = new Set(["east:1|west:1", "west:2|north:2", "east:3|south:1", "west:4|south:2", "east:2|north:3", "west:5|north:0", "lot|south:3"]);
+
+interface BlockSpec {
+  x: Span;
+  z: Span;
+  key: string;
 }
 
-/** Enche um quarteirão de prédios ou, de vez em quando, faz dele uma praça. */
-function outerBlock(city: ColorMerge, [fromX, toX]: Span, [fromZ, toZ]: Span, seed: number) {
-  const columns = Math.floor((toX - fromX - 2) / LOT);
-  const rows = Math.floor((toZ - fromZ - 2) / LOT);
-  if (columns < 1 || rows < 1) return;
-  if (shuffled(seed) > 0.82) {
-    city.slab(fromX, toX, fromZ, toZ, SURFACE.walk, 0.05, "#5c7a58");
-    for (let index = 0; index < columns * rows; index += 1) {
-      tree(city, fromX + 2 + shuffled(seed + index * 3) * (toX - fromX - 4), fromZ + 2 + shuffled(seed + index * 5) * (toZ - fromZ - 4));
-    }
-    return;
-  }
-  // Na frente do escritório os prédios são baixos: a câmera olha por cima deles.
-  const front = fromX >= CITY_CORE.maxX || fromZ >= CITY_CORE.maxZ;
-  const width = (toX - fromX - 2) / columns;
-  const length = (toZ - fromZ - 2) / rows;
-  for (let column = 0; column < columns; column += 1) {
-    for (let row = 0; row < rows; row += 1) {
-      const lot = seed + column * 19 + row * 23;
-      const height = front ? 2.5 + shuffled(lot) * 4 : 4 + shuffled(lot) * 7;
-      const minX = fromX + 1 + column * width;
-      const minZ = fromZ + 1 + row * length;
-      building(city, minX, minX + width - 1, minZ, minZ + length - 1, height, lot);
-    }
-  }
-}
-
-function outerCity(city: ColorMerge) {
+/** Todos os quarteirões, com o nome de cada um: é o que deixa escolher as praças à mão. */
+function cityBlocks(): BlockSpec[] {
   const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
-  const alongX = outerStreets(CITY_CORE.minX, CITY_CORE.maxX, minX, maxX);
-  const alongZ = outerStreets(CITY_CORE.minZ, CITY_CORE.maxZ, minZ, maxZ);
-  for (const [from, to] of alongX.roads) {
-    city.slab(from, to, minZ, maxZ, SURFACE.road, 0.02, "#33363c");
-    lane(city, "z", (from + to) / 2, minZ + 1, maxZ);
-  }
-  for (const [from, to] of alongZ.roads) {
-    city.slab(minX, maxX, from, to, SURFACE.road, 0.02, "#33363c");
-    lane(city, "x", (from + to) / 2, minX + 1, maxX);
-  }
-  // As ruas do entorno seguem até a ponta da cidade e dividem também os quarteirões de fora.
-  const { south, north, east, west } = ROADS;
-  const coreX: Span[] = [[CITY_CORE.minX, west.from], [west.to, east.from], [east.to, CITY_CORE.maxX]];
-  const coreZ: Span[] = [[CITY_CORE.minZ, north.from], [north.to, south.from], [south.to, CITY_CORE.maxZ]];
-  const xs = [...coreX, ...alongX.blocks];
-  const zs = [...coreZ, ...alongZ.blocks];
-  let seed = 500;
-  for (const x of xs) {
-    for (const z of zs) {
-      seed += 1;
-      if (!coreX.includes(x) || !coreZ.includes(z)) outerBlock(city, x, z, seed);
-    }
-  }
+  const xs: { span: Span; key: string }[] = [
+    ...axis(ROADS.east.to, maxX, 1, STREETS.east).spans.map((span, index) => ({ span, key: `east:${index}` })),
+    { span: [ROADS.west.to, ROADS.east.from], key: "lot" },
+    ...axis(ROADS.west.from, minX, -1, STREETS.west).spans.map((span, index) => ({ span, key: `west:${index}` })),
+  ];
+  const zs: { span: Span; key: string }[] = [
+    ...axis(ROADS.south.to, maxZ, 1, STREETS.south).spans.map((span, index) => ({ span, key: `south:${index}` })),
+    { span: [ROADS.north.to, ROADS.south.from], key: "lot" },
+    ...axis(ROADS.north.from, minZ, -1, STREETS.north).spans.map((span, index) => ({ span, key: `north:${index}` })),
+  ];
+  return xs.flatMap((x) => zs.map((z) => ({ x: x.span, z: z.span, key: `${x.key}|${z.key}` })));
 }
+
+/** Respiro em volta da torre: os quarteirões colados a ela são baixos ou abertos. */
+const BREATHING = 26;
+
+/** A planta da cidade: onde há prédio e de que altura, sem desenhar nada. Também é o que o teste lê. */
+export function cityPlan(): { buildings: CityBuilding[]; parks: BlockSpec[]; blocks: BlockSpec[] } {
+  const buildings: CityBuilding[] = [];
+  const parks: BlockSpec[] = [];
+  const blocks = cityBlocks().filter(({ key }) => key !== "lot|lot");
+  blocks.forEach((block, blockIndex) => {
+    const [fromX, toX] = block.x;
+    const [fromZ, toZ] = block.z;
+    // O primeiro quarteirão de cada lado da frente é praça, com a rua da entrada à vista.
+    const front = block.key.endsWith("south:0") || block.key.startsWith("east:0");
+    if (front || PARKS.has(block.key) || toX - fromX < 6 || toZ - fromZ < 6) {
+      parks.push(block);
+      return;
+    }
+    const inner = { minX: fromX + 1.5, maxX: toX - 1.5, minZ: fromZ + 1.5, maxZ: toZ - 1.5 };
+    const center = Math.hypot((fromX + toX) / 2, (fromZ + toZ) / 2);
+    const lots = splitLots(inner, 37 + blockIndex * 3.3, center < 70 ? 11 : 15);
+    lots.forEach((lot, lotIndex) => {
+      const seed = 100 + blockIndex * 17.7 + lotIndex * 3.1;
+      // De vez em quando um miolo aberto: quarteirão sem furo nenhum parece bloco maciço.
+      if (shuffled(seed + 0.13) > 0.93) return;
+      const gap = shuffled(seed + 0.77) > 0.5 ? 0.25 : 0.1;
+      const building = { minX: lot.minX + gap, maxX: lot.maxX - gap, minZ: lot.minZ + gap, maxZ: lot.maxZ - gap };
+      let stories = districtStories((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2, seed);
+      const ring = Math.max(Math.abs((lot.minX + lot.maxX) / 2), Math.abs((lot.minZ + lot.maxZ) / 2));
+      if (ring < BREATHING + 14) stories = Math.min(stories, 3 + Math.floor(Math.max(0, ring - BREATHING) / 5));
+      const cap = occlusionCap(building);
+      stories = Math.min(stories, Math.floor((cap - 0.3 - EXTRAS) / STORY));
+      if (stories >= 1) buildings.push({ ...building, height: stories * STORY });
+    });
+  });
+  return { buildings, parks, blocks };
+}
+
+/** Cornija e casa de máquinas: o teto do prédio passa um pouco da altura dos pavimentos. */
+const EXTRAS = 1.4;
 
 export function buildCityGeometry() {
   const city = new ColorMerge();
   const { minX, maxX, minZ, maxZ } = CITY_BOUNDS;
-  city.slab(minX, maxX, minZ, maxZ, SURFACE.plate, 1.4, "#55595f");
+  city.slab(minX, maxX, minZ, maxZ, SURFACE.plate, 1.4, "#33363c");
   // Calçada em volta do prédio; a laje do escritório cobre o meio dela.
   city.slab(ROADS.west.to, ROADS.east.from, ROADS.north.to, ROADS.south.from, SURFACE.walk, 0.05, "#a8a59c");
 
   const { south, north, east, west } = ROADS;
-  city.slab(minX, maxX, south.from, south.to, SURFACE.road, 0.02, "#33363c");
-  city.slab(minX, maxX, north.from, north.to, SURFACE.road, 0.02, "#33363c");
-  city.slab(east.from, east.to, minZ, maxZ, SURFACE.road, 0.02, "#33363c");
-  city.slab(west.from, west.to, minZ, maxZ, SURFACE.road, 0.02, "#33363c");
   lane(city, "x", (south.from + south.to) / 2, minX + 1, maxX);
   lane(city, "x", (north.from + north.to) / 2, minX + 1, maxX);
   lane(city, "z", (east.from + east.to) / 2, minZ + 1, maxZ);
   lane(city, "z", (west.from + west.to) / 2, minZ + 1, maxZ);
-
-  // Quarteirões: x de oeste a leste, z do fundo para a frente. Só há prédio fora das ruas.
-  const columns: readonly (readonly [number, number])[] = [[-33, -26], [-25, -18], [-13, -6], [-5, 2], [3, 13], [19.5, 29]];
-  const rows: readonly (readonly [number, number])[] = [[-29, -23], [-22, -16], [22, 27]];
-  const west_rows: readonly (readonly [number, number])[] = [[-11, -3], [-2, 5], [6, 10.5]];
-  let seed = 1;
-  for (const [fromX, toX] of columns) {
-    for (const [fromZ, toZ] of rows) {
-      seed += 1;
-      const front = fromZ > 0 && fromX > -18;
-      const height = front ? 1.6 + shuffled(seed) * (FRONT_HEIGHT - 1.6) : 4 + shuffled(seed) * 7;
-      building(city, fromX, toX, fromZ, toZ, height, seed);
-    }
+  for (const { streets } of [axis(ROADS.east.to, maxX, 1, STREETS.east), axis(ROADS.west.from, WEST_TO, -1, STREETS.west)]) {
+    for (const { span, width } of streets) if (width >= 6) lane(city, "z", (span[0] + span[1]) / 2, minZ + 1, maxZ);
   }
-  for (const [fromZ, toZ] of west_rows) {
-    for (const [fromX, toX] of [[-33, -26], [-25, -18]] as const) {
-      seed += 1;
-      building(city, fromX, toX, fromZ, toZ, 4 + shuffled(seed) * 6, seed);
-    }
+  for (const { streets } of [axis(ROADS.south.to, maxZ, 1, STREETS.south), axis(ROADS.north.from, minZ, -1, STREETS.north)]) {
+    for (const { span, width } of streets) if (width >= 6) lane(city, "x", (span[0] + span[1]) / 2, minX + 1, maxX);
   }
-  // Praças na frente da rua: prédio ali esconderia o carro e a entrada.
-  city.slab(CITY_CORE.minX, CITY_CORE.maxX, 16.5, 21, SURFACE.walk, 0.05, "#5c7a58");
-  city.slab(19.5, CITY_CORE.maxX, -11, 21, SURFACE.walk, 0.05, "#5c7a58");
-  for (let x = -30; x < 28; x += 6.5) tree(city, x, 18.8 + (shuffled(x) - 0.5) * 2.2);
-  for (let z = -9; z < 15; z += 5.5) tree(city, 24 + (shuffled(z) - 0.5) * 3, z);
 
+  const { buildings, parks, blocks } = cityPlan();
+  const haze = (x: number, z: number) => Math.min(1, Math.hypot(x, z) / 170) ** 2 * 0.62;
+  for (const block of blocks) {
+    const [fromX, toX] = block.x;
+    const [fromZ, toZ] = block.z;
+    city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, mix("#8f8c84", AIR, haze((fromX + toX) / 2, (fromZ + toZ) / 2)));
+  }
+  buildings.forEach((lot, index) => building(city, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
+  parks.forEach((park, index) => {
+    const [fromX, toX] = park.x;
+    const [fromZ, toZ] = park.z;
+    const x = (fromX + toX) / 2;
+    const z = (fromZ + toZ) / 2;
+    if (toX - fromX < 3 || toZ - fromZ < 3) return;
+    city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.walk + 0.004, mix(GARDEN, AIR, haze(x, z)));
+    const near = Math.hypot(x, z) < 70;
+    const count = Math.min(near ? 14 : 8, Math.floor(((toX - fromX) * (toZ - fromZ)) / (near ? 28 : 70)));
+    for (let item = 0; item < count; item += 1) {
+      const seed = 700 + index * 11 + item * 5.3;
+      tree(city, fromX + 2 + shuffled(seed) * (toX - fromX - 4), fromZ + 2 + shuffled(seed + 0.5) * (toZ - fromZ - 4), near ? 1 : 1.3, near);
+    }
+  });
+
+  // Árvores das calçadas da torre, por fora de quem chega de carro.
   for (let x = -12; x <= 13; x += 4.5) {
     if (Math.abs(x - ENTRANCE.x) > 2) tree(city, x, 11.15, 0.8);
   }
   for (let z = -10; z <= 9; z += 4.75) tree(city, 14.1, z, 0.8);
   // A calçada dos fundos cede o lugar da caixa dos elevadores.
   for (let x = -12; x <= 13; x += 5) if (x < ELEVATOR_CORE.bounds.minX - 1 || x > ELEVATOR_CORE.bounds.maxX + 1) tree(city, x, -11.6, 0.8);
-  outerCity(city);
   return city.build();
 }
 
