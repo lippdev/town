@@ -1,7 +1,8 @@
 import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
 import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
 import { screenUv } from "./officeTextures";
-import { ELEVATOR_CORE_X, ELEVATOR_XS, RECEPTION } from "./officeLobby";
+import type { FloorId } from "./officeBuilding";
+import { ELEVATOR_CORE, ELEVATOR_STOPS, ELEVATOR_XS, RECEPTION, type ElevatorStop } from "./officeLobby";
 import { BACK_WALL_CUT, CORRIDOR, DESK_REACH, ENTRANCE, FACING, FLOOR_BOUNDS, FRONT_WALL_CUT, WALL_HEIGHT, WALL_THICKNESS, type OfficeBounds } from "./officeLayout";
 import { DESK_TOP, FRAME, WALL_FRONT, WALL_NORTH, WALL_WEST, WOOD, armchair, bookshelf, cabinet, chair, deskTop, lowTable, monitor, rug, sofa, wallRuns, windowUnit, workstation } from "./officeRooms";
 
@@ -31,10 +32,12 @@ interface WallPlan {
   windows?: ReadonlyArray<readonly [number, number]>;
   /** Vãos: centro e largura, no eixo da parede. */
   doors?: ReadonlyArray<{ at: number; width: number }>;
+  /** Onde começa a parede por cima dos vãos. */
+  head?: number;
 }
 
 /** Parede do fundo, inteira: não há nada atrás dela para esconder. */
-export function backWall(b: KitBuilder, side: "north" | "west", { windows = [], doors = [] }: WallPlan = {}) {
+export function backWall(b: KitBuilder, side: "north" | "west", { windows = [], doors = [], head = 2.3 }: WallPlan = {}) {
   const color = side === "north" ? WALL_NORTH : WALL_WEST;
   const half = (side === "north" ? WIDTH / 2 : DEPTH / 2) + 0.16;
   const frame = (fn: () => void) => (side === "north" ? b.at([0, 0, minZ - INSET], 0, fn) : b.at([minX - INSET, 0, 0], Math.PI / 2, fn));
@@ -42,7 +45,7 @@ export function backWall(b: KitBuilder, side: "north" | "west", { windows = [], 
     const gaps = [...windows.map(([from, to]) => ({ at: (from + to) / 2, width: to - from })), ...doors];
     for (const [from, to] of wallRuns(half, gaps)) b.box([(from + to) / 2, WALL_HEIGHT / 2, 0], [to - from, WALL_HEIGHT, WALL_THICKNESS], { color });
     for (const [from, to] of windows) windowUnit(b, from, to, color);
-    for (const door of doors) b.box([door.at, (2.3 + WALL_HEIGHT) / 2, 0], [door.width, WALL_HEIGHT - 2.3, WALL_THICKNESS], { color });
+    for (const door of doors) b.box([door.at, (head + WALL_HEIGHT) / 2, 0], [door.width, WALL_HEIGHT - head, WALL_THICKNESS], { color });
     for (const [from, to] of wallRuns(half - 0.2, gaps)) b.box([(from + to) / 2, 0.12, 0.12], [to - from, 0.2, 0.06], { ...WOOD, cast: false });
   });
 }
@@ -63,27 +66,142 @@ function column(b: KitBuilder, x: number, z: number) {
   b.solid("coluna", x, z, 0.56, 0.56);
 }
 
+const CORE_WALL = "#7d776d";
+const CORE_CUT = "#3f3a33";
+const SHAFT_WALL = "#34373c";
+const STEEL = "#a9adb0";
+const JAMB = "#4c4f53";
+const CAB_WALL = "#d6cab2";
+
+/** Cabine parada no andar: é ela, à vista pela porta aberta, que diz para onde a porta leva. */
+function elevatorCab(b: KitBuilder, x: number) {
+  const { cab, front } = ELEVATOR_CORE;
+  const z = front - cab.depth / 2;
+  const half = cab.width / 2;
+  b.box([x, 0.02, z], [cab.width, 0.04, cab.depth], { color: "#8f8676", cast: false });
+  b.box([x, cab.height / 2, front - cab.depth], [cab.width, cab.height, 0.05], { color: "#b9c2c6", cast: false });
+  for (const side of [-1, 1]) {
+    b.box([x + side * half, cab.height / 2, z], [0.05, cab.height, cab.depth], { color: CAB_WALL, cast: false });
+    // Corrimão e luz nas duas laterais: a parede oeste é a que a câmera enxerga.
+    b.box([x + side * (half - 0.05), 0.95, z], [0.04, 0.04, cab.depth - 0.3], { color: "#c2a26a", cast: false });
+    b.box([x + side * (half - 0.03), cab.height - 0.12, z], [0.012, 0.09, cab.depth - 0.2], { surface: "glow", color: "#fff0d0", cast: false });
+  }
+  // Teto com a polia e os cabos: é o que se vê de cima, no poço.
+  b.box([x, cab.height + 0.05, z], [cab.width + 0.05, 0.1, cab.depth + 0.05], { color: "#5c5f63" });
+  b.cylinder([x, cab.height + 0.17, z], 0.16, 0.12, { color: "#2a2c30" }, 14);
+  for (const offset of [-0.09, 0, 0.09]) {
+    const bottom = cab.height + 0.2;
+    b.box([x + offset, (bottom + ELEVATOR_CORE.top) / 2, z], [0.022, ELEVATOR_CORE.top - bottom, 0.022], { color: "#1c1d20", cast: false });
+  }
+}
+
+/** Trilhos, cabos e contrapeso: o que há num poço sem cabine neste andar. */
+function shaftInside(b: KitBuilder, x: number, withCab: boolean) {
+  const { front, back, top, pitch, partition } = ELEVATOR_CORE;
+  const z = (front + back) / 2;
+  const half = (pitch - partition) / 2 - 0.03;
+  for (const side of [-1, 1]) b.box([x + side * half, top / 2, z], [0.07, top, 0.09], { color: "#6d7176", cast: false });
+  if (withCab) return;
+  for (const offset of [-0.14, 0, 0.14]) b.box([x + offset, top / 2, z + 0.25], [0.022, top, 0.022], { color: "#1c1d20", cast: false });
+  b.box([x, 2.55, back + 0.16], [0.9, 1.1, 0.2], { color: "#494c50" });
+  for (const y of [2.2, 2.45, 2.7, 2.95]) b.box([x, y, back + 0.27], [0.92, 0.03, 0.02], { color: "#2a2c30", cast: false });
+}
+
+/** Porta de pavimento, batente e soleira. `open` deixa à vista a cabine parada ali. */
+function landingDoor(b: KitBuilder, x: number, stop: ElevatorStop, open: boolean, index: number) {
+  const { wallFace, front, openingHead, doorHeight } = ELEVATOR_CORE;
+  const z = wallFace - stop.recess;
+  const inner = minZ + 0.02;
+  const halfOpening = stop.opening / 2;
+  const middle = (inner + z) / 2;
+  const reveal = inner - z + 0.04;
+  // Forro do recuo: batente dos dois lados, por baixo da verga e no chão.
+  for (const side of [-1, 1]) b.box([x + side * (halfOpening - 0.015), openingHead / 2, middle + 0.02], [0.05, openingHead, reveal], { color: JAMB, cast: false });
+  b.box([x, openingHead - 0.015, middle + 0.02], [stop.opening, 0.05, reveal], { color: JAMB, cast: false });
+  b.box([x, 0.006, middle + 0.02], [stop.opening, 0.012, reveal], { color: "#7b7f83", cast: false });
+  // Painel acima da porta, com o mostrador aceso de quem chega.
+  b.box([x, (doorHeight + openingHead) / 2, z], [stop.opening, openingHead - doorHeight, 0.05], { color: "#23262a", cast: false });
+  b.box([x + (index - 1) * 0.1, doorHeight + 0.07, z + 0.03], [0.09, 0.07, 0.01], { surface: "glow", color: "#ffcf7a", cast: false });
+  for (const side of [-1, 1]) b.box([x + side * 0.28, doorHeight + 0.07, z + 0.03], [0.06, 0.03, 0.01], { surface: "glow", color: open ? "#8fe0a8" : "#5a4a2c", cast: false });
+  if (open) {
+    // Folhas recolhidas: sobra só a ponta delas, e o chão segue até a cabine.
+    for (const side of [-1, 1]) b.box([x + side * (halfOpening - 0.07), doorHeight / 2, z], [0.09, doorHeight, 0.04], { color: STEEL, cast: false });
+    b.box([x, 0.008, (z + front) / 2], [stop.opening, 0.016, z - front + 0.04], { color: "#7b7f83", cast: false });
+    return;
+  }
+  const leaf = halfOpening - 0.02;
+  for (const side of [-1, 1]) b.box([x + side * (leaf / 2 + 0.005), doorHeight / 2, z], [leaf, doorHeight, 0.04], { color: STEEL });
+  b.box([x, doorHeight / 2, z + 0.022], [0.014, doorHeight, 0.008], { color: "#2c2e31", cast: false });
+}
+
 /**
- * Portas de elevador na parede do fundo. Abrir, chamar e subir não existem: quem muda de andar
- * é o seletor. Quem chama já está no referencial da parede (+Z aponta para dentro).
+ * A caixa dos elevadores, em coordenadas do andar. Abrir, chamar e subir não existem: quem muda
+ * de andar é o seletor. Mas a porta leva a algum lugar: atrás dela há recuo, poço, cabine e
+ * cabos, e a caixa é a mesma em todo andar, para o elevador nunca mudar de lugar na torre.
  */
-export function elevatorBank(b: KitBuilder, xs: readonly number[], { portal = 1.9, panel = true }: { portal?: number; panel?: boolean } = {}) {
-  const y = 2.25;
-  const leaf = (portal - 0.34) / 2;
-  for (const [index, x] of xs.entries()) {
-    b.box([x, y / 2 + 0.06, 0.05], [portal, y + 0.12, 0.08], { color: "#5a5850", cast: false });
-    for (const side of [-1, 1]) b.box([x + side * (leaf / 2 + 0.01), y / 2 + 0.03, 0.1], [leaf, y - 0.04, 0.04], { color: "#a9adb0" });
-    b.box([x, y / 2 + 0.03, 0.122], [0.018, y - 0.04, 0.01], { color: "#3a3d40", cast: false });
-    // Mostrador aceso de cada porta: só dá vida, não diz onde cabine nenhuma está.
-    b.box([x, y + 0.2, 0.09], [0.56, 0.16, 0.04], { color: "#191c20", cast: false });
-    b.box([x + (index - (xs.length - 1) / 2) * 0.14, y + 0.2, 0.115], [0.1, 0.08, 0.01], { surface: "glow", color: "#ffcf7a", cast: false });
-    if (panel) {
-      b.box([x + portal / 2 + 0.18, 1.1, 0.09], [0.13, 0.24, 0.04], { color: "#2a2d31", cast: false });
-      b.box([x + portal / 2 + 0.18, 1.1, 0.115], [0.05, 0.05, 0.01], { surface: "glow", color: "#ffcf7a", cast: false });
+export function elevatorCore(b: KitBuilder, floor: FloorId) {
+  const stop: ElevatorStop = ELEVATOR_STOPS[floor];
+  const { bounds, wallFace, front, back, top, pitch, partition, openingHead } = ELEVATOR_CORE;
+  const width = bounds.maxX - bounds.minX;
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+  // Laje e fundo do poço.
+  b.box([centerX, -0.16, centerZ], [width + 0.2, 0.3, bounds.maxZ - bounds.minZ + 0.2], { color: "#61554a", cast: false });
+  b.box([centerX, -0.012, (front + back) / 2], [width, 0.012, front - back], { color: "#1b1c1f", cast: false });
+  // Paredes de fora: fundo e laterais, com o topo escuro da seção.
+  const span = front - bounds.minZ;
+  const shaftZ = (front + bounds.minZ) / 2;
+  b.box([centerX, top / 2, (back + bounds.minZ) / 2], [width, top, back - bounds.minZ], { color: CORE_WALL });
+  b.box([centerX, top + 0.005, (back + bounds.minZ) / 2], [width + 0.01, 0.015, back - bounds.minZ + 0.01], { color: CORE_CUT, cast: false });
+  b.box([centerX, top / 2, back + 0.012], [width - 0.2, top, 0.02], { color: SHAFT_WALL, cast: false });
+  for (const side of [-1, 1]) {
+    const x = centerX + side * (width / 2 - partition / 2);
+    b.box([x, top / 2, shaftZ], [partition, top, span], { color: CORE_WALL });
+    b.box([x, top + 0.005, shaftZ], [partition + 0.01, 0.015, span + 0.01], { color: CORE_CUT, cast: false });
+  }
+  for (const [index, x] of ELEVATOR_XS.entries()) {
+    if (index > 0) {
+      const wall = x - pitch / 2;
+      b.box([wall, top / 2, shaftZ], [partition, top, span], { color: SHAFT_WALL });
+      b.box([wall, top + 0.005, shaftZ], [partition + 0.01, 0.015, span + 0.01], { color: CORE_CUT, cast: false });
+    }
+    // Frente do poço: maciça em volta da porta, atrás da parede do andar.
+    const depth = wallFace - front;
+    const z = (wallFace + front) / 2;
+    const door = (stop.doors as readonly number[]).includes(index);
+    const halfOpening = door ? stop.opening / 2 : 0;
+    const from = door ? openingHead : 0;
+    b.box([x, (from + top) / 2, z], [pitch, top - from, depth], { color: CORE_WALL });
+    b.box([x, top + 0.005, z], [pitch + 0.01, 0.015, depth + 0.01], { color: CORE_CUT, cast: false });
+    if (door) {
+      const pier = (pitch - stop.opening) / 2;
+      for (const side of [-1, 1]) b.box([x + side * (halfOpening + pier / 2), openingHead / 2, z], [pier, openingHead, depth], { color: CORE_WALL });
+      landingDoor(b, x, stop, stop.openShaft === index, index);
+    }
+    shaftInside(b, x, stop.openShaft === index);
+    if (stop.openShaft === index) elevatorCab(b, x);
+    if (stop.panel && door) {
+      b.box([x + halfOpening + 0.14, 1.1, minZ + 0.04], [0.13, 0.24, 0.04], { color: "#2a2d31", cast: false });
+      b.box([x + halfOpening + 0.14, 1.1, minZ + 0.065], [0.05, 0.05, 0.01], { surface: "glow", color: "#ffcf7a", cast: false });
+    }
+    if (stop.machines) {
+      // Último pavimento: a máquina de tração fica sobre o poço, numa viga de ponta a ponta.
+      const machineZ = (front + back) / 2 - 0.1;
+      b.box([x + 0.42, top + 0.2, machineZ], [0.5, 0.34, 0.5], { color: "#3d4044" });
+      b.cylinder([x - 0.05, top + 0.22, machineZ], 0.2, 0.14, { color: "#6d7176" }, 16);
     }
   }
-  const span = xs.at(-1)! - xs[0]! + portal + (panel ? 0.7 : 0);
-  b.box([(xs[0]! + xs.at(-1)!) / 2, 0.03, 0.7], [span, 0.012, 1.1], { color: "#8d8476", cast: false });
+  if (stop.machines) b.box([centerX, top + 0.01, (front + back) / 2 - 0.1], [width, 0.06, 0.3], { color: "#55585c" });
+  // Faixa de chegada no piso, em frente às portas.
+  const doorsXs = stop.doors.map((index) => ELEVATOR_XS[index]!);
+  const hallWidth = doorsXs.at(-1)! - doorsXs[0]! + stop.opening + (stop.panel ? 0.5 : 0);
+  if (stop.doors.length > 1) b.box([(doorsXs[0]! + doorsXs.at(-1)!) / 2, 0.012, minZ + 0.72], [hallWidth, 0.012, 1.1], { color: "#8d8476", cast: false });
+}
+
+/** Vãos da parede do fundo: a parede abre de verdade, e a porta fica atrás dela. */
+function elevatorOpenings(floor: FloorId): Pick<WallPlan, "doors" | "head"> {
+  const stop: ElevatorStop = ELEVATOR_STOPS[floor];
+  return { doors: stop.doors.map((index) => ({ at: ELEVATOR_XS[index]!, width: stop.opening })), head: ELEVATOR_CORE.openingHead };
 }
 
 function receptionDesk(b: KitBuilder) {
@@ -204,14 +322,14 @@ function doorway(b: KitBuilder) {
 }
 
 /**
- * A porta do elevador no fim do corredor do escritório, só na demonstração: o escritório da
- * frota real é o mesmo de sempre. O corredor mede 1,5 m, e a porta cabe nele sem estreitar.
+ * A caixa dos elevadores no fim do corredor do escritório, só na demonstração: o escritório da
+ * frota real é o mesmo de sempre. A porta mora atrás da ponta do corredor, sem estreitá-lo.
  */
 let operationCore: FloorBuild | null = null;
 export function buildOperationCore(): FloorBuild {
   if (operationCore) return operationCore;
   const b = new KitBuilder();
-  b.at([0, 0, minZ + 0.02], 0, () => elevatorBank(b, [ELEVATOR_CORE_X], { portal: 1.4, panel: false }));
+  elevatorCore(b, "operacao");
   operationCore = { fixed: b.build(), props: b.props, footprints: b.footprints };
   return operationCore;
 }
@@ -284,7 +402,7 @@ function anteroom(b: KitBuilder) {
     b.box([0, 1.5, 0], [2.8, 3.0, 0.04], { ...WOOD, color: "#6e5140" });
     b.box([0, 1.9, 0.03], [2.5, 0.5, 0.02], { color: "#14171d", cast: false });
   });
-  b.at([0, 0, minZ + 0.02], 0, () => elevatorBank(b, ELEVATOR_XS));
+  elevatorCore(b, "diretoria");
   // Banco e jardim baixo a leste: dão fim ao corredor sem parede nem móvel alto.
   b.at([4.35, 0, -5.9], 0, () => {
     b.box([0, 0.26, 0], [3, 0.12, 0.62], { surface: "fabric", color: "#6e7076" });
@@ -351,7 +469,7 @@ export function buildDirectorate(): FloorBuild {
   if (directorate) return directorate;
   const b = new KitBuilder();
   floorSlab(b, "#cfc6b7");
-  backWall(b, "north", { windows: [[-9.6, -5.2]] });
+  backWall(b, "north", { windows: [[-9.6, -5.2]], ...elevatorOpenings("diretoria") });
   backWall(b, "west", { windows: [[0.8, 3.8], [-7.4, -3.4]] });
   frontWall(b, "south");
   frontWall(b, "east");
@@ -368,13 +486,13 @@ export function buildLobby(): FloorBuild {
   if (lobby) return lobby;
   const b = new KitBuilder();
   floorSlab(b);
-  backWall(b, "north", { windows: [[-10.8, -8.4], [9.15, 10.85]] });
+  backWall(b, "north", { windows: [[-10.8, -8.4], [9.15, 10.85]], ...elevatorOpenings("terreo") });
   backWall(b, "west", { windows: [[-7.6, -2.8], [2.6, 7.4]] });
   frontWall(b, "south", [{ at: -ENTRANCE.x, width: 2.5 }]);
   frontWall(b, "east");
   doorway(b);
   receptionDesk(b);
-  b.at([0, 0, minZ + 0.02], 0, () => elevatorBank(b, ELEVATOR_XS));
+  elevatorCore(b, "terreo");
   turnstiles(b);
   lounge(b);
   cafe(b);
