@@ -1,6 +1,7 @@
 import { BoxGeometry, BufferAttribute, Color, ConeGeometry, CylinderGeometry, PlaneGeometry, type BufferGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ENTRANCE, FLOOR_BOUNDS, type OfficeBounds } from "./officeLayout";
+import { ELEVATOR_CORE } from "./officeLobby";
 
 /**
  * A cidade em volta do escritório, só na demonstração: tudo numa malha só, com a cor nos
@@ -249,7 +250,8 @@ export function buildCityGeometry() {
     if (Math.abs(x - ENTRANCE.x) > 2) tree(city, x, 11.15, 0.8);
   }
   for (let z = -10; z <= 9; z += 4.75) tree(city, 14.1, z, 0.8);
-  for (let x = -12; x <= 13; x += 5) tree(city, x, -11.6, 0.8);
+  // A calçada dos fundos cede o lugar da caixa dos elevadores.
+  for (let x = -12; x <= 13; x += 5) if (x < ELEVATOR_CORE.bounds.minX - 1 || x > ELEVATOR_CORE.bounds.maxX + 1) tree(city, x, -11.6, 0.8);
   outerCity(city);
   return city.build();
 }
