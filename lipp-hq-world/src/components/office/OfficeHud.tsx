@@ -136,7 +136,7 @@ function OfflineNotice({ connection }: { connection: OfficeConnection | null }) 
 }
 
 /** Pessoas à parte dos bots: não têm sala nem estado, e são criadas por você. */
-function PeopleList({ matches }: { matches: (text: string) => boolean }) {
+function PeopleList({ matches, onSelect }: { matches: (text: string) => boolean; onSelect: (humanId: string) => void }) {
   const humans = useOfficeStore((state) => state.humans);
   const waiting = useOfficeStore((state) => state.humansWaiting);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
@@ -153,7 +153,7 @@ function PeopleList({ matches }: { matches: (text: string) => boolean }) {
           type="button"
           className={human.id === selectedHumanId ? "office-roster-bot active" : "office-roster-bot"}
           data-person-row={human.id}
-          onClick={() => useOfficeStore.getState().selectHuman(human.id)}
+          onClick={() => onSelect(human.id)}
         >
           <span className="office-agent-avatar" style={{ "--agent-color": human.preset.colors.top } as React.CSSProperties} aria-hidden><PersonStanding size={22} /></span>
           <span className="office-roster-name">{human.name}</span>
@@ -278,7 +278,11 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
           );
         })}
         {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
-        {mode === "demo" && <PeopleList matches={matches} />}
+        {mode === "demo" && <PeopleList matches={matches} onSelect={(humanId) => {
+          // Como na linha de bot: a cena precisa estar à vista para a seleção ter efeito.
+          onView("escritorio");
+          useOfficeStore.getState().selectHuman(humanId);
+        }} />}
       </div>
       <OfficeAccountMenu detail={mode === "demo" ? "Demonstração" : "Frota do Hermes"} />
     </aside>
