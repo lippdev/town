@@ -340,18 +340,19 @@ export function applyTravel(): boolean {
   return true;
 }
 
-const LONGEST_TRAVEL_FRAME = 0.05;
-
 /**
  * Um quadro da viagem. A chegada é o `goal` de agora, refeito a cada quadro: abrir a gaveta ou
- * redimensionar a tela no caminho muda o destino sem salto. Não há cronômetro: sem quadro, nada anda.
+ * redimensionar a tela no caminho muda o destino sem salto. Não há cronômetro: sem quadro, nada
+ * anda — mas o intervalo entre quadros é o tempo real, e não um tanto fixo. Travar cada quadro em
+ * 50 ms esticava uma viagem de meio segundo para dez segundos num aparelho de 1,3 quadros por
+ * segundo, e no celular fraco a troca de andar ficava parada na tela.
  */
 export function stepTravel(delta: number) {
   const runtime = officeRuntime;
   const travel = runtime.travel;
   const flight = travel.flight;
   if (!flight) return;
-  if (flight.started) flight.elapsed += Math.min(delta, LONGEST_TRAVEL_FRAME) * 1000;
+  if (flight.started) flight.elapsed += Math.max(0, delta) * 1000;
   flight.started = true;
   const { plan } = flight;
   if (travel.hold !== null) flight.elapsed = plan.duration * travel.hold;

@@ -561,6 +561,29 @@ describe("navegação entre andares", () => {
     expect(useOfficeStore.getState()).toMatchObject({ traveling: false, mountedFloors: ["terreo"] });
   });
 
+  it("num aparelho lento a viagem dura o mesmo relógio, não o mesmo número de quadros", () => {
+    // 1,3 quadro por segundo é o que um celular fraco entrega no modo Leve.
+    const frames = (delta: number) => {
+      officeRuntime.viewport = { width: 1440, height: 900 };
+      useOfficeStore.setState({ mode: "demo", buildingView: "exterior", framing: "floor" });
+      officeRuntime.view = { x: 9, z: 9, zoom: 20 };
+      useOfficeStore.getState().goToView("diretoria");
+      let count = 0;
+      while (officeRuntime.travel.flight && count < 400) {
+        aimCamera();
+        stepTravel(delta);
+        count += 1;
+      }
+      return { count };
+    };
+    const slow = frames(0.75);
+    // Com o teto de 50 ms por quadro a mesma viagem pedia 14 quadros: dez segundos parada.
+    expect(slow.count).toBeLessThanOrEqual(2);
+    const fast = frames(1 / 60);
+    expect(fast.count).toBeGreaterThan(20);
+    expect(officeRuntime.view).toEqual(floorFit({ width: 1440, height: 900 }));
+  });
+
   it("no meio do caminho, a câmera está entre a saída e a chegada, e a tela mudada no caminho vale", () => {
     officeRuntime.viewport = { width: 1440, height: 900 };
     useOfficeStore.setState({ mode: "demo", buildingView: "operacao", framing: "floor" });
