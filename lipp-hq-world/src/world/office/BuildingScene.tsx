@@ -135,10 +135,11 @@ function Facade() {
  */
 export function BuildingSurroundings() {
   // A rua só vale a pena de perto. A sombra do andar só cai nela com o chão colado.
-  const elevation = useOfficeStore((state) => viewElevation(state.buildingView));
+  // Na viagem os pedestres ficam: sumiriam da calçada à vista logo no primeiro quadro.
+  const elevated = useOfficeStore((state) => !state.traveling && viewElevation(state.buildingView) > STORY);
   return (
     <GroundGroup>
-      <OfficeCity elevated={elevation > STORY} />
+      <OfficeCity elevated={elevated} />
       <Facade />
     </GroundGroup>
   );
