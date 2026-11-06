@@ -39,15 +39,25 @@
         "terminal"
       ]
     },
-    "panelSessions": {
-      "bot": "Pulse",
-      "head": "Sessões recentes 3",
-      "items": [
-        "terminalTriagem de pull requestsagora · 15 msg",
-        "telegramAnalisar falhas de CI16 min · 16 msg",
-        "dashboardResumir releases do dia31 min · 17 msg"
-      ]
+    "chat": {
+      "head": "Triagem de pull requeststerminal · agora · ativa",
+      "bubbles": 3,
+      "tools": 1,
+      "empty": null,
+      "error": null,
+      "firstAuthor": "Você19:33"
     },
+    "drawer": {
+      "name": "Pulse",
+      "tabs": [
+        "Resumo",
+        "Sessões3",
+        "Personagem"
+      ],
+      "sessions": 3,
+      "head": "Sessões recentes 3"
+    },
+    "characterTab": true,
     "diagnostics": {
       "rows": 4,
       "allOk": true,
@@ -58,16 +68,17 @@
         "/api/cron/jobs"
       ],
       "latencies": [
+        "3 ms",
+        "3 ms",
         "4 ms",
-        "3 ms",
-        "3 ms",
         "4 ms"
       ],
       "summary": "tudo respondendo4 de 4 endpoints",
       "config": [
         "ModoHermes (ao vivo)",
-        "APIhttp://127.0.0.1:33979",
-        "Dashboardhttp://127.0.0.1:33063",
+        "APIhttp://127.0.0.1:37139",
+        "Dashboardhttp://127.0.0.1:42289",
+        "Origemvariáveis de ambiente",
         "Credenciaissem chave · sem token",
         "Última leituraagora"
       ]
@@ -86,6 +97,12 @@
       }
     },
     "panelRoutineWarning": "Rotina Briefing semanal falhou 1 h: sessão encerrou sem resposta do modelo (timeout 600s)",
+    "dashboardLink": {
+      "href": "http://127.0.0.1:42289/?profile=argos",
+      "target": "_blank",
+      "rel": "noreferrer noopener",
+      "text": "Abrir no dashboard do Hermes"
+    },
     "demoEventsAfterLive": 0
   },
   "ok": true

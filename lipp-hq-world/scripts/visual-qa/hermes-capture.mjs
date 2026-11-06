@@ -117,18 +117,53 @@ async function main() {
     });
     await page.screenshot({ path: path.join(OUT, "sessions.png") });
 
-    // clicar numa sessão abre o painel do bot dono dela
+    // clicar numa sessão abre a conversa dela na gaveta
     await page.locator(".session-row").first().click();
-    await page.waitForSelector(".panel-sessions", { timeout: 30000 });
-    report.checks.panelSessions = await page.evaluate(() => {
-      const panel = document.querySelector(".drawer");
+    await page.waitForSelector(".drawer .chat", { timeout: 30000 });
+    // a conversa só conta como provada com bolha na tela: "lendo…" também é .chat-empty
+    await page.waitForFunction(
+      () => (document.querySelectorAll(".drawer .chat .chat-msg").length ?? 0) > 0,
+      null,
+      { timeout: 60000 },
+    );
+    report.checks.chat = await page.evaluate(() => {
+      const chat = document.querySelector(".drawer .chat");
+      const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
       return {
-        bot: panel?.querySelector("strong")?.textContent ?? null,
-        head: panel?.querySelector(".panel-sessions-head")?.textContent ?? null,
-        items: Array.from(panel?.querySelectorAll(".panel-sessions li") ?? []).map((item) => (item.textContent ?? "").trim()),
+        head: textOf(chat?.querySelector(".chat-head")),
+        bubbles: chat?.querySelectorAll(".chat-msg").length ?? 0,
+        tools: chat?.querySelectorAll(".chat-tool").length ?? 0,
+        empty: textOf(chat?.querySelector(".chat-empty")),
+        error: textOf(chat?.querySelector(".chat-error")),
+        firstAuthor: textOf(chat?.querySelector(".chat-msg .chat-author")),
+      };
+    });
+    await page.screenshot({ path: path.join(OUT, "session-chat.png") });
+
+    // voltar devolve a gaveta do bot, com as sessões listadas
+    await page.locator(".chat-back").first().click();
+    await page.waitForSelector(".panel-sessions", { timeout: 30000 });
+    report.checks.drawer = await page.evaluate(() => {
+      const drawer = document.querySelector(".drawer");
+      const textOf = (node) => (node ? (node.textContent ?? "").trim() : null);
+      return {
+        name: textOf(drawer?.querySelector("strong")),
+        tabs: Array.from(drawer?.querySelectorAll(".drawer-tab") ?? []).map((tab) => (tab.textContent ?? "").trim()),
+        sessions: drawer?.querySelectorAll(".panel-sessions li").length ?? 0,
+        head: textOf(drawer?.querySelector(".panel-sessions-head")),
       };
     });
     await page.screenshot({ path: path.join(OUT, "bot-panel-sessions.png") });
+
+    // a aba Personagem continua existindo na cena clássica
+    await page.locator(".drawer-tab", { hasText: "Personagem" }).click();
+    await page.waitForSelector(".character-editor", { timeout: 30000 });
+    report.checks.characterTab = await page.evaluate(
+      () => Boolean(document.querySelector(".drawer .character-editor")),
+    );
+    await page.locator(".panel-close").first().click();
+    await page.waitForTimeout(400);
+
     // ---- diagnóstico do gateway: cada endpoint, com latência real ----
     await page.locator(".sidebar-item", { hasText: "Integrações" }).click();
     await page.waitForSelector(".gateway-row", { timeout: 30000 });
@@ -236,7 +271,10 @@ async function main() {
     report.checks.sessions?.sources.length > 1 &&
     (report.checks.sessions?.first?.title ?? "").length > 0 &&
     (report.checks.sessions?.note ?? "").includes("janela de 5 min") &&
-    (report.checks.panelSessions?.items.length ?? 0) > 0 &&
+    report.checks.chat?.bubbles > 0 &&
+    report.checks.drawer?.sessions > 0 &&
+    report.checks.drawer?.tabs.some((tab) => tab.startsWith("Personagem")) &&
+    report.checks.characterTab === true &&
     report.checks.routines?.rows > 0 &&
     report.checks.routines?.failed > 0 &&
     (report.checks.routines?.note ?? "").includes("rotinas") &&
