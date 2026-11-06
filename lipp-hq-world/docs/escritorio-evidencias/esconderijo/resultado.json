@@ -1,0 +1,55 @@
+{
+  "checks": [
+    "antes de achar, nada entrega o segredo: seletor, teclas, fachada, URL e textos",
+    "de mouse: pista, livro abre a estante, passagem desce, porta sobe; Esc também volta",
+    "só de teclado: Tab acha o livro, Enter abre, Enter desce, Tab acha a porta, Enter sobe",
+    "cada easter egg responde de verdade, de mouse e de teclado, e nada fica salvo",
+    "foto de perto: o morcego, o carro e o traje são reconhecíveis",
+    "figurante não vai à barra lateral nem responde: o morcego é cenário como os outros",
+    "viagens rápidas entre segredo, expansões e Diretoria terminam num andar só, sem ninguém a mais",
+    "laje da viagem até o segredo continua alinhada: nenhuma regressão no corte",
+    "movimento reduzido: troca na hora, sem quadro no caminho, e os segredos respondem parados",
+    "a frota real não tem segredo: nem URL, nem botão, nem peça",
+    "se o kit não baixa, a caverna autoral continua de pé e a saída funciona",
+    "celular: enquadra o esconderijo, mostra a saída e tocar no segredo funciona",
+    "30 viagens passando pelo segredo, depois de aquecer 48, sem acúmulo na GPU"
+  ],
+  "before": {
+    "textures": 64,
+    "framebuffers": 17,
+    "geometries": 131
+  },
+  "samples": [
+    {
+      "textures": 64,
+      "framebuffers": 17,
+      "geometries": 131
+    },
+    {
+      "textures": 64,
+      "framebuffers": 17,
+      "geometries": 131
+    },
+    {
+      "textures": 64,
+      "framebuffers": 17,
+      "geometries": 131
+    },
+    {
+      "textures": 64,
+      "framebuffers": 17,
+      "geometries": 131
+    },
+    {
+      "textures": 64,
+      "framebuffers": 17,
+      "geometries": 131
+    }
+  ],
+  "after": {
+    "textures": 64,
+    "framebuffers": 17,
+    "geometries": 131
+  },
+  "errors": []
+}
