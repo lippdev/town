@@ -2,9 +2,9 @@
 
 O andar inteiro, com os bots sentados nos postos usando o modelo aprovado no estúdio.
 
-| Modo | URL | O que mostra |
-| - | - | - |
-| Frota real | `/?escritorio=completo` | Os bots que o Hermes reporta, com ids, nomes e estados dele |
+| Modo         | URL                                       | O que mostra                                                             |
+| ------------ | ----------------------------------------- | ------------------------------------------------------------------------ |
+| Frota real   | `/?escritorio=completo`                   | Os bots que o Hermes reporta, com ids, nomes e estados dele              |
 | Demonstração | `/?escritorio=completo&modo=demonstracao` | Os sete bots de referência, com o rótulo **Demonstração** sempre visível |
 
 O servidor local costuma ficar em `http://127.0.0.1:5198`. O painel clássico (`/`) tem o
@@ -43,14 +43,14 @@ Hermes não tem nada disso: fica no escritório, sem seletor, cidade nem fachada
 **O andar em tela fica sempre em y = 0; é o entorno que desce.** A cidade e os pavimentos abaixo
 do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
 
-- *Por quê:* `worldToScreen`, o raio do clique, `roomAt`, cadeiras, voos e o mapa de sombra são
+- _Por quê:_ `worldToScreen`, o raio do clique, `roomAt`, cadeiras, voos e o mapa de sombra são
   todos escritos para o chão em y = 0. Mover a câmera ou o andar para a altura real obrigaria
   cada um deles a aprender um deslocamento, com risco de divergência entre o que se vê e o que
   se clica.
-- *O custo:* tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
+- _O custo:_ tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
   do grupo por causa do roteiro, e o limite da cidade, que encolhe do lado para onde o chão anda
   na tela (`cityBoundsAt`). A cidade só recebe sombra com o chão colado no andar.
-- *Viagem:* entre 480 e 650 ms, com a cena sempre em tela e no mesmo Canvas. O prédio fica parado
+- _Viagem:_ entre 480 e 650 ms, com a cena sempre em tela e no mesmo Canvas. O prédio fica parado
   e quem anda é o corte (`floorTravel.ts`): sair de um andar é erguer a fachada em volta dele até uma
   laje fechá-lo, passar pela torre e, em cima do andar novo, baixar a fachada com a laje abrindo.
   Assim só um andar fica à mostra por vez, e a troca acontece com a laje fechada: nenhum piso
@@ -142,13 +142,13 @@ Dentro há central de investigação, vitrine do traje, treino e garagem. O vigi
 é figurante, com as regras dos outros: fora de Pessoas, sem clique, sem comando. Tudo é cenário, e as
 telas dizem que os arquivos são cenográficos. Os easter eggs têm efeito real e voltam atrás:
 
-| Onde | Gesto | O que acontece |
-| - | - | - |
-| Terminal | Clique | Troca os três painéis de arquivo |
-| Holofote | Clique | Liga o sinal na parede e, no prédio fechado, no céu da cidade |
-| Carro | Clique | Liga o motor: farol, luz de baixo e uma volta da plataforma |
-| Moeda gigante | Clique | Dá cara ou coroa, alternando; a moeda mostra a face |
-| Relógio da Diretoria | Clique | Vai à meia-noite e acende o livro |
+| Onde                 | Gesto  | O que acontece                                                |
+| -------------------- | ------ | ------------------------------------------------------------- |
+| Terminal             | Clique | Troca os três painéis de arquivo                              |
+| Holofote             | Clique | Liga o sinal na parede e, no prédio fechado, no céu da cidade |
+| Carro                | Clique | Liga o motor: farol, luz de baixo e uma volta da plataforma   |
+| Moeda gigante        | Clique | Dá cara ou coroa, alternando; a moeda mostra a face           |
+| Relógio da Diretoria | Clique | Vai à meia-noite e acende o livro                             |
 
 Com movimento reduzido, nada gira e tudo muda na hora. Não há luz nova na cena: o azul e o âmbar são
 planos somados (`HIDEOUT_GLOWS`), e a noite do andar só reduz a força das luzes de sempre, com a laje
@@ -166,13 +166,13 @@ Operação. O passeio fica na Diretoria; sair do andar no meio dele o devolve à
 
 ## Como usar
 
-| Ação | Como |
-| - | - |
-| Entrar numa sala | Clicar no chão dela, na etiqueta ou na lista |
-| Ver um bot | Clicar na figura, no nome sobre a cabeça ou na lista |
-| Mover e aproximar | Arrastar; roda do mouse ou pinça; botões − e +; setas e teclas + e − |
-| Voltar | Esc fecha a gaveta e, no segundo toque, volta ao andar; **Voltar ao andar**; **Ver o andar inteiro** |
-| Qualidade | Auto, Alta ou Leve, na barra de baixo |
+| Ação              | Como                                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| Entrar numa sala  | Clicar no chão dela, na etiqueta ou na lista                                                         |
+| Ver um bot        | Clicar na figura, no nome sobre a cabeça ou na lista                                                 |
+| Mover e aproximar | Arrastar; roda do mouse ou pinça; botões − e +; setas e teclas + e −                                 |
+| Voltar            | Esc fecha a gaveta e, no segundo toque, volta ao andar; **Voltar ao andar**; **Ver o andar inteiro** |
+| Qualidade         | Auto, Alta ou Leve, na barra de baixo                                                                |
 
 A câmera não gira. O azimute (45°) e a elevação (30°) são os da sala aprovada, e é isso que
 garante que o corte das paredes nunca fique na frente de ninguém.
@@ -183,11 +183,11 @@ São as nove salas de `world/rooms/rooms.ts`, nas mesmas posições relativas, e
 compactas que só valem aqui (`world/office/officeLayout.ts`). O andar mede 22,4 × 18 m, com
 corredores de 1,5 m cruzados em #.
 
-| | Oeste | Centro | Leste |
-| - | - | - | - |
-| Norte | Engenharia (Pulse) | Comando (Forge) | Comunidade (Echo) |
-| Meio | Pesquisa (Scout) | Hall | Produto (Atlas) |
-| Sul | Conteúdo (Ink) | Operações (Argos) | Reuniões |
+|       | Oeste              | Centro            | Leste             |
+| ----- | ------------------ | ----------------- | ----------------- |
+| Norte | Engenharia (Pulse) | Comando (Forge)   | Comunidade (Echo) |
+| Meio  | Pesquisa (Scout)   | Hall              | Produto (Atlas)   |
+| Sul   | Conteúdo (Ink)     | Operações (Argos) | Reuniões          |
 
 - **Paredes:** as do limite do prédio (norte e oeste) ficam inteiras, com janelas. As internas
   do fundo são cortadas a 1,3 m, porque a 30° isso só cobre o corredor atrás delas. As da frente
@@ -227,26 +227,26 @@ Medido no commit `073cdbe` (build de produção), Apple M1 com 8 GB, Chromium 15
 interface, 1728×1000 com deviceScaleFactor 2. Cada linha é a última de três janelas de 5 s, depois
 de 8 s de aquecimento. Dados completos em `docs/escritorio-evidencias/metricas.json`.
 
-| Cena | Qualidade | fps | Quadro p95 | Chamadas | Triângulos |
-| - | - | - | - | - | - |
-| Andar parado, 7 bots | Alta (dpr 1,5) | 60 | 16,8 ms | 73–121 | 472 mil–929 mil |
-| Andar com câmera arrastando | Alta | 60 | 16,7 ms | 74–122 | 472 mil–929 mil |
-| Engenharia em foco | Alta | 60 | 16,7 ms | 70–121 | 555 mil–1,10 mi |
-| Hall em foco | Alta | 60 | 16,7 ms | 70–120 | 555 mil–1,10 mi |
-| Andar parado, 7 bots | Leve (dpr 1) | 60 | 16,8 ms | 73–121 | 381 mil–748 mil |
-| Andar parado, 19 bots | Alta | 60 | 16,7 ms | 166–286 | 553 mil–1,09 mi |
+| Cena                        | Qualidade      | fps | Quadro p95 | Chamadas | Triângulos      |
+| --------------------------- | -------------- | --- | ---------- | -------- | --------------- |
+| Andar parado, 7 bots        | Alta (dpr 1,5) | 60  | 16,8 ms    | 73–121   | 472 mil–929 mil |
+| Andar com câmera arrastando | Alta           | 60  | 16,7 ms    | 74–122   | 472 mil–929 mil |
+| Engenharia em foco          | Alta           | 60  | 16,7 ms    | 70–121   | 555 mil–1,10 mi |
+| Hall em foco                | Alta           | 60  | 16,7 ms    | 70–120   | 555 mil–1,10 mi |
+| Andar parado, 7 bots        | Leve (dpr 1)   | 60  | 16,8 ms    | 73–121   | 381 mil–748 mil |
+| Andar parado, 19 bots       | Alta           | 60  | 16,7 ms    | 166–286  | 553 mil–1,09 mi |
 
 O valor maior de chamadas e triângulos é o quadro que refaz a sombra (1 a cada 20 em Alta, 1 a
 cada 60 em Leve).
 
 Com VSync, 60 fps é o teto da tela e não mostra folga. Sem VSync, na mesma máquina:
 
-| Cena | Qualidade | fps médio | Quadro p50 | Quadro p95 |
-| - | - | - | - | - |
-| Andar parado | Alta | 96 | 9,6 ms | 20,9 ms |
-| Hall em foco | Alta | 76 | 12,0 ms | 30,5 ms |
-| Andar parado | Leve | 176 | 5,2 ms | 12,2 ms |
-| Hall em foco | Leve | 124 | 7,0 ms | 17,2 ms |
+| Cena         | Qualidade | fps médio | Quadro p50 | Quadro p95 |
+| ------------ | --------- | --------- | ---------- | ---------- |
+| Andar parado | Alta      | 96        | 9,6 ms     | 20,9 ms    |
+| Hall em foco | Alta      | 76        | 12,0 ms    | 30,5 ms    |
+| Andar parado | Leve      | 176       | 5,2 ms     | 12,2 ms    |
+| Hall em foco | Leve      | 124       | 7,0 ms     | 17,2 ms    |
 
 **Limites da medição:** um único M1, sem janela visível. Sem VSync, o p95 em Alta passa de 16,7 ms,
 e o provável responsável é o quadro que refaz a sombra; ou seja, em Alta a folga é pequena. Não há
@@ -269,16 +269,16 @@ vídeo descomprimida, então o custo real em GPU é maior que o download.
 
 ## Falhas tratadas
 
-| Situação | O que acontece |
-| - | - |
-| Sem WebGL | Mensagem explicando, sem tela preta |
-| Contexto WebGL perdido | Tela de falha com **Tentar de novo** (código escrito, mas o harness não provoca esse caso) |
-| Falta textura | A interface fica de pé e diz qual arquivo faltou, com **Tentar de novo** |
-| Arquivo que nunca chega | Em 20 s, troca o carregamento por aviso e **Tentar de novo** |
-| Falta `pulse.glb` | Planta e lista seguem, com aviso; nada de figura antiga no lugar |
-| Falta planta ou luminária | A cena segue sem elas, com aviso no console (o harness não provoca esse caso) |
-| Hermes fora | Aviso com demonstração e nova tentativa |
-| Leitura atrasada | Aviso; a última leitura boa continua na tela (coberto só em teste de unidade) |
+| Situação                  | O que acontece                                                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sem WebGL                 | Mensagem explicando, sem tela preta                                                                                                                                                          |
+| Contexto WebGL perdido    | Tela de falha com **Tentar de novo** (código escrito, mas o harness não provoca esse caso)                                                                                                   |
+| Falta textura             | A interface fica de pé e diz qual arquivo faltou, com **Tentar de novo**                                                                                                                     |
+| Arquivo que nunca chega   | O aviso entra quando os downloads **param de avançar** (12 s sem arquivo novo), não por cronômetro; teto duro de 90 s. Durante o carregamento aparece o progresso real ("10 de 72 arquivos") |
+| Falta `pulse.glb`         | Planta e lista seguem, com aviso; nada de figura antiga no lugar                                                                                                                             |
+| Falta planta ou luminária | A cena segue sem elas, com aviso no console (o harness não provoca esse caso)                                                                                                                |
+| Hermes fora               | Aviso com demonstração e nova tentativa                                                                                                                                                      |
+| Leitura atrasada          | Aviso; a última leitura boa continua na tela (coberto só em teste de unidade)                                                                                                                |
 
 ## Reproduzir
 
