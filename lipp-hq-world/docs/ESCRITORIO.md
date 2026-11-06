@@ -71,6 +71,11 @@ vertical, e coroa de três degraus com agulha discreta.
 - **A cidade cresceu para o fundo** (`CITY_BOUNDS`): do alto da torre se vê mais chão, e sem isso o
   limite da cidade cortaria a coroa no enquadramento. O fit exterior prioriza a torre completa,
   inclusive em telas largas e baixas; o limite da cidade só restringe a câmera livre.
+- **A cidade segue a torre** (`cityPlan`): mesmo pavimento de 3,4 m, quarteirões e ruas sem passo
+  fixo, praças escolhidas à mão e massa mais alta atrás da torre, nunca acima do corpo dela. Na frente,
+  `occlusionCap` limita a altura pelo que esconderia o lote na câmera fixa. O entorno colado à torre
+  fica baixo, para dar respiro. Mais longe o detalhe cai e a cor vai para o tom do ar. São 50 mil
+  vértices numa chamada de desenho, contra quase 200 mil da grade anterior; o teste trava em 70 mil.
 
 O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe
