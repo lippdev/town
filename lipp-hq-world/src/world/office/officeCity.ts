@@ -114,12 +114,10 @@ type Lot = { minX: number; maxX: number; minZ: number; maxZ: number };
 
 const WEST_TO = -160;
 
-/** Mistura duas cores: quanto mais longe, mais perto do tom do ar, e a torre salta. */
 function mix(color: string, to: string, amount: number) {
   return `#${new Color(color).lerp(new Color(to), amount).getHexString()}`;
 }
 
-const AIR = "#3d4656";
 /** Tijolo, pedra, areia, concreto e vidro azulado: famílias, não uma cor por prédio ao acaso. */
 const FACADES = ["#7a6256", "#8d8275", "#a79a84", "#6e747e", "#5a6b7c", "#8f7763", "#767066"] as const;
 const ROOFS = ["#4a4d53", "#55565a", "#44494f", "#5c5a56"] as const;
@@ -243,8 +241,7 @@ function building(city: ColorMerge, glow: ColorMerge, lot: Lot, stories: number,
   const distance = Math.hypot((lot.minX + lot.maxX) / 2, (lot.minZ + lot.maxZ) / 2);
   const far = Math.min(1, distance / 170);
   const near = distance < 62;
-  const haze = far * far * 0.62;
-  const paint = (color: string) => mix(color, AIR, haze);
+  const paint = (color: string) => color;
   const body = FACADES[Math.floor(shuffled(seed + 0.11) * FACADES.length)]!;
   const side = paint(body);
   const shade = paint(mix(body, "#20242c", 0.2));
@@ -387,11 +384,10 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
   }
 
   const { buildings, parks, blocks } = cityPlan();
-  const haze = (x: number, z: number) => Math.min(1, Math.hypot(x, z) / 170) ** 2 * 0.62;
   for (const block of blocks) {
     const [fromX, toX] = block.x;
     const [fromZ, toZ] = block.z;
-    city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, mix("#8f8c84", AIR, haze((fromX + toX) / 2, (fromZ + toZ) / 2)));
+    city.flat(fromX, toX, fromZ, toZ, SURFACE.walk, "#8f8c84");
   }
   buildings.forEach((lot, index) => building(city, glow, lot, Math.round(lot.height / STORY), 300 + index * 2.3));
   parks.forEach((park, index) => {
@@ -400,7 +396,7 @@ export function buildCity(): { body: BufferGeometry; lit: BufferGeometry } {
     const x = (fromX + toX) / 2;
     const z = (fromZ + toZ) / 2;
     if (toX - fromX < 3 || toZ - fromZ < 3) return;
-    city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.walk + 0.004, mix(GARDEN, AIR, haze(x, z)));
+    city.flat(fromX + 1, toX - 1, fromZ + 1, toZ - 1, SURFACE.walk + 0.004, GARDEN);
     const near = Math.hypot(x, z) < 70;
     const count = Math.min(near ? 14 : 8, Math.floor(((toX - fromX) * (toZ - fromZ)) / (near ? 28 : 70)));
     for (let item = 0; item < count; item += 1) {

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Group, type Mesh } from "three";
+import { Group, MeshBasicMaterial, MeshStandardMaterial, type Mesh } from "three";
 import { HumanFigure, loadHumanBase, type HumanBase } from "@/avatar/human/HumanFigure";
 import { newPreset, resolveHuman, type HumanPreset } from "@/avatar/human/preset";
 import { HUMAN_SCALE, turnToward } from "./officeHumans";
 import { officeRuntime } from "./officeStore";
+import { withCityHaze } from "./cityHaze";
 import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCity } from "./officeCity";
 
 const TURN_PER_SECOND = 5;
@@ -135,10 +136,19 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
   });
   const reduced = usePrefersReduced();
   const built = useMemo(() => buildCity(), []);
+  const materials = useMemo(
+    () => ({
+      body: withCityHaze(new MeshStandardMaterial({ vertexColors: true, roughness: 0.9 })),
+      lit: withCityHaze(new MeshBasicMaterial({ vertexColors: true })),
+    }),
+    [],
+  );
   useEffect(() => () => {
     built.body.dispose();
     built.lit.dispose();
-  }, [built]);
+    materials.body.dispose();
+    materials.lit.dispose();
+  }, [built, materials]);
   const [base, setBase] = useState<HumanBase | null>(null);
   useEffect(() => {
     let alive = true;
@@ -154,13 +164,9 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
   }, []);
   return (
     <>
-      <mesh ref={city} geometry={built.body} name="cidade">
-        <meshStandardMaterial vertexColors roughness={0.9} />
-      </mesh>
+      <mesh ref={city} geometry={built.body} material={materials.body} name="cidade" />
       {/* As janelas acesas não dependem da luz da cena; a hora do dia ajusta a cor do material. */}
-      <mesh geometry={built.lit} name="cidade-acesa">
-        <meshBasicMaterial vertexColors />
-      </mesh>
+      <mesh geometry={built.lit} material={materials.lit} name="cidade-acesa" />
       {TRAFFIC.map((car) => (
         <TrafficCar key={car.color} car={car} reduced={reduced} />
       ))}

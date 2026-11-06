@@ -12,6 +12,8 @@ export const DAY_START = 6 * 60;
 /** De quanto em quanto tempo a cena relê o relógio. */
 export const CLOCK_POLL_MS = 30_000;
 export const NIGHT_BACKGROUND = "#111828";
+/** Cor do ar à noite: é para onde vai a cidade ao longe. */
+export const NIGHT_AIR = "#1b2436";
 
 const clockFormat = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -75,13 +77,17 @@ export interface SkyLook {
   litWindows: number;
   /** Exposição do mapeamento de tons: o dia é mais claro no todo, sem mexer em cada cor. */
   exposure: number;
+  /** Cor da névoa da cidade: a mesma cidade se dissolve no ar daquela hora. */
+  air: string;
 }
 
 /** A noite é exatamente a cena de antes; o dia é o mesmo escritório com céu claro e sol alto. */
-const NIGHT: SkyLook = { background: NIGHT_BACKGROUND, hemiSky: "#cad9f5", hemiGround: "#5a4131", hemi: 0.55, sun: 3.3, sunColor: "#ffd5a0", fill: 0.8, fillColor: "#bccff2", environment: 0.45, litWindows: 1, exposure: 1 };
-const DAY: SkyLook = { background: "#9ec4ec", hemiSky: "#eef4ff", hemiGround: "#9a8266", hemi: 1.35, sun: 4.6, sunColor: "#fff4e0", fill: 1.1, fillColor: "#e2ecfb", environment: 0.7, litWindows: 0.12, exposure: 1.45 };
+const NIGHT: SkyLook = { background: NIGHT_BACKGROUND, hemiSky: "#cad9f5", hemiGround: "#5a4131", hemi: 0.55, sun: 3.3, sunColor: "#ffd5a0", fill: 0.8, fillColor: "#bccff2", environment: 0.45, litWindows: 1, exposure: 1, air: NIGHT_AIR };
+const DAY: SkyLook = { background: "#9ec4ec", hemiSky: "#eef4ff", hemiGround: "#9a8266", hemi: 1.35, sun: 4.6, sunColor: "#fff4e0", fill: 1.1, fillColor: "#e2ecfb", environment: 0.7, litWindows: 0.12, exposure: 1.45, air: "#8fa5bd" };
 /** O entardecer passa por um céu alaranjado em vez de só misturar azul com azul-escuro. */
 const DUSK_TINT = new Color("#d98a5a");
+/** Ao longe o entardecer é mais apagado que o céu: é ar, não sol. */
+const DUSK_AIR = new Color("#a8705a");
 
 const mixHex = (a: string, b: string, t: number) => "#" + new Color(a).lerp(new Color(b), t).getHexString();
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -92,6 +98,7 @@ export function skyFor(daylight: number): SkyLook {
   const background = new Color(NIGHT.background).lerp(new Color(DAY.background), t);
   // O tom quente aparece no meio da transição e some nas pontas.
   background.lerp(DUSK_TINT, 0.55 * Math.sin(Math.PI * t) ** 2);
+  const air = new Color(NIGHT.air).lerp(new Color(DAY.air), t).lerp(DUSK_AIR, 0.6 * Math.sin(Math.PI * t) ** 2);
   return {
     background: "#" + background.getHexString(),
     hemiSky: mixHex(NIGHT.hemiSky, DAY.hemiSky, t),
@@ -104,5 +111,6 @@ export function skyFor(daylight: number): SkyLook {
     environment: mix(NIGHT.environment, DAY.environment, t),
     litWindows: mix(NIGHT.litWindows, DAY.litWindows, t),
     exposure: mix(NIGHT.exposure, DAY.exposure, t),
+    air: "#" + air.getHexString(),
   };
 }
