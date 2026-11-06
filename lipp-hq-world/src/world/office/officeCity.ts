@@ -315,17 +315,22 @@ interface Lights {
   tone: string;
 }
 
+const DARK_BY_DETAIL = [0.28, 0.52, 0.74] as const;
+
 function lightsFor(seed: number, stories: number, detail: Detail): Lights {
   const tone = LIT_TONES[Math.floor(shuffled(seed + 0.2) * LIT_TONES.length)]!;
   const dark = { floors: [], columns: 0, from: 0, to: 0, tone };
+  // Quanto mais longe, mais prédios apagados: a linha do céu tem pontos de luz, não um painel.
+  const unlit = DARK_BY_DETAIL[detail];
   const roll = shuffled(seed + 0.47);
-  if (roll < 0.28) return dark;
+  if (roll < unlit) return dark;
+  const chance = (roll - unlit) / (1 - unlit);
   const at = (salt: number) => Math.floor(shuffled(seed + salt) * stories);
   // O andar da diretoria de cada um: nos altos, o último pavimento é o que mais fica aceso.
-  if (roll < 0.5 && detail < 2 && stories >= 6) return { ...dark, floors: [stories - 1 - Math.floor(shuffled(seed + 0.53) * 2)] };
-  if (roll < 0.76 && detail < 2) return { ...dark, floors: stories >= 6 && roll > 0.66 ? [at(0.51), at(0.57)] : [at(0.51)] };
+  if (chance < 0.22 && detail < 2 && stories >= 6) return { ...dark, floors: [stories - 1 - Math.floor(shuffled(seed + 0.53) * 2)] };
+  if (chance < 0.66 && detail < 2) return { ...dark, floors: stories >= 6 && chance > 0.5 ? [at(0.51), at(0.57)] : [at(0.51)] };
   const from = at(0.63);
-  return { ...dark, columns: stories >= 6 && roll > 0.9 ? 2 : 1, from, to: from + 2 + Math.floor(shuffled(seed + 0.69) * 4) };
+  return { ...dark, columns: stories >= 6 && chance > 0.86 ? 2 : 1, from, to: from + 2 + Math.floor(shuffled(seed + 0.69) * 4) };
 }
 
 interface FaceSpec {

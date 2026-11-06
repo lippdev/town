@@ -1,4 +1,4 @@
-import { Box3 } from "three";
+import { Box3, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { AZIMUTH, ELEVATION, NO_INSETS, fitView, keepGroundInside, screenToGround, zoomLimits, type Viewport } from "@/world/office/officeCamera";
 import { viewFit } from "@/world/office/officeBuilding";
@@ -7,8 +7,8 @@ import { CITY_BOUNDS, CITY_VIEW, PROTECTED_GROUND, ROADS, buildCity, buildCityGe
 
 /** Aumentar este número é uma decisão: a cidade é uma malha só, mas cada vértice sai toda vez. */
 const CITY_VERTEX_BUDGET = 45_000;
-/** A luz acesa é pouca e agrupada: um andar ou uma coluna, com muitos prédios apagados. */
-const CITY_LIT_VERTEX_BUDGET = 6_000;
+/** Em m² de janela acesa. A cidade anterior tinha 1.516, sorteados um a um: a de agora acende menos. */
+const CITY_LIT_AREA_BUDGET = 1_500;
 
 const SCREENS: Viewport[] = [
   { width: 1440, height: 900 },
@@ -81,9 +81,18 @@ describe("geometria da cidade", () => {
     expect(vertices).toBeLessThan(CITY_VERTEX_BUDGET);
   });
 
-  it("acende pouco: a malha das janelas acesas não vira outra cidade", () => {
+  it("acende menos que a cidade anterior, agrupado em andares e colunas", () => {
     const { body, lit } = buildCity();
-    expect(lit.getAttribute("position").count).toBeLessThan(CITY_LIT_VERTEX_BUDGET);
+    const position = lit.getAttribute("position");
+    const [a, b, c] = [new Vector3(), new Vector3(), new Vector3()];
+    let area = 0;
+    for (let index = 0; index < position.count; index += 3) {
+      a.fromBufferAttribute(position, index);
+      b.fromBufferAttribute(position, index + 1);
+      c.fromBufferAttribute(position, index + 2);
+      area += b.sub(a).cross(c.sub(a)).length() / 2;
+    }
+    expect(area).toBeLessThan(CITY_LIT_AREA_BUDGET);
     body.dispose();
     lit.dispose();
   });
