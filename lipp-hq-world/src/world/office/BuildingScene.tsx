@@ -4,6 +4,8 @@ import { buildFacade, buildingSignTexture } from "./buildingFacade";
 import { OfficeCity } from "./CityScene";
 import { useOfficeStore } from "./officeStore";
 
+const CUT_SINK = 0.05;
+
 /** Pavimento apontado no prédio fechado: uma faixa de luz em volta dele. */
 function LevelBand({ level }: { level: number }) {
   const { minX, maxX, minZ, maxZ } = FACADE_BOUNDS;
@@ -39,12 +41,15 @@ function Facade() {
   const { minX, maxZ, maxX } = FACADE_BOUNDS;
   return (
     <>
-      <mesh geometry={build.body} name="fachada">
-        <meshStandardMaterial vertexColors roughness={0.85} />
-      </mesh>
-      <mesh geometry={build.lit} name="fachada-acesa">
-        <meshBasicMaterial vertexColors />
-      </mesh>
+      {/* No corte, o topo da torre fica dentro da laje: no mesmo plano do piso, os dois piscariam. */}
+      <group position={[0, closed ? 0 : -CUT_SINK, 0]}>
+        <mesh geometry={build.body} name="fachada">
+          <meshStandardMaterial vertexColors roughness={0.85} />
+        </mesh>
+        <mesh geometry={build.lit} name="fachada-acesa">
+          <meshBasicMaterial vertexColors />
+        </mesh>
+      </group>
       {closed && (
         <mesh position={[(minX + maxX) / 2, BUILDING_HEIGHT + 1.5, maxZ + 0.13]} name="placa-do-predio">
           <planeGeometry args={[13.5, 2.25]} />
