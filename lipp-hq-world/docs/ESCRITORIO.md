@@ -60,7 +60,8 @@ vertical, e coroa de três degraus com agulha discreta.
 - **Para um pavimento de fachada virar andar:** entra em `FloorId`, `FLOOR_LEVEL`, `FLOOR_LABEL` e
   `viewRooms`, com a caixa dos elevadores e o interior. A fachada não muda.
 - **A cidade cresceu para o fundo** (`CITY_BOUNDS`): do alto da torre se vê mais chão, e sem isso o
-  limite da cidade cortaria a coroa no enquadramento.
+  limite da cidade cortaria a coroa no enquadramento. O fit exterior prioriza a torre completa,
+  inclusive em telas largas e baixas; o limite da cidade só restringe a câmera livre.
 
 O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe

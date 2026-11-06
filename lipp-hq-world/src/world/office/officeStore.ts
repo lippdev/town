@@ -74,8 +74,8 @@ interface OfficeState {
 }
 
 /** Selecionar quem está em outro andar leva até lá. Na frota real, tudo é o mesmo andar. */
-function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Pick<OfficeState, "buildingView"> | Record<string, never> {
-  return state.mode === "demo" && state.buildingView !== floor ? { buildingView: floor } : {};
+function arrival(state: Pick<OfficeState, "mode" | "buildingView">, floor: FloorId): Partial<OfficeState> {
+  return state.mode === "demo" && state.buildingView !== floor ? { buildingView: floor, hoveredRoomId: null, hoveredBotId: null, hoveredHumanId: null, hoveredLevel: null } : {};
 }
 
 /** Depois de mudar de andar: a câmera já está no lugar e a URL já diz onde se está, sem navegar. */
@@ -234,7 +234,7 @@ export function aimCamera() {
   else if (store.framing === "room" && room) runtime.goal = fitView(room.bounds, runtime.viewport, currentInsets(), { margin: FLOOR_MARGIN });
   // Enquadrando o andar alto, ele manda: no celular, o limite da cidade cortaria a ponta do piso.
   const elevation = viewElevation(store.buildingView);
-  if (store.mode === "demo" && !(store.framing === "floor" && elevation > 0)) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
+  if (store.mode === "demo" && !(store.framing === "floor" && (elevation > 0 || store.buildingView === "exterior"))) runtime.goal = keepGroundInside(runtime.goal, runtime.viewport, cityBoundsAt(CITY_BOUNDS, elevation));
 }
 
 /** Botões + e −: zoom em torno do meio da área livre. */
