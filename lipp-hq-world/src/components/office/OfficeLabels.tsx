@@ -6,7 +6,8 @@ import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, 
 import { expansionFloor } from "@/world/office/officeExpansion";
 import { ENTRANCE, FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
-import { officeRuntime, useOfficeStore } from "@/world/office/officeStore";
+import { secretCaption, secretSpotsOf, useSecretStore } from "@/world/office/officeSecrets";
+import { officeRuntime, triggerSpot, useOfficeStore } from "@/world/office/officeStore";
 
 type Anchor = readonly [number, number, number];
 
@@ -35,6 +36,7 @@ export function OfficeLabels() {
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
   const traveling = useOfficeStore((state) => state.traveling);
   const expansion = expansionFloor(buildingView);
+  const secrets = useSecretStore();
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
   // Chegando, ele ainda não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
   const chiefAway = chiefStatus === "chegando" || chiefStatus === "entrando";
@@ -184,6 +186,21 @@ export function OfficeLabels() {
           {expansion.title} · cenário simulado
         </span>
       )}
+      {mode === "demo" && secretSpotsOf(buildingView).map((spot) => (
+        // De mouse o gesto é na cena; este botão é o caminho do teclado, e só aparece com foco ou apontado.
+        <button
+          key={spot.id}
+          type="button"
+          className={secrets.activeSpot === spot.id ? "office-secret-spot active" : "office-secret-spot"}
+          data-secret-spot={spot.id}
+          aria-label={`${spot.label}: ${secretCaption(spot.id, secrets)}`}
+          ref={place(spot.anchor)}
+          onClick={() => triggerSpot(spot.id)}
+        >
+          <span>{secretCaption(spot.id, secrets)}</span>
+        </button>
+      ))}
+      <span className="office-secret-live" role="status" data-secret-live>{secrets.announcement}</span>
       {buildingView === "exterior" && hoveredFloor && (
         <span className="office-floor-tag" aria-hidden ref={place([FACADE_BOUNDS.maxX, (hoveredLevel! + 0.5) * STORY, FACADE_BOUNDS.maxZ])}>
           {FLOOR_LABEL[hoveredFloor].name}
