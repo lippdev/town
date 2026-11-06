@@ -73,9 +73,59 @@ export interface FloorSignSpec {
 export const ELEVATOR_CORE_X = 4.35;
 export const ELEVATOR_XS = [ELEVATOR_CORE_X - 2.3, ELEVATOR_CORE_X, ELEVATOR_CORE_X + 2.3] as const;
 
+/** Face externa da parede do fundo do prédio: é dali que o núcleo começa, para o norte. */
+const BACK_FACE = minZ - 0.16;
+const SHAFT_PITCH = 2.3;
+
+/**
+ * O núcleo dos elevadores: uma caixa de verdade atrás da parede do fundo, com um poço para cada
+ * porta e a mesma planta em todo andar. Fica fora da laje de propósito: nenhuma sala, posto ou
+ * móvel precisou mudar de lugar para ele caber, e o escritório da frota real segue igual.
+ */
+export const ELEVATOR_CORE = {
+  /** Espaço entre o batente da frente do poço e a parede do fundo dele. */
+  front: BACK_FACE - 0.36,
+  back: BACK_FACE - 2.06,
+  /** Pegada da caixa, com as paredes. */
+  bounds: { minX: ELEVATOR_XS[0] - SHAFT_PITCH / 2, maxX: ELEVATOR_XS[2] + SHAFT_PITCH / 2, minZ: BACK_FACE - 2.22, maxZ: BACK_FACE },
+  wallFace: BACK_FACE,
+  pitch: SHAFT_PITCH,
+  /** Parede entre um poço e outro. */
+  partition: 0.14,
+  /** Até onde a caixa sobe: acima da parede de 3 m, o poço fica à mostra de cima. */
+  top: 3.4,
+  /** Altura do vão na parede e da porta: a 30°, a verga cobre o que estiver recuado atrás dela. */
+  openingHead: 2.65,
+  doorHeight: 2.12,
+  cab: { width: 1.92, depth: 1.5, height: 2.35 },
+} as const;
+
+/** Como cada andar vê o núcleo. A cabine aberta é de um poço diferente em cada andar: são três elevadores. */
+export interface ElevatorStop {
+  /** Índices de `ELEVATOR_XS` que têm porta neste andar. */
+  doors: readonly number[];
+  /** O poço cuja cabine está parada aqui, de porta aberta. */
+  openShaft: number;
+  /** Largura do vão na parede. */
+  opening: number;
+  /** Quanto a porta fica atrás da face externa da parede. */
+  recess: number;
+  panel: boolean;
+  /** Último pavimento: as máquinas ficam em cima do poço. */
+  machines: boolean;
+}
+
+export const ELEVATOR_STOPS = {
+  terreo: { doors: [0, 1, 2], openShaft: 0, opening: 1.75, recess: 0.3, panel: true, machines: false },
+  // O corredor do escritório mede 1,5 m e as paredes das salas invadem um pouco a ponta dele:
+  // com o recuo dos outros andares, a própria parede cobriria a porta nesta câmera.
+  operacao: { doors: [1], openShaft: 1, opening: 1.18, recess: 0.06, panel: false, machines: false },
+  diretoria: { doors: [0, 1, 2], openShaft: 2, opening: 1.75, recess: 0.3, panel: true, machines: true },
+} as const satisfies Record<FloorId, ElevatorStop>;
+
 export const LOBBY_SIGNS: readonly FloorSignSpec[] = [
   { text: "LIPP HQ", at: [RECEPTION.x, 1.75, minZ + 0.2], width: 4.8, height: 0.8 },
-  { text: "ELEVADORES", at: [ELEVATOR_XS[1], 2.72, minZ + 0.14], width: 2.2, height: 0.37 },
+  { text: "ELEVADORES", at: [ELEVATOR_XS[1], 2.83, minZ + 0.05], width: 1.7, height: 0.28 },
 ];
 
 /** Por onde se chega à recepção a partir da porta: faixa livre de móveis. */

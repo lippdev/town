@@ -20,6 +20,7 @@ import {
   type OfficeRoom,
   type OfficeSeat,
 } from "./officeLayout";
+import { ELEVATOR_CORE } from "./officeLobby";
 import { screenUv, signUv } from "./officeTextures";
 import { CHAIR as HUMAN_CHAIR, DESK } from "@/avatar/human/seatFit";
 
@@ -400,7 +401,7 @@ function buildFloor(b: KitBuilder, room: OfficeRoom) {
   else b.box(at, size, { surface: "wood", tile: FLOOR_TILE, color: FLOOR_TINT[room.id] ?? "#ffffff", cast: false });
 }
 
-function buildShell(b: KitBuilder) {
+function buildShell(b: KitBuilder, elevatorOpening: boolean) {
   const { minX, maxX, minZ, maxZ } = FLOOR_BOUNDS;
   const width = maxX - minX;
   const depth = maxZ - minZ;
@@ -417,7 +418,9 @@ function buildShell(b: KitBuilder) {
   for (const corridor of corridorBounds()) {
     const vertical = corridor.minZ === minZ && corridor.maxZ === maxZ;
     if (vertical) {
-      b.box([(corridor.minX + corridor.maxX) / 2, WALL_HEIGHT / 2, minZ - inset], [CORRIDOR + 0.02, WALL_HEIGHT, WALL_THICKNESS], { color: WALL_NORTH });
+      // No prédio, a ponta do corredor leste é a porta do elevador: fica só a verga.
+      const head = elevatorOpening && corridor.minX > 0 ? ELEVATOR_CORE.openingHead : 0;
+      b.box([(corridor.minX + corridor.maxX) / 2, (head + WALL_HEIGHT) / 2, minZ - inset], [CORRIDOR + 0.02, WALL_HEIGHT - head, WALL_THICKNESS], { color: WALL_NORTH });
     } else if (corridor.minX === minX) {
       b.box([minX - inset, WALL_HEIGHT / 2, (corridor.minZ + corridor.maxZ) / 2], [WALL_THICKNESS, WALL_HEIGHT, CORRIDOR + 0.02], { color: WALL_WEST });
     }
@@ -654,9 +657,9 @@ export interface OfficeBuild {
   triangles: { fixed: number; raised: number };
 }
 
-export function buildOffice(): OfficeBuild {
+export function buildOffice({ elevatorOpening = false }: { elevatorOpening?: boolean } = {}): OfficeBuild {
   const b = new KitBuilder();
-  buildShell(b);
+  buildShell(b, elevatorOpening);
   const raised: Record<string, Batch> = {};
   const footprints: Record<string, Footprint[]> = {};
   let raisedTriangles = 0;

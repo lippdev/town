@@ -50,7 +50,14 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
 
 O **térreo** é a porta do prédio: recepção, elevadores, lounge e café, com a rua à vista. A
 atendente é cenário, com etiqueta que diz isso: não está em Pessoas, não clica e não recebe
-comando. Os elevadores também são desenho; quem muda de andar é o seletor.
+comando.
+
+Os **elevadores** continuam desenho: quem muda de andar é o seletor. Mas a porta leva a algum lugar.
+A caixa (`ELEVATOR_CORE`) fica atrás da parede do fundo, fora da laje, com a mesma planta nos três
+andares: recuo, porta, poço com trilhos e contrapeso, e uma cabine parada em cada andar, de um poço
+diferente. Fora da laje para que nenhuma sala, posto ou móvel tivesse de mudar, e o escritório da
+frota real segue idêntico, com a parede inteira. A parede é vazada de verdade, com a verga em
+2,65 m: mais baixa, ela cobriria o topo da porta nesta câmera a 30°.
 
 A **Diretoria** é o último pavimento. O chefe fica na sala de canto, que tem mesa, reunião privada
 e lounge, e é o único ali com gaveta. As duas figuras simuladas são cenário, como a atendente:

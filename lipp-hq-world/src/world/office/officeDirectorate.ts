@@ -79,7 +79,7 @@ const seatedDirector: SceneryHuman = (() => {
 export const DIRECTORATE_SCENERY: readonly SceneryHuman[] = [standingDirector, seatedDirector];
 
 export const DIRECTORATE_SIGNS: readonly FloorSignSpec[] = [
-  { text: "ELEVADORES", at: [4.35, 2.72, minZ + 0.14], width: 2.2, height: 0.37 },
+  { text: "ELEVADORES", at: [4.35, 2.83, minZ + 0.05], width: 1.7, height: 0.28 },
   { text: "DIRETORIA", at: [-0.9, 1.9, minZ + 0.2], width: 2.4, height: 0.4 },
 ];
 

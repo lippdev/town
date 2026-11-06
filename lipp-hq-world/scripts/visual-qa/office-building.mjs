@@ -100,6 +100,29 @@ await check("clicar no pavimento aceso entra no andar; pavimento decorativo não
   assert.equal((await state(page)).buildingView, "operacao");
 });
 
+await check("o elevador tem caixa atrás da porta nos três andares; de perto, para conferir a olho", async () => {
+  // Câmera fixa 45°/30°: o ponto do mundo vira pixel com a mesma conta de `worldToScreen`.
+  const pixel = (view, x, y, z) => {
+    const dx = x - view.x;
+    const dz = z - view.z;
+    return { x: 720 + Math.SQRT1_2 * (dx - dz) * view.zoom, y: 450 - (y * (Math.sqrt(3) / 2) - 0.5 * Math.SQRT1_2 * (dx + dz)) * view.zoom };
+  };
+  for (const floor of FLOORS) {
+    await goTo(page, floor);
+    const { view } = await state(page);
+    const core = pixel(view, 4.35, 2, -10);
+    await page.mouse.move(core.x, core.y);
+    await page.mouse.wheel(0, -840);
+    await settled(page);
+    await page.mouse.move(4, 4);
+    await shot(page, `elevadores-${floor}`);
+    await page.keyboard.press("Escape");
+    await settled(page);
+    assert.equal((await state(page)).buildingView, floor);
+  }
+  await goTo(page, "operacao");
+});
+
 await check("na Operação, os sete bots e as etiquetas das salas estão lá", async () => {
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__.state().rigs.length === 7, null, { timeout: 30000 });
   const tags = await sceneFocusables(page);
