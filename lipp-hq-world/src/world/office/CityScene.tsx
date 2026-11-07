@@ -7,6 +7,7 @@ import { HUMAN_SCALE, turnToward } from "./officeHumans";
 import { officeRuntime } from "./officeStore";
 import { withCityHaze } from "./cityHaze";
 import { CITY_BOUNDS, EAST_WALK_X, FAR_LANE_Z, ROADS, SOUTH_WALK_Z, buildCarGeometry, buildCity } from "./officeCity";
+import { idleSequence } from "./idleQueue";
 
 const TURN_PER_SECOND = 5;
 const LONGEST_FRAME = 0.05;
@@ -150,16 +151,17 @@ export function OfficeCity({ elevated = false }: { elevated?: boolean }) {
     materials.lit.dispose();
   }, [built, materials]);
   const [base, setBase] = useState<HumanBase | null>(null);
+  // Quem passa na calçada é detalhe: o esqueleto pesado vem depois da primeira tela.
   useEffect(() => {
     let alive = true;
-    loadHumanBase().then(
-      (loaded) => {
+    const cancel = idleSequence([
+      () => loadHumanBase().then((loaded) => {
         if (alive) setBase(loaded);
-      },
-      () => undefined,
-    );
+      }),
+    ]);
     return () => {
       alive = false;
+      cancel();
     };
   }, []);
   return (
