@@ -1,5 +1,6 @@
 import { AmbientLight, DirectionalLight, OrthographicCamera, Scene, Vector3, WebGLRenderer, NeutralToneMapping, SRGBColorSpace } from "three";
 import { loadGltf, ROBOT_URL } from "@/avatar/human/humanAssets";
+import { portraitStorage, readPortrait, savePortrait } from "./portraitCache";
 import { sharedCrop, solidBounds, type PixelBounds } from "./portraitFrame";
 import { REACTION_FRAMES, REST_FRAME, YAW_FRAMES, robotReactionFor } from "./robotMotion";
 import { RobotRig } from "./RobotRig";
@@ -82,6 +83,16 @@ function stripImage(frames: readonly HTMLCanvasElement[]): string {
 
 /** Retratos do mesmo GLB da cena. Um renderer temporário para o lote, sem animação. */
 export async function robotPortraits(looks: Record<string, RobotLook>): Promise<Record<string, RobotPortrait>> {
+  const storage = portraitStorage();
+  const result: Record<string, RobotPortrait> = {};
+  const missing: Array<[string, RobotLook]> = [];
+  for (const [id, look] of Object.entries(looks)) {
+    const saved = readPortrait(storage, id, look);
+    if (saved) result[id] = saved;
+    else missing.push([id, look]);
+  }
+  // Tudo guardado: nem o modelo do robô nem um segundo contexto WebGL entram na abertura.
+  if (missing.length === 0) return result;
   const gltf = await loadGltf(ROBOT_URL);
   const renderer = new WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(RENDER_SIZE, RENDER_SIZE);
@@ -97,9 +108,8 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
   fill.position.set(-3, 2, 1);
   scene.add(fill);
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
-  const result: Record<string, RobotPortrait> = {};
   try {
-    for (const [id, look] of Object.entries(looks)) {
+    for (const [id, look] of missing) {
       const rig = new RobotRig(gltf.scene, gltf.animations, { reduced: true });
       try {
         rig.apply(look);
@@ -130,6 +140,7 @@ export async function robotPortraits(looks: Record<string, RobotLook>): Promise<
           still: stripImage([pixelFrame(shots[REST_FRAME]!.canvas, crop, STILL_ART)]),
           sheet: stripImage(shots.map((shot) => pixelFrame(shot.canvas, crop, SPRITE_ART))),
         };
+        savePortrait(storage, id, look, result[id]!);
       } finally {
         scene.remove(rig.root);
         rig.dispose();

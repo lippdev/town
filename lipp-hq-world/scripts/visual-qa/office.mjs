@@ -454,7 +454,7 @@ async function failureSuite(browser, origin, offlineOrigin) {
   });
   await noFigure.context().close();
 
-  const noTexture = await open(browser, origin + DEMO, { routes: (page) => page.route("**/prototipo/wood_floor_diff_1k.jpg", (route) => route.abort()) });
+  const noTexture = await open(browser, origin + DEMO, { routes: (page) => page.route("**/escritorio/texturas/wood_floor_diff.webp", (route) => route.abort()) });
   await check("sem textura do piso: mensagem de falha, nada de carregamento eterno", async () => {
     await noTexture.waitForSelector(".boot-error", { timeout: 25000 });
     assert.equal(await noTexture.getByRole("button", { name: /Tentar de novo|Recarregar/ }).count(), 1);
@@ -462,7 +462,7 @@ async function failureSuite(browser, origin, offlineOrigin) {
   });
   await noTexture.context().close();
 
-  const stalled = await open(browser, origin + DEMO, { routes: (page) => page.route("**/prototipo/wood_floor_arm_1k.jpg", () => {}) });
+  const stalled = await open(browser, origin + DEMO, { routes: (page) => page.route("**/escritorio/texturas/wood_floor_arm.webp", () => {}) });
   await check("arquivo que nunca chega: em 20 s para de dizer que está carregando", async () => {
     await stalled.waitForSelector(".boot-label", { timeout: 15000 });
     await stalled.waitForSelector(".boot-error", { timeout: 26000 });

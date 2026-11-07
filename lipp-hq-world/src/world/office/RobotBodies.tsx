@@ -142,7 +142,8 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const [model, setModel] = useState<{ scene: Object3D; clips: AnimationClip[] } | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const mark = useGroundMark();
-  const wanted = bots.length > 0;
+  // De fora do prédio não há robô à vista: o modelo vem na folga, por `PrepareBuilding`.
+  const wanted = bots.length > 0 && mounted;
 
   useEffect(() => {
     useOfficeStore.getState().setFiguresError(null);

@@ -25,6 +25,17 @@ continuam iguais e não carregam nada desta página.
   rótulo muda com o estado, então "trabalhando" não tem animação própria e `SitDown` não é
   digitação. As telas dos monitores são cenário e não mostram dado de bot.
 
+## Primeiro carregamento
+
+A vista inicial é o prédio fechado, e ela não usa nada de dentro dos andares. Por isso:
+
+- **Texturas, personagens e robô vêm depois**, um arquivo por vez, quando o navegador está folgado (`idleQueue.ts`). Quem abre direto num andar, ou a frota real, espera as texturas como sempre.
+- **As texturas do escritório são WebP de 512 px** em `public/escritorio/texturas/`: 225 KB no lugar de 3,1 MB, sem diferença visível nesta câmera. As de 1k em `public/prototipo/` são do protótipo da Engenharia.
+- **Os retratos da barra lateral ficam guardados no navegador** (`portraitCache.ts`). Mudou como o retrato é desenhado: suba `PORTRAIT_CACHE_VERSION`.
+- **`pnpm demo` serve o build de produção**, que é o que mostra o peso real: em servidor de desenvolvimento são 31 MB de JavaScript em 138 arquivos, contra 477 KB em 17. Para mostrar a alguém, use ele; `pnpm dev` é só para programar.
+
+`pnpm qa:primeiro-load` prova tudo isso.
+
 ## Dia e noite
 
 O céu e as luzes seguem o relógio de Brasília (`America/Sao_Paulo`): noite das 18h às 5h, dia das

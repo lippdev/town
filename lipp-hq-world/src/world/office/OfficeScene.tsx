@@ -1,6 +1,7 @@
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { CITY_AIR, CITY_LIT_MIN } from "./cityHaze";
+import { idleSequence } from "./idleQueue";
 import { shouldStall } from "./loadWatch";
 import { useLoadProgress } from "./useLoadProgress";
 import { CLOCK_POLL_MS, NIGHT_BACKGROUND, currentMinutes, daylightAt, skyFor } from "./dayCycle";
@@ -82,9 +83,10 @@ function useReducedMotion() {
   return useRef(window.matchMedia("(prefers-reduced-motion: reduce)").matches).current;
 }
 
+/** 512 px em WebP: nesta câmera a textura nunca chega perto do tamanho de 1k, e a abertura cai de 3 MB para 225 KB. */
 function pbrSet(name: string, withColor: boolean) {
-  const urls = [`/prototipo/${name}_nor_gl_1k.jpg`, `/prototipo/${name}_arm_1k.jpg`];
-  return withColor ? [`/prototipo/${name}_diff_1k.jpg`, ...urls] : urls;
+  const urls = [`/escritorio/texturas/${name}_nor_gl.webp`, `/escritorio/texturas/${name}_arm.webp`];
+  return withColor ? [`/escritorio/texturas/${name}_diff.webp`, ...urls] : urls;
 }
 
 const ALL_TEXTURES = [...pbrSet("wood_floor", true), ...pbrSet("floor_tiles_04", true), ...pbrSet("fabric_pattern_07", false)];
@@ -96,7 +98,7 @@ function useOfficeMaterials(): Record<SurfaceKey, Material> {
     const prepared = textures.map((texture, index) => {
       texture.wrapS = texture.wrapT = RepeatWrapping;
       texture.anisotropy = 4;
-      if (ALL_TEXTURES[index]!.includes("_diff_")) texture.colorSpace = SRGBColorSpace;
+      if (ALL_TEXTURES[index]!.includes("_diff")) texture.colorSpace = SRGBColorSpace;
       texture.needsUpdate = true;
       return texture;
     });
@@ -120,6 +122,9 @@ function useOfficeMaterials(): Record<SurfaceKey, Material> {
     },
     [materials],
   );
+  // Sobe as texturas para a GPU sem pressa: senão a primeira entrada num andar paga tudo de uma vez.
+  const gl = useThree((state) => state.gl);
+  useEffect(() => idleSequence(textures.map((texture) => () => gl.initTexture(texture))), [gl, textures]);
   return materials;
 }
 
@@ -474,15 +479,21 @@ function HideGround({ hidden }: { hidden: boolean }) {
  * monta a mobília. Andar fora de tela continua desmontado; só os arquivos e as malhas ficam à mão.
  */
 function PrepareBuilding() {
+  const ready = useOfficeStore((state) => state.load === "ready");
   useEffect(() => {
-    buildLobby();
-    buildDirectorate();
-    buildOperationCore();
-    void loadGltf(ROBOT_URL).catch(() => undefined);
-    void loadHumanBase().catch(() => undefined);
-    const presets = [...useOfficeStore.getState().humans.map((human) => human.preset), ...LOBBY_SCENERY.map((person) => person.preset), ...DIRECTORATE_SCENERY.map((person) => person.preset), ...EXPANSION_FLOORS.flatMap((floor) => expansionScenery(floor.id).map((person) => person.preset)), ...HIDEOUT_SCENERY.map((person) => person.preset)];
-    for (const preset of presets) for (const part of resolveHuman(preset).parts) void loadPart(part.file).catch(() => undefined);
-  }, []);
+    if (!ready) return;
+    const { humans } = useOfficeStore.getState();
+    const scenery = [...LOBBY_SCENERY, ...DIRECTORATE_SCENERY, ...EXPANSION_FLOORS.flatMap((floor) => expansionScenery(floor.id)), ...HIDEOUT_SCENERY];
+    const parts = [...humans.map((human) => human.preset), ...scenery.map((person) => person.preset)].flatMap((preset) => resolveHuman(preset).parts.map((part) => part.file));
+    return idleSequence([
+      () => loadGltf(ROBOT_URL),
+      () => loadHumanBase(),
+      buildOperationCore,
+      buildLobby,
+      buildDirectorate,
+      ...[...new Set(parts)].map((file) => () => loadPart(file)),
+    ]);
+  }, [ready]);
   return null;
 }
 
@@ -547,7 +558,7 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
 }
 
 /** Materiais ficam; o andar é o único pedaço do prédio com móveis, e só ele está montado. */
-function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
+function FloorsWorld({ quality }: { quality: GraphicsQuality }) {
   const materials = useOfficeMaterials();
   const mounted = useOfficeStore((state) => state.mountedFloors);
   const shown = useOfficeStore((state) => state.shownFloor);
@@ -594,9 +605,26 @@ function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
   );
 }
 
+/**
+ * A vista inicial é o prédio fechado, sem nenhum móvel: as texturas dos andares vêm depois, na folga.
+ * Quem abre direto num andar, ou a frota real, espera por elas como sempre. Depois de montados, os
+ * materiais ficam, inclusive ao voltar para fora.
+ */
+function OfficeWorld({ quality }: { quality: GraphicsQuality }) {
+  const inside = useOfficeStore((state) => state.mountedFloors.length > 0);
+  const [warm, setWarm] = useState(false);
+  const [started, setStarted] = useState(inside);
+  if (!started && (inside || warm)) setStarted(true);
+  useEffect(() => {
+    if (started) return;
+    return idleSequence([() => setWarm(true)]);
+  }, [started]);
+  return started ? <FloorsWorld quality={quality} /> : <SceneReady />;
+}
+
 /** Sem os materiais não há andar: a interface segue de pé e explica o que faltou. */
 function reportWorldFailure(message: string) {
-  const file = /\/prototipo\/[^\s:]+/.exec(message)?.[0];
+  const file = /\/(?:prototipo|escritorio)\/[^\s:]+/.exec(message)?.[0];
   useOfficeStore.getState().setLoad("failed", file ? `Não consegui baixar ${file}.` : message);
 }
 
