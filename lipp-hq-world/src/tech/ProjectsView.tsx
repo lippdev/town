@@ -77,8 +77,8 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
         <div className="tv-detail">
           {node.blocked && (
             <p className="tv-blocked">
-              Travada desde {whenLabel(node.blocked.since, state.at)}: {node.blocked.reason}
-              {node.blocked.waitingOn ? `, esperando ${node.blocked.waitingOn.name}` : ""}.
+              Travada desde {whenLabel(node.blocked.since, state.at)}
+              {node.blocked.waitingOn ? `, esperando ${node.blocked.waitingOn.name}` : ""}: {node.blocked.reason}
             </p>
           )}
           <h4>Critérios de aceite</h4>
