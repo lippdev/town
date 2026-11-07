@@ -1,6 +1,7 @@
 import { newPreset, type HumanPreset } from "@/avatar/human/preset";
 import { FLOOR_BOUNDS, type OfficeBounds, type OfficeSeat } from "./officeLayout";
 import { zone, type BuildingRoom, type SceneryHuman } from "./officeLobby";
+import { OFFICE_SCENARIO } from "./officeRoute";
 
 /**
  * Os andares reservados para as próximas equipes, só na demonstração. Tudo aqui é dado: para uma
@@ -16,8 +17,8 @@ export type ExpansionPiece =
   | { kind: "floor"; bounds: OfficeBounds; color: string }
   /** Divisória baixa, com vãos medidos no eixo dela. */
   | { kind: "partition"; axis: "x" | "z"; at: number; from: number; to: number; height?: number; doors?: ReadonlyArray<{ at: number; width: number }> }
-  /** Mesa comprida com cadeiras dos dois lados, ao longo de x. */
-  | { kind: "island"; x: number; z: number; width: number; depth: number; seats: readonly number[]; color?: string }
+  /** Mesa comprida com cadeiras dos dois lados, ao longo de x. `bare` não põe laptop em quem senta. */
+  | { kind: "island"; x: number; z: number; width: number; depth: number; seats: readonly number[]; color?: string; bare?: boolean }
   /** Mesa redonda com quatro cadeiras. */
   | { kind: "round"; x: number; z: number; radius: number; color?: string }
   /** Posto individual: mesa e cadeira, olhando para +z (yaw 0) ou girado. */
@@ -40,6 +41,17 @@ export interface ExpansionZoneSpec {
   name: string;
   color: string;
   bounds: OfficeBounds;
+  /** O que a sala é, quando não é a frase dos andares reservados. */
+  purpose?: string;
+}
+
+/** Cadeira que alguém pode ocupar, sem figurante: a mobília não a desenha, `HumanChairs` desenha. */
+export interface ExpansionSeat {
+  key: string;
+  zone: string;
+  x: number;
+  z: number;
+  yaw: number;
 }
 
 /**
@@ -72,6 +84,13 @@ export interface ExpansionFloor {
   zones: readonly ExpansionZoneSpec[];
   pieces: readonly ExpansionPiece[];
   figures: readonly ExpansionFigure[];
+  /** Cadeiras ocupáveis por quem não é figurante: o squad de um cenário. */
+  seats?: readonly ExpansionSeat[];
+  /**
+   * Andar ocupado por uma equipe de cenário: entra no seletor com nome próprio, fora da linha da
+   * Expansão, e a etiqueta diz o que ele é.
+   */
+  team?: { tag: string };
 }
 
 const { minX, maxX, minZ, maxZ } = FLOOR_BOUNDS;
@@ -242,17 +261,78 @@ const FLOORS: readonly ExpansionFloor[] = [
   },
 ];
 
-export const EXPANSION_FLOORS = FLOORS;
+/** Os quatro lugares da mesa de cada ilha do squad, a partir do meio dela. */
+const TECH_DESK_OFFSETS = [-2.1, -0.7, 0.7, 2.1] as const;
+/** As duas ilhas do squad e a mesa da sala de reunião. */
+export const TECH_ISLANDS = { a: { x: -5.6, z: -3.4 }, b: { x: -5.6, z: 1.6 } } as const;
+export const TECH_MEETING_TABLE = { x: 6.8, z: 5.8, width: 5.2, offsets: [-1.95, -0.65, 0.65, 1.95] } as const;
+/** Do meio da mesa até o eixo da cadeira, nos dois lados: o mesmo das ilhas das expansões. */
+const SEAT_REACH = 0.93;
+const TECH_PURPOSE = "Simulação: squad fictício, sem dado real de ninguém.";
+
+/**
+ * O andar da Tecnologia, que toma o lugar da expansão 2 no cenário de tecnologia. Planta própria:
+ * o quadro dos épicos na parede do fundo, duas ilhas com as mesas do squad, a sala de reunião com
+ * oito lugares e o canto do huddle. Ninguém é figurante: quem senta aqui é o squad simulado.
+ */
+const TECH_FLOOR: ExpansionFloor = {
+  id: "expansao-2",
+  level: 2,
+  title: "Tecnologia",
+  slab: "#d6cfc2",
+  openShaft: 0,
+  // O fundo norte fica sem janela onde está o quadro dos épicos.
+  northWindows: [],
+  westWindows: [[-7.4, -3.4], [3.4, 7.4]],
+  team: { tag: "simulação" },
+  zones: [
+    hall("#9fb3c8"),
+    { key: "fluxo", name: "Fluxo dos épicos", color: "#c9a66b", bounds: { minX, maxX: 0.6, minZ, maxZ: -6.3 }, purpose: "Discovery à esquerda, delivery à direita. Cada épico é um cartão na cor da saúde dele. Simulação." },
+    { key: "squad", name: "Mesas do squad", color: "#8fa8c9", bounds: { minX, maxX: 0.6, minZ: -6.3, maxZ: 4.2 }, purpose: TECH_PURPOSE },
+    { key: "huddle", name: "Canto do huddle", color: "#7f9f83", bounds: { minX: 5.4, maxX, minZ: -5.6, maxZ: 2.4 }, purpose: "Quem entra num huddle do Slack vem para cá. Só se sabe quem entrou e saiu, nunca o que se falou." },
+    { key: "sala", name: "Sala de reunião", color: "#7f8fa8", bounds: { minX: 2.4, maxX, minZ: 2.6, maxZ }, purpose: "Reunião presencial na agenda do Outlook traz a pessoa para cá. Simulação." },
+    { key: "apoio", name: "Apoio", color: SUPPORT_COLOR, bounds: { minX, maxX: 2.2, minZ: 4.4, maxZ }, purpose: TECH_PURPOSE },
+  ],
+  pieces: [
+    { kind: "floor", bounds: { minX, maxX: 2.2, minZ: -6.3, maxZ: 4.2 }, color: "#b08a64" },
+    { kind: "floor", bounds: { minX, maxX: 0.6, minZ, maxZ: -6.3 }, color: "#c7b49c" },
+    { kind: "floor", bounds: { minX: 2.4, maxX, minZ: 2.6, maxZ }, color: "#b6a593" },
+    { kind: "partition", axis: "z", at: 2.4, from: 2.6, to: maxZ },
+    { kind: "partition", axis: "x", at: 2.6, from: 2.4, to: maxX, doors: [{ at: 4.35, width: 1.5 }] },
+    { kind: "island", x: TECH_ISLANDS.a.x, z: TECH_ISLANDS.a.z, width: 5.6, depth: 1.2, seats: TECH_DESK_OFFSETS },
+    { kind: "island", x: TECH_ISLANDS.b.x, z: TECH_ISLANDS.b.z, width: 5.6, depth: 1.2, seats: TECH_DESK_OFFSETS },
+    { kind: "island", x: TECH_MEETING_TABLE.x, z: TECH_MEETING_TABLE.z, width: TECH_MEETING_TABLE.width, depth: 1.2, seats: TECH_MEETING_TABLE.offsets, color: "#6d5240", bare: true },
+    { kind: "lounge", x: 8.6, z: -4.2, pillow: "#8fb3a3", armchairs: [], rug: "#7b7671" },
+    { kind: "cabinet", x: -10.7, z: 6.6, width: 3.4, yaw: quarterTurn },
+    { kind: "plant", x: 1.6, z: 8.2, width: 0.9 },
+    { kind: "plant", x: 10.5, z: 1.6, width: 0.85 },
+    { kind: "plant", x: -10.4, z: -5.8, width: 0.9 },
+  ],
+  figures: [],
+  seats: [
+    ...[TECH_ISLANDS.a, TECH_ISLANDS.b].flatMap((island, row) => TECH_DESK_OFFSETS.map((offset, index) => ({ key: `mesa-${row * 4 + index + 1}`, zone: "squad", x: island.x + offset, z: island.z - SEAT_REACH, yaw: 0 }))),
+    // Primeiro os quatro de frente para a câmera; depois os de costas.
+    ...TECH_MEETING_TABLE.offsets.map((offset, index) => ({ key: `sala-${index + 1}`, zone: "sala", x: TECH_MEETING_TABLE.x + offset, z: TECH_MEETING_TABLE.z - SEAT_REACH, yaw: 0 })),
+    ...TECH_MEETING_TABLE.offsets.map((offset, index) => ({ key: `sala-${index + 5}`, zone: "sala", x: TECH_MEETING_TABLE.x + offset, z: TECH_MEETING_TABLE.z + SEAT_REACH, yaw: Math.PI })),
+  ],
+};
+
+/** No cenário de tecnologia, o andar 2 é o do squad; sem cenário, a tabela é a de sempre. */
+export const EXPANSION_FLOORS: readonly ExpansionFloor[] = OFFICE_SCENARIO === "tecnologia" ? [TECH_FLOOR, ...FLOORS.slice(1)] : FLOORS;
+export { TECH_FLOOR };
 
 export function expansionFloor(id: string): ExpansionFloor | undefined {
-  return FLOORS.find((floor) => floor.id === id);
+  return EXPANSION_FLOORS.find((floor) => floor.id === id);
 }
+
+/** Andar reservado de verdade: sem equipe, nem de cenário. É o que entra na linha da Expansão. */
+export const isReservedFloor = (floor: ExpansionFloor) => !floor.team;
 
 const PURPOSE = "Espaço reservado para uma equipe futura. As figuras são cenário: sem equipe, sessão nem atividade real.";
 
 /** As zonas viram salas com o id do andar na frente: `expansao-3-apoio`, sem repetição no prédio. */
 export function expansionRooms(floor: ExpansionFloor): BuildingRoom[] {
-  return floor.zones.map((spec) => zone(`${floor.id}-${spec.key}`, spec.name, spec.color, PURPOSE, spec.bounds));
+  return floor.zones.map((spec) => zone(`${floor.id}-${spec.key}`, spec.name, spec.color, spec.purpose ?? PURPOSE, spec.bounds));
 }
 
 const FIGURE_DATE = "2026-11-06T00:00:00.000Z";
@@ -261,7 +341,8 @@ const figureSeat = (floor: ExpansionFloor, figure: ExpansionFigure): OfficeSeat 
 
 /** As cadeiras em que alguém senta: a mobília não desenha a fixa, e `HumanChairs` desenha esta. */
 export function expansionSeats(floor: ExpansionFloor): OfficeSeat[] {
-  return floor.figures.filter((figure) => figure.seated).map((figure) => figureSeat(floor, figure));
+  const extra = (floor.seats ?? []).map((seat): OfficeSeat => ({ id: `${floor.id}-${seat.key}`, roomId: `${floor.id}-${seat.zone}`, kind: "reuniao", x: seat.x, z: seat.z, yaw: seat.yaw }));
+  return [...floor.figures.filter((figure) => figure.seated).map((figure) => figureSeat(floor, figure)), ...extra];
 }
 
 function figureHuman(floor: ExpansionFloor, figure: ExpansionFigure): SceneryHuman {
@@ -279,7 +360,7 @@ function figureHuman(floor: ExpansionFloor, figure: ExpansionFigure): SceneryHum
   };
 }
 
-const FIGURES = Object.fromEntries(FLOORS.map((floor) => [floor.id, floor.figures.map((figure) => figureHuman(floor, figure))])) as Record<ExpansionFloorId, SceneryHuman[]>;
+const FIGURES = Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, floor.figures.map((figure) => figureHuman(floor, figure))])) as Record<ExpansionFloorId, SceneryHuman[]>;
 
 /** Figurantes de um andar: uma lista só por página, para a cena não refazer ninguém a cada leitura. */
 export function expansionScenery(id: ExpansionFloorId): readonly SceneryHuman[] {

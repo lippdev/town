@@ -576,9 +576,12 @@ function expansionPiece(b: KitBuilder, piece: ExpansionPiece, taken: TakenSeat) 
         deskTop(b, 0, 0, piece.width, piece.depth);
         for (const [index, offset] of piece.seats.entries()) {
           const north = -piece.depth / 2 - DESK_REACH;
-          if (taken(piece.x + offset, piece.z + north)) laptop(b, offset, -piece.depth / 2 + 0.28, index);
-          else b.at([offset, 0, north], FACING.south, () => chair(b, piece.color ?? CHAIR_TONE));
-          b.at([offset, 0, piece.depth / 2 + DESK_REACH], FACING.north, () => chair(b, piece.color ?? CHAIR_TONE));
+          const south = piece.depth / 2 + DESK_REACH;
+          if (taken(piece.x + offset, piece.z + north)) {
+            if (!piece.bare) laptop(b, offset, -piece.depth / 2 + 0.28, index);
+          } else b.at([offset, 0, north], FACING.south, () => chair(b, piece.color ?? CHAIR_TONE));
+          // Do lado de trás, só a sala de reunião do cenário tem cadeira ocupável.
+          if (!taken(piece.x + offset, piece.z + south)) b.at([offset, 0, south], FACING.north, () => chair(b, piece.color ?? CHAIR_TONE));
         }
       });
       break;
@@ -642,13 +645,14 @@ function expansionPiece(b: KitBuilder, piece: ExpansionPiece, taken: TakenSeat) 
   }
 }
 
-const expansions = new Map<string, FloorBuild>();
+const expansions = new Map<ExpansionFloor, FloorBuild>();
 
 /** Um andar reservado: laje, paredes e núcleo iguais, a planta vem da tabela. Só monta quando alguém vai até lá. */
-export function buildExpansion(id: string): FloorBuild {
-  const cached = expansions.get(id);
+/** Por id, o andar da tabela em uso; o teste passa o andar em si, para montar a Tecnologia sem o cenário. */
+export function buildExpansion(which: string | ExpansionFloor): FloorBuild {
+  const floor: ExpansionFloor = typeof which === "string" ? expansionFloor(which)! : which;
+  const cached = expansions.get(floor);
   if (cached) return cached;
-  const floor: ExpansionFloor = expansionFloor(id)!;
   const stop = expansionStop(floor.openShaft);
   const b = new KitBuilder();
   floorSlab(b, floor.slab);
@@ -665,7 +669,7 @@ export function buildExpansion(id: string): FloorBuild {
   const { minX: fromX, maxX: toX, minZ: fromZ, maxZ: toZ } = EXPANSION_CORRIDOR;
   b.box([(fromX + toX) / 2, 0.008, (fromZ + toZ) / 2], [toX - fromX, 0.012, toZ - fromZ], { surface: "fabric", color: "#6b6764", cast: false });
   const build = { fixed: b.build(), props: b.props, footprints: b.footprints };
-  expansions.set(id, build);
+  expansions.set(floor, build);
   return build;
 }
 

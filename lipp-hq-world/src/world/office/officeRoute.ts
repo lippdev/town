@@ -15,6 +15,23 @@ export function parseOfficeRoute(search: string): OfficeMode | null {
 export const OFFICE_LIVE_URL = `/?${OFFICE_QUERY}=completo`;
 export const OFFICE_DEMO_URL = `${OFFICE_LIVE_URL}&${DEMO_QUERY}=demonstracao`;
 
+/** Cenários a mais da demonstração. Sem `cenario`, a demonstração é a de sempre. */
+export type OfficeScenario = "tecnologia";
+const SCENARIO_QUERY = "cenario";
+
+/** Só vale na demonstração: a frota real nunca recebe cenário simulado. */
+export function parseScenario(search: string): OfficeScenario | null {
+  if (parseOfficeRoute(search) !== "demo") return null;
+  return new URLSearchParams(search).get(SCENARIO_QUERY) === "tecnologia" ? "tecnologia" : null;
+}
+
+/**
+ * Lido uma vez, ao carregar: o cenário troca a tabela dos andares, e a tabela é montada na
+ * importação. Trocar de cenário é trocar de página.
+ */
+export const OFFICE_SCENARIO: OfficeScenario | null = typeof window === "undefined" ? null : parseScenario(window.location.search);
+export const OFFICE_TECH_URL = `${OFFICE_DEMO_URL}&${SCENARIO_QUERY}=tecnologia`;
+
 export type OfficeConnection =
   | { kind: "connecting" }
   /** Hermes fora: nenhuma frota lida. A cena fica sem corpos e oferece a demonstração. */

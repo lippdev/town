@@ -149,7 +149,7 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {humans.filter((human) => human.floor === buildingView && !(human.id === CHIEF_ID && chiefAway)).map((human) => {
+      {humans.filter((human) => human.floor === buildingView && !human.squad && !(human.id === CHIEF_ID && chiefAway)).map((human) => {
         const active = human.id === selectedHumanId || human.id === hoveredHumanId;
         return (
           <button
@@ -159,7 +159,7 @@ export function OfficeLabels() {
               if (node) liveNodes.current.set(human.id, node);
               else liveNodes.current.delete(human.id);
             }}
-            className={["office-bot-tag", "office-human-tag", active ? "active" : "", humans.length > 2 ? "extra" : "", focusedRoomId && focusedRoomId !== human.roomId ? "elsewhere" : ""].filter(Boolean).join(" ")}
+            className={["office-bot-tag", "office-human-tag", active ? "active" : "", humans.filter((other) => !other.squad).length > 2 ? "extra" : "", focusedRoomId && focusedRoomId !== human.roomId ? "elsewhere" : ""].filter(Boolean).join(" ")}
             style={{ "--tag-color": "#94a3b8" } as React.CSSProperties}
             data-human={human.id}
             aria-label={`${human.name}, pessoa`}
@@ -183,7 +183,7 @@ export function OfficeLabels() {
       ))}
       {expansion && !focusedRoomId && (
         <span className="office-scenery-tag office-expansion-tag" data-floor-title={expansion.id} ref={place([-0.2, 3.25, FLOOR_NORTH])}>
-          {expansion.title} · cenário simulado
+          {expansion.title} · {expansion.team?.tag ?? "cenário simulado"}
         </span>
       )}
       {mode === "demo" && secretSpotsOf(buildingView).map((spot) => (

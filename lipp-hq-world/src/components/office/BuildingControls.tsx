@@ -1,10 +1,14 @@
 import { Building2, CornerLeftUp, Moon } from "lucide-react";
 import { FLOOR_LABEL, FLOOR_LEVEL, FLOOR_ORDER, HIDEOUT, type BuildingView } from "@/world/office/officeBuilding";
-import { EXPANSION_FLOORS, expansionFloor } from "@/world/office/officeExpansion";
+import { EXPANSION_FLOORS, expansionFloor, isReservedFloor } from "@/world/office/officeExpansion";
 import { useSecretStore } from "@/world/office/officeSecrets";
 import { useOfficeStore } from "@/world/office/officeStore";
 
-const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => !expansionFloor(floor));
+/** Andar de equipe de cenário (a Tecnologia) entra como andar próprio; só os reservados dividem a linha. */
+const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => {
+  const expansion = expansionFloor(floor);
+  return !expansion || !isReservedFloor(expansion);
+});
 
 /**
  * O seletor de andares, como um painel de elevador. Discreto e só na demonstração: a frota
@@ -14,7 +18,7 @@ const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => !expansionFloor(floor));
 export function FloorSelector() {
   const view = useOfficeStore((state) => state.buildingView);
   const go = (next: BuildingView) => useOfficeStore.getState().goToView(next);
-  const expansions = [...EXPANSION_FLOORS].sort((a, b) => b.level - a.level);
+  const expansions = EXPANSION_FLOORS.filter(isReservedFloor).sort((a, b) => b.level - a.level);
   // O esconderijo só entra no painel depois de achado, e o painel esquece com a página.
   const found = useSecretStore((state) => state.found);
   const hidden = view === HIDEOUT;
