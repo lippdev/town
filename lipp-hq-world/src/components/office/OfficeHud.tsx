@@ -1,7 +1,7 @@
 import { useLayoutEffect, useEffect, useRef, useState } from "react";
-import { useProgress } from "@react-three/drei";
 import { ChevronDown, House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { buildRosterSections } from "@/agents/organization";
+import { useLoadProgress } from "@/world/office/useLoadProgress";
 import { lookFor } from "@/avatar/robot/robotLook";
 import { robotPortraits } from "@/avatar/robot/robotPortraits";
 import { stateLabel } from "@/components/hud/fleetView";
@@ -532,8 +532,7 @@ function LoadOverlay() {
   const figuresError = useOfficeStore((state) => state.figuresError);
   const humansError = useOfficeStore((state) => state.humansError);
   // progresso real dos arquivos (glTF e texturas), não um cronômetro
-  const loaded = useProgress((state) => state.loaded);
-  const total = useProgress((state) => state.total);
+  const { loaded, total } = useLoadProgress();
   const progressText = total > 0 ? `${Math.min(loaded, total)} de ${total} arquivos` : null;
 
   if (load === "loading") {
