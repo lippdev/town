@@ -84,6 +84,14 @@ export function ChiefScene() {
   const car = useRef<Mesh>(null);
   const geometry = useMemo(() => buildCarGeometry("#1d2230"), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
+  // Saindo da demonstração, não sobra helicóptero nenhum para a frota real.
+  useEffect(
+    () => () => {
+      useOfficeStore.getState().setHelicopterPresent(false);
+      Object.assign(helipadRuntime, { step: null, parked: false, helicopter: null, rotor: 0, figure: null });
+    },
+    [],
+  );
   const script = useRef<{ step: Step; time: number; legs: Point[][]; leg: number; opened: boolean; flight: Flight | null; parked: boolean; carShown: boolean }>({ step: "driving", time: 0, legs: [], leg: 0, opened: false, flight: null, parked: false, carShown: true });
   const helicopter = useOfficeStore((state) => state.helicopterPresent);
   const seat = human?.chair ?? null;

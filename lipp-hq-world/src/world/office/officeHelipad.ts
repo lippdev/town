@@ -93,8 +93,8 @@ type Curve = readonly [Vec, Vec, Vec, Vec];
  * mundo, é mais perto da câmera, que na tela é mais para baixo), e sobe até o deque numa curva.
  */
 const INBOUND_CURVE: Curve = [
-  [150, 26, -60],
-  [105, 14, 25],
+  [190, 26, -95],
+  [120, 14, 25],
   [42, 10, 8],
   [0, HOVER_HEIGHT, 0],
 ];

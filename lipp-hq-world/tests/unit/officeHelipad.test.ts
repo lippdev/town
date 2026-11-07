@@ -135,11 +135,11 @@ describe("trajetória do voo", () => {
     }
   });
 
-  it("começa e termina longe da torre: entra e sai de cena em vez de aparecer", () => {
-    const start = inboundPose(0);
-    const end = outboundPose(OUTBOUND_SECONDS);
-    expect(Math.hypot(start.x - HELIPAD.x, start.z - HELIPAD.z)).toBeGreaterThan(150);
-    expect(Math.hypot(end.x - HELIPAD.x, end.z - HELIPAD.z)).toBeGreaterThan(150);
+  it("começa e termina fora do quadro, mesmo em tela larga com o menor zoom: não aparece do nada", () => {
+    // Na tela larga de 1920 x 600 o zoom mínimo mostra cerca de 170 m de cada lado do prédio.
+    const sideways = (pose: typeof PARKED_POSE) => Math.abs(pose.x - HELIPAD.x - (pose.z - HELIPAD.z)) * Math.SQRT1_2;
+    expect(sideways(inboundPose(0))).toBeGreaterThan(190);
+    expect(sideways(outboundPose(OUTBOUND_SECONDS))).toBeGreaterThan(190);
   });
 });
 

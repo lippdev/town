@@ -62,7 +62,7 @@ export function HelipadScene() {
     // Com o rotor cheio as pás viram um disco: é o borrão que vende a velocidade, sem nenhuma luz.
     const blurred = Math.max(0, (power - 0.25) / 0.75);
     blur.current.visible = blurred > 0.01;
-    blurMaterial.current.opacity = blurred * 0.2;
+    blurMaterial.current.opacity = blurred * 0.15;
     const running = power > 0.05;
     lamps.current.visible = running;
     strobe.current.visible = running && spin.current.clock % STROBE_EVERY < STROBE_ON;
@@ -100,10 +100,10 @@ export function HelipadScene() {
           <meshStandardMaterial vertexColors roughness={0.6} clippingPlanes={clip} />
         </mesh>
         <mesh ref={lamps} geometry={build.lamps} visible={false} name="helicoptero-luzes">
-          <meshBasicMaterial vertexColors toneMapped={false} clippingPlanes={clip} />
+          <meshBasicMaterial vertexColors clippingPlanes={clip} />
         </mesh>
         <mesh ref={strobe} geometry={build.strobe} visible={false} name="helicoptero-pisca">
-          <meshBasicMaterial vertexColors toneMapped={false} clippingPlanes={clip} />
+          <meshBasicMaterial vertexColors clippingPlanes={clip} />
         </mesh>
       </group>
       <mesh ref={contact} position={[HELIPAD.x, HELIPAD.top + 0.03, HELIPAD.z]} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={1} name="helicoptero-sombra">
