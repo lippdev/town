@@ -271,7 +271,7 @@ export function epicHealth(state: ActivityState, epicId: string, staleMs = DEFAU
     }
   }
   const left = epic.due - at;
-  if (stories.length > 0 && left < 2 * DAY && done / stories.length < 0.6) reasons.push({ kind: "prazo", text: `Entrega ${left <= 0 ? "vencida" : `em ${Math.max(1, Math.round(left / DAY))} dia(s)`} com ${done} de ${stories.length} HUs concluídas`, subject: { kind: "epic", id: epic.id } });
+  if (stories.length > 0 && left < 2 * DAY && done / stories.length < 0.6) reasons.push({ kind: "prazo", text: `Entrega ${left <= 0 ? "vencida" : left <= 1.5 * DAY ? "amanhã" : `em ${Math.round(left / DAY)} dias`} com ${done} de ${stories.length} HUs concluídas`, subject: { kind: "epic", id: epic.id } });
   const level: HealthLevel = reasons.some((reason) => reason.kind === "hu-travada") ? "travado" : reasons.length > 0 ? "em-risco" : "no-prazo";
   return { level, reasons, done, total: stories.length };
 }
