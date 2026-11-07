@@ -13,7 +13,9 @@ import { chromium } from "playwright";
 const base = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const angle = process.env.HQ_ANGLE ?? "metal";
 const out = process.argv[2] ?? "qa/office-building-transitions";
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+// Hora fixa: o céu segue o relógio de Brasília, e à noite o fundo escuro se parece com "vazio"
+// para a medida de pixels. Ao meio-dia a prova mede sempre a mesma cena.
+const DEMO = "/?escritorio=completo&modo=demonstracao&hora=12:00";
 const FLOORS = (process.env.HQ_FLOORS ?? "terreo,operacao,diretoria").split(",");
 /** Tempo da viagem. O teto folga por causa da carga do harness: o relógio da cena limita o passo. */
 const MIN_MS = 430;
