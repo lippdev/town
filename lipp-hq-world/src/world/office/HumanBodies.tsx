@@ -113,7 +113,8 @@ export function OfficeHumans() {
   const humans = everyone.filter((human) => mounted.includes(human.floor));
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const wanted = everyone.length > 0;
+  // Só quem está num andar montado tem corpo: de fora do prédio, ninguém pede o esqueleto.
+  const wanted = humans.length > 0;
 
   useEffect(() => {
     if (!wanted || base) return;

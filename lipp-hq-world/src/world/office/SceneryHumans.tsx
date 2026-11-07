@@ -40,9 +40,10 @@ export function SceneryHumans() {
   const mounted = useOfficeStore((state) => state.mountedFloors);
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  // Carrega antes de precisar: quem entra no andar não vê a cena sem ninguém.
+  // De fora do prédio ninguém aparece: quem adianta o esqueleto é `PrepareBuilding`, na folga.
+  const wanted = mounted.length > 0;
   useEffect(() => {
-    if (base) return;
+    if (base || !wanted) return;
     let alive = true;
     loadHumanBase().then(
       (loaded) => {
@@ -53,7 +54,7 @@ export function SceneryHumans() {
     return () => {
       alive = false;
     };
-  }, [view, base]);
+  }, [view, base, wanted]);
   if (!base) return null;
   return (
     <>
