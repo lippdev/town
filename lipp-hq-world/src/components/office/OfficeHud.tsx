@@ -20,7 +20,7 @@ import { OfficeConversations } from "./OfficeConversations";
 import { OfficeKanban } from "./OfficeKanban";
 import { OfficeOrgChart } from "./OfficeOrgChart";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
-import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA } from "@/world/office/officeChief";
+import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA, chiefMenu, type ChiefRequest } from "@/world/office/officeChief";
 import { officeRuntime, useOfficeStore, zoomStep } from "@/world/office/officeStore";
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
@@ -433,7 +433,7 @@ function HumanPanel() {
         </div>}
         {!human.chair && <p className="panel-warn">Os bots ocuparam as cadeiras da bancada: não há onde sentar agora.</p>}
         <p className="panel-warn">
-          {human.id === CHIEF_ID ? "Exemplo, só na demonstração: a agenda é fictícia e ainda não lê o Outlook. A ronda é só visual e fica na Diretoria: o trajeto de elevador ainda não existe, então ele não aparece no térreo nem na Operação." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
+          {human.id === CHIEF_ID ? "Exemplo, só na demonstração: a agenda é fictícia e ainda não lê o Outlook. A ronda é só visual e fica na Diretoria: o trajeto de elevador ainda não existe, então ele não aparece no térreo nem na Operação. O helicóptero também é só cena: nenhuma frota real voa." : "Pessoa criada por você, não é um bot: não executa nada e não vem do Hermes. Ela só anda e senta quando você manda."}
         </p>
       </div>
     </aside>
@@ -445,6 +445,12 @@ function ChiefAgenda() {
   const status = useOfficeStore((state) => state.chiefStatus);
   const pending = useOfficeStore((state) => state.chiefRequest);
   const request = useOfficeStore.getState().setChiefRequest;
+  const menu = chiefMenu(status);
+  /** Quem chega ou sai se vê de fora: o botão leva até lá, e o roteiro roda pelo relógio de qualquer jeito. */
+  const watchOutside = (asked: ChiefRequest) => {
+    request(asked);
+    useOfficeStore.getState().goToView("exterior");
+  };
   return (
     <section className="office-chief-agenda" data-chief-agenda>
       <p className={status === "reuniao" ? "office-chief-now busy" : "office-chief-now"}>{CHIEF_STATUS_LABEL[status]}</p>
@@ -458,10 +464,15 @@ function ChiefAgenda() {
           </li>
         ))}
       </ul>
+      {status === "fora" && <p className="panel-warn" data-chief-away>Saiu de helicóptero. Enquanto estiver fora, não há ninguém na mesa dele nem corpo na Diretoria.</p>}
       <div className="office-human-actions">
-        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("reuniao")}>Entrar em reunião</button>
-        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("ronda")}>Andar pela Diretoria</button>
-        <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => { request("chegada"); useOfficeStore.getState().goToView("exterior"); }}>Rever a chegada</button>
+        {menu.meeting && <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("reuniao")}>Entrar em reunião</button>}
+        {menu.patrol && <button type="button" className="office-button" disabled={Boolean(pending)} onClick={() => request("ronda")}>Andar pela Diretoria</button>}
+        {menu.replay && <button type="button" className="office-button" disabled={Boolean(pending)} data-chief-action="chegada" onClick={() => watchOutside("chegada")}>Rever a chegada</button>}
+        {menu.replay && <button type="button" className="office-button" disabled={Boolean(pending)} data-chief-action="chegada-heli" onClick={() => watchOutside("chegadaHeli")}>Chegar de helicóptero</button>}
+        {menu.leave && <button type="button" className="office-button" disabled={Boolean(pending)} data-chief-action="saida" onClick={() => watchOutside("saida")}>Sair de helicóptero</button>}
+        {menu.comeBack && <button type="button" className="office-button primary" disabled={Boolean(pending)} data-chief-action="volta-heli" onClick={() => watchOutside("chegadaHeli")}>Voltar de helicóptero</button>}
+        {menu.comeBack && <button type="button" className="office-button" disabled={Boolean(pending)} data-chief-action="volta-carro" onClick={() => watchOutside("chegada")}>Voltar de carro</button>}
       </div>
     </section>
   );
