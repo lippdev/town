@@ -19,6 +19,7 @@ pnpm dev        # http://127.0.0.1:5173
 | ------------------------------------------------------------------------ | ------------------------------------- |
 | [lipp-hq-world/docs/ARCHITECTURE.md](lipp-hq-world/docs/ARCHITECTURE.md) | arquitetura e decisões                |
 | [lipp-hq-world/docs/BACKLOG.md](lipp-hq-world/docs/BACKLOG.md)           | auditoria geral e melhorias           |
+| [lipp-hq-world/docs/ANDAMENTO.md](lipp-hq-world/docs/ANDAMENTO.md)       | **trabalho em andamento e retomada**  |
 | [lipp-hq-world/docs/PROGRESS.md](lipp-hq-world/docs/PROGRESS.md)         | estado atual                          |
 | [lipp-hq-world/docs/INTEGRATION.md](lipp-hq-world/docs/INTEGRATION.md)   | contratos do OpenMausBot              |
 | [lipp-hq-world/docs/AVATARES.md](lipp-hq-world/docs/AVATARES.md)         | pessoas e robôs: origem e limites     |
@@ -26,5 +27,6 @@ pnpm dev        # http://127.0.0.1:5173
 
 ## Fluxo de trabalho
 
-Todo avanço é entregue em commit + pull request para `main`, com gate visual
-GO/NO-GO por stage — relatórios em `lipp-hq-world/qa/reviews/`.
+Todo avanço é entregue em commit + pull request para `main`. O que está em curso,
+como os agentes trabalham e como retomar de outro computador ficam em
+[ANDAMENTO.md](lipp-hq-world/docs/ANDAMENTO.md).
