@@ -1,5 +1,5 @@
-import { CanvasTexture, ConeGeometry, SRGBColorSpace, type BufferGeometry } from "three";
-import { BASE_LEVELS, BUILDING_HEIGHT, BUILDING_LEVELS, CROWN_STEPS, FACADE_BOUNDS, SPIRE_HEIGHT, STORY } from "./officeBuilding";
+import { CanvasTexture, ConeGeometry, PlaneGeometry, RingGeometry, SRGBColorSpace, type BufferGeometry } from "three";
+import { BASE_LEVELS, BUILDING_HEIGHT, BUILDING_LEVELS, CROWN_ROOF, CROWN_STEPS, FACADE_BOUNDS, HELIPAD, SPIRE_HEIGHT, STORY } from "./officeBuilding";
 import { ColorMerge } from "./officeCity";
 import { ENTRANCE } from "./officeLayout";
 
@@ -217,11 +217,85 @@ function crown(body: ColorMerge, lit: ColorMerge) {
     crownStep(body, lit, bottom, step.inset, step.height, index, CROWN_STEPS.length - 1);
     bottom += step.height;
   }
-  // Agulha discreta: base em dois tempos e uma ponta fina, sem farol.
-  body.box(x, bottom, z, 2.2, 0.7, 2.2, STONE);
-  body.box(x, bottom + 0.7, z, 1.3, 0.8, 1.3, PIER);
-  body.box(x, bottom + 1.42, z, 1.42, 0.08, 1.42, BRONZE);
-  body.add(new ConeGeometry(0.34, SPIRE_HEIGHT - 1.5, 8), x, bottom + 1.5 + (SPIRE_HEIGHT - 1.5) / 2, z, BRONZE);
+  helipad(body, lit);
+}
+
+/** Tinta no piso do deque: uma folha só com a face de cima. */
+function deckPaint(target: ColorMerge, x: number, z: number, width: number, length: number, height: number, color: string) {
+  const sheet = new PlaneGeometry(width, length);
+  sheet.rotateX(-Math.PI / 2);
+  target.add(sheet, x, HELIPAD.top + height, z, color);
+}
+
+/** Deque em balanço sobre o último degrau, com a marcação, as luzes de borda, a escada e o mastro. */
+function helipad(body: ColorMerge, lit: ColorMerge) {
+  const { x, z, half, bottom, top, mast, kiosk } = HELIPAD;
+  const side = half * 2;
+  // Pé recuado sobre o último degrau e colunas no degrau de baixo: é o que segura o balanço.
+  body.box(x, CROWN_ROOF, z, 8.6, bottom - CROWN_ROOF, 5, STONE);
+  const lower = CROWN_ROOF - CROWN_STEPS.at(-1)!.height;
+  for (const along of [-4.4, -1.47, 1.47, 4.4]) {
+    body.box(x + along, lower, z + half - 0.42, 0.26, bottom - lower, 0.26, PIER);
+    body.box(x + along, bottom - 0.42, z + half - 0.42 - 1.05, 0.2, 0.26, 2.1, SPANDREL);
+  }
+  // Laje com o friso de bronze dos degraus: de longe, o deque é mais um deles.
+  body.box(x, bottom, z, side, top - bottom, side, "#2b2f36");
+  body.box(x, bottom + 0.06, z, side + 0.26, 0.14, side + 0.26, BRONZE);
+  deckPaint(body, x, z, side - 0.1, side - 0.1, 0.004, "#3f444c");
+  // Borda, círculo e H: a tinta fica um fio acima do piso, para não piscar com ele.
+  const inset = half - 0.5;
+  for (const sign of [-1, 1]) {
+    deckPaint(body, x + sign * inset, z, 0.16, inset * 2 + 0.16, 0.008, "#d9b86a");
+    deckPaint(body, x, z + sign * inset, inset * 2 + 0.16, 0.16, 0.008, "#d9b86a");
+  }
+  const ring = new RingGeometry(3.3, 3.62, 48);
+  ring.rotateX(-Math.PI / 2);
+  body.add(ring, x, top + 0.012, z, "#e4e1d6");
+  for (const sign of [-1, 1]) deckPaint(body, x + sign * 0.95, z, 0.56, 3, 0.012, "#e4e1d6");
+  deckPaint(body, x, z, 1.5, 0.56, 0.012, "#e4e1d6");
+  // Luzes de borda na malha acesa: brilham à noite e quase somem de dia, como as janelas.
+  const count = 8;
+  for (let index = 0; index <= count; index += 1) {
+    const along = -half + 0.2 + (index * (side - 0.4)) / count;
+    for (const sign of [-1, 1]) {
+      lit.box(x + along, top, z + sign * (half - 0.2), 0.17, 0.08, 0.17, "#8df2ae");
+      if (index > 0 && index < count) lit.box(x + sign * (half - 0.2), top, z + along, 0.17, 0.08, 0.17, "#8df2ae");
+    }
+  }
+  // Guarda-corpo baixo: abaixo do rotor e dos esquis, só marca a beira.
+  const rail = 0.56;
+  const edge = half + 0.02;
+  for (const sign of [-1, 1]) {
+    body.box(x + sign * edge, top + rail, z, 0.07, 0.07, side + 0.1, PILASTER);
+    body.box(x, top + rail, z + sign * edge, side + 0.1, 0.07, 0.07, PILASTER);
+  }
+  for (let index = 0; index <= 5; index += 1) {
+    const along = -edge + (index * edge * 2) / 5;
+    for (const sign of [-1, 1]) {
+      body.box(x + along, top, z + sign * edge, 0.06, rail, 0.06, SPANDREL);
+      if (index > 0 && index < 5) body.box(x + sign * edge, top, z + along, 0.06, rail, 0.06, SPANDREL);
+    }
+  }
+  // Casinha da escada: porta acesa para +z, de onde o chefe sai e por onde ele some.
+  const hutX = x + kiosk.x;
+  const hutZ = z + kiosk.z;
+  const front = hutZ + kiosk.size / 2;
+  body.box(hutX, top, hutZ, kiosk.size, kiosk.height, kiosk.size, STONE);
+  body.box(hutX, top + kiosk.height, hutZ, kiosk.size + 0.22, 0.12, kiosk.size + 0.22, BRONZE);
+  body.box(hutX, top, front + 0.03, 1.04, 1.74, 0.06, SPANDREL);
+  lit.quad(hutX, top + 0.02, front + 0.07, "z", 0.82, 1.6, "#ffe3b0");
+  lit.quad(hutX + kiosk.size / 2 + 0.01, top + 0.5, hutZ, "x", 0.2, 1.1, SOFT);
+  // O mastro, recuado: base em dois tempos e ponta fina, do degrau de baixo até o alto da coroa.
+  const mastX = x + mast.x;
+  const mastZ = z + mast.z;
+  const peak = CROWN_ROOF + SPIRE_HEIGHT;
+  body.box(mastX, lower, mastZ, 0.96, 3.2, 0.96, STONE);
+  body.box(mastX, lower + 3.2, mastZ, 0.58, 1.1, 0.58, PIER);
+  body.box(mastX, lower + 4.3, mastZ, 0.66, 0.07, 0.66, BRONZE);
+  const needle = peak - (lower + 4.37);
+  body.add(new ConeGeometry(0.17, needle, 8), mastX, lower + 4.37 + needle / 2, mastZ, BRONZE);
+  // A lâmpada de obstrução fica colada na ponta: à noite, é ela que marca o alto da torre.
+  lit.box(mastX, peak - 0.8, mastZ, 0.2, 0.14, 0.2, "#ff5a48");
 }
 
 export function buildFacade(): FacadeBuild {

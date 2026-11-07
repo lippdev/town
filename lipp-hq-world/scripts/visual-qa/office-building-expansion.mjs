@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 
 const base = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const out = process.argv[2] ?? "qa/office-building-expansion";
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const FLOORS = [2, 3, 4, 5].map((level) => ({ id: `expansao-${level}`, level }));
 mkdirSync(out, { recursive: true });
 

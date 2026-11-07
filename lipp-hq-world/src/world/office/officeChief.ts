@@ -41,18 +41,54 @@ export function placeEveryone(saved: readonly HumanPreset[], occupiedSeats: Iter
   return { placed: [placeChief(), ...placed], waiting };
 }
 
-export type ChiefStatus = "chegando" | "entrando" | "mesa" | "reuniao" | "levantando" | "ronda" | "voltando";
-export type ChiefRequest = "chegada" | "reuniao" | "ronda";
+export type ChiefStatus = "chegando" | "chegandoHeli" | "entrando" | "descendo" | "mesa" | "reuniao" | "levantando" | "ronda" | "voltando" | "saindo" | "aguardando" | "embarcando" | "decolando" | "fora";
+export type ChiefRequest = "chegada" | "chegadaHeli" | "saida" | "reuniao" | "ronda";
 
 export const CHIEF_STATUS_LABEL: Record<ChiefStatus, string> = {
   chegando: "Chegando de carro",
+  chegandoHeli: "Chegando de helicóptero",
   entrando: "Subindo para a Diretoria",
+  // O deque fica acima da Diretoria: de lá se desce, ao contrário de quem vem da rua.
+  descendo: "Descendo para a Diretoria",
   mesa: "Na mesa",
   reuniao: "Em reunião",
   levantando: "Levantando",
   ronda: "Andando pela Diretoria",
   voltando: "Voltando para a mesa",
+  saindo: "Indo para o heliporto",
+  aguardando: "Esperando o helicóptero",
+  embarcando: "Embarcando no helicóptero",
+  decolando: "Decolando",
+  fora: "Fora do prédio",
 };
+
+/** Em algum lugar do caminho, ou fora: a cadeira está vazia e não há corpo no andar. */
+export function chiefIsAway(status: ChiefStatus): boolean {
+  return !(status === "mesa" || status === "reuniao" || status === "levantando" || status === "ronda" || status === "voltando");
+}
+
+export interface ChiefMenu {
+  meeting: boolean;
+  patrol: boolean;
+  /** Refazer a chegada: "Rever a chegada" e "Chegar de helicóptero". */
+  replay: boolean;
+  leave: boolean;
+  /** "Voltar", de carro ou de helicóptero: ele já saiu, ou está saindo. */
+  comeBack: boolean;
+}
+
+/** Os botões que fazem sentido em cada situação: ninguém entra em reunião de dentro do helicóptero. */
+export function chiefMenu(status: ChiefStatus): ChiefMenu {
+  const leaving = status === "saindo" || status === "aguardando" || status === "embarcando" || status === "decolando" || status === "fora";
+  const inside = !chiefIsAway(status);
+  return {
+    meeting: status === "mesa",
+    patrol: status === "mesa" || status === "reuniao",
+    replay: !leaving,
+    leave: inside,
+    comeBack: leaving,
+  };
+}
 
 /** Agenda de exemplo, para ver como ficaria. Vira a leitura do Outlook quando houver integração. */
 export const SAMPLE_AGENDA = [

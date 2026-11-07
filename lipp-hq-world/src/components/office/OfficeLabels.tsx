@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
-import { CHIEF_ID, CHIEF_STATUS_LABEL } from "@/world/office/officeChief";
+import { CHIEF_ID, CHIEF_STATUS_LABEL, chiefIsAway } from "@/world/office/officeChief";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, sceneryOfView, viewRooms } from "@/world/office/officeBuilding";
 import { expansionFloor } from "@/world/office/officeExpansion";
 import { ENTRANCE, FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
@@ -38,8 +38,8 @@ export function OfficeLabels() {
   const expansion = expansionFloor(buildingView);
   const secrets = useSecretStore();
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
-  // Chegando, ele ainda não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
-  const chiefAway = chiefStatus === "chegando" || chiefStatus === "entrando";
+  // Chegando ou fora, ele não está no andar: a etiqueta não fica boiando sobre a cadeira vazia.
+  const chiefAway = chiefIsAway(chiefStatus);
   const nodes = useRef(new Map<HTMLElement, Anchor>());
   const liveNodes = useRef(new Map<string, HTMLElement>());
   /** Para onde a etiqueta aponta enquanto o corpo não carregou ou não existe. */

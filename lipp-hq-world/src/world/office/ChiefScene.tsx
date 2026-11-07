@@ -3,8 +3,10 @@ import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Mesh, type MeshStandardMaterial } from "three";
 import { FloorGroup, GroundGroup } from "./BuildingScene";
 import { buildCarGeometry, CURB_LANE_Z } from "./officeCity";
-import { ARRIVAL, CHIEF_ID, CLIMB_SECONDS, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, carTravel } from "./officeChief";
+import { ARRIVAL, CHIEF_ID, CLIMB_SECONDS, MEETING_SECONDS, PATROL_PAUSE, WORK_SECONDS, carTravel, chiefIsAway } from "./officeChief";
 import { directoratePatrol } from "./officeDirectorate";
+import { HelipadScene } from "./HelipadScene";
+import { PARKED_POSE, advanceFlight, arrivalVia, awayFlight, flightFrame, helipadRuntime, startArrival, startDeparture, type Flight } from "./officeHelipad";
 import type { Point } from "./officeHumans";
 import { DESK_REACH, type OfficeSeat } from "./officeLayout";
 import { humanActors, useOfficeStore } from "./officeStore";
@@ -29,7 +31,7 @@ function signTexture(text: string, color: string) {
 }
 
 /** Placa na mesa dele: de longe, a cor já diz se pode interromper. */
-function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
+function DeskSign({ seat, meeting, away }: { seat: OfficeSeat; meeting: boolean; away: boolean }) {
   const busy = useMemo(() => signTexture("EM REUNIÃO", "#ff6b5e"), []);
   const free = useMemo(() => signTexture("NA MESA", "#6fe08f"), []);
   useEffect(
@@ -50,7 +52,8 @@ function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
   const z = seat.z + Math.cos(seat.yaw) * forward - Math.sin(seat.yaw) * side;
   const color = meeting ? "#ff4d3d" : "#35c46a";
   return (
-    <group position={[x, 0.78, z]} rotation={[0, Math.PI / 4, 0]} name="placa-do-chefe">
+    // Mesa vazia não diz "na mesa": sem ele, a placa sai de cena e volta com ele.
+    <group position={[x, 0.78, z]} rotation={[0, Math.PI / 4, 0]} visible={!away} name="placa-do-chefe">
       <mesh position={[0, 0.16, 0]}>
         <planeGeometry args={[0.62, 0.23]} />
         <meshBasicMaterial map={meeting ? busy : free} toneMapped={false} />
@@ -68,9 +71,11 @@ function DeskSign({ seat, meeting }: { seat: OfficeSeat; meeting: boolean }) {
 }
 
 /**
- * Roteiro do Chefe na demonstração: chega de carro, sobe, trabalha, entra em reunião e anda pela
- * Diretoria. É só desenho, com tempos curtos; não lê agenda. Não há trajeto da porta ao elevador
- * nem subida animada: enquanto "sobe", ele não está em andar nenhum, e reaparece na mesa.
+ * Roteiro do Chefe na demonstração: chega de carro ou de helicóptero, sobe ou desce até a mesa,
+ * trabalha, entra em reunião, anda pela Diretoria e pode sair de helicóptero. É só desenho, com
+ * tempos curtos; não lê agenda. Não há trajeto da porta ao elevador nem subida animada: enquanto
+ * "sobe", ele não está em andar nenhum, e reaparece na mesa. O voo segue pelo relógio em qualquer
+ * vista, e pedir outra chegada no meio dele recomeça do zero, sem helicóptero parado no ar.
  */
 export function ChiefScene() {
   const human = useOfficeStore((state) => state.humans.find((candidate) => candidate.id === CHIEF_ID));
@@ -79,7 +84,16 @@ export function ChiefScene() {
   const car = useRef<Mesh>(null);
   const geometry = useMemo(() => buildCarGeometry("#1d2230"), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  const script = useRef<{ step: Step; time: number; legs: Point[][]; leg: number }>({ step: "driving", time: 0, legs: [], leg: 0 });
+  // Saindo da demonstração, não sobra helicóptero nenhum para a frota real.
+  useEffect(
+    () => () => {
+      useOfficeStore.getState().setHelicopterPresent(false);
+      Object.assign(helipadRuntime, { step: null, parked: false, helicopter: null, rotor: 0, figure: null });
+    },
+    [],
+  );
+  const script = useRef<{ step: Step; time: number; legs: Point[][]; leg: number; opened: boolean; flight: Flight | null; parked: boolean; carShown: boolean }>({ step: "driving", time: 0, legs: [], leg: 0, opened: false, flight: null, parked: false, carShown: true });
+  const helicopter = useOfficeStore((state) => state.helicopterPresent);
   const seat = human?.chair ?? null;
 
   useFrame((_, delta) => {
@@ -100,14 +114,75 @@ export function ChiefScene() {
       store.setChiefStatus("mesa");
       go("working");
     };
-    state.time += Math.min(delta, 0.1);
+    const step = Math.min(delta, 0.1);
+    state.time += step;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const arriveByAir = () => {
+      state.carShown = false;
+      store.setHumanGoal(CHIEF_ID, "seated");
+      if (reduced) {
+        // Movimento reduzido: nada de voo. Já pousado, e ele já na mesa.
+        state.flight = null;
+        state.parked = true;
+        atDesk();
+      } else {
+        state.parked = false;
+        state.flight = startArrival();
+      }
+    };
 
-    // Rever a chegada vale de onde ele estiver: o corpo some até voltar à mesa.
+    // A abertura se decide uma vez só, no primeiro quadro: recarregar sorteia de novo.
+    if (!state.opened) {
+      state.opened = true;
+      if (arrivalVia(window.location.search) === "helicoptero") arriveByAir();
+    }
+
+    // Os pedidos valem de onde ele estiver: o corpo some, e o helicóptero anterior sai sem ser visto,
+    // porque os botões ficam na gaveta, de dentro do prédio, com o corte abaixo dele.
     if (store.chiefRequest === "chegada") {
       store.setChiefRequest(null);
       store.setHumanGoal(CHIEF_ID, "seated");
+      state.flight = null;
+      state.parked = false;
+      state.carShown = true;
       go("driving");
+    } else if (store.chiefRequest === "chegadaHeli") {
+      store.setChiefRequest(null);
+      arriveByAir();
+    } else if (store.chiefRequest === "saida") {
+      store.setChiefRequest(null);
+      store.setHumanGoal(CHIEF_ID, "seated");
+      state.flight = reduced ? awayFlight() : startDeparture(state.parked);
+      state.parked = false;
+    }
+
+    let settled = false;
+    if (state.flight) {
+      state.flight = advanceFlight(state.flight, step);
+      if (state.flight.step === "settled") {
+        // Chegou: fica pousado no deque, e o chefe aparece na mesa.
+        state.flight = null;
+        state.parked = true;
+        atDesk();
+        settled = true;
+      }
+    }
+    const frame = state.flight ? flightFrame(state.flight) : null;
+    helipadRuntime.step = state.flight?.step ?? null;
+    helipadRuntime.parked = state.parked;
+    helipadRuntime.helicopter = frame ? frame.helicopter : state.parked ? PARKED_POSE : null;
+    helipadRuntime.rotor = frame?.rotor ?? 0;
+    helipadRuntime.figure = frame?.figure ?? null;
+    store.setHelicopterPresent(helipadRuntime.helicopter !== null);
+    car.current.visible = state.carShown;
+    if (settled) return;
+
+    if (frame) {
+      if (actor) actor.holder.visible = false;
+      // Reunião e ronda não fazem sentido no ar: o pedido não fica preso para quando ele voltar.
+      if (store.chiefRequest) store.setChiefRequest(null);
+      if (store.chiefStatus !== frame.status) store.setChiefStatus(frame.status);
+      return;
     }
 
     if (state.step === "driving" || state.step === "door" || state.step === "climbing") {
@@ -208,10 +283,12 @@ export function ChiefScene() {
         <mesh ref={car} geometry={geometry} rotation={[0, Math.PI / 2, 0]} name="carro-do-chefe" position={[ARRIVAL.startX, -0.05, CURB_LANE_Z]}>
           <meshStandardMaterial vertexColors roughness={0.35} metalness={0.45} />
         </mesh>
+        {/* Do alto da torre, mas também desce com a cidade: nos andares de baixo, fica sobre o corte. */}
+        {helicopter && <HelipadScene />}
       </GroundGroup>
       {seat && human && mounted && (
         <FloorGroup floor={human.floor}>
-          <DeskSign seat={seat} meeting={status === "reuniao"} />
+          <DeskSign seat={seat} meeting={status === "reuniao"} away={chiefIsAway(status)} />
         </FloorGroup>
       )}
     </>

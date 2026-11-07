@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { Box3, OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
-import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, STORY } from "./officeBuilding";
+import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, HELIPAD, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
+import { helipadRuntime } from "./officeHelipad";
 import { SECRET_SPOTS, useSecretStore } from "./officeSecrets";
 import { humanActors, humanFigures, officeRuntime, robotActors, sceneryActors, useOfficeStore } from "./officeStore";
 
@@ -58,6 +59,14 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
         focusedRoomId: store.focusedRoomId,
         scenery: [...sceneryActors].map(([id, actor]) => ({ id, phase: actor.phase, position: actor.position, heading: actor.heading, chair: actor.chair })),
         chiefStatus: store.chiefStatus,
+        helipad: {
+          step: helipadRuntime.step,
+          parked: helipadRuntime.parked,
+          present: store.helicopterPresent,
+          pose: helipadRuntime.helicopter,
+          rotor: helipadRuntime.rotor,
+          figure: helipadRuntime.figure,
+        },
         daylight: store.daylight,
         framing: store.framing,
         load: store.load,
@@ -142,8 +151,15 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     },
     /** Pixel do meio de um pavimento na fachada, com o prédio fechado. */
     levelPoint: (level: number) => worldToScreen([FACADE_BOUNDS.maxX, (level + 0.5) * STORY, FACADE_BOUNDS.maxZ - 3], officeRuntime.view, officeRuntime.viewport),
-    /** Pixel da ponta da agulha, para provar que a coroa cabe no enquadramento. */
-    spirePoint: () => worldToScreen([(FACADE_BOUNDS.minX + FACADE_BOUNDS.maxX) / 2, BUILDING_HEIGHT + CROWN_HEIGHT, (FACADE_BOUNDS.minZ + FACADE_BOUNDS.maxZ) / 2], officeRuntime.view, officeRuntime.viewport),
+    /** Pixel da ponta do mastro, para provar que a coroa cabe no enquadramento. */
+    spirePoint: () => worldToScreen([HELIPAD.x + HELIPAD.mast.x, BUILDING_HEIGHT + CROWN_HEIGHT, HELIPAD.z + HELIPAD.mast.z], officeRuntime.view, officeRuntime.viewport),
+    /** Pixel do meio do helicóptero, onde ele estiver: o harness prova que ele entra e sai de cena. */
+    helicopterPoint: () => {
+      const pose = helipadRuntime.helicopter;
+      return pose ? worldToScreen([pose.x, pose.y + 1.4 - officeRuntime.travel.root, pose.z], officeRuntime.view, officeRuntime.viewport) : null;
+    },
+    /** Pixel do meio do deque. */
+    helipadPoint: () => worldToScreen([HELIPAD.x, HELIPAD.top - officeRuntime.travel.root, HELIPAD.z], officeRuntime.view, officeRuntime.viewport),
     /** Pixel de um ponto livre do chão da sala. */
     roomPoint: (roomId: string, localX = 0, localZ = 0) => {
       const room = BUILDING_ROOMS_BY_ID[roomId]!;
