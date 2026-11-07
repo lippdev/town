@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { FlaskConical, Pause, Play, RotateCcw, X } from "lucide-react";
 import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
-import { directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, prsOfStory, storiesOf, trackingAnswers, whereIs } from "@/activity/selectors";
+import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, whereIs } from "@/activity/selectors";
 import { prAuthor } from "@/activity/identity";
 import { SPEEDS } from "@/activity/simulation";
 import { at, clockLabel, whenLabel } from "@/activity/time";
@@ -13,7 +13,7 @@ import { escapeLayers, useOfficeStore } from "@/world/office/officeStore";
 import { emailOfHuman, squadHumanId, squadHumans } from "./techPeople";
 import { HEALTH_COLOR, TECH_FLOOR_ID } from "./techPlaces";
 import { techSceneRuntime } from "./TechScene";
-import { useTechStore } from "./techStore";
+import { useTechStore, type TechView } from "./techStore";
 import "./tech.css";
 
 declare global {
@@ -51,6 +51,17 @@ function techQaApi() {
     pr: (number: number) => useTechStore.getState().state.prs.find((pr) => pr.number === number) ?? null,
     messages: () => useTechStore.getState().state.messages,
     people: () => useTechStore.getState().state.people,
+    // Visões Projetos e Painel: a prova "o prédio e o painel dizem o mesmo".
+    view: () => useTechStore.getState().view,
+    setView: (view: TechView) => useTechStore.getState().setView(view),
+    candidates: (number: number) => {
+      const { state } = useTechStore.getState();
+      const pr = state.prs.find((item) => item.number === number);
+      return pr ? reviewCandidates(state, pr).map((candidate) => candidate.person.email) : [];
+    },
+    stories: () => useTechStore.getState().state.stories.map((story) => story.id),
+    reasons: (epicId: string) => blockersOf(useTechStore.getState().state, epicId).map((reason) => reason.text),
+    render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused }),
   };
 }
 
