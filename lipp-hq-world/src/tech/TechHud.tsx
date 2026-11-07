@@ -118,9 +118,9 @@ export function TechClock() {
   );
 }
 
-function Section({ title, children, count }: { title: string; children: ReactNode; count?: number }) {
+export function Section({ title, children, count, id }: { title: string; children: ReactNode; count?: number; id?: string }) {
   return (
-    <section className="tech-section">
+    <section className="tech-section" id={id}>
       <h3>
         {title}
         {count !== undefined && <small>{count}</small>}
@@ -136,16 +136,31 @@ export function PrAuthor({ state, pr }: { state: ActivityState; pr: PullRequest 
   return author ? <span>{author.name}</span> : <span className="tech-unknown" title="Ninguém vinculou este login no cadastro">autor não identificado ({pr.author})</span>;
 }
 
-export function PrLine({ state, pr }: { state: ActivityState; pr: PullRequest }) {
+const PR_STATE_LABEL = { open: "aberto", merged: "mesclado", closed: "fechado" } as const;
+const reviewerName = (state: ActivityState, login: string) => personOf(state, state.people.find((person) => person.github === login)?.email ?? null)?.name ?? login;
+
+/** Um PR numa linha. `detailed` acrescenta o estado e todas as revisões, para a árvore de Projetos. */
+export function PrLine({ state, pr, detailed = false }: { state: ActivityState; pr: PullRequest; detailed?: boolean }) {
   const last = pr.reviews.at(-1);
   return (
-    <li className="tech-row" data-pr={pr.number}>
+    <li className="tech-row" data-pr={pr.number} data-pr-state={pr.state}>
       <span className="tech-row-id">#{pr.number}</span>
       <span className="tech-row-main">
         {pr.title}
         <small>
-          <PrAuthor state={state} pr={pr} /> · {pr.state === "merged" ? "mesclado" : pr.ci ? CI_LABEL[pr.ci] : "sem CI"}
-          {last ? ` · ${personOf(state, state.people.find((person) => person.github === last.by)?.email ?? null)?.name ?? last.by} ${REVIEW_LABEL[last.state]}` : pr.state === "open" && pr.reviewers.length ? " · esperando revisão" : ""}
+          <PrAuthor state={state} pr={pr} /> · {detailed && pr.state === "open" ? `${pr.draft ? "rascunho" : "aberto"} · ` : ""}
+          {pr.state === "open" ? (pr.ci ? CI_LABEL[pr.ci] : "sem CI") : PR_STATE_LABEL[pr.state]}
+          {detailed
+            ? pr.reviews.length
+              ? ` · ${pr.reviews.map((review) => `${reviewerName(state, review.by)} ${REVIEW_LABEL[review.state]}`).join(", ")}`
+              : pr.state === "open" && pr.reviewers.length
+                ? ` · esperando revisão de ${pr.reviewers.map((login) => reviewerName(state, login)).join(", ")}`
+                : pr.state === "open" ? " · sem revisão pedida" : ""
+            : last
+              ? ` · ${reviewerName(state, last.by)} ${REVIEW_LABEL[last.state]}`
+              : pr.state === "open" && pr.reviewers.length
+                ? " · esperando revisão"
+                : ""}
         </small>
         {pr.summary && <small className="tech-summary" data-pr-summary>Resumo do {pr.summary.by === "pulse" ? "Pulse" : pr.summary.by}: {pr.summary.text}</small>}
       </span>
@@ -308,6 +323,10 @@ function EpicDrawer() {
       escapeLayers.delete(close);
     };
   }, []);
+  // Quem abre uma HU pela árvore ou pelo painel chega nela, mesmo no fim da lista.
+  useEffect(() => {
+    if (highlight) node.current?.querySelector(".tech-story.highlight")?.scrollIntoView({ block: "nearest" });
+  }, [epicId, highlight, node]);
   if (!epic) return null;
   const health = epicHealth(state, epic.id);
   const project = state.projects.find((item) => item.id === epic.projectId);
