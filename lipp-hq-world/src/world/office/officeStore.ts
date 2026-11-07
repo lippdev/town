@@ -51,6 +51,13 @@ interface OfficeState {
   humans: OfficeHuman[];
   /** Salvas além da capacidade: listadas, sem corpo. */
   humansWaiting: { id: string; name: string }[];
+  /** Pessoas criadas no editor; `humans` é isto mais o squad do cenário. */
+  ownHumans: OfficeHuman[];
+  /** O squad do cenário de tecnologia, quando ligado. */
+  squad: OfficeHuman[];
+  setSquad: (squad: OfficeHuman[]) => void;
+  /** Muda a sala de quem anda: a etiqueta e o foco seguem a pessoa. */
+  setHumanRoom: (id: string, roomId: string) => void;
   selectedHumanId: string | null;
   humanGoals: Record<string, HumanGoal>;
   humanPhases: Record<string, HumanPhase>;
@@ -181,6 +188,20 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   seating: { seats: {}, unseated: [] },
   humans: [],
   humansWaiting: [],
+  ownHumans: [],
+  squad: [],
+  setSquad: (squad) => {
+    const { ownHumans, humansWaiting } = get();
+    set({ squad });
+    get().setHumans(ownHumans, humansWaiting);
+  },
+  setHumanRoom: (id, roomId) => {
+    const { squad, ownHumans, humansWaiting } = get();
+    const human = squad.find((candidate) => candidate.id === id);
+    if (!human || human.roomId === roomId) return;
+    set({ squad: squad.map((candidate) => (candidate.id === id ? { ...candidate, roomId } : candidate)) });
+    get().setHumans(ownHumans, humansWaiting);
+  },
   selectedHumanId: null,
   humanGoals: {},
   chiefStatus: "chegando",
@@ -211,9 +232,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
       set({ hoveredRoomId, hoveredBotId, hoveredHumanId });
     }
   },
-  setHumans: (humans, humansWaiting) => {
-    const { selectedHumanId } = get();
-    set({ humans, humansWaiting, selectedHumanId: humans.some((human) => human.id === selectedHumanId) ? selectedHumanId : null });
+  setHumans: (own, humansWaiting) => {
+    const { selectedHumanId, squad } = get();
+    const humans = [...own, ...squad];
+    set({ ownHumans: own, humans, humansWaiting, selectedHumanId: humans.some((human) => human.id === selectedHumanId) ? selectedHumanId : null });
   },
   setHumanPhase: (id, phase) => set((state) => ({ humanPhases: { ...state.humanPhases, [id]: phase } })),
   setHumanGoal: (id, goal) => set((state) => ({ humanGoals: { ...state.humanGoals, [id]: goal } })),
@@ -285,6 +307,12 @@ export const officeRuntime = {
   /** Quem se mexe na cena: id → ponto da etiqueta, atualizado a cada quadro. */
   liveAnchors: new Map<string, readonly [number, number, number]>(),
 };
+
+/**
+ * Gavetas de fora do escritório (as do cenário): o Esc pergunta a cada uma antes de mexer na cena.
+ * Quem fecha alguma coisa devolve true, e o Esc para ali.
+ */
+export const escapeLayers = new Set<() => boolean>();
 
 /** Fora do estado do React: mudam a cada quadro. O clique e o QA leem daqui. */
 export const humanActors = new Map<string, HumanActor>();

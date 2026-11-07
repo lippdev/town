@@ -110,7 +110,8 @@ export function OfficeHumans() {
   const everyone = useOfficeStore((state) => state.humans);
   const view = useOfficeStore((state) => state.buildingView);
   const mounted = useOfficeStore((state) => state.mountedFloors);
-  const humans = everyone.filter((human) => mounted.includes(human.floor));
+  // O squad do cenário tem corpo próprio, que segue a agenda: aqui só quem foi criado no editor.
+  const humans = everyone.filter((human) => mounted.includes(human.floor) && !human.squad);
   const [base, setBase] = useState<HumanBase | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Só quem está num andar montado tem corpo: de fora do prédio, ninguém pede o esqueleto.

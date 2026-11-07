@@ -31,6 +31,11 @@ export interface ActorFigure {
 export interface ActorClips {
   /** Metros por segundo em que o pé de apoio não escorrega. */
   walkSpeed: number;
+  /**
+   * Passo apressado: anda e balança as pernas este tanto mais rápido, sem o pé escorregar. O squad
+   * do cenário usa, porque o dia dele passa comprimido.
+   */
+  pace?: number;
 }
 
 const TURN_PER_SECOND = 7;
@@ -49,9 +54,9 @@ export class HumanActor {
   readonly holder = new Group();
   phase: HumanPhase = "standing";
   private goal: HumanGoal = "standing";
-  private readonly seat: OfficeSeat | null;
-  private readonly spot: Point;
-  private readonly route: readonly Point[];
+  private seat: OfficeSeat | null;
+  private spot: Point;
+  private route: readonly Point[];
   /**
    * Metros já andados. Abaixo de zero, ela ainda não saiu do lugar: caminho curto não dá tempo
    * de a cadeira se virar, então ela espera a cadeira começar.
@@ -65,7 +70,15 @@ export class HumanActor {
   private x: number;
   private z: number;
   private yaw: number;
-  private readonly restYaw: number;
+  private restYaw: number;
+  private get pace() {
+    return { timeScale: this.clips.pace ?? 1 };
+  }
+
+  private get stride() {
+    return this.clips.walkSpeed * (this.clips.pace ?? 1) * HUMAN_SCALE;
+  }
+
   /** Onde está a cadeira desta pessoa: quem desenha a cadeira lê daqui. */
   chair: ChairPose | null;
 
@@ -113,6 +126,21 @@ export class HumanActor {
     if (goal === "seated") this.jump();
   }
 
+  /**
+   * Muda a casa da pessoa: o lugar onde fica em pé, a cadeira e o caminho até ela. Só vale com ela
+   * parada em pé, no lugar novo: é o que deixa o squad sentar na mesa dele ou na sala de reunião.
+   */
+  rehome(home: Pick<OfficeHuman, "spot" | "chair" | "route"> & { restYaw?: number }) {
+    if (this.phase !== "standing") return false;
+    this.spot = home.spot;
+    this.seat = home.chair;
+    this.route = home.route ?? (home.chair ? chairRoute(home.spot, home.chair) : [home.spot]);
+    this.chair = home.chair ? chairAtHome(home.chair) : null;
+    if (home.restYaw !== undefined) this.restYaw = home.restYaw;
+    this.goal = "standing";
+    return true;
+  }
+
   /** Coloca a pessoa num ponto, sem andar. Quem chega de fora da cena começa assim. */
   moveTo(point: Point) {
     this.x = point.x;
@@ -130,11 +158,11 @@ export class HumanActor {
     this.errandPath = path;
     this.errandWalked = 0;
     this.phase = "errand";
-    this.figure.play("walk");
+    this.figure.play("walk", this.pace);
   }
 
   private walkErrand(step: number) {
-    this.errandWalked += this.clips.walkSpeed * HUMAN_SCALE * step;
+    this.errandWalked += this.stride * step;
     const pose = pathPose(this.errandPath, this.errandWalked);
     this.x = pose.x;
     this.z = pose.z;
@@ -187,7 +215,7 @@ export class HumanActor {
       this.phase = "toChair";
       this.backwards = false;
       this.walked = Math.min(0, pathLength(this.route) - CHAIR_READY_FROM);
-      if (this.walked === 0) this.figure.play("walk");
+      if (this.walked === 0) this.figure.play("walk", this.pace);
     } else if (this.phase === "seated" && this.goal === "standing") {
       this.phase = "rising";
       this.seatTime = 0;
@@ -241,8 +269,8 @@ export class HumanActor {
     }
     const before = this.walked;
     const end = this.backwards ? Math.max(total, CHAIR_READY_FROM) : total;
-    this.walked = Math.min(end, before + this.clips.walkSpeed * HUMAN_SCALE * step);
-    if (!this.backwards && before < 0 && this.walked >= 0) this.figure.play("walk");
+    this.walked = Math.min(end, before + this.stride * step);
+    if (!this.backwards && before < 0 && this.walked >= 0) this.figure.play("walk", this.pace);
     if (this.backwards && before < total && this.walked >= total) this.figure.play("idle");
     const stepping = this.backwards ? before < total : this.walked >= 0;
     if (stepping) {
@@ -270,7 +298,7 @@ export class HumanActor {
       this.phase = "toSpot";
       this.backwards = true;
       this.walked = 0;
-      this.figure.play("walk");
+      this.figure.play("walk", this.pace);
     }
   }
 }

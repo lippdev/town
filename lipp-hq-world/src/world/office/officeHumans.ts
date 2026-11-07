@@ -57,6 +57,11 @@ export interface OfficeHuman {
   route?: readonly Point[];
   /** Só muda o instante da piscada, para não piscarem todos juntos. */
   phase: number;
+  /**
+   * E-mail de quem é do squad de um cenário: o corpo, a etiqueta e a gaveta são do cenário, e a
+   * pessoa não entra em Pessoas.
+   */
+  squad?: string;
 }
 
 export interface HumanPlacement {

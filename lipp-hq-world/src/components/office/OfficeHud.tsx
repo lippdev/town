@@ -1,4 +1,4 @@
-import { useLayoutEffect, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useLayoutEffect, useEffect, useRef, useState } from "react";
 import { ChevronDown, House, Columns3, MessagesSquare, Network, Search, Armchair, ArrowLeft, ExternalLink, Maximize, Minus, PanelLeftClose, PanelLeftOpen, Pencil, PersonStanding, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { buildRosterSections } from "@/agents/organization";
 import { useLoadProgress } from "@/world/office/useLoadProgress";
@@ -10,7 +10,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
 import { BUILDING_ROOMS_BY_ID } from "@/world/office/officeBuilding";
 import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
-import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
+import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, OFFICE_SCENARIO, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
@@ -22,6 +22,11 @@ import { OfficeOrgChart } from "./OfficeOrgChart";
 import { useDemoConversations, type DemoConversations } from "./useDemoConversations";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, SAMPLE_AGENDA, chiefMenu, type ChiefRequest } from "@/world/office/officeChief";
 import { officeRuntime, useOfficeStore, zoomStep } from "@/world/office/officeStore";
+
+/** O cenário de tecnologia é baixado só quando está ligado. */
+const TECH = OFFICE_SCENARIO === "tecnologia";
+const TechHud = lazy(() => import("@/tech/TechHud"));
+const TechClock = lazy(() => import("@/tech/TechHud").then((module) => ({ default: module.TechClock })));
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
 const ROSTER_MIN_WIDTH = 1180;
@@ -89,7 +94,12 @@ function TopBar({ connection, title }: { connection: OfficeConnection | null; ti
     <header className="office-top" data-office-inset="top">
       <h1 className="office-page-title">{title}</h1>
       <ModeChip connection={connection} />
-      {demo && <span className="office-demo-note">Sete bots de exemplo, sem atividade real.</span>}
+      {demo && TECH && (
+        <Suspense fallback={<span className="office-chip tech-chip">Simulação</span>}>
+          <TechClock />
+        </Suspense>
+      )}
+      {demo && <span className="office-demo-note">{TECH ? "Squad fictício num dia simulado; bots de exemplo." : "Sete bots de exemplo, sem atividade real."}</span>}
       <nav className="office-nav" aria-label="Fonte dos dados">
         <a href={demo ? OFFICE_LIVE_URL : OFFICE_DEMO_URL}>{demo ? "Usar frota do Hermes" : "Ver demonstração"}</a>
       </nav>
@@ -138,7 +148,8 @@ function OfflineNotice({ connection }: { connection: OfficeConnection | null }) 
 
 /** Pessoas à parte dos bots: não têm sala nem estado, e são criadas por você. */
 function PeopleList({ matches, onSelect }: { matches: (text: string) => boolean; onSelect: (humanId: string) => void }) {
-  const humans = useOfficeStore((state) => state.humans);
+  // O squad do cenário não foi criado por você: ele tem a lista dele.
+  const humans = useOfficeStore((state) => state.ownHumans);
   const waiting = useOfficeStore((state) => state.humansWaiting);
   const selectedHumanId = useOfficeStore((state) => state.selectedHumanId);
   return (
@@ -363,7 +374,7 @@ function CameraBar() {
 }
 
 /** Mede a gaveta aberta para a câmera enquadrar só o que sobra da tela. */
-function useDrawerInset(open: boolean) {
+export function useDrawerInset(open: boolean) {
   const setViewInsetRight = useHQStore((state) => state.setViewInsetRight);
   const node = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
@@ -393,7 +404,9 @@ function HumanPanel() {
   const humans = useOfficeStore((state) => state.humans);
   const goals = useOfficeStore((state) => state.humanGoals);
   const phases = useOfficeStore((state) => state.humanPhases);
-  const human = humans.find((candidate) => candidate.id === selectedHumanId);
+  const found = humans.find((candidate) => candidate.id === selectedHumanId);
+  // Quem é do squad abre a gaveta do cenário.
+  const human = found?.squad ? undefined : found;
   const node = useDrawerInset(Boolean(human));
   if (!human) return null;
   const goal = goals[human.id] ?? "standing";
@@ -681,6 +694,11 @@ export function OfficeHud({ live }: { live: boolean }) {
       <CameraBar />
       {live ? <BotDrawer characterTab={false} /> : <DemoPanel onConversation={openConversation} />}
       {!live && <HumanPanel />}
+      {!live && TECH && (
+        <Suspense fallback={null}>
+          <TechHud />
+        </Suspense>
+      )}
       <LoadOverlay />
     </div>
   );

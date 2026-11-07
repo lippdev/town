@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { CITY_AIR, CITY_LIT_MIN } from "./cityHaze";
 import { idleSequence } from "./idleQueue";
@@ -57,10 +57,13 @@ import { OfficeCameraRig } from "./OfficeCameraRig";
 import { OfficeHumans } from "./HumanBodies";
 import { OfficeRobots } from "./RobotBodies";
 import { thinIslands } from "./thinIslands";
-import type { OfficeMode } from "./officeRoute";
+import { OFFICE_SCENARIO, type OfficeMode } from "./officeRoute";
 import { travelSinks, useOfficeStore } from "./officeStore";
 
 type BuildingFloors = readonly FloorId[];
+
+/** O cenário de tecnologia vem num arquivo à parte: sem `cenario`, nada dele é baixado. */
+const TechScene = lazy(() => import("@/tech/TechScene"));
 
 const PROP_URL = { planta: "/prototipo/planta.glb", luminaria: "/prototipo/luminaria.glb" } as const;
 
@@ -656,6 +659,11 @@ export function OfficeScene({ stage }: { stage: HTMLElement }) {
           <SceneryHumans />
           <ChiefScene />
           <SkySignal />
+          {OFFICE_SCENARIO === "tecnologia" && (
+            <Suspense fallback={null}>
+              <TechScene />
+            </Suspense>
+          )}
         </PartBoundary>
       )}
       <RoomGlow />

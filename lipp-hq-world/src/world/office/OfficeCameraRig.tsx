@@ -15,7 +15,7 @@ import {
   type PickBox,
 } from "./officeCamera";
 import { secretSpotsOf, useSecretStore, type SecretSpotId } from "./officeSecrets";
-import { aimCamera, applyTravel, cameraEaseStep, panBounds, humanActors, officeRuntime, robotActors, stepTravel, triggerSpot, useOfficeStore, zoomStep } from "./officeStore";
+import { aimCamera, applyTravel, cameraEaseStep, escapeLayers, panBounds, humanActors, officeRuntime, robotActors, stepTravel, triggerSpot, useOfficeStore, zoomStep } from "./officeStore";
 
 /** Longe o bastante para nada cruzar o plano próximo; na ortográfica não muda o tamanho. */
 /** Longe o bastante para o prédio mais perto, com a tela no zoom mínimo, não ser cortado. */
@@ -298,6 +298,7 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         // O menu da conta ouve o Esc por conta própria: a cena não reage junto.
         if (stage.ownerDocument.querySelector("[data-account-menu]")) return;
         // Primeiro fecha a gaveta; só depois volta ao andar.
+        if ([...escapeLayers].some((close) => close())) return;
         if (useHQStore.getState().selectedBotId) useHQStore.getState().clearSelection();
         else if (store.selectedHumanId) store.clearHuman();
         else if (store.framing !== "floor") store.backToFloor();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NeutralToneMapping, SRGBColorSpace } from "three";
 import { ReadySignal } from "@/app/ReadySignal";
@@ -11,12 +11,14 @@ import { AVATAR_STORAGE_KEY, browserStorage, loadAvatars } from "@/avatar/human/
 import { ROBOT_STORAGE_KEY, loadRobotLooks } from "@/avatar/robot/robotLook";
 import { placeEveryone } from "@/world/office/officeChief";
 import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
-import type { OfficeMode } from "@/world/office/officeRoute";
+import { OFFICE_SCENARIO, type OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { OfficeHud } from "./OfficeHud";
 import { OfficeLabels } from "./OfficeLabels";
 import "@fontsource-variable/onest";
 import "@/styles/office.css";
+
+const TechStage = lazy(() => import("@/tech/TechStage"));
 
 /** Quem está em cena: os sete da demonstração, ou a frota real a cada leitura. */
 function useRoster(mode: OfficeMode) {
@@ -105,6 +107,11 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
           </Canvas>
         )}
         <OfficeLabels />
+        {OFFICE_SCENARIO === "tecnologia" && (
+          <Suspense fallback={null}>
+            <TechStage />
+          </Suspense>
+        )}
       </div>
       <OfficeHud live={mode === "live"} />
       {mode === "live" && <HermesConnection />}
