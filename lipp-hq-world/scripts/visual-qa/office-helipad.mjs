@@ -432,6 +432,30 @@ await check("movimento reduzido: sem voo, o estado final entra direto", async ()
   await page.context().close();
 });
 
+await check("montar e desmontar o helicóptero repetidas vezes não acumula nada na GPU", async () => {
+  const page = await open(`${HELI}&hora=12:00`, { reducedMotion: "reduce" });
+  await untilStatus(page, "mesa", 3000);
+  const memory = () => page.evaluate(() => {
+    const { geometries, textures, programs } = window.__HQ_OFFICE_QA__.renderInfo();
+    return { geometries, textures, programs };
+  });
+  const roundTrip = async () => {
+    await openDrawer(page);
+    await action(page, "saida").click();
+    await untilStatus(page, "fora", 2000);
+    await page.waitForTimeout(150);
+    await openDrawer(page);
+    await action(page, "volta-heli").click();
+    await untilStatus(page, "mesa", 2000);
+    await page.waitForTimeout(150);
+  };
+  for (let round = 0; round < 3; round += 1) await roundTrip();
+  const before = await memory();
+  for (let round = 0; round < 8; round += 1) await roundTrip();
+  assert.deepEqual(await memory(), before);
+  await page.context().close();
+});
+
 await check("a frota real não tem heliporto: nem deque, nem helicóptero, nem botão", async () => {
   const live = await open("/?escritorio=completo&chegada=helicoptero");
   await live.waitForTimeout(1500);
