@@ -30,6 +30,9 @@ export const techSceneRuntime = {
   robots: new Map<string, { botId: string; x: number; y: number; z: number; arrived: boolean; leaving: boolean; gone: boolean }>(),
   /** Só a prova liga: o quadro lento é dividido em passos curtos, e o squad anda no tempo real. */
   realTime: false,
+  /** Quadros desenhados desde a abertura, e se o render está parado por Projetos ou Painel. */
+  frames: 0,
+  paused: false,
 };
 
 /** O passo mais longo de animação; o mesmo teto do `HumanActor`. */
@@ -357,16 +360,44 @@ function TechBots() {
   );
 }
 
+/**
+ * Com Projetos ou Painel cobrindo a cena, ninguém vê o 3D: o render para. Volta sozinho ao prédio,
+ * e os movimentos já limitam o passo do quadro, como numa aba que esteve escondida. Só para com a
+ * cena pronta e parada: a primeira montagem e uma viagem entre andares terminam antes.
+ */
+function PauseWhenCovered() {
+  const setFrameloop = useThree((state) => state.setFrameloop);
+  const covered = useTechStore((store) => store.view !== "predio");
+  const ready = useOfficeStore((state) => state.load === "ready" && !state.traveling);
+  const paused = covered && ready;
+  useEffect(() => {
+    techSceneRuntime.paused = paused;
+    setFrameloop(paused ? "never" : "always");
+    return () => {
+      techSceneRuntime.paused = false;
+      setFrameloop("always");
+    };
+  }, [paused, setFrameloop]);
+  useFrame(() => {
+    techSceneRuntime.frames += 1;
+  });
+  return null;
+}
+
 /** O que o cenário põe no andar da Tecnologia. Só existe com o andar montado. */
 export function TechScene() {
   const mounted = useOfficeStore((state) => state.mountedFloors.includes(TECH_FLOOR_ID));
-  if (!mounted) return null;
   return (
-    <FloorGroup floor={TECH_FLOOR_ID}>
-      <EpicBoard />
-      <TechSquad />
-      <TechBots />
-    </FloorGroup>
+    <>
+      <PauseWhenCovered />
+      {mounted && (
+        <FloorGroup floor={TECH_FLOOR_ID}>
+          <EpicBoard />
+          <TechSquad />
+          <TechBots />
+        </FloorGroup>
+      )}
+    </>
   );
 }
 

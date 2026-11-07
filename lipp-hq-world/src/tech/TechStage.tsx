@@ -36,7 +36,8 @@ export function TechStage() {
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const root = layer.current;
-      if (!root) return;
+      // Com Projetos ou Painel por cima, a cena não anda e ninguém vê as etiquetas.
+      if (!root || techSceneRuntime.paused) return;
       const { view: camera, viewport } = officeRuntime;
       for (const node of root.querySelectorAll<HTMLElement>("[data-squad-tag]")) {
         const id = node.dataset.squadTag!;
