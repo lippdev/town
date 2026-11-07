@@ -6,6 +6,11 @@
  *
  * Uso: HQ_URL=http://127.0.0.1:5271 node scripts/visual-qa/office-tech.mjs [pasta]
  * Cada página usa um perfil novo e /api/hq bloqueado: nenhum Hermes, nada do seu navegador.
+ *
+ * O relógio da simulação anda com o tempo real (o dia em 15 minutos), e numa máquina lenta só
+ * entrar no andar leva minutos. Por isso cada página abre com o relógio pausado no instante em
+ * que o cenário monta, e cada prova salta o relógio para a hora do que vai provar e só então
+ * espera a cena alcançar o plano. A única prova com o relógio andando é a do próprio relógio.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -38,6 +43,22 @@ async function check(name, fn) {
 async function open(url, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
   await context.route("**/api/hq/**", (route) => route.fulfill({ status: 503, body: "" }));
+  // Pausa o relógio no mesmo instante em que o cenário abre a ponte da prova, antes do primeiro
+  // passo do relógio: a página fica na `hora_sim` pedida, por mais que demore a carregar. E liga o
+  // tempo real da cena: sem GPU um quadro passa de um segundo, e sem isso uma caminhada da mesa à
+  // sala leva mais de 15 minutos.
+  await context.addInitScript(() => {
+    let api;
+    Object.defineProperty(window, "__HQ_TECH_QA__", {
+      configurable: true,
+      get: () => api,
+      set: (value) => {
+        api = value;
+        value?.pause(true);
+        value?.realTime(true);
+      },
+    });
+  });
   const page = await context.newPage();
   page.setDefaultTimeout(after(30000));
   const requests = [];
@@ -91,24 +112,9 @@ try {
     assert.equal((await office(page)).buildingView, "exterior");
     await page.waitForFunction(() => window.__HQ_TECH_QA__);
     assert.ok(await page.locator("[data-tech-clock] .tech-chip").isVisible());
-    assert.match(await page.locator("[data-sim-time]").textContent(), /ter 10\/11 · 09:2\d/);
+    assert.match(await page.locator("[data-sim-time]").textContent(), /ter 10\/11 · 09:20/);
     assert.ok(await page.locator('[data-floor-selector] [data-view="expansao-2"]').isVisible(), "a Tecnologia tem botão próprio no seletor");
     await shot(page, "exterior-cenario");
-  });
-
-  await check("a simulação avança, pausa e muda de velocidade", async () => {
-    const first = await tech(page, "at");
-    await page.waitForTimeout(3000);
-    const second = await tech(page, "at");
-    assert.ok(second - first > 60_000, `3 s reais devem passar mais de 1 min do dia (${second - first} ms)`);
-    await page.click("[data-sim-pause]");
-    const paused = await tech(page, "at");
-    await page.waitForTimeout(1500);
-    assert.equal(await tech(page, "at"), paused, "pausado, o relógio não anda");
-    await page.click("[data-sim-pause]");
-    await page.click('[data-sim-speed="4"]');
-    assert.equal(await tech(page, "speed"), 4);
-    await page.click('[data-sim-speed="1"]');
   });
 
   await check("entra na Tecnologia: squad nas mesas, Tiago e Bianca fora, quadro dos épicos na parede", async () => {
@@ -126,7 +132,9 @@ try {
 
   await check("a daily leva o squad à sala, e cada um volta à mesa depois", async () => {
     const present = ["marina.lopes", "caio.rezende", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
-    await page.waitForFunction(() => window.__HQ_TECH_QA__.plans().find((plan) => plan.email === "renata.okabe@lipp.example").zone === "sala", null, { timeout: after(30000) });
+    // Daily das 9h30 às 9h45: no meio dela, o plano de todos já é a sala.
+    await tech(page, "jumpToClock", "09:35");
+    assert.equal((await tech(page, "plans")).find((plan) => plan.email === EMAIL("renata.okabe")).zone, "sala");
     await sceneCaughtUp(page, present, 90000);
     await everyoneStill(page);
     const homes = await tech(page, "scene");
@@ -144,12 +152,38 @@ try {
     await shot(page, "depois-da-daily");
   });
 
+  // O relógio andando fica para depois da daily: o tempo que ele anda aqui não estraga nada.
+  await check("a simulação avança, pausa e muda de velocidade", async () => {
+    const pause = page.locator("[data-sim-pause]");
+    assert.equal(await pause.getAttribute("aria-pressed"), "true", "a prova abre com o relógio pausado");
+    await page.click('[data-sim-speed="4"]');
+    assert.equal(await tech(page, "speed"), 4);
+    await page.click('[data-sim-speed="1"]');
+    assert.equal(await tech(page, "speed"), 1);
+    await pause.click();
+    const first = await tech(page, "at");
+    const startedAt = Date.now();
+    // Na velocidade 1, 3 s reais são quase 2 min do dia; cada passo do relógio vale no máximo 1 s
+    // real, então a máquina lenta espera mais para provar o mesmo.
+    await page.waitForTimeout(after(3000));
+    const second = await tech(page, "at");
+    const real = Date.now() - startedAt;
+    assert.ok(second - first > 60_000, `o relógio deve passar mais de 1 min do dia (${second - first} ms em ${real} ms reais)`);
+    await pause.click();
+    assert.equal(await pause.getAttribute("aria-pressed"), "true");
+    const paused = await tech(page, "at");
+    await page.waitForTimeout(1500);
+    assert.equal(await tech(page, "at"), paused, "pausado, o relógio não anda");
+    report.relogio = { simMs: second - first, realMs: real };
+  });
+
   await check("huddle junta quem entrou no canto do huddle", async () => {
     await tech(page, "jumpToClock", "11:21");
     const people = ["renata.okabe", "diego.martins", "rafael.coutinho"].map(EMAIL);
     await sceneCaughtUp(page, people, 90000);
     const scene = await tech(page, "scene");
     assert.ok(people.every((email) => scene[email].home.startsWith("huddle-")), JSON.stringify(scene));
+    await everyoneStill(page);
     await shot(page, "huddle");
   });
 
@@ -193,18 +227,24 @@ try {
   // ─── Bots ──────────────────────────────────────────────────────────────────
   const bots = await open(`${TECH}&andar=expansao-2&hora_sim=09:11`);
   await check("o bot da rotina sai do elevador, vai até o trabalho e volta", async () => {
+    await settled(bots);
+    // O Forge prepara a pauta da daily das 9h12 às 9h24.
+    assert.equal((await tech(bots, "robots")).length, 0, "antes da rotina, nenhum robô no andar");
+    await tech(bots, "jumpToClock", "09:13");
+    assert.ok((await tech(bots, "tasks")).some((task) => task.kind === "pauta_daily" && task.doneAt === null));
     await bots.waitForFunction(() => window.__HQ_TECH_QA__.robots().some((robot) => robot.botId === "forge" && robot.arrived), null, { timeout: after(60000) });
     await shot(bots, "bot-na-sala");
-    await bots.waitForFunction(() => window.__HQ_TECH_QA__.tasks().some((task) => task.kind === "pauta_daily" && task.doneAt), null, { timeout: after(60000) });
+    await tech(bots, "jumpToClock", "09:25");
+    assert.ok((await tech(bots, "tasks")).some((task) => task.kind === "pauta_daily" && task.doneAt));
     const messages = await tech(bots, "messages");
     assert.ok(messages.some((message) => message.from.kind === "bot" && message.text.startsWith("Pauta da daily")));
+    await bots.waitForFunction(() => window.__HQ_TECH_QA__.robots().filter((robot) => robot.botId === "forge").every((robot) => robot.gone), null, { timeout: after(60000) });
   });
   await bots.close();
 
   // ─── Movimento reduzido ────────────────────────────────────────────────────
   const still = await open(`${TECH}&andar=expansao-2&hora_sim=09:20`, { reducedMotion: "reduce" });
   await check("movimento reduzido: ninguém anda, cada um aparece já no lugar", async () => {
-    await tech(still, "pause", true);
     await tech(still, "jumpToClock", "09:35");
     await sceneCaughtUp(still, [EMAIL("renata.okabe"), EMAIL("marina.lopes")], 4000);
     const moving = await still.evaluate(() => window.__HQ_OFFICE_QA__.state().humans.filter((human) => human.id.startsWith("squad-") && !["seated", "standing", null].includes(human.phase)).length);
