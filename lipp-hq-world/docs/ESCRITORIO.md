@@ -313,7 +313,16 @@ As 28 chamadas a mais são as oito pessoas (cinco figurantes saem), as cadeiras 
 
 `pnpm qa:tecnologia` prova o cenário: abre, o dia anda, pausa e muda de velocidade, a daily leva o
 squad à sala e devolve, huddle, o épico destrava no quadro, gaveta da pessoa e do épico, robô da rotina,
-movimento reduzido, celular, custo, e que sem `cenario` nada muda.
+movimento reduzido, celular, custo, e que sem `cenario` nada muda. O roteiro não aposta corrida com o
+relógio: cada página abre com ele pausado na `hora_sim` pedida, cada prova salta para a hora do que vai
+provar (`jumpToClock` da ponte `__HQ_TECH_QA__`) e só então espera a cena alcançar o plano; só a prova do
+próprio relógio o deixa andar. A ponte também liga o tempo real da cena (`realTime`): sem GPU um quadro
+passa de um segundo e cada quadro anda no máximo 50 ms, então a caminhada da mesa à sala levava mais de
+15 minutos; com ele, o quadro lento é dividido em passos de até 50 ms e o squad e os robôs andam no ritmo
+do tempo real. Fora da prova ele fica desligado e nada muda. Assim o roteiro passa igual numa máquina
+lenta, sem GPU, com `HQ_TIMEOUT_SCALE=3` (12 provas em cerca de 25 minutos num Linux de 6 núcleos com
+swiftshader). As provas do painel (mesmas respostas no prédio e no painel), das três ações e do
+cadastro do GitHub entram no roteiro junto com as PRs que criam essas telas.
 
 Limites do andar: o passo do squad é apressado (1,7×) para o dia comprimido caber, e mesmo assim, a 4× e
 8×, as pessoas chegam atrasadas às reuniões curtas. Ninguém sobe pelo elevador: quem sai some na porta e
