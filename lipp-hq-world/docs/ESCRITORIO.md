@@ -48,7 +48,7 @@ do corte ficam num grupo em `y = -elevação` (`BuildingSurroundings`).
   cada um deles a aprender um deslocamento, com risco de divergência entre o que se vê e o que
   se clica.
 - _O custo:_ tudo o que é da rua precisa descer junto, inclusive o carro do chefe, que vive fora
-  do grupo por causa do roteiro, e o limite da cidade, que encolhe do lado para onde o chão anda
+  do grupo por causa do roteiro, o helicóptero dele e o limite da cidade, que encolhe do lado para onde o chão anda
   na tela (`cityBoundsAt`). A cidade só recebe sombra com o chão colado no andar.
 - _Viagem:_ entre 480 e 650 ms, com a cena sempre em tela e no mesmo Canvas. O prédio fica parado
   e quem anda é o corte (`floorTravel.ts`): sair de um andar é erguer a fachada em volta dele até uma
@@ -160,9 +160,49 @@ Evidências e custo medido em `docs/escritorio-evidencias/esconderijo/`.
 Limites do esconderijo: ninguém anda lá dentro, a passagem é um vão pintado na parede, sem furar a torre,
 e o carro não sai da plataforma.
 
-Limites do chefe: ele chega de carro na rua, some por uns segundos e reaparece sentado na mesa.
-Não há trajeto da porta ao elevador nem subida animada, e ele não aparece no térreo nem na
-Operação. O passeio fica na Diretoria; sair do andar no meio dele o devolve à mesa.
+Limites do chefe: ele chega de carro na rua ou de helicóptero no deque, some por uns segundos e
+reaparece sentado na mesa. Não há trajeto da porta ao elevador nem subida ou descida animada, e ele
+não aparece no térreo nem na Operação. O passeio fica na Diretoria; sair do andar no meio dele o
+devolve à mesa.
+
+### O heliporto
+
+O deque fica sobre o último degrau da coroa, em balanço sobre colunas, com o círculo e o H pintados,
+luzes de borda, guarda-corpo baixo e a casinha da escada. Mora nas malhas da fachada, depois do último
+pavimento: o corte o tira de cena junto com a coroa, não há chamada de desenho a mais, e as luzes
+seguem as janelas, acesas à noite e quase apagadas de dia. A agulha virou um mastro fino no canto de
+trás, fora do giro do rotor, na mesma altura de antes: o enquadramento do exterior não mudou.
+
+O helicóptero é só cena da demonstração, como o resto do roteiro: não vem de dado nenhum, e a frota
+real não tem prédio nem helicóptero. É procedural, sem arquivo, textura ou luz nova, e só é construído
+enquanto há voo ou helicóptero pousado; quem chegou de carro nunca paga por ele.
+
+- **Chegar:** vem da direita da tela, passando na frente da coroa, faz a curva, freia, gira no ar para
+  o rumo do pouso e desce. O rotor desacelera, o chefe anda até a porta da casinha, e dali em diante é
+  como no carro: some e reaparece na mesa. Fica pousado enquanto ele estiver no prédio.
+- **Sair:** o chefe aparece na porta da casinha, embarca, o rotor acelera e o helicóptero decola e sai
+  pela esquerda. Se ele tinha chegado de carro, o deque está vazio e o helicóptero vem buscá-lo antes,
+  com o rotor girando. O status passa a "Fora do prédio", e a gaveta diz isso e oferece a volta.
+- **Na gaveta do chefe:** só aparece o que faz sentido naquele momento (`chiefMenu`). Quem chega ou sai
+  se vê de fora, então esses botões levam ao exterior.
+- **Às vezes:** a chegada da abertura é de helicóptero em cerca de uma a cada três vezes.
+  `?chegada=helicoptero` e `?chegada=carro` fixam; qualquer outro valor sorteia.
+- **Interrupções:** o roteiro anda pelo relógio em qualquer vista, e com o corte aberto helicóptero e
+  deque não são desenhados. Pedir outra chegada no meio recomeça do zero: os botões ficam dentro do
+  prédio, com o helicóptero fora do corte, então ninguém o vê sumir do ar.
+- **Movimento reduzido:** sem voo. Pousado e com ele na mesa, ou direto fora do prédio.
+
+Prova em `pnpm qa:heliporto`. Custo no exterior de dia, em 1440×900, com o menor valor de 4 s de
+quadros: antes do deque 35 chamadas e 119.675 triângulos; com o deque vazio, as mesmas 35 chamadas e
+120.643 triângulos; pousado, 36 chamadas e 121.175 triângulos, porque o carro sai de cena. Durante o
+voo, a mediana fica entre 38 e 44 chamadas e chega a 122.743 triângulos, no pior momento: o chefe
+andando no deque com o rotor girando, quando o helicóptero veio só buscá-lo.
+
+Limites do heliporto: no deque o chefe é um boneco com as cores dele, porque o corpo de verdade só
+existe no andar em tela e carregá-lo baixaria arquivos em plena abertura; de perto, com o zoom no
+máximo, dá para notar. Ele some ao chegar à porta e ao helicóptero, sem animação de abrir porta ou de
+embarcar. O helicóptero não projeta sombra de verdade: há só uma sombra de contato no deque. No celular,
+a primeira parte do voo fica fora da tela ou atrás do seletor de andares.
 
 ## Como usar
 
@@ -285,6 +325,7 @@ vídeo descomprimida, então o custo real em GPU é maior que o download.
 ```sh
 pnpm build
 pnpm qa:escritorio   # --skip-perf para só o comportamento, --only-perf para só as medições
+pnpm qa:heliporto    # deque, voos com fotos no meio, interrupções, reduzido, celular e noite
 ```
 
 O harness sobe o fixture do Hermes e dois `vite preview` com `HQ_CONNECTION_FILE` temporário, então
