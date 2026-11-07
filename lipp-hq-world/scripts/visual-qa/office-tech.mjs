@@ -78,9 +78,14 @@ async function open(url, options = {}) {
 
 const tech = (page, call, ...args) => page.evaluate(([name, values]) => window.__HQ_TECH_QA__[name](...values), [call, args]);
 const office = (page) => page.evaluate(() => window.__HQ_OFFICE_QA__.state());
+/**
+ * Captura com as animações de CSS já no fim: sem GPU a página roda a um quadro por segundo, e a
+ * entrada de 180 ms da gaveta ainda estava transparente na foto. O prazo escala com a máquina,
+ * porque a captura espera um quadro novo da cena.
+ */
 const shot = async (page, name) => {
   await page.waitForTimeout(500);
-  await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: after(30000) });
+  await page.screenshot({ path: path.join(OUT, `${name}.png`), animations: "disabled", timeout: after(60000) });
 };
 const settled = (page) =>
   page.waitForFunction(() => {
