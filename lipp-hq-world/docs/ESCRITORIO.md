@@ -329,6 +329,53 @@ Limites do andar: o passo do squad é apressado (1,7×) para o dia comprimido ca
 quem chega aparece nela. Os robôs também aparecem na porta do elevador, sem a viagem desde a Operação, e
 a mesa do bot na Operação não fica vazia enquanto ele visita. O texto do quadro só se lê de perto.
 
+### Projetos e Painel: o mesmo dia fora do prédio
+
+O experimento é saber se o campo virtual agrega mais que um dashboard. Para a comparação ser justa, o
+cenário tem também o dashboard, bom e com os mesmos dados. Na barra de cima, ao lado do relógio, o
+seletor **Prédio | Projetos | Painel** (abas de verdade: clique, setas, Home e End; no celular só os
+ícones, o nome segue para o leitor de tela). `?visao=projetos` ou `?visao=painel` abre direto, e a URL
+acompanha a troca. Tudo vem no mesmo pedaço de JavaScript do cenário.
+
+- **Uma fonte só.** As três visões leem o mesmo `useTechStore` e o mesmo `ActivityState`. A árvore
+  (`projectTree`) e o painel (`dailyBoard`), em `src/tech/techViews.ts`, são montados pelos seletores de
+  `src/activity/selectors.ts`: as listas de travadas, paradas, sem critério, revisões, sem autor e
+  presença são as de `trackingAnswers`. O teste confere a cada 20 minutos do dia que dizem o mesmo.
+- **Projetos** é a árvore do Notion: Projeto → Épico → HU → critérios de aceite, com expandir e
+  recolher. Cada nível tem as propriedades em colunas: responsável (quem está fora vem marcado com o
+  motivo, "Férias até 16/11"), etapa com a trilha discovery/delivery, saúde do épico na mesma cor e
+  rótulo do quadro, HU travada (desde quando, esperando quem), parada ou sem critério, os riscos do
+  épico que caem na HU (CI quebrado, PR sem revisão, responsável fora), critérios marcados ou não e os
+  PRs ligados, com estado, CI, revisões e "autor não identificado" quando o GitHub não está vinculado.
+  Abre de cara o que pede atenção; o filtro "Pede atenção" esconde o que está em dia.
+- **Painel** responde à daily de cima para baixo. No topo, os números com contexto (a travada mais
+  antiga e quem ela espera, o PR que espera há mais tempo e quantos podem revisar agora, épicos por
+  saúde, quem está disponível). Depois, **precisa de ação**: HUs travadas (desde quando, esperando quem,
+  e onde essa pessoa está agora), PRs esperando revisão (há quanto tempo, a quem foi pedida e quem pode
+  revisar agora, pela regra de `reviewCandidates`), HUs paradas, sem critério e PRs sem autor. Ao lado,
+  a saúde de cada épico com os motivos, o time agora (reunião, chamada, huddle, foco, fora, na mesa) e
+  o que os bots fizeram hoje. Embaixo, a carga por pessoa: HUs, PRs abertos e revisões pedidas.
+- **Tudo leva à origem.** Abrir um épico, HU, PR ou motivo abre a gaveta do épico que o prédio já tem,
+  com a HU em destaque (a gaveta rola até ela); um nome abre a gaveta da pessoa. Não há gaveta
+  duplicada. **Esc** fecha a gaveta primeiro; o seguinte volta ao prédio.
+- **A cena para.** Com Projetos ou Painel cobrindo o 3D, o render vai para `frameloop="never"`, o laço
+  das etiquetas não trabalha e o palco nem é composto (`visibility: hidden`); volta sozinho ao prédio. Só
+  para com a cena pronta e fora de viagem. Medido no servidor sem GPU (swiftshader, 1440×900): o andar
+  da Tecnologia desenha 6 quadros por segundo; com o Painel aberto, 0. A primeira captura com o Painel
+  aberto caiu de 28 s para 9 s quando o canvas deixou de ser composto por baixo.
+- **Largura.** A visão mede a si mesma (container query): com a gaveta aberta ao lado, ou no celular,
+  a árvore vira linhas com a propriedade rotulada, em vez de cortar colunas.
+
+Ficam para a PR seguinte (`feat/tecnologia-acoes`): cobrar o responsável, reatribuir HU, pedir ao bot e
+o cadastro com vínculo do GitHub. O lugar natural delas é a linha do item no painel e na árvore; não há
+botão morto por enquanto. Mensagem entre pessoas continua fora: o modelo não tem, as visões não inventam.
+
+`qa:tecnologia` prova, num bloco à parte, que **o prédio e o painel dizem o mesmo**: em 10:40, 11:21,
+14:00 e 15:20, com o relógio parado e levado por `jumpToClock`, compara `trackingAnswers` com os `data-*`
+do painel (ids, não texto), com a árvore de Projetos e com o prédio (saúde no quadro via `data-health`,
+lugares pelo plano e pela cena, a lua de "não perturbe" de quem está em foco). Também troca de visão por
+clique, teclado e URL, Esc em camadas, celular sem rolagem lateral e que sem `cenario` nada é baixado.
+
 ### A fronteira simulação/conector (`source.ts`)
 
 A cena, o painel e os seletores só conhecem `ActivityState`. Quem o alimenta implementa `ActivitySource`:
