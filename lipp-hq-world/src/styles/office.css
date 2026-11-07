@@ -610,13 +610,15 @@ button.office-roster-room:hover {
 /* Com a gaveta aberta, a barra de baixo termina antes dela — mas só onde
    sobra largura para as duas. Em tela estreita a gaveta tomaria quase tudo e
    empurraria "Leve" para fora; lá ela cobre a cena e a barra volta ao fechar. */
-@media (min-width: 960px) {
+@media (min-width: 1240px) {
   .office-hud:has(.drawer) .office-bottom {
     right: calc(min(400px, 100vw - 32px) + 16px);
   }
 }
 
-@media (max-width: 959px) {
+/* Abaixo disso a sobra ao lado da gaveta não paga os controles: 280 da navegação mais ~510 de
+   câmera e qualidade. Em vez de esticar a barra para fora da tela, ela sai inteira. */
+@media (max-width: 1239px) {
   .office-hud:has(.drawer) > .office-bottom {
     visibility: hidden;
   }
