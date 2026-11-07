@@ -15,6 +15,8 @@
 .tech-view { position: absolute; inset: 52px 0 0 var(--sidebar-width); z-index: 8; display: flex; flex-direction: column; min-width: 0; background: var(--ui-bg); color: var(--ui-text); font-size: 13px; container: techview / inline-size; }
 /* A gaveta (épico ou pessoa) abre por cima, à direita: em tela larga a visão encolhe para não ficar embaixo. */
 @media (min-width: 1100px) { .office-hud:has(.drawer) .tech-view { right: calc(min(400px, 100vw - 32px) + 12px); } }
+/* A cena coberta nem é composta: o canvas e as etiquetas somem (o layout fica, a câmera não muda). */
+.office-shell:has(.tech-view) > .office-stage { visibility: hidden; }
 /* Comandos da cena não fazem sentido com ela coberta. */
 .office-hud:has(.tech-view) > .office-focus,
 .office-hud:has(.tech-view) > .office-bottom,
@@ -32,6 +34,9 @@
 .tv-head [data-view-clock] { color: var(--ui-text); font-variant-numeric: tabular-nums; }
 .tv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tv-tools .office-button { padding: 5px 10px; font-size: 12px; }
+.tv-filter { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--ui-raised); }
+.tv-filter button { padding: 3px 8px; border: 0; border-radius: 6px; background: none; color: var(--ui-dim); font: inherit; font-size: 12px; cursor: pointer; }
+.tv-filter button.active { background: var(--ui-selected); color: var(--ui-text); }
 .tv-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 40px; scrollbar-width: thin; overscroll-behavior: contain; }
 
 /* ─── Pedaços comuns ───────────────────────────────────────────────────────── */
@@ -144,13 +149,13 @@ button.tv-item-main { cursor: pointer; }
   .tv-columns-2 { grid-template-columns: minmax(0, 1fr); }
   .tv-row.tv-columns { display: none; }
   /* Cada linha vira o nome em cima e as propriedades embaixo, com o rótulo de cada uma. */
-  .tv-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 8px; }
-  .tv-epic > .tv-row { padding-left: 24px; }
-  .tv-story > .tv-row { padding-left: 40px; }
+  /* O recuo do nível vale para as propriedades também; o nome recua menos, para o triângulo. */
+  .tv-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 8px 8px 8px 34px; }
+  .tv-epic > .tv-row { padding-left: 54px; }
+  .tv-story > .tv-row { padding-left: 74px; }
   .tv-epic > .tv-row .tv-name, .tv-story > .tv-row .tv-name { padding-left: 0; }
-  .tv-row > .tv-name { flex: 1 0 100%; }
+  .tv-row > .tv-name { flex: 1 0 100%; margin-left: -26px; }
   .tv-row > .tv-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
-  .tv-row > .tv-name + .tv-cell { margin-left: 26px; }
   .tv-row > .tv-cell::before { content: attr(data-label) ":"; color: var(--ui-dim); font-size: 11px; }
   .tv-row > .tv-empty-cell { display: none; }
   .tv-detail { padding-left: 66px; }
@@ -160,8 +165,8 @@ button.tv-item-main { cursor: pointer; }
 }
 @container techview (max-width: 640px) {
   .tv-scroll { padding: 12px 12px 32px; }
-  .tv-epic > .tv-row { padding-left: 14px; }
-  .tv-story > .tv-row { padding-left: 22px; }
+  .tv-epic > .tv-row { padding-left: 44px; }
+  .tv-story > .tv-row { padding-left: 54px; }
   .tv-open { white-space: normal; }
   .tv-detail { padding-left: 24px; }
   .tv-item-extra { padding-left: 8px; }
