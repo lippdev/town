@@ -215,6 +215,100 @@ máximo, dá para notar. Ele some ao chegar à porta e ao helicóptero, sem anim
 embarcar. O helicóptero não projeta sombra de verdade: há só uma sombra de contato no deque. No celular,
 a primeira parte do voo fica fora da tela ou atrás do seletor de andares.
 
+## Cenário de tecnologia
+
+Um modo a mais da demonstração, para avaliar se um "campo virtual" do setor de tecnologia agrega ao
+time além do que um painel em tempo real já daria. **Nada é real:** o squad, os projetos, os PRs e a
+agenda são fictícios e simulados. A estrutura, porém, é a das ferramentas que o setor usa, para a
+simulação poder dar lugar aos conectores sem mexer na cena.
+
+### O modelo (`src/activity/`)
+
+Puro TypeScript, sem React nem three, coberto por `tests/unit/activity.test.ts`.
+
+| Fonte         | O que entra                                                                                   |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| Notion        | Projeto → Épico → HU → critérios de aceite, com responsável; épico na trilha discovery ou delivery |
+| GitHub        | PRs (ligados à HU pelo `HU-31` no título ou na branch), revisões, CI, merges e deploys        |
+| Slack         | Só sinais: status, huddle (quem entrou e saiu) e contagem de mensagens por canal               |
+| Microsoft 365 | Agenda do Outlook (título, horário, participantes, sala ou remoto) e presença do Teams       |
+
+- **Identidade:** o e-mail corporativo é a chave. Notion, Slack e M365 já chegam com ele. O GitHub é
+  pessoal: chega com o login, e só vira pessoa se o login estiver vinculado no cadastro. Como a ligação
+  é feita na leitura, vincular atribui também o que já tinha acontecido; até lá, o PR mostra "autor não
+  identificado" e o login (`identity.ts`).
+- **Um formato de evento** (`events.ts`): `{ id, at, source, actor, subject, type, data }` — quem, o
+  quê, sobre o quê, quando e de que fonte (`notion`, `github`, `slack`, `m365`, `bot` ou `app`). O estado
+  "agora" é o retrato inicial com os eventos aplicados em ordem. Evento repetido é aplicado uma vez, e
+  evento sobre algo que não existe é ignorado.
+- **Perguntas de acompanhamento** (`selectors.ts`): o que trava o épico X, HUs paradas há mais de N,
+  PRs esperando revisão e quem pode revisar agora (dev ou tech lead com GitHub vinculado, que não é o
+  autor, está na mesa e não tem reunião nos próximos 30 minutos; foco conta como "não perturbe"), HUs
+  prontas ou em curso sem critério de aceite, o que os bots fizeram hoje, quem está em reunião, huddle,
+  foco ou fora, carga por pessoa e saúde do épico (no prazo, em risco, travado) com o motivo de cada
+  ponto. `trackingAnswers` junta as respostas: é por ela que a prova confere que o prédio e o painel
+  dizem o mesmo.
+
+### A simulação
+
+`SimulatedDay` gera um dia de trabalho, terça 10/11/2026 das 9h às 18h, determinístico pela semente
+(`?semente=`): a mesma semente dá o mesmo dia, e as mesmas ações dão as mesmas consequências. A semente
+mexe nos minutos e no movimento dos canais; as situações são sempre as mesmas, para haver o que mostrar.
+Na velocidade 1, o dia passa em 15 minutos.
+
+- A HU-27 está travada desde ontem esperando decisão da PM, que passa o dia em reuniões: o épico Login
+  sem senha só destrava depois do refinamento, a menos que alguém cobre antes.
+- O PR #142 está aberto há quatro dias sem revisão, até a rotina do Pulse cobrar quem está livre.
+- O CI do PR #145 quebra durante o foco da Luana e é consertado; a Renata aprova depois do huddle.
+- Daily e refinamento na sala; chamadas remotas na mesa; três huddles; almoço; a Bianca de férias, com
+  HU no nome dela; o Tiago chega depois da daily e abre PR com um login que não vinculou.
+- Deploys em homologação e em produção; um épico de discovery é validado e outro passa para o delivery.
+- Rotinas dos bots da Operação: o Forge prepara a pauta da daily, o Atlas atualiza o status dos épicos a
+  partir do GitHub, e o Pulse cobra a revisão parada. O resultado é calculado pelos mesmos seletores.
+
+### A fronteira simulação/conector (`source.ts`)
+
+A cena, o painel e os seletores só conhecem `ActivityState`. Quem o alimenta implementa `ActivitySource`:
+
+- `initial()`: a sincronização inicial, um retrato completo lido das APIs uma vez.
+- `pull(until, estado)`: os eventos novos até `until`, já normalizados. No conector, vêm de webhooks
+  (ou de leitura periódica onde não há webhook), guardados numa fila no servidor até a tela pedir.
+- `perform(ação, estado)`: executa uma ação da tela. No conector, vira chamada de API; o que ela causa
+  depois chega por `pull`, como qualquer outro evento.
+
+Trocar `SimulatedDay` por um conector é escrever outra classe com esses três métodos. Nada na cena muda.
+
+### Privacidade por desenho
+
+- Não existe, no modelo, mensagem entre pessoas: nem texto, nem contagem por pessoa. Canal só tem
+  horário e total do dia. Huddle só tem quem entrou e saiu. O teste confere isso.
+- A única mensagem com texto é a que o próprio Lipp HQ (ou um bot dele) envia numa ação ou rotina.
+- Agenda: só título, horário, participantes e lugar; nada de corpo do convite.
+- Todos os dados da demonstração são fictícios, com e-mails no domínio reservado `lipp.example`.
+
+### O que falta para ligar as ferramentas reais
+
+Um pequeno serviço no servidor (como o proxy do Hermes em `server/`) que recebe os webhooks, traduz para
+`ActivityEvent`, guarda numa fila e serve `initial` e `pull` para a tela. Os segredos ficam nele, nunca
+no navegador. Por ferramenta:
+
+- **Notion:** integração interna aprovada por quem administra o workspace, compartilhada com as bases
+  de Projetos, Épicos e HUs, com a permissão de ler e-mail dos usuários. Webhooks de página e base
+  para mudança de status, responsável e critérios; escrita (`pages.update`) para reatribuir.
+- **GitHub:** GitHub App instalado na organização por um admin, com leitura de pull requests, checks,
+  actions e deployments, e escrita em pull requests para pedir revisão. Webhooks `pull_request`,
+  `pull_request_review`, `check_suite`/`workflow_run`, `push` e `deployment_status`. No cadastro, o
+  vínculo deve passar a ser por "Entrar com GitHub" (OAuth), para provar que o login é da pessoa; na
+  demonstração ele é digitado.
+- **Slack:** app instalado por admin do workspace, com `users:read`, `users:read.email` (ligar ao
+  e-mail), `users.profile:read` (status), `chat:write` (só as mensagens do app) e leitura de canais.
+  Eventos `user_status_changed`, `user_huddle_changed` e `message.channels`. Atenção: o evento de
+  mensagem traz o texto; o conector precisa descartá-lo na chegada e guardar só a contagem.
+- **Microsoft 365:** registro de app no Entra ID com consentimento de admin para `Calendars.Read`,
+  `Presence.Read.All` e `User.Read.All`, restrito às caixas do squad por política de acesso de
+  aplicativo. Assinaturas do Graph (change notifications) para eventos de agenda e presença, com
+  renovação periódica, e um endpoint HTTPS público para recebê-las.
+
 ## Como usar
 
 | Ação              | Como                                                                                                 |
