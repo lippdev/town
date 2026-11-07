@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { Box3, OrthographicCamera, type Scene, type WebGLRenderer } from "three";
+import { Box3, Mesh, OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, STORY } from "./officeBuilding";
 import { OFFICE_SEATS_BY_ID } from "./officeLayout";
@@ -134,6 +134,14 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
       if (!object) return false;
       for (let current = object; current; current = current.parent!) if (!current.visible) return false;
       return true;
+    },
+    /** Cor do material do objeto: { r, g, b } em 0–1, ou null se não existir. Para o QA do ciclo dia-noite. */
+    materialColor: (name: string) => {
+      const object = scene.getObjectByName(name);
+      if (!(object instanceof Mesh)) return null;
+      const mat = object.material as { color?: { r: number; g: number; b: number } };
+      if (!mat.color) return null;
+      return { r: mat.color.r, g: mat.color.g, b: mat.color.b };
     },
     /** Pixel do meio de um segredo: o harness clica na cena como quem usa o mouse. */
     secretPoint: (id: string) => {
