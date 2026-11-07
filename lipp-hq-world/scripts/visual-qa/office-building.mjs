@@ -19,6 +19,8 @@ const CHROME = process.env.CHROME_PATH || (existsSync("/usr/bin/google-chrome") 
 const SCALE = Number(process.env.HQ_TIMEOUT_SCALE ?? 1);
 const after = (ms) => Math.round(ms * SCALE);
 const OUT = process.argv[2] ?? "qa/office-building";
+/** Numa máquina sem GPU, cada pixel de cena custa caro: HQ_VIEWPORT=1024x640 encurta a rodada. */
+const [VW, VH] = (process.env.HQ_VIEWPORT ?? "1440x900").split("x").map(Number);
 const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/];
 mkdirSync(OUT, { recursive: true });
@@ -36,10 +38,13 @@ async function check(name, fn) {
 }
 
 async function open(url, options = {}) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
+  const context = await browser.newContext({ viewport: { width: VW, height: VH }, ...options });
   // A prova nunca fala com um Hermes de verdade, mesmo abrindo a frota real.
   await context.route("**/api/hq/**", (route) => route.fulfill({ status: 503, body: "" }));
   const page = await context.newPage();
+  // Um clique espera o elemento parar de se mexer por dois quadros: a 0,3 quadros por segundo
+  // isso não cabe nos 30 s padrão do Playwright.
+  page.setDefaultTimeout(after(30000));
   page.on("console", (message) => {
     if (message.location().url.includes("/api/hq/")) return;
     if (["error", "warning"].includes(message.type()) && !IGNORED.some((pattern) => pattern.test(message.text()))) problems.push(message.text());
@@ -47,6 +52,9 @@ async function open(url, options = {}) {
   page.on("pageerror", (error) => problems.push(String(error)));
   await page.goto(`${BASE}${url}`);
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: after(90000) });
+  // Abaixo de 1200 px a navegação começa recolhida; as provas de desktop contam com ela à vista.
+  const collapsed = await page.evaluate(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "false");
+  if (collapsed && VW > 860) await page.click('[aria-label="Abrir navegação"]');
   return page;
 }
 const state = (page) => page.evaluate(() => window.__HQ_OFFICE_QA__.state());
@@ -83,7 +91,7 @@ await check("a demonstração abre com o prédio fechado, sem bot nem rótulo", 
   assert.equal(now.buildingView, "exterior");
   assert.deepEqual(now.rigs, []);
   assert.deepEqual(await sceneFocusables(page), []);
-  await assertTowerFits(page, 1440, 900);
+  await assertTowerFits(page, VW, VH);
   await shot(page, "exterior");
 });
 
@@ -120,7 +128,7 @@ await check("o elevador tem caixa atrás da porta nos três andares; de perto, p
   const pixel = (view, x, y, z) => {
     const dx = x - view.x;
     const dz = z - view.z;
-    return { x: 720 + Math.SQRT1_2 * (dx - dz) * view.zoom, y: 450 - (y * (Math.sqrt(3) / 2) - 0.5 * Math.SQRT1_2 * (dx + dz)) * view.zoom };
+    return { x: VW / 2 + Math.SQRT1_2 * (dx - dz) * view.zoom, y: VH / 2 - (y * (Math.sqrt(3) / 2) - 0.5 * Math.SQRT1_2 * (dx + dz)) * view.zoom };
   };
   for (const floor of FLOORS) {
     await goTo(page, floor);
