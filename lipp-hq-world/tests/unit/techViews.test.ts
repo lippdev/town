@@ -47,6 +47,21 @@ describe("visão Projetos: a árvore do Notion", () => {
     expect(personTag(state, null)).toBeNull();
   });
 
+  it("a HU traz os outros motivos do épico que caem nela: responsável fora, PR sem revisão", () => {
+    const state = day(at(10, 20));
+    const stories = projectTree(state).flatMap((node) => node.epics.flatMap((epic) => epic.stories));
+    const hu37 = stories.find((node) => node.story.id === "HU-37")!;
+    expect(hu37.risks.map((reason) => reason.kind)).toEqual(["responsavel-fora"]);
+    expect(needsAttention(hu37)).toBe(true);
+    const hu31 = stories.find((node) => node.story.id === "HU-31")!;
+    expect(hu31.risks.map((reason) => reason.kind)).toContain("pr-sem-revisao");
+    // Cada motivo de épico fora do prazo aparece em alguma HU, ou é do próprio épico (prazo).
+    for (const epic of projectTree(state).flatMap((node) => node.epics)) {
+      const shown = new Set(epic.stories.flatMap((node) => [...node.risks.map((reason) => reason.text)]));
+      for (const reason of epic.health.reasons.filter((item) => ["ci-quebrado", "pr-sem-revisao", "responsavel-fora"].includes(item.kind))) expect(shown.has(reason.text)).toBe(true);
+    }
+  });
+
   it("liga cada PR à sua HU e conta critérios marcados", () => {
     const state = day(at(14, 0));
     const stories = projectTree(state).flatMap((node) => node.epics.flatMap((epic) => epic.stories));

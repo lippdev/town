@@ -69,6 +69,8 @@ export interface StoryNode {
   withoutCriteria: boolean;
   criteriaDone: number;
   prs: PullRequest[];
+  /** Os outros motivos da saúde do épico que caem nesta HU: CI quebrado, PR sem revisão, responsável fora. */
+  risks: HealthReason[];
 }
 
 export interface EpicNode {
@@ -86,23 +88,34 @@ export interface ProjectNode {
   summary: { stories: number; done: number; blocked: number; withoutCriteria: number; health: Record<HealthLevel, number> };
 }
 
+/** Motivos que a HU já mostra com marca própria (travada, parada, sem critério). */
+const FLAGGED = new Set<HealthReason["kind"]>(["hu-travada", "hu-parada", "hu-sem-criterio"]);
+
 export function projectTree(state: ActivityState): ProjectNode[] {
   const blocked = new Set(blockedStories(state).map((story) => story.id));
   const stale = new Set(staleStories(state).map((story) => story.id));
   const withoutCriteria = new Set(storiesWithoutCriteria(state).map((story) => story.id));
-  const storyNode = (story: Story): StoryNode => ({
-    story,
-    assignee: personTag(state, story.assignee),
-    blocked: blocked.has(story.id) && story.blocked ? { reason: story.blocked.reason, since: story.blocked.since, waitingOn: personTag(state, story.blocked.waitingOn) } : null,
-    stale: stale.has(story.id),
-    withoutCriteria: withoutCriteria.has(story.id),
-    criteriaDone: story.criteria.filter((criterion) => criterion.done).length,
-    prs: prsOfStory(state, story.id),
-  });
+  const storyNode = (story: Story, health: EpicHealth): StoryNode => {
+    const prs = prsOfStory(state, story.id);
+    const touches = (subject: Subject) => (subject.kind === "story" && subject.id === story.id) || (subject.kind === "pr" && prs.some((pr) => pr.number === subject.number));
+    return {
+      story,
+      assignee: personTag(state, story.assignee),
+      blocked: blocked.has(story.id) && story.blocked ? { reason: story.blocked.reason, since: story.blocked.since, waitingOn: personTag(state, story.blocked.waitingOn) } : null,
+      stale: stale.has(story.id),
+      withoutCriteria: withoutCriteria.has(story.id),
+      criteriaDone: story.criteria.filter((criterion) => criterion.done).length,
+      prs,
+      risks: health.reasons.filter((reason) => !FLAGGED.has(reason.kind) && touches(reason.subject)),
+    };
+  };
   return state.projects.map((project) => {
     const epics = state.epics
       .filter((epic) => epic.projectId === project.id)
-      .map((epic): EpicNode => ({ epic, owner: personTag(state, epic.owner), track: trackOf(epic.status), health: epicHealth(state, epic.id), stories: storiesOf(state, epic.id).map(storyNode) }));
+      .map((epic): EpicNode => {
+        const health = epicHealth(state, epic.id);
+        return { epic, owner: personTag(state, epic.owner), track: trackOf(epic.status), health, stories: storiesOf(state, epic.id).map((story) => storyNode(story, health)) };
+      });
     const stories = epics.flatMap((epic) => epic.stories);
     const health: Record<HealthLevel, number> = { "no-prazo": 0, "em-risco": 0, travado: 0 };
     for (const epic of epics) health[epic.health.level] += 1;
@@ -121,15 +134,15 @@ export function projectTree(state: ActivityState): ProjectNode[] {
   });
 }
 
-/** A HU pede atenção: travada, parada ou sem critério. */
-export const needsAttention = (node: StoryNode) => Boolean(node.blocked) || node.stale || node.withoutCriteria;
+/** A HU pede atenção: travada, parada, sem critério, ou é o motivo de o épico estar em risco. */
+export const needsAttention = (node: StoryNode) => Boolean(node.blocked) || node.stale || node.withoutCriteria || node.risks.length > 0;
 
-/** O que abrir para ver tudo que pede atenção: os projetos e os épicos com HU travada, parada ou sem critério. */
+/** O que abrir para ver tudo que pede atenção: os projetos e os épicos fora do prazo ou com HU marcada. */
 export function attentionExpansion(tree: readonly ProjectNode[]): Set<string> {
   const open = new Set<string>();
   for (const project of tree) {
     open.add(project.project.id);
-    for (const epic of project.epics) if (epic.stories.some(needsAttention)) open.add(epic.epic.id);
+    for (const epic of project.epics) if (epic.health.level !== "no-prazo" || epic.stories.some(needsAttention)) open.add(epic.epic.id);
   }
   return open;
 }
