@@ -36,6 +36,10 @@ function techQaApi() {
     },
     setSpeed: (speed: (typeof SPEEDS)[number]) => useTechStore.getState().setSpeed(speed),
     pause: (paused: boolean) => useTechStore.getState().setPaused(paused),
+    /** Máquina sem GPU: a cena divide o quadro lento em passos curtos e anda no tempo real. */
+    realTime: (on: boolean) => {
+      techSceneRuntime.realTime = on;
+    },
     speed: () => useTechStore.getState().speed,
     where: (email: string) => whereIs(useTechStore.getState().state, email).kind,
     plans: () => useTechStore.getState().people.map((plan) => ({ email: plan.email, place: plan.place.key, zone: plan.place.zone })),

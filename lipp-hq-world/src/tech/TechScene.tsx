@@ -28,7 +28,26 @@ export const techSceneRuntime = {
   people: new Map<string, { home: string; pending: string | null; hidden: boolean }>(),
   board: [] as Array<{ epicId: string; health: string; stage: number }>,
   robots: new Map<string, { botId: string; x: number; y: number; z: number; arrived: boolean; leaving: boolean; gone: boolean }>(),
+  /** Só a prova liga: o quadro lento é dividido em passos curtos, e o squad anda no tempo real. */
+  realTime: false,
 };
+
+/** O passo mais longo de animação; o mesmo teto do `HumanActor`. */
+const LONGEST_STEP = 0.05;
+/** Com o tempo real ligado, um quadro vale no máximo isto de animação (s). */
+const LONGEST_REAL_FRAME = 2;
+
+/**
+ * Os passos de animação de um quadro. Fora da prova é um só, e quadro lento anda no máximo
+ * `LONGEST_STEP`, como no resto do prédio. Na prova em máquina sem GPU, onde um quadro passa de um
+ * segundo, o quadro é dividido em passos de até `LONGEST_STEP` para a cena acompanhar o relógio.
+ */
+function frameSteps(delta: number): number[] {
+  if (!techSceneRuntime.realTime || delta <= LONGEST_STEP) return [delta];
+  const total = Math.min(delta, LONGEST_REAL_FRAME);
+  const count = Math.ceil(total / LONGEST_STEP);
+  return Array.from({ length: count }, () => total / count);
+}
 
 /**
  * Leva a pessoa até o lugar que o plano pede: levanta, anda pela rede de caminhos, troca de casa e
@@ -75,6 +94,17 @@ function SquadBody({ human, base, reduced }: { human: OfficeHuman; base: HumanBa
   useFrame((_, delta) => {
     const state = drive.current;
     if (!actor || !state) return;
+    for (const step of frameSteps(delta)) follow(state, step);
+    const { x, y, z } = actor.position;
+    officeRuntime.liveAnchors.set(id, [x, y + TAG_HEIGHT + (actor.phase === "seated" ? SEATED_RISE : 0), z]);
+    techSceneRuntime.people.set(email, { home: state.home.key, pending: state.pending?.key ?? null, hidden: state.hidden });
+    frame.current = (frame.current + 1) % WALKING_SHADOW_EVERY;
+    if (frame.current === 0 && actor.phase !== "standing" && actor.phase !== "seated") gl.shadowMap.needsUpdate = true;
+  });
+
+  /** Um passo: troca de casa se chegou, levanta ou parte se o plano mudou, e anima. */
+  function follow(state: NonNullable<typeof drive.current>, delta: number) {
+    if (!actor) return;
     const want = useTechStore.getState().people.find((plan) => plan.email === email)?.place ?? state.home;
     const before = actor.phase;
     if (state.pending) {
@@ -111,12 +141,7 @@ function SquadBody({ human, base, reduced }: { human: OfficeHuman; base: HumanBa
       gl.shadowMap.needsUpdate = true;
       useOfficeStore.getState().setHumanPhase(id, actor.phase);
     }
-    const { x, y, z } = actor.position;
-    officeRuntime.liveAnchors.set(id, [x, y + TAG_HEIGHT + (actor.phase === "seated" ? SEATED_RISE : 0), z]);
-    techSceneRuntime.people.set(email, { home: state.home.key, pending: state.pending?.key ?? null, hidden: state.hidden });
-    frame.current = (frame.current + 1) % WALKING_SHADOW_EVERY;
-    if (frame.current === 0 && actor.phase !== "standing" && actor.phase !== "seated") gl.shadowMap.needsUpdate = true;
-  });
+  }
 
   return actor ? <primitive object={actor.holder} name={`squad-${email}`} /> : null;
 }
@@ -284,15 +309,19 @@ function BotVisitor({ visit, scene, clips, reduced }: { visit: BotVisit; scene: 
   }, [holder, rig, visit.taskId]);
   useEffect(() => rig.apply(lookFor(BOT_COLOR[visit.botId] ?? "#ca9337", saved)), [rig, saved, visit.botId]);
   useFrame(({ clock }, delta) => {
-    const step = Math.min(delta, 0.05);
-    rig.update(reduced ? 0 : step);
     const state = motion.current;
     const goal = done ? 0 : length;
-    if (reduced) state.distance = goal;
-    else state.distance += Math.sign(goal - state.distance) * Math.min(Math.abs(goal - state.distance), BOT_SPEED * step);
-    const pose = pathPose(path, state.distance);
-    const moving = Math.abs(goal - state.distance) > 1e-3;
-    state.yaw = turnToward(state.yaw, moving ? (done ? pose.yaw + Math.PI : pose.yaw) : 0, 4 * step);
+    let pose = pathPose(path, state.distance);
+    let moving = false;
+    for (const each of frameSteps(delta)) {
+      const step = Math.min(each, LONGEST_STEP);
+      rig.update(reduced ? 0 : step);
+      if (reduced) state.distance = goal;
+      else state.distance += Math.sign(goal - state.distance) * Math.min(Math.abs(goal - state.distance), BOT_SPEED * step);
+      pose = pathPose(path, state.distance);
+      moving = Math.abs(goal - state.distance) > 1e-3;
+      state.yaw = turnToward(state.yaw, moving ? (done ? pose.yaw + Math.PI : pose.yaw) : 0, 4 * step);
+    }
     state.gone = done && state.distance <= 1e-3;
     holder.visible = !state.gone;
     const y = HOVER + (reduced ? 0 : bobAt(clock.elapsedTime, botPhase(visit.botId)));
