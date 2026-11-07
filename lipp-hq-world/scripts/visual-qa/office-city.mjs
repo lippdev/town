@@ -6,7 +6,7 @@
  * Uso: HQ_URL=http://127.0.0.1:5243 node scripts/visual-qa/office-city.mjs [pasta]
  * Perfil novo e /api/hq bloqueado: não fala com Hermes nenhum nem toca no navegador de ninguém.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 
@@ -19,7 +19,8 @@ const after = (ms) => Math.round(ms * SCALE);
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({
-  executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
+  // Chrome da máquina quando existe (servidor sem GPU); senão o Chromium do Playwright, como no Mac.
+  executablePath: process.env.CHROME_PATH || (existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined),
   args: ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle", `--use-angle=${process.env.HQ_ANGLE ?? (process.platform === "darwin" ? "metal" : "swiftshader")}`, "--enable-unsafe-swiftshader", "--disable-gpu-sandbox", "--ignore-gpu-blocklist"],
 });
 const errors = [];

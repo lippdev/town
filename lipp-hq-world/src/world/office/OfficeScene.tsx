@@ -2,8 +2,9 @@ import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type 
 import { useFrame, useThree } from "@react-three/fiber";
 import { CITY_AIR, CITY_LIT_MIN } from "./cityHaze";
 import { shouldStall } from "./loadWatch";
+import { useLoadProgress } from "./useLoadProgress";
 import { CLOCK_POLL_MS, NIGHT_BACKGROUND, currentMinutes, daylightAt, skyFor } from "./dayCycle";
-import { ContactShadows, SoftShadows, useGLTF, useProgress, useTexture } from "@react-three/drei";
+import { ContactShadows, SoftShadows, useGLTF, useTexture } from "@react-three/drei";
 import type {
   DirectionalLight,
   Group,
@@ -420,8 +421,7 @@ function SceneReady() {
  * falhado. Agora o aviso só entra quando os downloads param de avançar.
  */
 function LoadWatch() {
-  const active = useProgress((state) => state.active);
-  const loaded = useProgress((state) => state.loaded);
+  const { active, loaded } = useLoadProgress();
   const pulse = useRef({ active, loaded, at: Date.now(), startedAt: Date.now() });
 
   useEffect(() => {
