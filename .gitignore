@@ -34,3 +34,4 @@ logs/
 # Ficam locais; o que vira prova no repositório é copiado para qa/screenshots/.
 lipp-hq-world/qa/office-building/
 lipp-hq-world/qa/office-city/
+lipp-hq-world/qa/office-tech/

@@ -27,6 +27,7 @@
     "qa:heliporto": "node scripts/visual-qa/office-helipad.mjs",
     "qa:primeiro-load": "node scripts/visual-qa/office-first-load.mjs",
     "qa:predio-quadros": "node scripts/visual-qa/office-building-frames.mjs",
+    "qa:tecnologia": "node scripts/visual-qa/office-tech.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
   },
