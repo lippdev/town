@@ -7,13 +7,14 @@
  * Cada página usa um perfil novo: nada toca no que você salvou no navegador.
  */
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 
 const BASE = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const ANGLE = process.env.HQ_ANGLE ?? (process.platform === "darwin" ? "metal" : "swiftshader");
-const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
+// Chrome da máquina quando existe (servidor sem GPU); senão o Chromium do Playwright, como no Mac.
+const CHROME = process.env.CHROME_PATH || (existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined);
 /** Numa máquina sem GPU um quadro custa segundos: o relógio do harness acompanha por HQ_TIMEOUT_SCALE. */
 const SCALE = Number(process.env.HQ_TIMEOUT_SCALE ?? 1);
 const after = (ms) => Math.round(ms * SCALE);
