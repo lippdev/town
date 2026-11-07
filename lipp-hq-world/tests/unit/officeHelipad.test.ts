@@ -117,13 +117,14 @@ describe("trajetória do voo", () => {
     expect(outboundPose(0)).toMatchObject({ x: PARKED_POSE.x, y: PARKED_POSE.y, z: PARKED_POSE.z, yaw: 0 });
   });
 
-  it("não dá saltos: entre dois instantes próximos a posição anda pouco", () => {
+  it("não dá saltos: fica abaixo de um teto de velocidade, em metros por segundo", () => {
     for (const [duration, pose] of [[INBOUND_SECONDS, inboundPose], [OUTBOUND_SECONDS, outboundPose]] as const) {
       const path = along(duration, pose);
+      const seconds = duration / SAMPLES;
       for (let index = 1; index < path.length; index += 1) {
         const a = path[index - 1]!;
         const b = path[index]!;
-        expect(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z)).toBeLessThan(2.6);
+        expect(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) / seconds).toBeLessThan(110);
       }
     }
   });
