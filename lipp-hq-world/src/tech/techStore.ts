@@ -28,6 +28,27 @@ export function launchFrom(search: string): Launch {
   return { seed: Number.isFinite(seed) ? seed : DEFAULT_SEED, start, speed: (SPEEDS as readonly number[]).includes(asked) ? (asked as Speed) : 1 };
 }
 
+/** As três maneiras de olhar o mesmo dia: o andar 3D, a árvore do Notion e o painel. */
+export const TECH_VIEWS = ["predio", "projetos", "painel"] as const;
+export type TechView = (typeof TECH_VIEWS)[number];
+export const TECH_VIEW_LABEL: Record<TechView, string> = { predio: "Prédio", projetos: "Projetos", painel: "Painel" };
+const VIEW_QUERY = "visao";
+
+/** `?visao=predio|projetos|painel`: abre direto numa visão; qualquer outro valor é o prédio. */
+export function viewFrom(search: string): TechView {
+  const asked = new URLSearchParams(search).get(VIEW_QUERY);
+  return (TECH_VIEWS as readonly string[]).includes(asked ?? "") ? (asked as TechView) : "predio";
+}
+
+/** A URL acompanha a visão, para recarregar ou mandar o link e cair no mesmo lugar. */
+export function searchWithView(search: string, view: TechView): string {
+  const params = new URLSearchParams(search);
+  if (view === "predio") params.delete(VIEW_QUERY);
+  else params.set(VIEW_QUERY, view);
+  const next = params.toString();
+  return next ? `?${next}` : "";
+}
+
 export interface Notice {
   id: number;
   text: string;
@@ -42,6 +63,8 @@ interface TechState {
   ended: boolean;
   people: PersonPlan[];
   visits: BotVisit[];
+  /** Prédio, Projetos ou Painel: todas leem o mesmo `state`. */
+  view: TechView;
   selectedEpicId: string | null;
   /** HU em destaque no épico aberto. */
   highlightStoryId: string | null;
@@ -54,10 +77,12 @@ interface TechState {
   jumpTo: (instant: number) => void;
   perform: (action: AppAction) => ActionResult;
   selectEpic: (epicId: string | null, storyId?: string | null) => void;
+  setView: (view: TechView) => void;
   dismissNotice: (id: number) => void;
 }
 
 const launch = typeof window === "undefined" ? { seed: DEFAULT_SEED, start: DAY_START, speed: 1 as Speed } : launchFrom(window.location.search);
+const firstView: TechView = typeof window === "undefined" ? "predio" : viewFrom(window.location.search);
 let runtime = new ActivityRuntime(new SimulatedDay(launch.seed), launch.start);
 let noticeId = 0;
 
@@ -68,6 +93,7 @@ export const useTechStore = create<TechState>((set, get) => ({
   ...derived(runtime.state),
   speed: launch.speed,
   paused: false,
+  view: firstView,
   selectedEpicId: null,
   highlightStoryId: null,
   notices: [],
@@ -98,6 +124,13 @@ export const useTechStore = create<TechState>((set, get) => ({
     return result;
   },
   selectEpic: (selectedEpicId, highlightStoryId = null) => set({ selectedEpicId, highlightStoryId }),
+  setView: (view) => {
+    if (view === get().view) return;
+    set({ view });
+    if (typeof window === "undefined") return;
+    const search = searchWithView(window.location.search, view);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`);
+  },
   dismissNotice: (id) => set({ notices: get().notices.filter((notice) => notice.id !== id) }),
 }));
 
