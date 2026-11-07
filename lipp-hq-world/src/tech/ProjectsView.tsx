@@ -218,7 +218,7 @@ export function ProjectsView() {
         title="Projetos"
         tools={
           <>
-            <div className="tech-speeds tv-filter" role="group" aria-label="Filtro">
+            <div className="tv-filter" role="group" aria-label="Filtro">
               <button type="button" aria-pressed={!onlyAttention} className={!onlyAttention ? "active" : undefined} onClick={() => setOnlyAttention(false)} data-tree-filter="tudo">
                 Tudo
               </button>
