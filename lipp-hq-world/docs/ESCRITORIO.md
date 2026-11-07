@@ -266,6 +266,60 @@ Na velocidade 1, o dia passa em 15 minutos.
 - Rotinas dos bots da Operação: o Forge prepara a pauta da daily, o Atlas atualiza o status dos épicos a
   partir do GitHub, e o Pulse cobra a revisão parada. O resultado é calculado pelos mesmos seletores.
 
+### O andar da Tecnologia
+
+`/?escritorio=completo&modo=demonstracao&cenario=tecnologia`. Sem `cenario`, a demonstração é a de
+sempre, e a frota real nunca aceita cenário (`parseScenario`). No cenário, o pavimento 2 deixa de ser
+expansão reservada e vira **Tecnologia**, com botão próprio no seletor; os pavimentos 3 a 5 seguem na
+linha da Expansão. `?hora_sim=HH:MM` abre o dia numa hora, `?velocidade=1|2|4|8` e `?semente=` também
+valem.
+
+- **Planta** (`TECH_FLOOR` em `officeExpansion.ts`): o quadro dos épicos na parede do fundo, duas ilhas
+  com as oito mesas do squad, a sala de reunião com oito lugares (quatro de frente para a câmera) e o
+  canto do huddle perto dos elevadores. Não há figurante: quem está ali é o squad simulado.
+- **Cada pessoa** é uma `HumanFigure` com aparência própria (`src/tech/techPeople.ts`) e uma mesa. O plano
+  (`personPlans`) diz onde ela deve estar: reunião presencial na agenda leva à sala (oito minutos do
+  dia antes, para chegar a tempo), huddle do Slack ao canto do huddle, presença offline ou ausente ao
+  elevador, onde a pessoa some. Foco e chamada remota ficam na mesa; foco ganha a lua de "não perturbe",
+  sempre à vista. A cena levanta, anda pela rede de caminhos (`techPlaces.ts`, testada para não atravessar
+  móvel), troca de casa e senta. Ninguém para no meio de um movimento: termina e segue o plano novo.
+- **O rótulo** de cada pessoa ("revisando PR #145", "Daily", "foco · HU-32", "indo para Refinamento")
+  aparece ao apontar, ao selecionar ou com o foco do teclado, para a cena não virar uma lista de nomes.
+- **O quadro dos épicos**: discovery à esquerda (Ideia, Pesquisa, Validado), delivery à direita
+  (Planejado, Em andamento, Homologação, Entregue). Cada épico é um cartão na cor da saúde: verde no
+  prazo, âmbar em risco, vermelho travado. É uma textura só, redesenhada quando muda etapa ou saúde, com
+  botões de verdade por cima: clicar (ou Tab e Enter) abre a gaveta do épico, com os motivos.
+- **Os bots trabalhando**: quando o Forge, o Pulse ou o Atlas começam uma tarefa, um robô sai do
+  elevador, voa até o lugar do trabalho (a sala da daily, o cartão do épico ou a mesa de quem abriu o
+  PR), fica lá enquanto ela dura e volta. A etiqueta diz qual bot e o que faz.
+- **A gaveta da pessoa**: agora (o que faz, até quando, Teams e Slack), agenda do dia, HUs, PRs abertos,
+  revisões pedidas e o histórico do dia. Quem não vinculou o GitHub vê o aviso, com o login encontrado.
+- **Esc** fecha primeiro a gaveta do cenário (`escapeLayers`), depois segue como no resto do prédio.
+
+**Primeiro carregamento:** o cenário mora num pedaço de JavaScript à parte (`src/tech/`), baixado só
+com `cenario=tecnologia`. Sem ele, `qa:tecnologia` confere que nenhum arquivo do cenário é pedido. Com
+ele, a vista inicial continua o prédio fechado; o squad, o quadro e os robôs só são montados no andar.
+
+**Custo medido** (1440×900, Apple M1, servidor de desenvolvimento, mediana de 12 quadros):
+
+| Vista                  | Chamadas | Triângulos |
+| ---------------------- | -------- | ---------- |
+| Andar 2 sem cenário    | 85       | 333 mil    |
+| Tecnologia, 10h20      | 113      | 461 mil    |
+| Exterior sem cenário   | 36       | 121 mil    |
+| Exterior com cenário   | 36       | 121 mil    |
+
+As 28 chamadas a mais são as oito pessoas (cinco figurantes saem), as cadeiras ocupáveis e o quadro.
+
+`pnpm qa:tecnologia` prova o cenário: abre, o dia anda, pausa e muda de velocidade, a daily leva o
+squad à sala e devolve, huddle, o épico destrava no quadro, gaveta da pessoa e do épico, robô da rotina,
+movimento reduzido, celular, custo, e que sem `cenario` nada muda.
+
+Limites do andar: o passo do squad é apressado (1,7×) para o dia comprimido caber, e mesmo assim, a 4× e
+8×, as pessoas chegam atrasadas às reuniões curtas. Ninguém sobe pelo elevador: quem sai some na porta e
+quem chega aparece nela. Os robôs também aparecem na porta do elevador, sem a viagem desde a Operação, e
+a mesa do bot na Operação não fica vazia enquanto ele visita. O texto do quadro só se lê de perto.
+
 ### A fronteira simulação/conector (`source.ts`)
 
 A cena, o painel e os seletores só conhecem `ActivityState`. Quem o alimenta implementa `ActivitySource`:
