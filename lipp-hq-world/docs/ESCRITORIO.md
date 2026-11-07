@@ -32,6 +32,7 @@ O céu e as luzes seguem o relógio de Brasília (`America/Sao_Paulo`): noite da
 céu clareia, o sol sobe de intensidade, a exposição aumenta e as janelas acesas da cidade e da
 fachada apagam; à noite é a cena de sempre. `?hora=HH:MM` fixa a hora para conferir qualquer
 momento. Tudo em `src/world/office/dayCycle.ts`. O esconderijo ignora a hora: lá é sempre noite.
+Prova do ciclo em `pnpm qa:cidade` (abre a demonstração em três horários: meio-dia, entardecer e noite).
 
 ## O prédio (só na demonstração)
 
