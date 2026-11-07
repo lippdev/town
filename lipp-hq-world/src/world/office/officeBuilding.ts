@@ -36,9 +36,9 @@ export const CROWN_STEPS: ReadonlyArray<{ inset: number; height: number }> = [
   { inset: 4, height: 3.2 },
   { inset: 6.4, height: 2.8 },
 ];
-/** Base da agulha e a agulha, sobre o último degrau. */
+/** Quanto o mastro passa do último degrau: é ele o ponto mais alto, e o que o enquadramento respeita. */
 export const SPIRE_HEIGHT = 4.6;
-/** Coroa e agulha acima da última laje: entram no enquadramento do exterior. */
+/** Coroa e mastro acima da última laje: entram no enquadramento do exterior. */
 export const CROWN_HEIGHT = CROWN_STEPS.reduce((sum, step) => sum + step.height, 0) + SPIRE_HEIGHT;
 
 /** Fachada um pouco para dentro da laje do andar: a borda do corte fica à mostra. */
@@ -48,6 +48,30 @@ export const FACADE_BOUNDS: OfficeBounds = {
   minZ: FLOOR_BOUNDS.minZ - 0.25,
   maxZ: FLOOR_BOUNDS.maxZ + 0.25,
 };
+
+/** Topo do último degrau da coroa: é onde o heliporto se apoia. */
+export const CROWN_ROOF = BUILDING_HEIGHT + 0.01 + CROWN_STEPS.reduce((sum, step) => sum + step.height, 0);
+
+/**
+ * O heliporto, sobre o último degrau. O degrau mede 10 × 5,7 m e o rotor pede 8 m de diâmetro: o
+ * deque balança 2,65 m para a frente e para trás, ainda dentro do degrau de baixo, sobre colunas.
+ * O mastro fica fora do deque, no canto de trás: a câmera olha de +x +z e ele segue lendo como o
+ * eixo da torre na silhueta, a quase 8 m do cubo do rotor.
+ */
+export const HELIPAD = {
+  x: (FACADE_BOUNDS.minX + FACADE_BOUNDS.maxX) / 2,
+  z: (FACADE_BOUNDS.minZ + FACADE_BOUNDS.maxZ) / 2,
+  /** Meio lado do deque, que é quadrado como os degraus. */
+  half: 5.5,
+  /** Parte de baixo da laje do deque. */
+  bottom: CROWN_ROOF + 0.62,
+  /** Piso do deque: onde os esquis encostam e o chefe anda. */
+  top: CROWN_ROOF + 0.9,
+  /** Mastro, em relação ao centro do deque. */
+  mast: { x: -6.4, z: -4.6 },
+  /** Casinha da escada, em relação ao centro do deque: fora do giro do rotor, com a porta para +z. */
+  kiosk: { x: 4.55, z: -4.55, size: 1.6, height: 2 },
+} as const;
 
 export const FLOOR_LEVEL = {
   terreo: 0,

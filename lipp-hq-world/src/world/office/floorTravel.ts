@@ -1,4 +1,4 @@
-import { BUILDING_HEIGHT, CROWN_HEIGHT, CROWN_STEPS, FACADE_BOUNDS, FLOOR_LEVEL, STORY, viewElevation, type BuildingView, type FloorId } from "./officeBuilding";
+import { BUILDING_HEIGHT, CROWN_HEIGHT, CROWN_STEPS, FACADE_BOUNDS, FLOOR_LEVEL, HELIPAD, STORY, viewElevation, type BuildingView, type FloorId } from "./officeBuilding";
 import type { OfficeBounds } from "./officeLayout";
 
 /**
@@ -102,9 +102,7 @@ export function plateOpacity(cut: number, shown: FloorId | null): number {
   return t * t * (3 - 2 * t);
 }
 
-const SPIRE_BASE = 2.2;
-
-/** A seção do prédio nesta altura: a coroa recua em degraus. Acima da base da agulha, não há o que tampar. */
+/** A seção do prédio nesta altura: a coroa recua em degraus. Acima do deque, não há o que tampar. */
 export function sectionAt(cut: number): OfficeBounds | null {
   const { minX, maxX, minZ, maxZ } = FACADE_BOUNDS;
   let inset = 0;
@@ -116,10 +114,9 @@ export function sectionAt(cut: number): OfficeBounds | null {
       if (cut <= bottom) break;
     }
     if (cut > bottom) {
-      if (cut > bottom + 0.7) return null;
-      const x = (minX + maxX) / 2;
-      const z = (minZ + maxZ) / 2;
-      return { minX: x - SPIRE_BASE / 2, maxX: x + SPIRE_BASE / 2, minZ: z - SPIRE_BASE / 2, maxZ: z + SPIRE_BASE / 2 };
+      if (cut > HELIPAD.top) return null;
+      const { x, z, half } = HELIPAD;
+      return { minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half };
     }
   }
   // Até o beiral da laje real: a borda da seção é a mesma do piso que ela esconde.
