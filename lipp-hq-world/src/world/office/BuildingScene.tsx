@@ -42,6 +42,26 @@ export function GroundGroup({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * O mesmo corte da fachada para quem vive fora dela: o que está acima do corte não é desenhado.
+ * O helicóptero usa isto para sumir junto com a coroa na viagem, sem a fachada saber dele.
+ */
+export function useAboveCutClip() {
+  const clip = useMemo(() => [new Plane(new Vector3(0, -1, 0), 1000)], []);
+  useLayoutEffect(() => {
+    const apply = () => {
+      const { cut, root } = officeRuntime.travel;
+      clip[0]!.constant = cut >= TOWER_TOP ? 1000 : cut - root - CUT_SINK + 0.001;
+    };
+    apply();
+    travelSinks.listeners.add(apply);
+    return () => {
+      travelSinks.listeners.delete(apply);
+    };
+  }, [clip]);
+  return clip;
+}
+
 /** Pavimento apontado no prédio fechado: uma faixa de luz em volta dele. */
 function LevelBand({ level }: { level: number }) {
   const { minX, maxX, minZ, maxZ } = FACADE_BOUNDS;

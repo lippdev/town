@@ -59,6 +59,9 @@ interface OfficeState {
   chiefRequest: ChiefRequest | null;
   setChiefStatus: (status: ChiefStatus) => void;
   setChiefRequest: (request: ChiefRequest | null) => void;
+  /** Há helicóptero em cena: só então ele é construído. Nunca na frota real. */
+  helicopterPresent: boolean;
+  setHelicopterPresent: (present: boolean) => void;
   /** Cor e expressão escolhidas no editor; quem não está aqui usa o padrão. */
   robotLooks: RobotLooks;
   setRobotLooks: (looks: RobotLooks) => void;
@@ -184,6 +187,10 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   chiefRequest: null,
   setChiefStatus: (chiefStatus) => set({ chiefStatus }),
   setChiefRequest: (chiefRequest) => set({ chiefRequest }),
+  helicopterPresent: false,
+  setHelicopterPresent: (helicopterPresent) => {
+    if (get().helicopterPresent !== helicopterPresent) set({ helicopterPresent });
+  },
   humanPhases: {},
   humansError: null,
   robotLooks: {},
