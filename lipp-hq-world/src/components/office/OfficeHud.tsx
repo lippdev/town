@@ -27,6 +27,8 @@ import { officeRuntime, useOfficeStore, zoomStep } from "@/world/office/officeSt
 const TECH = OFFICE_SCENARIO === "tecnologia";
 const TechHud = lazy(() => import("@/tech/TechHud"));
 const TechClock = lazy(() => import("@/tech/TechHud").then((module) => ({ default: module.TechClock })));
+const TechViewSwitch = lazy(() => import("@/tech/TechViews").then((module) => ({ default: module.TechViewSwitch })));
+const TechViewLayer = lazy(() => import("@/tech/TechViews").then((module) => ({ default: module.TechViewLayer })));
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
 const ROSTER_MIN_WIDTH = 1180;
@@ -97,6 +99,7 @@ function TopBar({ connection, title }: { connection: OfficeConnection | null; ti
       {demo && TECH && (
         <Suspense fallback={<span className="office-chip tech-chip">Simulação</span>}>
           <TechClock />
+          <TechViewSwitch />
         </Suspense>
       )}
       {demo && <span className="office-demo-note">{TECH ? "Squad fictício num dia simulado; bots de exemplo." : "Sete bots de exemplo, sem atividade real."}</span>}
@@ -696,6 +699,7 @@ export function OfficeHud({ live }: { live: boolean }) {
       {!live && <HumanPanel />}
       {!live && TECH && (
         <Suspense fallback={null}>
+          <TechViewLayer />
           <TechHud />
         </Suspense>
       )}
