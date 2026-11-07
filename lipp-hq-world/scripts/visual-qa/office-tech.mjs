@@ -25,7 +25,10 @@ const after = (ms) => Math.round(ms * SCALE);
 const OUT = process.argv[2] ?? "qa/office-tech";
 const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const TECH = `${DEMO}&cenario=tecnologia`;
-const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/];
+// `PCFSoftShadowMap has been removed`: o `shadows="soft"` do prédio, que o three 0.186 troca pelo
+// PCFShadowMap (o desenho é o mesmo). Apareceu em máquina sem GPU; vem de antes do cenário e se
+// resolve no próprio prédio, fora desta prova.
+const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/, /PCFSoftShadowMap has been removed/];
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({
