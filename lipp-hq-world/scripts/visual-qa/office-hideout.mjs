@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 
 const base = process.env.HQ_URL ?? "http://127.0.0.1:5173";
 const out = process.argv[2] ?? "qa/office-hideout";
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({ args: [`--use-angle=${process.env.HQ_ANGLE ?? "metal"}`, "--ignore-gpu-blocklist"] });

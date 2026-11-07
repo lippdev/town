@@ -15,7 +15,7 @@ const angle = process.env.HQ_ANGLE ?? "metal";
 const out = process.argv[2] ?? "qa/office-building-transitions";
 // Hora fixa: o céu segue o relógio de Brasília, e à noite o fundo escuro se parece com "vazio"
 // para a medida de pixels. Ao meio-dia a prova mede sempre a mesma cena.
-const DEMO = "/?escritorio=completo&modo=demonstracao&hora=12:00";
+const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro&hora=12:00";
 const FLOORS = (process.env.HQ_FLOORS ?? "terreo,operacao,diretoria").split(",");
 /** Tempo da viagem. O teto folga por causa da carga do harness: o relógio da cena limita o passo. */
 const MIN_MS = 430;

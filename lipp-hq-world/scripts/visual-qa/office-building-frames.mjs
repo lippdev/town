@@ -21,7 +21,7 @@ const browser = await chromium.launch({ args: [`--use-angle=${process.env.HQ_ANG
 const context = await browser.newContext({ viewport: { width, height } });
 await context.route("**/api/hq/**", (route) => route.fulfill({ status: 503, body: "" }));
 const page = await context.newPage();
-await page.goto(`${base}/?escritorio=completo&modo=demonstracao`);
+await page.goto(`${base}/?escritorio=completo&modo=demonstracao&chegada=carro`);
 await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: 90000 });
 await page.waitForLoadState("networkidle");
 const settled = () => page.waitForFunction(() => {

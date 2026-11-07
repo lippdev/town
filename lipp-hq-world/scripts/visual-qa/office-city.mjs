@@ -30,7 +30,7 @@ const open = async (hour) => {
   await context.route("**/api/hq/**", (route) => route.fulfill({ status: 503, body: "" }));
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(String(error)));
-  await page.goto(`${base}/?escritorio=completo&modo=demonstracao&hora=${hour}`);
+  await page.goto(`${base}/?escritorio=completo&modo=demonstracao&chegada=carro&hora=${hour}`);
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: after(90000) });
   await page.waitForFunction(() => {
     const { view, goal, traveling } = window.__HQ_OFFICE_QA__.state();

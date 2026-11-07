@@ -19,7 +19,7 @@ const CHROME = process.env.CHROME_PATH || (existsSync("/usr/bin/google-chrome") 
 const SCALE = Number(process.env.HQ_TIMEOUT_SCALE ?? 1);
 const after = (ms) => Math.round(ms * SCALE);
 const OUT = process.argv[2] ?? "qa/office-building";
-const DEMO = "/?escritorio=completo&modo=demonstracao";
+const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/];
 mkdirSync(OUT, { recursive: true });
 

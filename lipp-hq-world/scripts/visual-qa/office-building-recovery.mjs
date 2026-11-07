@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 const browser = await chromium.launch({ args: ['--use-angle=metal'] });
-const url = `${process.env.HQ_URL ?? 'http://127.0.0.1:5199'}/?escritorio=completo&modo=demonstracao`;
+const url = `${process.env.HQ_URL ?? 'http://127.0.0.1:5199'}/?escritorio=completo&modo=demonstracao&chegada=carro`;
 try {
   const context = await browser.newContext();
   await context.route('**/api/hq/**', r => r.fulfill({ status:503, body:'' }));
