@@ -319,6 +319,241 @@ try {
     console.log(JSON.stringify(report.custo));
   });
 
+  // ─── Visões: o prédio e o painel dizem o mesmo ─────────────────────────────
+  // Bloco à parte: Projetos e Painel leem o mesmo estado da cena. Relógio sempre parado e levado
+  // com jumpToClock antes de cada leitura: nada aposta corrida com o relógio de verdade.
+  const VIEW_TIMES = ["10:40", "11:21", "14:00", "15:20"];
+  const sorted = (list) => [...list].sort();
+  const panelRead = (page) =>
+    page.evaluate(() => {
+      const items = (list, attr) => [...document.querySelectorAll(`[data-panel-list="${list}"] > [data-panel-item]`)].map((node) => node.getAttribute(attr));
+      const presence = (kind) => [...document.querySelectorAll(`[data-panel-presence="${kind}"] .tv-presence-people > [data-person]`)].map((node) => node.dataset.person);
+      return {
+        at: document.querySelector("[data-view-clock]")?.textContent,
+        travadas: items("travadas", "data-story"),
+        paradas: items("paradas", "data-story"),
+        revisoes: items("revisoes", "data-pr").map(Number),
+        semCriterio: items("sem-criterio", "data-story"),
+        semAutor: items("sem-autor", "data-pr").map(Number),
+        botsHoje: items("bots", "data-task").length,
+        reuniao: presence("reuniao"),
+        huddle: presence("huddle"),
+        foco: presence("foco"),
+        fora: presence("fora"),
+        saude: Object.fromEntries([...document.querySelectorAll("[data-panel-epic]")].map((node) => [node.dataset.panelEpic, node.dataset.health])),
+        candidatos: Object.fromEntries([...document.querySelectorAll('[data-panel-list="revisoes"] > [data-panel-item]')].map((node) => [node.dataset.pr, node.dataset.candidates ? node.dataset.candidates.split(",") : []])),
+        motivos: Object.fromEntries([...document.querySelectorAll("[data-panel-epic]")].map((node) => [node.dataset.panelEpic, node.querySelectorAll("[data-epic-reasons] > li").length])),
+        contagens: Object.fromEntries([...document.querySelectorAll("[data-panel-count]")].map((node) => [node.dataset.panelCount, Number(node.dataset.value)])),
+      };
+    });
+  const treeRead = (page) =>
+    page.evaluate(() => {
+      const ids = (flag) => [...document.querySelectorAll(`[data-tree-story][${flag}]`)].map((node) => node.dataset.treeStory);
+      return {
+        at: document.querySelector("[data-view-clock]")?.textContent,
+        travadas: ids("data-blocked"),
+        paradas: ids("data-stale"),
+        semCriterio: ids("data-no-criteria"),
+        saude: Object.fromEntries([...document.querySelectorAll("[data-tree-epic]")].map((node) => [node.dataset.treeEpic, node.dataset.health])),
+        hus: [...document.querySelectorAll("[data-tree-story]")].map((node) => node.dataset.treeStory),
+      };
+    });
+  const viewIs = (page, view) => page.waitForFunction((name) => window.__HQ_TECH_QA__.view() === name && document.querySelector(`[data-view-tab="${name}"]`)?.getAttribute("aria-selected") === "true" && (name === "predio" ? !document.querySelector("[data-tech-view]") : Boolean(document.querySelector(`[data-tech-view="${name}"]`))), view);
+  const urlView = (page) => page.evaluate(() => new URLSearchParams(window.location.search).get("visao"));
+  report.visoes = { horas: VIEW_TIMES, leituras: [] };
+
+  // Movimento reduzido: cada pessoa aparece já no lugar. A prova é de conteúdo, não de animação, e
+  // assim não depende de quantos quadros por segundo a máquina sem GPU consegue desenhar.
+  const views = await open(`${TECH}&andar=expansao-2&hora_sim=09:05&visao=painel`, { reducedMotion: "reduce" });
+  await check("?visao=painel abre direto no Painel, por cima da cena, com o render parado", async () => {
+    await views.waitForFunction(() => window.__HQ_TECH_QA__);
+    await tech(views, "pause", true);
+    await viewIs(views, "painel");
+    assert.equal(await views.getAttribute("[data-tech-view]", "role"), "tabpanel");
+    assert.equal(await views.getAttribute("[data-tech-view]", "aria-labelledby"), "tech-tab-painel");
+    // Os comandos da cena somem com ela coberta.
+    assert.equal(await views.locator(".office-floors").isVisible(), false);
+    await views.waitForFunction(() => window.__HQ_TECH_QA__.render().paused);
+    const before = (await tech(views, "render")).frames;
+    await views.waitForTimeout(2000);
+    const after2s = (await tech(views, "render")).frames;
+    report.visoes.quadrosComPainel = after2s - before;
+    assert.equal(after2s - before, 0, "com o Painel aberto a cena não desenha nenhum quadro");
+  });
+
+  for (const clock of VIEW_TIMES) {
+    await check(`${clock}: o Painel mostra exatamente as respostas de trackingAnswers`, async () => {
+      if ((await tech(views, "view")) !== "painel") {
+        await views.click('[data-view-tab="painel"]');
+        await viewIs(views, "painel");
+      }
+      await tech(views, "jumpToClock", clock);
+      await views.waitForFunction((value) => document.querySelector("[data-view-clock]")?.textContent === value, clock);
+      const answers = await tech(views, "answers");
+      assert.equal(answers.at, clock);
+      const panel = await panelRead(views);
+      for (const key of ["travadas", "paradas", "revisoes", "semCriterio", "semAutor", "reuniao", "huddle", "foco", "fora"]) assert.deepEqual(panel[key], answers[key], `${clock} · painel.${key}`);
+      assert.equal(panel.botsHoje, answers.botsHoje, `${clock} · bots hoje`);
+      assert.deepEqual(panel.saude, answers.saude, `${clock} · saúde dos épicos`);
+      for (const number of answers.revisoes) assert.deepEqual(panel.candidatos[number], await tech(views, "candidates", number), `${clock} · quem pode revisar o #${number}`);
+      for (const [epicId, count] of Object.entries(panel.motivos)) assert.equal(count, (await tech(views, "reasons", epicId)).length, `${clock} · motivos do ${epicId}`);
+      assert.equal(panel.contagens.travadas, answers.travadas.length);
+      assert.equal(panel.contagens.revisoes, answers.revisoes.length);
+      assert.equal(panel.contagens.paradas, answers.paradas.length);
+      assert.equal(panel.contagens["sem-criterio"], answers.semCriterio.length);
+      assert.equal(panel.contagens.epicos, Object.values(answers.saude).filter((level) => level !== "no-prazo").length);
+      report.visoes.leituras.push({ hora: clock, ...answers });
+      if (clock === "11:21") await shot(views, "visoes-painel-1440");
+    });
+
+    await check(`${clock}: a árvore de Projetos marca as mesmas HUs travadas, paradas e sem critério`, async () => {
+      await views.click('[data-view-tab="projetos"]');
+      await viewIs(views, "projetos");
+      assert.equal(await urlView(views), "projetos", "a URL acompanha a visão");
+      await views.click("[data-tree-expand-all]");
+      const answers = await tech(views, "answers");
+      const tree = await treeRead(views);
+      assert.equal(tree.at, clock);
+      assert.deepEqual(sorted(tree.hus), sorted(await tech(views, "stories")), `${clock} · toda HU está na árvore, uma vez`);
+      assert.deepEqual(sorted(tree.travadas), sorted(answers.travadas), `${clock} · árvore travadas`);
+      assert.deepEqual(sorted(tree.paradas), sorted(answers.paradas), `${clock} · árvore paradas`);
+      assert.deepEqual(sorted(tree.semCriterio), sorted(answers.semCriterio), `${clock} · árvore sem critério`);
+      assert.deepEqual(tree.saude, answers.saude, `${clock} · árvore saúde`);
+      if (clock === "10:40") await shot(views, "visoes-projetos-1440");
+    });
+
+    await check(`${clock}: o prédio diz o mesmo onde ele diz (quadro, lugares, não perturbe)`, async () => {
+      // Teclado: da aba Projetos, seta para a esquerda volta ao Prédio.
+      await views.locator('[data-view-tab="projetos"]').focus();
+      await views.keyboard.press("ArrowLeft");
+      await viewIs(views, "predio");
+      assert.equal(await urlView(views), null, "o prédio não deixa ?visao= na URL");
+      assert.equal(await views.evaluate(() => document.activeElement?.dataset.viewTab), "predio", "o foco acompanha a aba");
+      await views.waitForFunction(() => !window.__HQ_TECH_QA__.render().paused);
+      const answers = await tech(views, "answers");
+      // Quadro dos épicos: a mesma saúde, no DOM e no que a cena desenhou.
+      await views.waitForFunction((saude) => Object.entries(saude).every(([epicId, level]) => document.querySelector(`[data-epic-card="${epicId}"]`)?.dataset.health === level), answers.saude);
+      await views.waitForFunction((saude) => window.__HQ_TECH_QA__.board().every((card) => card.health === saude[card.epicId]), answers.saude, { timeout: after(20000) });
+      // Lugares: o plano que a cena segue põe cada um onde a presença manda.
+      const plans = Object.fromEntries((await tech(views, "plans")).map((plan) => [plan.email, plan]));
+      for (const email of answers.reuniao) assert.equal(plans[email].zone, "sala", `${clock} · ${email} em reunião está na sala`);
+      for (const email of answers.huddle) assert.equal(plans[email].zone, "huddle", `${clock} · ${email} no canto do huddle`);
+      assert.deepEqual(sorted(Object.values(plans).filter((plan) => plan.zone === "huddle").map((plan) => plan.email)), sorted(answers.huddle));
+      assert.deepEqual(sorted(Object.values(plans).filter((plan) => plan.place === "fora").map((plan) => plan.email)), sorted(answers.fora), `${clock} · quem está fora sai pelo elevador`);
+      // E a cena alcança o plano: quem está fora some, os outros chegam ao lugar.
+      await sceneCaughtUp(views, Object.keys(plans), 60000);
+      const scene = await tech(views, "scene");
+      for (const email of answers.fora) assert.equal(scene[email].hidden, true, `${clock} · ${email} fora não aparece no andar`);
+      // Foco: o "não perturbe" sobre a mesa é de quem o painel diz que está em foco.
+      const dnd = await views.evaluate(() => [...document.querySelectorAll("[data-dnd]")].map((node) => node.dataset.dnd));
+      assert.deepEqual(sorted(dnd), sorted(answers.foco), `${clock} · não perturbe no andar`);
+    });
+  }
+
+  await check("Esc fecha a gaveta antes de trocar a visão; abrir um item usa a gaveta do prédio", async () => {
+    await views.click('[data-view-tab="painel"]');
+    await viewIs(views, "painel");
+    const first = views.locator('[data-panel-list="paradas"] > [data-panel-item] .tv-item-main').first();
+    const story = await views.locator('[data-panel-list="paradas"] > [data-panel-item]').first().getAttribute("data-story");
+    await first.click();
+    const epicId = (await tech(views, "story", story)).epicId;
+    await views.waitForSelector(`[data-tech-epic="${epicId}"] .tech-story.highlight`);
+    assert.equal(await views.locator("[data-tech-epic]").count(), 1, "uma gaveta só, a do prédio");
+    await views.keyboard.press("Escape");
+    await views.waitForFunction(() => !document.querySelector("[data-tech-epic]"));
+    assert.equal(await tech(views, "view"), "painel", "o primeiro Esc fecha só a gaveta");
+    await views.locator('[data-panel-count="travadas"]').focus();
+    await views.keyboard.press("Escape");
+    await viewIs(views, "predio");
+    // Pela pessoa: o nome no painel abre a gaveta dela.
+    await views.click('[data-view-tab="painel"]');
+    await viewIs(views, "painel");
+    await views.click(`[data-panel-load="${EMAIL("diego.martins")}"] th [data-person]`);
+    await views.waitForSelector(`[data-tech-person="${EMAIL("diego.martins")}"]`);
+    await shot(views, "visoes-painel-gaveta-pessoa-1440");
+    await views.keyboard.press("Escape");
+    await views.waitForFunction(() => !document.querySelector("[data-tech-person]"));
+    assert.equal(await tech(views, "view"), "painel");
+    // Projetos com a gaveta do épico aberta ao lado.
+    await views.click('[data-view-tab="projetos"]');
+    await viewIs(views, "projetos");
+    await views.click('[data-tree-story="HU-34"] .tv-open');
+    await views.waitForSelector('[data-tech-epic="E-2"] .tech-story.highlight');
+    const overflow = await views.evaluate(() => {
+      const scroll = document.querySelector(".tv-scroll");
+      return scroll.scrollWidth - scroll.clientWidth;
+    });
+    assert.ok(overflow <= 0, `a árvore não corta embaixo da gaveta (${overflow}px)`);
+    await shot(views, "visoes-projetos-gaveta-1440");
+    await views.keyboard.press("Escape");
+  });
+
+  await check("custo com a visão aberta: quadros por segundo no Prédio e no Painel", async () => {
+    await views.click('[data-view-tab="predio"]');
+    await viewIs(views, "predio");
+    await views.waitForFunction(() => !window.__HQ_TECH_QA__.render().paused);
+    const sample = async () => {
+      const start = (await tech(views, "render")).frames;
+      await views.waitForTimeout(3000);
+      return ((await tech(views, "render")).frames - start) / 3;
+    };
+    report.visoes.quadrosPorSegundo = { predio: await sample() };
+    await views.click('[data-view-tab="painel"]');
+    await viewIs(views, "painel");
+    await views.waitForFunction(() => window.__HQ_TECH_QA__.render().paused);
+    report.visoes.quadrosPorSegundo.painel = await sample();
+    assert.ok(report.visoes.quadrosPorSegundo.predio > 0);
+    assert.equal(report.visoes.quadrosPorSegundo.painel, 0);
+    console.log(JSON.stringify(report.visoes.quadrosPorSegundo));
+  });
+  await views.close();
+
+  const viewsPhone = await open(`${TECH}&andar=expansao-2&hora_sim=09:05&visao=painel`, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  await check("no celular: abas na barra sem sobrepor, Painel e Projetos sem rolagem lateral", async () => {
+    await viewsPhone.waitForFunction(() => window.__HQ_TECH_QA__);
+    await tech(viewsPhone, "pause", true);
+    await tech(viewsPhone, "jumpToClock", "11:21");
+    await viewIs(viewsPhone, "painel");
+    await viewsPhone.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "11:21");
+    const layout = () =>
+      viewsPhone.evaluate(() => {
+        const items = [...document.querySelectorAll(".office-top > *")].filter((node) => getComputedStyle(node).display !== "none").map((node) => node.getBoundingClientRect());
+        const scroll = document.querySelector(".tv-scroll");
+        return {
+          outside: items.some((box) => box.right > window.innerWidth + 1),
+          overlap: items.some((box, index) => items.slice(index + 1).some((other) => other.left < box.right - 1 && other.right > box.left + 1)),
+          page: document.documentElement.scrollWidth - window.innerWidth,
+          view: scroll ? scroll.scrollWidth - scroll.clientWidth : 0,
+        };
+      });
+    let measured = await layout();
+    assert.deepEqual(measured, { outside: false, overlap: false, page: 0, view: 0 }, `Painel no celular: ${JSON.stringify(measured)}`);
+    assert.ok(await viewsPhone.locator('[data-view-tab="projetos"]').isVisible());
+    const panel = await panelRead(viewsPhone);
+    const answers = await tech(viewsPhone, "answers");
+    assert.deepEqual(panel.travadas, answers.travadas);
+    assert.deepEqual(panel.huddle, answers.huddle);
+    await shot(viewsPhone, "visoes-painel-390");
+    await viewsPhone.locator('[data-view-tab="projetos"]').tap();
+    await viewIs(viewsPhone, "projetos");
+    measured = await layout();
+    assert.deepEqual(measured, { outside: false, overlap: false, page: 0, view: 0 }, `Projetos no celular: ${JSON.stringify(measured)}`);
+    await shot(viewsPhone, "visoes-projetos-390");
+    await viewsPhone.locator('[data-tree-story="HU-27"] .tv-open').tap();
+    await viewsPhone.waitForSelector('[data-tech-epic="E-1"]');
+    await shot(viewsPhone, "visoes-projetos-gaveta-390");
+  });
+  await viewsPhone.close();
+
+  const viewsPlain = await open(`${DEMO}&andar=expansao-2&visao=painel`);
+  await check("sem cenario: ?visao= não faz nada e nenhum pedaço das visões é baixado", async () => {
+    await viewsPlain.waitForTimeout(2000);
+    assert.equal(await viewsPlain.locator("[data-tech-views], [data-tech-view]").count(), 0);
+    const downloaded = viewsPlain.requests.filter((file) => /\/assets\/(TechViews|DailyPanel|ProjectsView|viewParts|techViews|tech-views)/i.test(file) || file.includes("/src/tech/"));
+    assert.deepEqual(downloaded, []);
+  });
+  await viewsPlain.close();
+
   writeFileSync(path.join(OUT, "resultado.json"), JSON.stringify(report, null, 2));
   assert.deepEqual(problems, []);
   console.log(`\ncenário de tecnologia ok: ${report.checks.length} provas`);
