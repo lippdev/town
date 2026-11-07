@@ -29,3 +29,8 @@ logs/
 
 # Conexão local com o Hermes (link + session token) — nunca commitar
 .hq-connection.json
+
+# Capturas frescas dos harnesses: o destino padrão de office-building.mjs e office-city.mjs.
+# Ficam locais; o que vira prova no repositório é copiado para qa/screenshots/.
+lipp-hq-world/qa/office-building/
+lipp-hq-world/qa/office-city/
