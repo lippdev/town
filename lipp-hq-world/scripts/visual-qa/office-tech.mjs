@@ -12,7 +12,8 @@
  * que o cenário monta, e cada prova salta o relógio para a hora do que vai provar e só então
  * espera a cena alcançar o plano. A única prova com o relógio andando é a do próprio relógio.
  *
- * HQ_ONLY=visoes roda só o bloco das visões (Projetos e Painel), para iterar nele.
+ * HQ_ONLY=visoes roda só o bloco das visões (Projetos e Painel); HQ_ONLY=acoes, só o das ações e
+ * do cadastro. Servem para iterar num bloco.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -116,8 +117,8 @@ const everyoneStill = (page) => page.waitForFunction(() => window.__HQ_OFFICE_QA
 const EMAIL = (name) => `${name}@lipp.example`;
 
 try {
-  // HQ_ONLY=visoes pula a cena e roda só o bloco das visões (para iterar nele).
-  if (ONLY !== "visoes") {
+  // HQ_ONLY=visoes ou HQ_ONLY=acoes pula a cena e roda só aquele bloco (para iterar nele).
+  if (!ONLY) {
     // ─── Abrir ─────────────────────────────────────────────────────────────────
     const page = await open(`${TECH}&velocidade=1&hora_sim=09:20`);
 
@@ -376,6 +377,7 @@ try {
   const urlView = (page) => page.evaluate(() => new URLSearchParams(window.location.search).get("visao"));
   report.visoes = { horas: VIEW_TIMES, leituras: [] };
 
+  if (ONLY !== "acoes") {
   // Movimento reduzido: cada pessoa aparece já no lugar. A prova é de conteúdo, não de animação, e
   // assim não depende de quantos quadros por segundo a máquina sem GPU consegue desenhar.
   const views = await open(`${TECH}&andar=expansao-2&hora_sim=09:00&visao=painel`, { reducedMotion: "reduce" });
@@ -654,6 +656,306 @@ try {
     assert.deepEqual(downloaded, []);
   });
   await viewsPlain.close();
+
+  }
+
+  if (ONLY !== "visoes") {
+  // ─── Ações e cadastro ──────────────────────────────────────────────────────
+  // Bloco à parte: cobrar, reatribuir, pedir ao bot e o cadastro do GitHub, tudo pela interface.
+  // Relógio sempre parado e levado com jumpToClock; a ponte só lê o efeito, nunca age.
+  const acts = await open(`${TECH}&andar=expansao-2&hora_sim=09:55`, { reducedMotion: "reduce" });
+  await acts.waitForFunction(() => window.__HQ_TECH_QA__);
+  await tech(acts, "pause", true);
+  report.acoes = {};
+  const focused = (page) => page.evaluate(() => ({ ...document.activeElement?.dataset, tag: document.activeElement?.tagName }));
+  /** O Painel continua batendo com trackingAnswers depois de cada ação. */
+  const panelMatches = async (page, label) => {
+    const answers = await tech(page, "answers");
+    const panel = await panelRead(page);
+    for (const key of ["travadas", "paradas", "revisoes", "semCriterio", "semAutor", "reuniao", "huddle", "foco", "fora"]) assert.deepEqual(panel[key], answers[key], `${label} · painel.${key}`);
+    assert.equal(panel.botsHoje, answers.botsHoje, `${label} · bots hoje`);
+    assert.deepEqual(panel.saude, answers.saude, `${label} · saúde`);
+    return answers;
+  };
+  const toView = async (page, name) => {
+    if ((await tech(page, "view")) === name) return;
+    await page.click(`[data-view-tab="${name}"]`);
+    await viewIs(page, name);
+  };
+
+  await check("cobrar a HU-27 pelo Painel: o botão diz a quem vai e mostra a mensagem do app antes de enviar", async () => {
+    await tech(acts, "jumpToClock", "10:05");
+    await toView(acts, "painel");
+    await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "10:05");
+    const item = '[data-panel-list="travadas"] > [data-panel-item][data-story="HU-27"]';
+    const trigger = acts.locator(`${item} [data-action="cobrar"]`);
+    assert.equal((await trigger.textContent()).trim(), "Cobrar Marina", "o botão diz para quem vai");
+    await trigger.click();
+    const panel = acts.locator(`${item} [data-action-panel="cobrar"]`);
+    await panel.waitFor();
+    assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+    const message = (await panel.locator("[data-nudge-message] blockquote").textContent()).trim();
+    assert.match(message, /^Oi, Marina! A HU-27 \(Definir expiração do link mágico\) está travada há \d+ h esperando você/);
+    assert.ok((await focused(acts)).actionConfirm !== undefined, "o foco vai para Enviar");
+    await shot(acts, "acao-cobrar-previa-1440");
+    // Esc fecha só o painel; a visão fica, e o foco volta ao botão.
+    await acts.keyboard.press("Escape");
+    await panel.waitFor({ state: "detached" });
+    assert.equal(await tech(acts, "view"), "painel");
+    assert.equal((await focused(acts)).action, "cobrar", "o foco volta ao botão");
+    assert.equal((await tech(acts, "messages")).filter((entry) => entry.from.kind === "app").length, 0, "cancelar não envia nada");
+    // Pelo teclado: Enter reabre, Enter envia.
+    await acts.keyboard.press("Enter");
+    await panel.waitFor();
+    await acts.keyboard.press("Enter");
+    await acts.waitForSelector(`${item} [data-nudge-status="aguardando"]`);
+    const sent = (await tech(acts, "messages")).filter((entry) => entry.from.kind === "app");
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].to, EMAIL("marina.lopes"));
+    assert.equal(sent[0].text, message, "sai exatamente a mensagem mostrada");
+    assert.equal((await acts.locator(`${item} [data-nudge-status]`).textContent()).trim(), "Cobrado às 10:05, aguardando resposta de Marina");
+    assert.equal(await acts.getAttribute(".tech-notices", "aria-live"), "polite");
+    assert.match(await acts.locator("[data-notice]").last().textContent(), /Mensagem enviada a Marina Lopes/);
+    // A árvore mostra o mesmo "aguardando".
+    await toView(acts, "projetos");
+    await acts.waitForSelector('[data-tree-story="HU-27"][data-nudge="aguardando"]');
+    await toView(acts, "painel");
+    await shot(acts, "acao-cobrar-enviada-1440");
+  });
+
+  await check("a resposta vem pela simulação e o Login sem senha destrava antes do refinamento (sem cobrança, só depois)", async () => {
+    await tech(acts, "jumpToClock", "10:30");
+    await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "10:30");
+    assert.equal((await tech(acts, "story", "HU-27")).blocked, null);
+    const unblocked = await tech(acts, "unblockedAt", "HU-27");
+    const without = await tech(acts, "baselineUnblock", "HU-27");
+    assert.ok(unblocked && unblocked < "14:00", `com cobrança destrava antes do refinamento das 14h (${unblocked})`);
+    assert.ok(without && without >= "15:00", `sem cobrança só destrava depois do refinamento (${without})`);
+    const answers = await panelMatches(acts, "10:30 depois da cobrança");
+    assert.notEqual(answers.saude["E-1"], "travado");
+    assert.equal((await tech(acts, "baseline", "10:30")).saude["E-1"], "travado", "no mesmo dia sem cobrança, às 10:30 o épico ainda está travado");
+    assert.ok(!answers.travadas.includes("HU-27"));
+    assert.notEqual((await tech(acts, "nudge", "HU-27")).answeredAt, null);
+    // A gaveta do épico mostra quem respondeu e quando.
+    await acts.click('[data-panel-epic="E-1"] > .tv-item-main');
+    await acts.waitForSelector('[data-tech-epic="E-1"] [data-nudge-status="respondida"][data-nudge-story="HU-27"]');
+    assert.equal((await acts.locator('[data-tech-epic="E-1"] [data-nudge-story="HU-27"]').textContent()).trim(), `Cobrado às 10:05; Marina respondeu às ${unblocked}`);
+    await shot(acts, "acao-cobrar-respondida-1440");
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-epic]"));
+    report.acoes.cobrar = { enviadaAs: "10:05", destravouAs: unblocked, semCobranca: without, saudeE1: answers.saude["E-1"] };
+  });
+
+  await check("reatribuir a HU-37 pela árvore: carga de cada um, férias à vista, confirmação, e todas as visões mudam", async () => {
+    await tech(acts, "jumpToClock", "10:40");
+    await toView(acts, "projetos");
+    await acts.click("[data-tree-expand-all]");
+    const row = '[data-tree-story="HU-37"]';
+    assert.equal(await acts.getAttribute(row, "data-assignee"), EMAIL("bianca.sales"));
+    const trigger = acts.locator(`${row} [data-story-actions] [data-action="reatribuir"]`);
+    await trigger.click();
+    const panel = acts.locator(`${row} [data-action-panel="reatribuir"]`);
+    await panel.waitFor();
+    const bianca = panel.locator(`[data-assignee-option="${EMAIL("bianca.sales")}"]`);
+    assert.match(await bianca.textContent(), /responsável agora/);
+    assert.ok(await bianca.locator("input").isDisabled(), "quem já é responsável não se escolhe");
+    assert.equal(await panel.locator("[data-away]").count(), 1, "só a Bianca está fora às 10:40");
+    const load = await tech(acts, "loadOf", EMAIL("tiago.nunes"));
+    const tiago = panel.locator(`[data-assignee-option="${EMAIL("tiago.nunes")}"]`);
+    assert.equal(Number(await tiago.locator("[data-load-stories]").getAttribute("data-load-stories")), load.stories.length, "a carga mostrada é a de personLoad");
+    assert.ok(await panel.locator("[data-action-confirm]").isDisabled(), "sem escolha, não confirma");
+    // Esc dentro do grupo de opções fecha só o painel.
+    assert.equal((await focused(acts)).tag, "INPUT", "o foco vai para a primeira opção");
+    await acts.keyboard.press("Escape");
+    await panel.waitFor({ state: "detached" });
+    assert.equal(await tech(acts, "view"), "projetos");
+    await trigger.click();
+    await panel.waitFor();
+    await tiago.locator("input").check();
+    assert.match(await panel.locator("[data-reassign-summary]").textContent(), /A HU-37 sai de Bianca Sales e vai para Tiago Nunes/);
+    await shot(acts, "acao-reatribuir-1440");
+    await panel.locator("[data-action-confirm]").click();
+    await acts.waitForFunction((email) => document.querySelector('[data-tree-story="HU-37"]')?.dataset.assignee === email, EMAIL("tiago.nunes"));
+    assert.match(await acts.locator(`${row} > .tv-row [data-label="Responsável"]`).textContent(), /Tiago Nunes/);
+    assert.equal((await tech(acts, "story", "HU-37")).assignee, EMAIL("tiago.nunes"));
+    // Painel: a carga do Tiago tem a HU-37, a da Bianca não, e tudo bate com trackingAnswers.
+    await toView(acts, "painel");
+    const after = await tech(acts, "loadOf", EMAIL("tiago.nunes"));
+    assert.ok(after.stories.includes("HU-37"));
+    assert.equal(await acts.getAttribute(`[data-panel-load="${EMAIL("tiago.nunes")}"]`, "data-stories"), String(after.stories.length));
+    assert.equal(await acts.getAttribute(`[data-panel-load="${EMAIL("bianca.sales")}"]`, "data-stories"), String((await tech(acts, "loadOf", EMAIL("bianca.sales"))).stories.length));
+    assert.match(await acts.locator(`[data-panel-load="${EMAIL("tiago.nunes")}"]`).textContent(), /HU-37/);
+    assert.doesNotMatch(await acts.locator(`[data-panel-load="${EMAIL("bianca.sales")}"]`).textContent(), /HU-37/);
+    await panelMatches(acts, "10:40 depois de reatribuir");
+    // A gaveta da pessoa mostra a HU nova.
+    await acts.click(`[data-panel-load="${EMAIL("tiago.nunes")}"] th [data-person]`);
+    await acts.waitForSelector(`[data-tech-person="${EMAIL("tiago.nunes")}"] [data-story="HU-37"]`);
+    await shot(acts, "acao-reatribuir-gaveta-1440");
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-person]"));
+    report.acoes.reatribuir = { hu: "HU-37", de: "Bianca Sales", para: "Tiago Nunes", cargaTiago: after.stories };
+  });
+
+  await check("pedir ao Atlas pela gaveta do épico: começa já, entra em bots hoje e o robô vai até o cartão do quadro", async () => {
+    await tech(acts, "jumpToClock", "10:50");
+    await toView(acts, "predio");
+    await acts.waitForFunction(() => !window.__HQ_TECH_QA__.render().paused);
+    const before = (await tech(acts, "answers")).botsHoje;
+    await acts.locator('[data-epic-card="E-5"]').focus();
+    await acts.keyboard.press("Enter");
+    await acts.waitForSelector('[data-tech-epic="E-5"]');
+    const drawer = '[data-tech-epic="E-5"]';
+    await acts.click(`${drawer} [data-story-actions="HU-40"] [data-action="bot-completar_criterios"]`);
+    const panel = acts.locator(`${drawer} [data-action-panel="bot-completar_criterios"]`);
+    await panel.waitFor();
+    assert.equal(await panel.locator("[data-bot-when]").getAttribute("data-bot-when"), "agora", "o Atlas está livre: começa já");
+    await panel.locator("[data-action-confirm]").click();
+    await acts.waitForSelector(`${drawer} [data-bot-request="trabalhando"][data-bot-target="HU-40"]`);
+    assert.match(await acts.locator("[data-notice]").last().textContent(), /Atlas está indo/);
+    const task = (await tech(acts, "tasks")).find((entry) => entry.kind === "completar_criterios" && entry.requestedBy === "app");
+    assert.equal(task.botId, "atlas");
+    assert.equal((await tech(acts, "answers")).botsHoje, before + 1);
+    // O robô vai até o cartão do E-5 no quadro.
+    const visit = await tech(acts, "visit", task.id);
+    const card = (await tech(acts, "board")).find((entry) => entry.epicId === "E-5");
+    assert.equal(visit.node, "quadro");
+    assert.ok(Math.abs(visit.x - card.x) < 0.01, `o lugar da visita é o cartão do E-5 (${visit.x} × ${card.x})`);
+    await acts.waitForFunction((id) => window.__HQ_TECH_QA__.robots().some((robot) => robot.taskId === id && robot.arrived), task.id, { timeout: after(90000) });
+    const robot = (await tech(acts, "robots")).find((entry) => entry.taskId === task.id);
+    assert.ok(Math.abs(robot.x - visit.x) < 0.6 && Math.abs(robot.z - visit.z) < 0.6, `o robô está no lugar (${JSON.stringify(robot)} × ${JSON.stringify(visit)})`);
+    await shot(acts, "acao-bot-robo-1440");
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-epic]"));
+    // Painel: a tarefa está em "bots hoje", como pedido pela tela.
+    await toView(acts, "painel");
+    const bot = acts.locator(`[data-panel-list="bots"] > [data-task="${task.id}"]`);
+    assert.match(await bot.textContent(), /Atlas: Completar critérios de aceite/);
+    assert.match(await bot.textContent(), /pedido pela tela/);
+    await panelMatches(acts, "10:50 depois de pedir ao bot");
+    await shot(acts, "acao-bot-painel-1440");
+    // Terminada, a HU sai de "sem critério" com as sugestões marcadas.
+    await tech(acts, "jumpToClock", "11:05");
+    await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "11:05");
+    const story = await tech(acts, "story", "HU-40");
+    assert.equal(story.criteria.length, 3);
+    assert.ok(story.criteria.every((criterion) => criterion.suggestedBy === "atlas"));
+    assert.ok(!(await tech(acts, "answers")).semCriterio.includes("HU-40"));
+    await panelMatches(acts, "11:05 com o Atlas pronto");
+    report.acoes.bot = { tarefa: task.id, inicio: "10:50", robo: { x: robot.x, z: robot.z }, cartao: card.x };
+  });
+
+  await check("cadastro: vincular o login do Tiago tira o PR #147 de 'autor não identificado' em todas as visões; erros na tela", async () => {
+    await tech(acts, "jumpToClock", "13:45");
+    await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "13:45");
+    assert.deepEqual((await tech(acts, "answers")).semAutor, [147]);
+    assert.match(await acts.locator('[data-panel-list="sem-autor"] > [data-pr="147"]').textContent(), /tnunes-dev/);
+    // Da gaveta do Tiago: o aviso que já existia ganha "Vincular".
+    await acts.click(`[data-panel-load="${EMAIL("tiago.nunes")}"] th [data-person]`);
+    const person = `[data-tech-person="${EMAIL("tiago.nunes")}"]`;
+    await acts.waitForSelector(`${person} [data-github-missing]`);
+    await acts.click(`${person} [data-open-registry]`);
+    await acts.waitForSelector("[data-tech-registry]");
+    assert.equal(await acts.locator("[data-tech-person]").count(), 0, "o cadastro usa o lugar da gaveta");
+    const form = `[data-registry-form="${EMAIL("tiago.nunes")}"]`;
+    await acts.waitForSelector(form);
+    assert.ok((await focused(acts)).registryLogin !== undefined, "o foco cai no login do Tiago");
+    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "6");
+    const unknown = acts.locator('[data-registry-unknown="tnunes-dev"]');
+    assert.match(await unknown.textContent(), /tnunes-dev · 2 PRs/);
+    assert.match(await unknown.textContent(), /#140/);
+    assert.match(await unknown.textContent(), /#147/);
+    await shot(acts, "cadastro-1440");
+    // Login inválido e login em uso: o erro aparece na tela, junto do campo.
+    const input = acts.locator(`${form} [data-registry-login]`);
+    await input.fill("tiago nunes");
+    await acts.keyboard.press("Enter");
+    await acts.waitForSelector(`${form} [data-registry-error]`);
+    assert.equal((await acts.locator(`${form} [data-registry-error]`).textContent()).trim(), "Login do GitHub inválido: só letras, números e hífen, até 39.");
+    assert.equal(await input.getAttribute("aria-invalid"), "true");
+    await shot(acts, "cadastro-erro-1440");
+    await input.fill("rokabe");
+    await acts.keyboard.press("Enter");
+    await acts.waitForFunction((selector) => document.querySelector(`${selector} [data-registry-error]`)?.textContent.trim() === "Esse login já está vinculado a outra pessoa.", form);
+    assert.equal((await tech(acts, "people")).find((entry) => entry.email === EMAIL("tiago.nunes")).github, null, "erro não muda o cadastro");
+    // O certo.
+    await input.fill("tnunes-dev");
+    await acts.keyboard.press("Enter");
+    await acts.waitForSelector(form, { state: "detached" });
+    assert.equal(await acts.getAttribute(`[data-registry-person="${EMAIL("tiago.nunes")}"] [data-registry-github]`, "data-registry-github"), "tnunes-dev");
+    assert.equal(await acts.locator("[data-registry-unknown]").count(), 0, "nenhum login sem pessoa");
+    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "7");
+    assert.match(await acts.locator("[data-notice]").last().textContent(), /GitHub @tnunes-dev vinculado/);
+    assert.equal((await tech(acts, "pr", 147)).author, "tnunes-dev", "o PR não muda: a ligação é na leitura");
+    assert.deepEqual((await tech(acts, "answers")).semAutor, []);
+    await shot(acts, "cadastro-vinculado-1440");
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-registry]"));
+    assert.equal(await tech(acts, "view"), "painel", "o Esc fecha o cadastro e a visão fica");
+    // Painel: sem autor vazio, o #147 com o Tiago na fila de revisão e na carga dele.
+    assert.equal(await acts.locator('[data-panel-list="sem-autor"] > [data-panel-item]').count(), 0);
+    const review = acts.locator('[data-panel-list="revisoes"] > [data-panel-item][data-pr="147"]');
+    if (await review.count()) assert.match(await review.textContent(), /Autor Tiago Nunes/);
+    assert.ok((await tech(acts, "loadOf", EMAIL("tiago.nunes"))).prs.includes(147));
+    assert.match(await acts.locator(`[data-panel-load="${EMAIL("tiago.nunes")}"]`).textContent(), /#147/);
+    await panelMatches(acts, "13:45 depois do vínculo");
+    // Projetos: o #147 (HU-33) e o antigo #140 (HU-30) mostram o Tiago.
+    await toView(acts, "projetos");
+    await acts.click("[data-tree-expand-all]");
+    for (const [story, number] of [["HU-33", 147], ["HU-30", 140]]) {
+      const line = await acts.locator(`[data-tree-story="${story}"] [data-pr="${number}"]`).textContent();
+      assert.match(line, /Tiago Nunes/, `árvore · #${number}`);
+      assert.doesNotMatch(line, /autor não identificado/);
+    }
+    assert.equal(await acts.locator("[data-tech-view] .tech-unknown").filter({ hasText: "autor não identificado" }).count(), 0);
+    // Prédio: a gaveta do épico e a da pessoa.
+    await toView(acts, "predio");
+    await acts.locator('[data-epic-card="E-2"]').focus();
+    await acts.keyboard.press("Enter");
+    await acts.waitForSelector('[data-tech-epic="E-2"] [data-pr="147"]');
+    assert.match(await acts.locator('[data-tech-epic="E-2"] [data-pr="147"]').textContent(), /Tiago Nunes/);
+    await acts.keyboard.press("Escape");
+    await acts.click('[data-registry-button]');
+    await acts.waitForSelector("[data-tech-registry]");
+    await acts.click(`[data-registry-person="${EMAIL("tiago.nunes")}"] .ta-trigger:has-text("Ver Tiago")`);
+    await acts.waitForSelector(`${person} [data-pr="147"]`);
+    assert.equal(await acts.locator(`${person} [data-github-missing]`).count(), 0);
+    await acts.keyboard.press("Escape");
+    report.acoes.cadastro = { login: "tnunes-dev", semAutorAntes: [147], semAutorDepois: [], erros: ["login-invalido", "login-em-uso"] };
+  });
+
+  await check("cadastro no celular (390×844): abre pela barra, sem rolagem lateral, Esc fecha", async () => {
+    await acts.setViewportSize({ width: 390, height: 844 });
+    await acts.waitForTimeout(500);
+    // A navegação aberta na tela larga vira sobreposição no celular: recolhe, como faria a pessoa.
+    const roster = acts.locator('[aria-label="Recolher navegação"]');
+    if (await roster.isVisible()) await roster.click();
+    const button = acts.locator("[data-registry-button]");
+    assert.ok(await button.isVisible(), "o botão do cadastro fica na barra do celular");
+    await button.click();
+    await acts.waitForSelector("[data-tech-registry]");
+    const layout = await acts.evaluate(() => {
+      const drawer = document.querySelector("[data-tech-registry]").getBoundingClientRect();
+      const items = [...document.querySelectorAll(".office-top > *")].filter((node) => getComputedStyle(node).display !== "none").map((node) => node.getBoundingClientRect());
+      return {
+        page: document.documentElement.scrollWidth - window.innerWidth,
+        drawerOutside: drawer.right > window.innerWidth + 1 || drawer.left < -1,
+        topOutside: items.some((box) => box.right > window.innerWidth + 1),
+        topOverlap: items.some((box, index) => items.slice(index + 1).some((other) => other.left < box.right - 1 && other.right > box.left + 1)),
+      };
+    });
+    assert.deepEqual(layout, { page: 0, drawerOutside: false, topOutside: false, topOverlap: false }, JSON.stringify(layout));
+    await acts.click(`[data-registry-edit="${EMAIL("caio.rezende")}"]`);
+    await acts.waitForSelector(`[data-registry-form="${EMAIL("caio.rezende")}"]`);
+    await shot(acts, "cadastro-390");
+    // Esc por camadas: primeiro o formulário, depois a gaveta.
+    await acts.keyboard.press("Escape");
+    await acts.waitForSelector(`[data-registry-form="${EMAIL("caio.rezende")}"]`, { state: "detached" });
+    assert.ok(await tech(acts, "registryOpen"));
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-registry]"));
+  });
+  await acts.close();
+  }
 
   writeFileSync(path.join(OUT, "resultado.json"), JSON.stringify(report, null, 2));
   assert.deepEqual(problems, []);
