@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { epicHealth, presenceBuckets, reviewCandidates, trackingAnswers } from "@/activity/selectors";
+import { epicHealth, presenceBuckets, prOf, reviewCandidates, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
 import { DEFAULT_SEED, simulatedStateAt } from "@/activity/simulation";
 import { EMAIL } from "@/activity/squad";
-import { DAY_START, MINUTE, at } from "@/activity/time";
+import { DAY_END, DAY_START, MINUTE, at, clockLabel } from "@/activity/time";
 import { searchWithView, viewFrom } from "@/tech/techStore";
 import { attentionExpansion, attentionOnly, dailyBoard, destinationOf, fullExpansion, needsAttention, personTag, projectTree, subjectLabel } from "@/tech/techViews";
 
@@ -130,6 +130,52 @@ describe("visão Painel: as respostas da daily", () => {
     // Às 15:20 há gente livre para revisar o #147.
     const late = dailyBoard(day(at(15, 20))).reviews.find((item) => item.pr.number === 147)!;
     expect(late.candidates.length).toBeGreaterThan(0);
+  });
+
+  it("na daily ninguém está livre, e o painel diz quem fica livre e quando", () => {
+    const state = day(at(9, 35));
+    const board = dailyBoard(state);
+    expect(board.reviews.length).toBeGreaterThan(0);
+    for (const item of board.reviews) {
+      // A regra de agora não muda: na daily o squad está na sala.
+      expect(item.candidates).toEqual([]);
+      expect(item.upcoming.map((upcoming) => upcoming.person.email)).toEqual(upcomingReviewers(state, item.pr).map((upcoming) => upcoming.person.email));
+    }
+    const pr142 = board.reviews.find((item) => item.pr.number === 142)!;
+    expect(pr142.upcoming.map((upcoming) => [upcoming.person.email, clockLabel(upcoming.freeAt)])).toEqual([
+      [EMAIL.luana, "09:45"],
+      [EMAIL.renata, "09:45"],
+    ]);
+  });
+
+  it("quem fica livre segue a regra de reviewCandidates no instante em que fica livre", () => {
+    for (const instant of DAY_SAMPLES) {
+      const state = day(instant);
+      for (const pr of state.prs.filter((item) => item.state === "open")) {
+        const now = reviewCandidates(state, pr).map((candidate) => candidate.person.email);
+        const upcoming = upcomingReviewers(state, pr);
+        // Do mais cedo para o mais tarde, no futuro, ainda hoje, e nunca quem já está livre.
+        expect(upcoming.map((item) => item.freeAt)).toEqual([...upcoming.map((item) => item.freeAt)].sort((a, b) => a - b));
+        for (const item of upcoming) {
+          expect(item.freeAt).toBeGreaterThan(state.at);
+          expect(item.freeAt).toBeLessThan(DAY_END);
+          expect(now).not.toContain(item.person.email);
+          expect(item.person.github).not.toBe(pr.author);
+          expect(["dev", "techlead"]).toContain(item.person.role);
+          // Na hora em que fica livre não está em reunião, e a próxima fica a 30 min ou mais.
+          const meetings = state.calendar.filter((entry) => entry.attendees.includes(item.person.email));
+          expect(meetings.some((entry) => entry.start <= item.freeAt && item.freeAt < entry.end)).toBe(false);
+          if (item.freeUntil !== null) expect(item.freeUntil - item.freeAt).toBeGreaterThanOrEqual(30 * MINUTE);
+          // Foco, huddle e fora não dizem quando acabam: ficam de fora.
+          expect(["mesa", "reuniao", "chamada"]).toContain(whereIs(state, item.person.email).kind);
+        }
+      }
+    }
+    // Às 13:35 o refinamento das 14h tira todo mundo; depois dele, voltam.
+    const before = day(at(13, 35));
+    const pr = prOf(before, 144)!;
+    expect(reviewCandidates(before, pr)).toEqual([]);
+    expect(upcomingReviewers(before, pr).map((item) => clockLabel(item.freeAt))).toEqual(["15:00", "15:00"]);
   });
 
   it("presença cobre o time inteiro, cada pessoa num lugar só", () => {

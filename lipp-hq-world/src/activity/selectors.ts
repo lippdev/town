@@ -1,6 +1,6 @@
 import type { ActivityEvent, ActivityState } from "./events";
 import { directoryOf, personByGithub, resolveActor, type Directory } from "./identity";
-import { DAY, DAY_START, MINUTE, ageLabel, clockLabel } from "./time";
+import { DAY, DAY_END, DAY_START, MINUTE, ageLabel, clockLabel } from "./time";
 import type { CalendarEvent, Epic, EpicStatus, Huddle, Instant, Person, PullRequest, Story, Subject } from "./types";
 import { EPIC_STAGES, trackOf } from "./types";
 
@@ -206,6 +206,46 @@ export function reviewCandidates(state: ActivityState, pr: Pick<PullRequest, "au
     })
     .filter((candidate) => candidate.freeUntil === null || candidate.freeUntil - state.at >= FREE_AHEAD_MS)
     .sort((a, b) => a.pending - b.pending || a.person.name.localeCompare(b.person.name));
+}
+
+export interface UpcomingReviewer {
+  person: Person;
+  pending: number;
+  /** Quando passa a contar como livre para revisar, pela regra de `reviewCandidates`. */
+  freeAt: Instant;
+  /** Até quando fica livre, pela agenda. */
+  freeUntil: Instant | null;
+}
+
+/** Os lugares que a agenda deixa prever: foco, huddle e "fora" não dizem quando acabam. */
+const PREDICTABLE = new Set<PlaceKind>(["mesa", "reuniao", "chamada"]);
+
+/**
+ * Quem ainda não pode revisar agora, mas fica livre hoje, e quando: a mesma regra de
+ * `reviewCandidates` (dev ou tech lead com GitHub, que não é o autor, sem reunião nos 30 minutos
+ * seguintes) aplicada à agenda. Na daily o squad inteiro está na sala e ninguém está livre; isto
+ * diz "Renata livre às 09:45". Do mais cedo para o mais tarde. Não muda `reviewCandidates`.
+ */
+export function upcomingReviewers(state: ActivityState, pr: Pick<PullRequest, "author">, until: Instant = DAY_END): UpcomingReviewer[] {
+  const now = new Set(reviewCandidates(state, pr).map((candidate) => candidate.person.email));
+  const upcoming: UpcomingReviewer[] = [];
+  for (const person of state.people) {
+    if ((person.role !== "dev" && person.role !== "techlead") || !person.github || person.github === pr.author || now.has(person.email)) continue;
+    if (!PREDICTABLE.has(whereIs(state, person.email).kind)) continue;
+    const meetings = meetingsOf(state, person.email);
+    let freeAt = state.at;
+    let freeUntil: Instant | null = null;
+    for (;;) {
+      freeAt = nextFreeAt(state, person.email, freeAt);
+      const next = meetings.find((entry) => entry.start > freeAt);
+      freeUntil = next?.start ?? null;
+      if (!next || next.start - freeAt >= FREE_AHEAD_MS) break;
+      freeAt = next.end;
+    }
+    if (freeAt <= state.at || freeAt >= until) continue;
+    upcoming.push({ person, pending: pendingReviewsOf(state, person.github).length, freeAt, freeUntil });
+  }
+  return upcoming.sort((a, b) => a.freeAt - b.freeAt || a.pending - b.pending || a.person.name.localeCompare(b.person.name));
 }
 
 // ─── HUs ─────────────────────────────────────────────────────────────────────
