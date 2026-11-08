@@ -14,9 +14,10 @@ import { Flag, HealthBadge, openSubject, riskLabel, useNow, ViewHead, Who } from
  * A visão Projetos: a árvore do Notion (Projeto → Épico → HU → critérios), com as propriedades de
  * cada nível em colunas, como uma base do Notion. Abrir um épico ou HU abre a gaveta do prédio.
  */
-function Toggle({ open, label, onToggle }: { open: boolean; label: string; onToggle: () => void }) {
+/** Expandir ou recolher: um botão com aria-expanded, que aponta para o que abre. Lista aninhada, sem papel de árvore. */
+function Toggle({ open, label, controls, onToggle }: { open: boolean; label: string; controls: string; onToggle: () => void }) {
   return (
-    <button type="button" className="tv-toggle" aria-expanded={open} aria-label={`${open ? "Recolher" : "Expandir"} ${label}`} onClick={onToggle}>
+    <button type="button" className="tv-toggle" aria-expanded={open} aria-controls={open ? controls : undefined} aria-label={`${open ? "Recolher" : "Expandir"} ${label}`} onClick={onToggle}>
       <ChevronRight size={14} aria-hidden />
     </button>
   );
@@ -32,15 +33,11 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
       data-blocked={node.blocked ? "true" : undefined}
       data-stale={node.stale ? "true" : undefined}
       data-no-criteria={node.withoutCriteria ? "true" : undefined}
-      role="treeitem"
-      aria-level={3}
-      aria-expanded={open}
-      aria-selected={selected}
     >
       <div className="tv-row">
         <span className="tv-name">
-          <Toggle open={open} label={story.id} onToggle={onToggle} />
-          <button type="button" className="tv-open" onClick={() => openSubject(state, { kind: "story", id: story.id })} title={`${story.id} · ${story.title}: abrir no épico`}>
+          <Toggle open={open} label={story.id} controls={`tv-detail-${story.id}`} onToggle={onToggle} />
+          <button type="button" className="tv-open" aria-current={selected ? "true" : undefined} onClick={() => openSubject(state, { kind: "story", id: story.id })} title={`${story.id} · ${story.title}: abrir no épico`}>
             <span className="tv-id">{story.id}</span> {story.title}
           </button>
         </span>
@@ -74,7 +71,7 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
         </span>
       </div>
       {open && (
-        <div className="tv-detail">
+        <div className="tv-detail" id={`tv-detail-${story.id}`}>
           {node.blocked && (
             <p className="tv-blocked">
               Travada desde {whenLabel(node.blocked.since, state.at)}
@@ -118,11 +115,11 @@ function EpicRow({ node, expanded, toggle, state }: { node: EpicNode; expanded: 
   const open = expanded.has(epic.id);
   const selected = useTechStore((store) => store.selectedEpicId === epic.id);
   return (
-    <li className={selected ? "tv-node tv-epic current" : "tv-node tv-epic"} data-tree-epic={epic.id} data-health={health.level} role="treeitem" aria-level={2} aria-expanded={open} aria-selected={selected}>
+    <li className={selected ? "tv-node tv-epic current" : "tv-node tv-epic"} data-tree-epic={epic.id} data-health={health.level}>
       <div className="tv-row">
         <span className="tv-name">
-          <Toggle open={open} label={`${epic.id} ${epic.title}`} onToggle={() => toggle(epic.id)} />
-          <button type="button" className="tv-open" onClick={() => openSubject(state, { kind: "epic", id: epic.id })} title={`${epic.id} · ${epic.title}: abrir o épico`}>
+          <Toggle open={open} label={`${epic.id} ${epic.title}`} controls={`tv-children-${epic.id}`} onToggle={() => toggle(epic.id)} />
+          <button type="button" className="tv-open" aria-current={selected ? "true" : undefined} onClick={() => openSubject(state, { kind: "epic", id: epic.id })} title={`${epic.id} · ${epic.title}: abrir o épico`}>
             <span className="tv-id">{epic.id}</span> {epic.title}
           </button>
         </span>
@@ -143,7 +140,7 @@ function EpicRow({ node, expanded, toggle, state }: { node: EpicNode; expanded: 
         </span>
       </div>
       {open && (
-        <ul role="group" className="tv-children">
+        <ul className="tv-children" id={`tv-children-${epic.id}`} aria-label={`HUs do ${epic.id}`}>
           {node.stories.map((story) => (
             <StoryRow key={story.story.id} node={story} open={expanded.has(story.story.id)} onToggle={() => toggle(story.story.id)} state={state} />
           ))}
@@ -158,10 +155,10 @@ function ProjectRow({ node, expanded, toggle, state }: { node: ProjectNode; expa
   const open = expanded.has(node.project.id);
   const { summary } = node;
   return (
-    <li className="tv-node tv-project" data-tree-project={node.project.id} role="treeitem" aria-level={1} aria-expanded={open}>
+    <li className="tv-node tv-project" data-tree-project={node.project.id}>
       <div className="tv-row">
         <span className="tv-name">
-          <Toggle open={open} label={node.project.name} onToggle={() => toggle(node.project.id)} />
+          <Toggle open={open} label={node.project.name} controls={`tv-children-${node.project.id}`} onToggle={() => toggle(node.project.id)} />
           <strong>{node.project.name}</strong>
         </span>
         <span className="tv-cell" data-label="Responsável">
@@ -188,7 +185,7 @@ function ProjectRow({ node, expanded, toggle, state }: { node: ProjectNode; expa
         <span className="tv-cell tv-empty-cell" aria-hidden />
       </div>
       {open && (
-        <ul role="group" className="tv-children">
+        <ul className="tv-children" id={`tv-children-${node.project.id}`} aria-label={`Épicos de ${node.project.name}`}>
           {node.epics.map((epic) => (
             <EpicRow key={epic.epic.id} node={epic} expanded={expanded} toggle={toggle} state={state} />
           ))}
@@ -247,7 +244,7 @@ export function ProjectsView() {
             <span>Progresso</span>
             <span>Prazo e PRs</span>
           </div>
-          <ul role="tree" aria-label="Projetos, épicos e HUs" className="tv-tree">
+          <ul aria-label="Projetos, épicos e HUs" className="tv-tree">
             {shown.map((project) => (
               <ProjectRow key={project.project.id} node={project} expanded={expanded} toggle={toggle} state={state} />
             ))}
