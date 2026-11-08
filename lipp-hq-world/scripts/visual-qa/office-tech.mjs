@@ -26,9 +26,10 @@ const CHROME = process.env.CHROME_PATH || (existsSync("/usr/bin/google-chrome") 
 const SCALE = Number(process.env.HQ_TIMEOUT_SCALE ?? 1);
 const after = (ms) => Math.round(ms * SCALE);
 const OUT = process.argv[2] ?? "qa/office-tech";
-const ONLY = process.env.HQ_ONLY ?? "";
+const ONLY = process.env.HQ_ONLY ?? (process.env.HQ_TECH_BARRA === "1" ? "barra" : "");
 const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const TECH = `${DEMO}&cenario=tecnologia`;
+const ONLY_BARRA = ONLY === "barra" || process.env.HQ_TECH_BARRA === "1";
 // `PCFSoftShadowMap has been removed`: o `shadows="soft"` do prédio, que o three 0.186 troca pelo
 // PCFShadowMap (o desenho é o mesmo). Apareceu em máquina sem GPU; vem de antes do cenário e se
 // resolve no próprio prédio, fora desta prova.
@@ -117,7 +118,7 @@ const everyoneStill = (page) => page.waitForFunction(() => window.__HQ_OFFICE_QA
 const EMAIL = (name) => `${name}@lipp.example`;
 
 try {
-  // HQ_ONLY=visoes ou HQ_ONLY=acoes pula a cena e roda só aquele bloco (para iterar nele).
+  // HQ_ONLY=visoes, acoes ou barra pula a cena e roda só aquele bloco (para iterar nele).
   if (!ONLY) {
     // ─── Abrir ─────────────────────────────────────────────────────────────────
     const page = await open(`${TECH}&velocidade=1&hora_sim=09:20`);
@@ -377,7 +378,7 @@ try {
   const urlView = (page) => page.evaluate(() => new URLSearchParams(window.location.search).get("visao"));
   report.visoes = { horas: VIEW_TIMES, leituras: [] };
 
-  if (ONLY !== "acoes") {
+  if (ONLY !== "acoes" && ONLY !== "barra") {
   // Movimento reduzido: cada pessoa aparece já no lugar. A prova é de conteúdo, não de animação, e
   // assim não depende de quantos quadros por segundo a máquina sem GPU consegue desenhar.
   const views = await open(`${TECH}&andar=expansao-2&hora_sim=09:00&visao=painel`, { reducedMotion: "reduce" });
@@ -659,7 +660,7 @@ try {
 
   }
 
-  if (ONLY !== "visoes") {
+  if (ONLY !== "visoes" && ONLY !== "barra") {
   // ─── Ações e cadastro ──────────────────────────────────────────────────────
   // Bloco à parte: cobrar, reatribuir, pedir ao bot e o cadastro do GitHub, tudo pela interface.
   // Relógio sempre parado e levado com jumpToClock; a ponte só lê o efeito, nunca age.
@@ -987,6 +988,164 @@ try {
   });
   await acts.close();
   }
+
+  // ─── Squad na barra lateral ──────────────────────────────────────────
+  // Bloco à parte: HQ_TECH_BARRA=1 roda só ele.
+  if (ONLY !== "visoes" && ONLY !== "acoes") {
+  report.barra = {};
+  const barra = await open(`${TECH}&andar=expansao-2&hora_sim=09:35`, { reducedMotion: "reduce" });
+  await barra.waitForFunction(() => window.__HQ_TECH_QA__);
+  await tech(barra, "pause", true);
+  const isClosed = await barra.evaluate(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "false");
+  if (isClosed) await barra.click('[aria-label="Abrir navegação"]');
+  await barra.waitForSelector('[data-roster-section="tecnologia-squad"]');
+
+  await check("às 09:35 a seção mostra os seis da daily 'Em reunião' e Bianca/Tiago fora", async () => {
+    const dailyEmails = ["marina.lopes", "caio.rezende", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
+    for (const email of dailyEmails) {
+      const row = barra.locator(`[data-squad-member="${email}"]`);
+      assert.ok(await row.isVisible(), `${email} visível na barra`);
+      const where = await row.getAttribute("data-where");
+      const qaWhere = await tech(barra, "where", email);
+      assert.equal(where, qaWhere, `data-where de ${email} bate com whereIs (${where} === ${qaWhere})`);
+      assert.equal(where, "reuniao");
+      const stateText = await row.locator("[data-state]").textContent();
+      assert.match(stateText, /^Em reunião/);
+    }
+
+    const tiago = barra.locator(`[data-squad-member="${EMAIL("tiago.nunes")}"]`);
+    assert.equal(await tiago.getAttribute("data-where"), await tech(barra, "where", EMAIL("tiago.nunes")));
+    assert.equal(await tiago.getAttribute("data-where"), "fora");
+    assert.equal((await tiago.locator("[data-state]").textContent()).trim(), "Fora");
+
+    const bianca = barra.locator(`[data-squad-member="${EMAIL("bianca.sales")}"]`);
+    assert.equal(await bianca.getAttribute("data-where"), await tech(barra, "where", EMAIL("bianca.sales")));
+    assert.equal(await bianca.getAttribute("data-where"), "fora");
+    assert.equal((await bianca.locator("[data-state]").textContent()).trim(), "Férias");
+
+    await shot(barra, "barra-lateral-squad-0935-1440");
+  });
+
+  await check("às 11:21 os três do huddle 'Em huddle', e todos batem com whereIs", async () => {
+    await tech(barra, "jumpToClock", "11:21");
+    await barra.waitForFunction(() => document.querySelectorAll('[data-squad-member][data-where="huddle"]').length === 3);
+    const answers = await tech(barra, "answers");
+    const huddleMembers = await barra.evaluate(() =>
+      [...document.querySelectorAll('[data-squad-member][data-where="huddle"]')].map((node) => node.dataset.squadMember)
+    );
+    assert.deepEqual(huddleMembers.sort(), answers.huddle.sort());
+    for (const email of answers.huddle) {
+      const row = barra.locator(`[data-squad-member="${email}"]`);
+      assert.equal((await row.locator("[data-state]").textContent()).trim(), "Em huddle");
+    }
+
+    const squadEmails = (await tech(barra, "people")).map((p) => p.email);
+    for (const email of squadEmails) {
+      const row = barra.locator(`[data-squad-member="${email}"]`);
+      const whereAttr = await row.getAttribute("data-where");
+      const qaWhere = await tech(barra, "where", email);
+      assert.equal(whereAttr, qaWhere, `data-where de ${email} bate com QA whereIs`);
+    }
+
+    await shot(barra, "barra-lateral-squad-1121-1440");
+  });
+
+  await check("clicar em uma pessoa abre a gaveta dela e vai para Tecnologia se em outro andar", async () => {
+    await barra.click('[data-floor-selector] [data-view="operacao"]');
+    await settled(barra);
+    assert.equal((await office(barra)).buildingView, "operacao");
+
+    const diegoRow = barra.locator(`[data-squad-member="${EMAIL("diego.martins")}"]`);
+    await diegoRow.click();
+
+    await barra.waitForSelector(`[data-tech-person="${EMAIL("diego.martins")}"]`);
+    assert.equal((await office(barra)).buildingView, "expansao-2");
+    assert.equal(await diegoRow.getAttribute("aria-pressed"), "true");
+
+    await shot(barra, "barra-lateral-gaveta-1440");
+    await barra.keyboard.press("Escape");
+    await barra.waitForFunction(() => !document.querySelector("[data-tech-person]"));
+  });
+
+  await check("busca 'QA' deixa só o Rafael", async () => {
+    const search = barra.locator(".office-roster-search");
+    await search.fill("QA");
+    await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 1);
+    const visibleMember = barra.locator("[data-squad-member]");
+    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("rafael.coutinho"));
+    assert.match(await visibleMember.textContent(), /Rafael Coutinho/);
+    assert.match(await visibleMember.textContent(), /QA/);
+    assert.equal(await barra.locator("[data-agent-row]").count(), 0);
+    assert.equal(await barra.locator("[data-person-row]").count(), 0);
+
+    await shot(barra, "barra-lateral-busca-qa-1440");
+
+    await search.fill("");
+    await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 8);
+  });
+
+  await check("recolher a seção funciona e é lembrado no localStorage", async () => {
+    const toggle = barra.locator('[data-roster-section="tecnologia-squad"] .office-section-toggle');
+    await toggle.click();
+    await barra.waitForFunction(
+      () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "true"
+    );
+    assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+    const saved = await barra.evaluate(() => JSON.parse(localStorage.getItem("lipp-hq.sidebar.equipes-recolhidas") || "[]"));
+    assert.ok(saved.includes("tecnologia-squad"));
+
+    await toggle.click();
+    await barra.waitForFunction(
+      () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "false"
+    );
+  });
+  await barra.close();
+
+  await check("no celular (390×844): squad na barra lateral, clicar fecha a barra e abre a gaveta", async () => {
+    const phone = await open(`${TECH}&andar=expansao-2&hora_sim=09:35`, {
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+      reducedMotion: "reduce",
+    });
+    await phone.waitForFunction(() => window.__HQ_TECH_QA__);
+    await tech(phone, "pause", true);
+
+    assert.equal(await phone.evaluate(() => document.querySelector(".office-hud")?.dataset.sidebarOpen), "false");
+
+    await phone.click('[aria-label="Abrir navegação"]');
+    await phone.waitForFunction(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "true");
+    await phone.waitForSelector('[data-roster-section="tecnologia-squad"]');
+    assert.equal(await phone.locator("[data-squad-member]").count(), 8);
+
+    await shot(phone, "barra-lateral-squad-390");
+
+    await phone.click(`[data-squad-member="${EMAIL("marina.lopes")}"]`);
+    await phone.waitForFunction(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "false");
+    await phone.waitForSelector(`[data-tech-person="${EMAIL("marina.lopes")}"]`);
+
+    await shot(phone, "barra-lateral-gaveta-390");
+
+    await phone.keyboard.press("Escape");
+    await phone.waitForFunction(() => !document.querySelector("[data-tech-person]"));
+    await phone.close();
+  });
+
+  await check("sem cenario: seção do squad não existe e nenhum arquivo de tech é baixado", async () => {
+    const plain = await open(`${DEMO}&andar=expansao-2`);
+    await plain.waitForTimeout(2000);
+    assert.equal(await plain.locator('[data-roster-section="tecnologia-squad"]').count(), 0);
+    assert.equal(await plain.locator("[data-squad-member]").count(), 0);
+    const downloaded = plain.requests.filter(
+      (file) => file.includes("TechRosterSection") || file.includes("techRosterStatus") || file.includes("/src/tech/")
+    );
+    assert.deepEqual(downloaded, []);
+    await plain.close();
+  });
+
+  }
+
 
   writeFileSync(path.join(OUT, "resultado.json"), JSON.stringify(report, null, 2));
   assert.deepEqual(problems, []);
