@@ -31,7 +31,7 @@ recebe conectores de verdade sem mexer na cena.
 | [#112](https://github.com/lippdev/town/pull/112) | `feat/tecnologia-andar` → `feat/tecnologia-modelo` | Pronta para revisão: andar da Tecnologia, quadro de épicos, gavetas, relógio da simulação; `qa:tecnologia` completo para a cena |
 | [#114](https://github.com/lippdev/town/pull/114) | `feat/tecnologia-visoes` → `feat/tecnologia-andar` | Pronta para revisão: visões Projetos e Painel com os mesmos dados; prova "o prédio e o painel dizem o mesmo" |
 | [#115](https://github.com/lippdev/town/pull/115) | `feat/tecnologia-acoes` → `feat/tecnologia-visoes` | Pronta para revisão: cobrar, reatribuir e pedir ao bot onde a pergunta aparece; cadastro com vínculo do GitHub; prova pela interface |
-| em aberto | `feat/tecnologia-barra-lateral` → `feat/tecnologia-acoes` | Pronta para revisão: squad na barra lateral com status sincronizado ao relógio, busca, recolhimento e abertura da gaveta |
+| [#116](https://github.com/lippdev/town/pull/116) | `feat/tecnologia-barra-lateral` → `feat/tecnologia-acoes` | Pronta para revisão: squad na barra lateral com status sincronizado ao relógio, busca, recolhimento e abertura da gaveta |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
