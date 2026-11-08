@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { FlaskConical, Pause, Play, RotateCcw, X } from "lucide-react";
+import { FlaskConical, Link2, Pause, Play, RotateCcw, X } from "lucide-react";
 import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
 import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, presenceBuckets, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
@@ -12,6 +12,7 @@ import { useHQStore } from "@/state/useHQStore";
 import { escapeLayers, useOfficeStore } from "@/world/office/officeStore";
 import { ActionPlace, PrActions, StoryActions } from "./TechActions";
 import { emailOfHuman, squadHumanId, squadHumans } from "./techPeople";
+import { RegistryDrawer } from "./TechRegistry";
 import { HEALTH_COLOR, TECH_FLOOR_ID } from "./techPlaces";
 import { techSceneRuntime } from "./TechScene";
 import { useTechStore, type TechView } from "./techStore";
@@ -316,6 +317,9 @@ function PersonDrawer() {
             <p className="panel-warn" data-github-missing>
               {person.name.split(" ")[0]} ainda não vinculou o GitHub no cadastro: os PRs dela ou dele aparecem como "autor não identificado"
               {unknownLogins.length ? ` (login visto: ${unknownLogins.join(", ")})` : ""}.
+              <button type="button" className="ta-trigger tr-link-button" onClick={() => useTechStore.getState().openRegistry(email)} data-open-registry={email}>
+                <Link2 size={13} aria-hidden /> Vincular
+              </button>
             </p>
           )}
         </Section>
@@ -473,6 +477,7 @@ export function TechHud() {
     <>
       <PersonDrawer />
       <EpicDrawer />
+      <RegistryDrawer />
       <Notices />
     </>
   );

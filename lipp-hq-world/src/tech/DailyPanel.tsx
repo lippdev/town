@@ -1,11 +1,12 @@
 import { useMemo, type ReactNode } from "react";
-import { Moon } from "lucide-react";
+import { Link2, Moon } from "lucide-react";
 import type { ActivityState } from "@/activity/events";
 import { PLACE_LABEL, type HealthLevel, type PlaceKind } from "@/activity/selectors";
 import { ageLabel, clockLabel, spanLabel, whenLabel } from "@/activity/time";
 import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type Person, type PullRequest, type Subject } from "@/activity/types";
 import { ActionPlace, PrActions, StoryActions } from "./TechActions";
 import { PrAuthor, Section } from "./TechHud";
+import { useTechStore } from "./techStore";
 import { dailyBoard, destinationOf, subjectKey, type DailyBoard } from "./techViews";
 import { HealthBadge, openDestination, openPerson, openSubject, useNow, ViewHead, Who } from "./viewParts";
 
@@ -274,6 +275,13 @@ export function DailyPanel() {
                     id={`#${item.pr.number}`}
                     label={item.pr.title}
                     data={{ "data-pr": String(item.pr.number) }}
+                    extra={
+                      <div className="ta-bar">
+                        <button type="button" className="ta-trigger" onClick={() => useTechStore.getState().openRegistry()} data-open-registry="login">
+                          <Link2 size={13} aria-hidden /> Vincular {item.pr.author} no cadastro
+                        </button>
+                      </div>
+                    }
                   >
                     <span className="tech-unknown">autor não identificado</span> · login {item.pr.author} · {item.story ? item.story.id : "sem HU"}
                   </Item>

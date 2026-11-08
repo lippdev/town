@@ -47,6 +47,42 @@
 .tv-item-extra .ta-bar { flex: 1 0 100%; }
 .tv-detail > .ta-bar { margin-top: 2px; }
 
+/* ─── Cadastro do squad ────────────────────────────────────────────────────── */
+.tr-coverage { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tr-coverage li { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 8px; background: var(--ui-raised); font-size: 12px; }
+.tr-coverage li strong { font-variant-numeric: tabular-nums; }
+.tr-coverage li.partial strong { color: #e7c06b; }
+.tr-intro { margin: 0; color: var(--ui-dim); font-size: 12px; line-height: 1.45; }
+.tr-people { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tr-person { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--ui-line); border-radius: 10px; }
+.tr-person.focus { border-color: #6f6f69; background: #1c1c1b; }
+.tr-person-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.tr-person-head strong { font-size: 13px; }
+.tr-person-head small { color: var(--ui-dim); font-size: 11.5px; }
+.tr-email { color: var(--ui-dim); font-size: 11.5px; overflow-wrap: anywhere; }
+.tr-sources { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tr-sources li { padding: 1px 7px; border-radius: 10px; background: rgba(79, 157, 105, 0.14); color: #8fd1a2; font-size: 11px; }
+.tr-sources li.missing { background: rgba(217, 164, 59, 0.14); color: #e7c06b; }
+.tr-form { display: grid; gap: 6px; }
+.tr-form label { color: var(--ui-dim); font-size: 11.5px; }
+.tr-input { display: flex; align-items: center; min-width: 0; border: 1px solid #3a3a37; border-radius: 8px; background: #151514; }
+.tr-input:focus-within { border-color: var(--ui-text); }
+.tr-input span { padding-left: 9px; color: var(--ui-dim); }
+.tr-input input { flex: 1; min-width: 0; padding: 6px 9px 6px 2px; border: 0; outline: 0; background: none; color: var(--ui-text); font: inherit; font-size: 13px; }
+.tr-input[data-invalid="true"] { border-color: #c4553d; }
+.tr-error { margin: 0; color: #ec8f7a; font-size: 12px; }
+.tr-logins { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tr-login { display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; background: rgba(217, 164, 59, 0.08); font-size: 12.5px; }
+.tr-login code { color: #e7c06b; font-size: 12.5px; }
+.tr-login small { color: var(--ui-dim); font-size: 11.5px; }
+
+/* Botão do cadastro na barra de cima. */
+.tech-registry-button { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 4px 10px; border: 0; border-radius: 8px; background: var(--ui-raised); color: var(--ui-dim); font: inherit; font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+.tech-registry-button:hover, .tech-registry-button[aria-expanded="true"] { color: var(--ui-text); }
+.tech-registry-button:focus-visible { outline: 2px solid var(--ui-text); outline-offset: 1px; }
+.office-hud:not([data-office-view="escritorio"]) .tech-registry-button { display: none; }
+@media (max-width: 1280px) { .tech-registry-button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+
 @media (max-width: 760px) {
   .tech-story > .ta-bar, .tech-drawer .tech-list > .ta-bar { padding-left: 8px; }
   .ta-person { grid-template-areas: "radio name name" "radio load state"; }
@@ -57,4 +93,5 @@
 .tech-row:has(> .ta-bar:not(:empty)) > .tech-row-main,
 .tech-row:has(> .ta-bar:not(:empty)) > .tech-row-button { flex: 1 1 0; }
 .tech-row > .ta-bar { flex: 1 0 100%; padding-left: 56px; }
+.tr-link-button { margin-left: 8px; vertical-align: baseline; }
 @media (max-width: 760px) { .tech-row > .ta-bar { padding-left: 0; } }
