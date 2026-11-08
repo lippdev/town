@@ -463,7 +463,7 @@ PR sem autor no Painel.
   (OAuth):** a pessoa entra na própria conta e o login chega confirmado pelo GitHub, sem digitação e
   sem como vincular o login de outra pessoa. A ação continua a mesma.
 
-`qa:tecnologia` prova as ações e o cadastro num bloco no fim (`HQ_TECH_ACOES=1` roda só ele), pela
+`qa:tecnologia` prova as ações e o cadastro num bloco no fim (`HQ_ONLY=acoes` roda só ele), pela
 interface, com o relógio parado e `jumpToClock`: cobra a HU-27 às 10:05 (o botão diz "Cobrar Marina",
 a mensagem enviada é a mostrada, a HU fica "aguardando"; às 10:30 ela destravou às 10:17, contra 15:08
 no mesmo dia sem cobrança, e o E-1 deixou de estar travado); reatribui a HU-37 da Bianca para o Tiago
