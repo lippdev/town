@@ -1,0 +1,60 @@
+/* Ações e cadastro do cenário de tecnologia. Mesma base neutra de tech.css e tech-views.css. */
+
+/* ─── A barra de ações de um item ──────────────────────────────────────────── */
+.ta-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.ta-bar:empty { display: none; }
+.tech-story > .ta-bar { padding: 2px 8px 4px 64px; }
+.tech-drawer .tech-list > .ta-bar { padding: 0 8px 6px 64px; }
+.ta-trigger { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid var(--ui-line); border-radius: 999px; background: var(--ui-raised); color: var(--ui-text); font: inherit; font-size: 11.5px; line-height: 1.4; white-space: nowrap; cursor: pointer; }
+.ta-trigger:hover { background: #2a2a28; }
+.ta-trigger[aria-expanded="true"] { border-color: #6f6f69; background: var(--ui-selected); }
+.ta-trigger:focus-visible { outline: 2px solid var(--ui-text); outline-offset: 1px; }
+.ta-trigger svg { color: var(--ui-dim); }
+
+/* O painel e as linhas de estado ocupam a largura toda, embaixo dos botões. */
+.ta-panel, .ta-status { flex: 1 0 100%; order: 10; }
+.ta-panel { display: grid; gap: 8px; margin: 2px 0 4px; padding: 10px 12px; border: 1px solid #3a3a37; border-radius: 10px; background: #1c1c1b; color: var(--ui-text); font-size: 12.5px; }
+.ta-title { margin: 0; font-size: 13px; font-weight: 600; }
+.ta-why, .ta-note, .ta-summary { margin: 0; color: var(--ui-dim); font-size: 12px; line-height: 1.45; }
+.ta-summary { color: var(--ui-text); }
+.ta-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.ta-buttons .office-button { padding: 5px 12px; font-size: 12.5px; }
+.ta-buttons .office-button:focus-visible { outline: 2px solid var(--ui-text); outline-offset: 2px; }
+
+.ta-message { margin: 0; padding: 8px 10px; border-left: 3px solid #8f7bd0; border-radius: 0 8px 8px 0; background: rgba(146, 120, 214, 0.1); }
+.ta-message figcaption { margin-bottom: 4px; color: #c7b6f2; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.ta-message blockquote { margin: 0; color: var(--ui-text); font-size: 12.5px; line-height: 1.45; }
+
+.ta-status { margin: 0; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; }
+.ta-status.waiting { background: rgba(217, 164, 59, 0.12); color: #e7c06b; }
+.ta-status.done { background: rgba(79, 157, 105, 0.12); color: #8fd1a2; }
+
+/* Quem recebe a HU: uma linha por pessoa, com a carga e quem está fora. */
+.ta-people { display: grid; gap: 2px; max-height: 280px; overflow: auto; margin: 0; padding: 0; border: 0; scrollbar-width: thin; }
+.ta-person { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "radio name state" "radio load state"; align-items: center; gap: 0 10px; padding: 5px 8px; border-radius: 8px; cursor: pointer; }
+.ta-person:hover { background: var(--ui-hover); }
+.ta-person:has(input:checked) { background: var(--ui-selected); }
+.ta-person:has(input:focus-visible) { outline: 2px solid var(--ui-text); outline-offset: -2px; }
+.ta-person.current { cursor: default; opacity: 0.7; }
+.ta-person input { grid-area: radio; margin: 0; accent-color: #efefec; }
+.ta-person-name { grid-area: name; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.ta-person-name small, .ta-person-load { color: var(--ui-dim); font-size: 11.5px; }
+.ta-person-load { grid-area: load; font-variant-numeric: tabular-nums; }
+.ta-person-state { grid-area: state; color: var(--ui-dim); font-size: 11.5px; text-align: right; }
+.ta-current { color: var(--ui-text); font-style: normal; }
+
+/* No Painel e na árvore, a barra segue o recuo do item. */
+.tv-item-extra .ta-bar { flex: 1 0 100%; }
+.tv-detail > .ta-bar { margin-top: 2px; }
+
+@media (max-width: 760px) {
+  .tech-story > .ta-bar, .tech-drawer .tech-list > .ta-bar { padding-left: 8px; }
+  .ta-person { grid-template-areas: "radio name name" "radio load state"; }
+}
+
+/* Dentro de uma linha de PR ou HU, as ações descem para a linha de baixo, alinhadas ao texto. */
+.tech-row:has(> .ta-bar:not(:empty)) { flex-wrap: wrap; }
+.tech-row:has(> .ta-bar:not(:empty)) > .tech-row-main,
+.tech-row:has(> .ta-bar:not(:empty)) > .tech-row-button { flex: 1 1 0; }
+.tech-row > .ta-bar { flex: 1 0 100%; padding-left: 56px; }
+@media (max-width: 760px) { .tech-row > .ta-bar { padding-left: 0; } }

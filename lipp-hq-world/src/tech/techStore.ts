@@ -3,6 +3,8 @@ import type { ActivityState } from "@/activity/events";
 import { DEFAULT_SEED, SPEEDS, SimulatedDay, TIME_SCALE, type Speed } from "@/activity/simulation";
 import { ActivityRuntime, type ActionResult, type AppAction } from "@/activity/source";
 import { DAY_END, DAY_START, at } from "@/activity/time";
+import { useHQStore } from "@/state/useHQStore";
+import { escapeLayers, useOfficeStore } from "@/world/office/officeStore";
 import { botVisits, personPlans, type BotVisit, type PersonPlan } from "./techPlaces";
 
 /**
@@ -55,6 +57,31 @@ export interface Notice {
   tone: "ok" | "erro";
 }
 
+/** O que a tela lembra do último pedido de cada ação: a hora e o que o runtime respondeu. */
+export interface ActionRecord {
+  at: number;
+  ok: boolean;
+  text: string;
+}
+
+/** Uma chave por ação e alvo: "cobrar:HU-27", "pedir_bot:resumir_pr:pr-142", "vincular_github:email". */
+export function actionKey(action: AppAction): string {
+  switch (action.kind) {
+    case "cobrar":
+    case "reatribuir":
+      return `${action.kind}:${action.storyId}`;
+    case "pedir_bot":
+      return `pedir_bot:${action.task}:${action.target.kind === "pr" ? `pr-${action.target.number}` : action.target.kind === "story" ? action.target.id : action.target.kind}`;
+    case "vincular_github":
+      return `vincular_github:${action.email.trim().toLocaleLowerCase()}`;
+  }
+}
+
+/** O cadastro aberto, e em quem: quem chega pelo aviso da pessoa já cai no vínculo dela. */
+export interface RegistryState {
+  focus: string | null;
+}
+
 interface TechState {
   seed: number;
   state: ActivityState;
@@ -69,6 +96,12 @@ interface TechState {
   /** HU em destaque no épico aberto. */
   highlightStoryId: string | null;
   notices: Notice[];
+  /** O painel de ação aberto (um só na tela): `${lugar}|${actionKey}`. */
+  openAction: string | null;
+  /** Último resultado de cada ação, por `actionKey`. */
+  records: Record<string, ActionRecord>;
+  /** A gaveta do cadastro do squad; nula quando fechada. */
+  registry: RegistryState | null;
   tick: (realMs: number) => void;
   setSpeed: (speed: Speed) => void;
   setPaused: (paused: boolean) => void;
@@ -79,6 +112,9 @@ interface TechState {
   selectEpic: (epicId: string | null, storyId?: string | null) => void;
   setView: (view: TechView) => void;
   dismissNotice: (id: number) => void;
+  setOpenAction: (key: string | null) => void;
+  openRegistry: (focus?: string | null) => void;
+  closeRegistry: () => void;
 }
 
 const launch = typeof window === "undefined" ? { seed: DEFAULT_SEED, start: DAY_START, speed: 1 as Speed } : launchFrom(window.location.search);
@@ -97,6 +133,9 @@ export const useTechStore = create<TechState>((set, get) => ({
   selectedEpicId: null,
   highlightStoryId: null,
   notices: [],
+  openAction: null,
+  records: {},
+  registry: null,
   tick: (realMs) => {
     const { paused, speed, ended } = get();
     if (paused || ended) return;
@@ -114,16 +153,18 @@ export const useTechStore = create<TechState>((set, get) => ({
   restart: (seed) => {
     const next = seed ?? get().seed;
     runtime = new ActivityRuntime(new SimulatedDay(next), DAY_START);
-    set({ seed: next, paused: false, selectedEpicId: null, highlightStoryId: null, notices: [], ...derived(runtime.state) });
+    set({ seed: next, paused: false, selectedEpicId: null, highlightStoryId: null, notices: [], openAction: null, records: {}, registry: null, ...derived(runtime.state) });
   },
   perform: (action) => {
     const result = runtime.perform(action);
     noticeId += 1;
     const notice: Notice = { id: noticeId, text: result.ok ? result.note : result.problem, tone: result.ok ? "ok" : "erro" };
-    set({ ...derived(runtime.state), notices: [...get().notices.slice(-3), notice] });
+    const record: ActionRecord = { at: runtime.state.at, ok: result.ok, text: notice.text };
+    set({ ...derived(runtime.state), notices: [...get().notices.slice(-3), notice], records: { ...get().records, [actionKey(action)]: record } });
     return result;
   },
-  selectEpic: (selectedEpicId, highlightStoryId = null) => set({ selectedEpicId, highlightStoryId }),
+  // Épico, pessoa, bot e cadastro dividem a gaveta: abrir um fecha os outros.
+  selectEpic: (selectedEpicId, highlightStoryId = null) => set(selectedEpicId ? { selectedEpicId, highlightStoryId, registry: null, openAction: null } : { selectedEpicId, highlightStoryId }),
   setView: (view) => {
     if (view === get().view) return;
     set({ view });
@@ -132,6 +173,31 @@ export const useTechStore = create<TechState>((set, get) => ({
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`);
   },
   dismissNotice: (id) => set({ notices: get().notices.filter((notice) => notice.id !== id) }),
+  setOpenAction: (openAction) => set({ openAction }),
+  openRegistry: (focus = null) => {
+    useHQStore.getState().clearSelection();
+    useOfficeStore.getState().clearHuman();
+    set({ registry: { focus }, selectedEpicId: null, highlightStoryId: null, openAction: null });
+  },
+  closeRegistry: () => set({ registry: null }),
 }));
+
+/**
+ * O Esc fecha de dentro para fora: primeiro o painel de uma ação, depois o cadastro. Registrado ao
+ * carregar o módulo, antes de qualquer gaveta montar, para vir antes delas em `escapeLayers`.
+ */
+export function closeTechOverlay(): boolean {
+  const store = useTechStore.getState();
+  if (store.openAction) {
+    store.setOpenAction(null);
+    return true;
+  }
+  if (store.registry) {
+    store.closeRegistry();
+    return true;
+  }
+  return false;
+}
+escapeLayers.add(closeTechOverlay);
 
 export const currentRuntime = () => runtime;

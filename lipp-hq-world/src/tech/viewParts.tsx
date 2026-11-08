@@ -40,7 +40,7 @@ export const openSubject = (state: ActivityState, subject: Subject) => openDesti
 export const openPerson = (email: string) => openDestination({ kind: "person", email });
 
 /** Uma gaveta aberta fecha antes de a visão trocar: o Esc sai de dentro para fora. */
-const drawerOpen = () => Boolean(useTechStore.getState().selectedEpicId || useHQStore.getState().selectedBotId || useOfficeStore.getState().selectedHumanId);
+const drawerOpen = () => Boolean(useTechStore.getState().selectedEpicId || useTechStore.getState().registry || useHQStore.getState().selectedBotId || useOfficeStore.getState().selectedHumanId);
 
 export function closeViewLayer(): boolean {
   const store = useTechStore.getState();
