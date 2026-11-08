@@ -29,7 +29,6 @@ const OUT = process.argv[2] ?? "qa/office-tech";
 const ONLY = process.env.HQ_ONLY ?? (process.env.HQ_TECH_BARRA === "1" ? "barra" : "");
 const DEMO = "/?escritorio=completo&modo=demonstracao&chegada=carro";
 const TECH = `${DEMO}&cenario=tecnologia`;
-const ONLY_BARRA = ONLY === "barra" || process.env.HQ_TECH_BARRA === "1";
 // `PCFSoftShadowMap has been removed`: o `shadows="soft"` do prédio, que o three 0.186 troca pelo
 // PCFShadowMap (o desenho é o mesmo). Apareceu em máquina sem GPU; vem de antes do cenário e se
 // resolve no próprio prédio, fora desta prova.
