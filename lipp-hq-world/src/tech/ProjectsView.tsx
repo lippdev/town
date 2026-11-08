@@ -129,8 +129,16 @@ function EpicRow({ node, expanded, toggle, state }: { node: EpicNode; expanded: 
         <span className="tv-cell" data-label="Etapa">
           <span className={`tv-track tv-track-${node.track}`}>{TRACK_LABEL[node.track]}</span> {EPIC_STATUS_LABEL[epic.status]}
         </span>
-        <span className="tv-cell" data-label="Saúde">
+        <span className="tv-cell tv-flags" data-label="Saúde">
           <HealthBadge level={health.level} />
+          {/* O que é do épico, e não de uma HU dele (a entrega perto com pouco pronto), aparece aqui: é o porquê do selo. */}
+          {health.reasons
+            .filter((reason) => reason.subject.kind === "epic")
+            .map((reason) => (
+              <Flag key={reason.text} tone="amber" title={reason.text} data={{ "data-epic-reason": reason.kind }}>
+                {reason.text}
+              </Flag>
+            ))}
         </span>
         <span className="tv-cell" data-label="HUs">
           {health.done}/{health.total} HUs concluídas

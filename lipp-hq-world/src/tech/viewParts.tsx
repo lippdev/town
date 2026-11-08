@@ -83,9 +83,9 @@ export function Who({ person, empty = "sem responsável" }: { person: PersonTag 
   );
 }
 
-export function Flag({ tone, children, title }: { tone: "red" | "amber" | "dim"; children: ReactNode; title?: string }) {
+export function Flag({ tone, children, title, data }: { tone: "red" | "amber" | "dim"; children: ReactNode; title?: string; data?: Record<string, string> }) {
   return (
-    <span className={`tv-flag tv-flag-${tone}`} title={title}>
+    <span className={`tv-flag tv-flag-${tone}`} title={title} {...data}>
       {children}
     </span>
   );
