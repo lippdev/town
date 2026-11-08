@@ -31,6 +31,7 @@ recebe conectores de verdade sem mexer na cena.
 | [#112](https://github.com/lippdev/town/pull/112) | `feat/tecnologia-andar` → `feat/tecnologia-modelo` | Pronta para revisão: andar da Tecnologia, quadro de épicos, gavetas, relógio da simulação; `qa:tecnologia` completo para a cena |
 | [#114](https://github.com/lippdev/town/pull/114) | `feat/tecnologia-visoes` → `feat/tecnologia-andar` | Pronta para revisão: visões Projetos e Painel com os mesmos dados; prova "o prédio e o painel dizem o mesmo" |
 | [#115](https://github.com/lippdev/town/pull/115) | `feat/tecnologia-acoes` → `feat/tecnologia-visoes` | Pronta para revisão: cobrar, reatribuir e pedir ao bot onde a pergunta aparece; cadastro com vínculo do GitHub; prova pela interface |
+| em aberto | `feat/tecnologia-barra-lateral` → `feat/tecnologia-acoes` | Pronta para revisão: squad na barra lateral com status sincronizado ao relógio, busca, recolhimento e abertura da gaveta |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
@@ -48,7 +49,10 @@ Próximos passos, nesta ordem:
    demonstração ("Entrar com GitHub" com os conectores). O `qa:tecnologia` prova tudo pela interface
    (`HQ_ONLY=acoes` roda só esse bloco): cobrar a HU-27 às 10:05 destrava o Login sem senha às 10:17,
    contra 15:08 sem cobrança.
-4. Squad na barra lateral.
+4. ~~Squad na barra lateral~~ (`feat/tecnologia-barra-lateral`): seção "Tecnologia · squad" (selo "Simulação"),
+   8 pessoas com estado sincronizado ao relógio pelos seletores puros, busca (nome e papel),
+   recolher persistido em localStorage, clique abre gaveta e leva ao andar 2, slot com import dinâmico
+   preservando zero download sem cenário; prova automatizada em 1440×900 e 390×844 no visual-qa.
 5. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
    3 a 5 pessoas, medindo tempo, acerto e se a pessoa sabe o que fazer em seguida.
 

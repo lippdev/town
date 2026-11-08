@@ -299,6 +299,14 @@ valem.
   (os logins sem pessoa ficam no cadastro, onde se escolhe a quem vincular). Para quem abre PR (dev,
   tech lead, QA) o aviso diz que PRs e revisões não entram na carga até o vínculo; para produto e design
   o tom é neutro.
+- **Squad na barra lateral:** com o cenário ligado, o Roster ganha a seção **"Tecnologia · squad"**
+  (com selo "Simulação" e contagem de 8 pessoas). Lista as oito pessoas com cargo e estado em tempo
+  real calculado pelos seletores puros (`whereIs`, `doingNow`, `PLACE_LABEL`): Na mesa, Em foco 🌙 ("não
+  perturbe"), Em reunião · Daily até 09:45, Em huddle, Em chamada, Fora/Férias. Clicar em qualquer membro
+  abre a gaveta dele (e navega para o andar da Tecnologia caso esteja em outro pavimento); no celular
+  (largura <= 480px), fecha a barra lateral ao selecionar. A busca filtra por nome e papel (ex.: "QA"
+  isola o Rafael). Recolher a seção persiste em `localStorage` (`hq:collapsed-teams`). O carregamento
+  é feito por slot dinâmico (`lazy`), garantindo que sem cenário nada de `src/tech/` seja baixado.
 - **Esc** fecha primeiro a gaveta do cenário (`escapeLayers`), depois segue como no resto do prédio.
 
 **Primeiro carregamento:** o cenário mora num pedaço de JavaScript à parte (`src/tech/`), baixado só
