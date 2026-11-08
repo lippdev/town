@@ -30,6 +30,7 @@ const TechClock = lazy(() => import("@/tech/TechHud").then((module) => ({ defaul
 const TechViewSwitch = lazy(() => import("@/tech/TechViews").then((module) => ({ default: module.TechViewSwitch })));
 const TechViewLayer = lazy(() => import("@/tech/TechViews").then((module) => ({ default: module.TechViewLayer })));
 const TechRegistryButton = lazy(() => import("@/tech/TechRegistry").then((module) => ({ default: module.TechRegistryButton })));
+const TechRosterSection = lazy(() => import("@/tech/TechRosterSection").then((module) => ({ default: module.TechRosterSection })));
 
 /** Abaixo disto o painel abre recolhido: a planta precisa da largura. */
 const ROSTER_MIN_WIDTH = 1180;
@@ -278,6 +279,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
                     return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} title={bot.role} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
                       if (view === "conversas") { onConversation(bot.id); return; }
                       onView("escritorio");
+                      if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
                       useOfficeStore.getState().selectBot(bot.id);
                     }}>
                       <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
@@ -294,10 +296,25 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
             </section>
           );
         })}
+        {mode === "demo" && TECH && (
+          <Suspense fallback={null}>
+            <TechRosterSection
+              matches={matches}
+              searching={searching}
+              collapsed={collapsedTeams.includes("tecnologia-squad")}
+              onToggle={() => toggleTeam("tecnologia-squad")}
+              onSelect={() => {
+                onView("escritorio");
+                if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
+              }}
+            />
+          </Suspense>
+        )}
         {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
         {mode === "demo" && <PeopleList matches={matches} onSelect={(humanId) => {
           // Como na linha de bot: a cena precisa estar à vista para a seleção ter efeito.
           onView("escritorio");
+          if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
           useOfficeStore.getState().selectHuman(humanId);
         }} />}
       </div>
