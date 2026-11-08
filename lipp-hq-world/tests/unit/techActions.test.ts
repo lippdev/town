@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assigneeOptions, botForTask, botRequestPreview, lastBotRequest, nudgePreview, nudgeStatus } from "@/activity/actions";
+import { assigneeOptions, botForTask, botRequestPreview, lastBotRequest, nudgePreview, nudgeReason, nudgeStatus } from "@/activity/actions";
 import { epicHealth, storyOf } from "@/activity/selectors";
 import { DEFAULT_SEED, SimulatedDay } from "@/activity/simulation";
 import { ActivityRuntime, type AppAction } from "@/activity/source";
@@ -24,9 +24,17 @@ describe("cobrar: o que a tela mostra antes e depois", () => {
     const { runtime } = runWith([[at(10, 5), null]]);
     const preview = nudgePreview(runtime.state, "HU-27")!;
     expect(preview).toMatchObject({ reason: "trava", person: { email: EMAIL.marina } });
-    expect(preview.text).toContain("Oi, Marina!");
+    // Lê como frase: sem repetir o "esperando" do motivo que veio do Notion.
+    expect(preview.text).toBe("Oi, Marina! A HU-27 (Definir expiração do link mágico) está travada há 17 h esperando você. Motivo: decisão de produto — o link vale 15 minutos ou 24 horas?");
+    expect(preview.text.match(/esperando/gi)).toHaveLength(1);
     runtime.perform({ kind: "cobrar", storyId: "HU-27" });
     expect(runtime.state.messages.at(-1)!.text).toBe(preview.text);
+  });
+
+  it("o motivo entra na mensagem sem repetir o esperando", () => {
+    expect(nudgeReason("Esperando decisão de produto: o link vale 15 minutos ou 24 horas?")).toBe("decisão de produto — o link vale 15 minutos ou 24 horas?");
+    expect(nudgeReason("esperando o jurídico")).toBe("o jurídico");
+    expect(nudgeReason("API do banco fora do ar")).toBe("API do banco fora do ar");
   });
 
   it("HU em QA cobra o QA; sem trava, cobra o responsável; concluída não cobra", () => {

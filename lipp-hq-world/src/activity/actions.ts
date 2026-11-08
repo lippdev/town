@@ -24,11 +24,24 @@ export function nudgeTarget(state: ActivityState, story: Story): { email: string
   return story.assignee ? { email: story.assignee, reason: "responsavel" } : null;
 }
 
+/**
+ * O motivo da trava como entra na mensagem, depois de "esperando você.": o Notion costuma escrever
+ * "Esperando decisão de produto: o link vale…", e repetir o "esperando" lê mal. Vira
+ * "decisão de produto — o link vale…".
+ */
+export function nudgeReason(reason: string): string {
+  const text = reason.trim();
+  const waiting = /^esperando\s+/i.exec(text);
+  const rest = waiting ? text.slice(waiting[0].length) : text;
+  const lead = waiting ? rest.charAt(0).toLocaleLowerCase("pt-BR") + rest.slice(1) : rest;
+  return lead.replace(/:\s+/, " — ");
+}
+
 /** A mensagem do Lipp HQ para quem destrava. É o único texto que a ação cria. */
 export function nudgeText(state: ActivityState, story: Story, email: string, now: Instant = state.at): string {
   const name = firstName(state, email);
   return story.blocked
-    ? `Oi, ${name}! A ${story.id} (${story.title}) está travada ${ageLabel(now - story.blocked.since)} esperando você: ${story.blocked.reason}`
+    ? `Oi, ${name}! A ${story.id} (${story.title}) está travada ${ageLabel(now - story.blocked.since)} esperando você. Motivo: ${nudgeReason(story.blocked.reason)}`
     : `Oi, ${name}! A ${story.id} (${story.title}) está em "${STORY_STATUS_LABEL[story.status]}" sem atualização ${ageLabel(now - story.updatedAt)}. Ainda é isso?`;
 }
 
