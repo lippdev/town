@@ -367,17 +367,25 @@ function TechBots() {
  */
 function PauseWhenCovered() {
   const setFrameloop = useThree((state) => state.setFrameloop);
+  const clock = useThree((state) => state.clock);
   const covered = useTechStore((store) => store.view !== "predio");
   const ready = useOfficeStore((state) => state.load === "ready" && !state.traveling);
   const paused = covered && ready;
   useEffect(() => {
     techSceneRuntime.paused = paused;
-    setFrameloop(paused ? "never" : "always");
+    // Só mexe no laço quando pausa de fato: montar o cenário não pode reiniciar o relógio da cena.
+    if (!paused) return;
+    // O setFrameloop do R3F 9.8 zera clock.elapsedTime, e o voo dos robôs, o balanço deles e os
+    // pisca-piscas contam o tempo por ele: sem guardar, quem estava no meio do voo pularia ao voltar.
+    // O tempo parado não conta, como se a cena tivesse congelado.
+    const elapsed = clock.elapsedTime;
+    setFrameloop("never");
     return () => {
       techSceneRuntime.paused = false;
       setFrameloop("always");
+      clock.elapsedTime = elapsed;
     };
-  }, [paused, setFrameloop]);
+  }, [paused, setFrameloop, clock]);
   useFrame(() => {
     techSceneRuntime.frames += 1;
   });
