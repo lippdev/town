@@ -4,8 +4,9 @@ import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
 import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, presenceBuckets, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
 import { prAuthor } from "@/activity/identity";
-import { SPEEDS } from "@/activity/simulation";
-import { at, clockLabel, whenLabel } from "@/activity/time";
+import { nudgeStatus } from "@/activity/actions";
+import { SPEEDS, simulatedStateAt } from "@/activity/simulation";
+import { DAY_END, at, clockLabel, whenLabel } from "@/activity/time";
 import { AVAILABILITY_LABEL, CI_LABEL, EPIC_STATUS_LABEL, REVIEW_LABEL, ROLE_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type PullRequest, type Story } from "@/activity/types";
 import { useDrawerInset } from "@/components/office/OfficeHud";
 import { useHQStore } from "@/state/useHQStore";
@@ -83,6 +84,33 @@ function techQaApi() {
       }));
     },
     render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused, pendingAtPause: [...techSceneRuntime.pendingAtPause], pausedFrames: techSceneRuntime.pausedFrames, loop: techSceneRuntime.loop() }),
+    // Ações e cadastro: a prova lê o efeito, nunca age por aqui (age pela interface).
+    nudge: (storyId: string) => nudgeStatus(useTechStore.getState().state, storyId),
+    /** "10:17": quando a HU destravou hoje, ou nulo. */
+    unblockedAt: (storyId: string) => {
+      const event = useTechStore.getState().state.feed.find((item) => item.type === "notion.story_unblocked" && item.data.storyId === storyId);
+      return event ? clockLabel(event.at) : null;
+    },
+    /** O mesmo dia, da mesma semente, sem nenhuma ação: o caminho de comparação. */
+    baseline: (clock: string) => {
+      const [hour, minute] = clock.split(":").map(Number);
+      return trackingAnswers(simulatedStateAt(useTechStore.getState().seed, at(hour!, minute!)));
+    },
+    baselineUnblock: (storyId: string) => {
+      const event = simulatedStateAt(useTechStore.getState().seed, DAY_END).feed.find((item) => item.type === "notion.story_unblocked" && item.data.storyId === storyId);
+      return event ? clockLabel(event.at) : null;
+    },
+    /** A carga de uma pessoa, com os ids: HUs, PRs abertos e revisões pedidas. */
+    loadOf: (email: string) => {
+      const load = personLoad(useTechStore.getState().state, email);
+      return load ? { stories: load.stories.map((story) => story.id), prs: load.prs.map((pr) => pr.number), reviews: load.reviews.map((pr) => pr.number) } : null;
+    },
+    visit: (taskId: string) => {
+      const visit = useTechStore.getState().visits.find((item) => item.taskId === taskId);
+      return visit ? { botId: visit.botId, key: visit.place.key, node: visit.place.node, x: visit.place.spot.x, z: visit.place.spot.z } : null;
+    },
+    openAction: () => useTechStore.getState().openAction,
+    registryOpen: () => useTechStore.getState().registry !== null,
   };
 }
 
