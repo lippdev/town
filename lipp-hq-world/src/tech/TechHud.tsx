@@ -275,7 +275,8 @@ function PersonDrawer() {
   const where = whereIs(state, email);
   const status = state.slackStatus[email];
   const history = personHistory(state, email, 60).filter((event) => !isNoise(event)).slice(0, 14);
-  const unknownLogins = !person.github ? [...new Set(state.prs.filter((pr) => !prAuthor(directory(state), pr)).map((pr) => pr.author))] : [];
+  // Quem não abre PR no dia a dia (produto, design) não perde nada visível sem o vínculo.
+  const opensPrs = person.role === "dev" || person.role === "techlead" || person.role === "qa";
   return (
     <ActionPlace.Provider value="gaveta-pessoa">
     <aside ref={node} className="drawer office-demo-panel tech-drawer" aria-label={`Pessoa ${person.name}`} data-tech-person={email}>
@@ -342,9 +343,11 @@ function PersonDrawer() {
               {load.prs.length === 0 && <li className="tech-empty">Nenhum PR aberto por @{person.github}.</li>}
             </ul>
           ) : (
-            <p className="panel-warn" data-github-missing>
-              {person.name.split(" ")[0]} ainda não vinculou o GitHub no cadastro: os PRs dela ou dele aparecem como "autor não identificado"
-              {unknownLogins.length ? ` (login visto: ${unknownLogins.join(", ")})` : ""}.
+            // O app não sabe de quem é um login sem vínculo: nenhum login é sugerido aqui. Os logins
+            // sem pessoa ficam no cadastro, onde se escolhe a quem vincular.
+            <p className={opensPrs ? "panel-warn" : "tech-empty"} data-github-missing>
+              GitHub não vinculado.
+              {opensPrs ? ` Até o vínculo, PRs e revisões de ${person.name.split(" ")[0]} não entram na carga.` : ""}
               <button type="button" className="ta-trigger tr-link-button" onClick={() => useTechStore.getState().openRegistry(email)} data-open-registry={email}>
                 <Link2 size={13} aria-hidden /> Vincular
               </button>
