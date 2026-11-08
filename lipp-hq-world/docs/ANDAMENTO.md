@@ -30,6 +30,7 @@ recebe conectores de verdade sem mexer na cena.
 | [#111](https://github.com/lippdev/town/pull/111) | `feat/tecnologia-modelo` → `main` | Pronta para revisão: modelo, identidade, simulação determinística, seletores, `ActivitySource` |
 | [#112](https://github.com/lippdev/town/pull/112) | `feat/tecnologia-andar` → `feat/tecnologia-modelo` | Pronta para revisão: andar da Tecnologia, quadro de épicos, gavetas, relógio da simulação; `qa:tecnologia` completo para a cena |
 | [#114](https://github.com/lippdev/town/pull/114) | `feat/tecnologia-visoes` → `feat/tecnologia-andar` | Pronta para revisão: visões Projetos e Painel com os mesmos dados; prova "o prédio e o painel dizem o mesmo" |
+| [#115](https://github.com/lippdev/town/pull/115) | `feat/tecnologia-acoes` → `feat/tecnologia-visoes` | Pronta para revisão: cobrar, reatribuir e pedir ao bot onde a pergunta aparece; cadastro com vínculo do GitHub; prova pela interface |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
@@ -40,8 +41,13 @@ Próximos passos, nesta ordem:
    árvore estilo Notion e painel da daily, os dois montados pelos seletores de `trackingAnswers`;
    abrir um item usa a gaveta do prédio; o render 3D para com a visão aberta. O `qa:tecnologia`
    prova em sete horas do dia (de 09:00 a 17:55, uma dentro da daily) que painel, árvore e prédio dizem o mesmo; `HQ_ONLY=visoes` roda só esse bloco.
-3. `feat/tecnologia-acoes`: interface de cobrar o responsável, reatribuir HU, pedir ao bot, e a
-   tela de cadastro com vínculo do GitHub. A lógica já está no modelo, testada.
+3. ~~`feat/tecnologia-acoes`~~ (#115): cobrar o responsável (o botão diz para quem vai e mostra a
+   mensagem do app; a HU fica "aguardando" até a resposta), reatribuir HU (carga e férias de cada um),
+   pedir ao Atlas ou ao Pulse (começa já ou depois da tarefa atual; o robô vai ao lugar), nas gavetas,
+   na árvore e no Painel, com um componente só; cadastro do squad numa gaveta, com vínculo digitado na
+   demonstração ("Entrar com GitHub" com os conectores). O `qa:tecnologia` prova tudo pela interface
+   (`HQ_ONLY=acoes` roda só esse bloco): cobrar a HU-27 às 10:05 destrava o Login sem senha às 10:17,
+   contra 15:08 sem cobrança.
 4. Squad na barra lateral.
 5. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
    3 a 5 pessoas, medindo tempo, acerto e se a pessoa sabe o que fazer em seguida.
