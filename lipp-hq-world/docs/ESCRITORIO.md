@@ -294,7 +294,11 @@ valem.
   elevador, voa até o lugar do trabalho (a sala da daily, o cartão do épico ou a mesa de quem abriu o
   PR), fica lá enquanto ela dura e volta. A etiqueta diz qual bot e o que faz.
 - **A gaveta da pessoa**: agora (o que faz, até quando, Teams e Slack), agenda do dia, HUs, PRs abertos,
-  revisões pedidas e o histórico do dia. Quem não vinculou o GitHub vê o aviso, com o login encontrado.
+  revisões pedidas e o histórico do dia. Quem não vinculou o GitHub vê "GitHub não vinculado" e **Vincular**, que
+  abre o cadastro nessa pessoa. A gaveta não sugere login: o app não sabe de quem é um login sem vínculo
+  (os logins sem pessoa ficam no cadastro, onde se escolhe a quem vincular). Para quem abre PR (dev,
+  tech lead, QA) o aviso diz que PRs e revisões não entram na carga até o vínculo; para produto e design
+  o tom é neutro.
 - **Esc** fecha primeiro a gaveta do cenário (`escapeLayers`), depois segue como no resto do prédio.
 
 **Primeiro carregamento:** o cenário mora num pedaço de JavaScript à parte (`src/tech/`), baixado só
@@ -389,15 +393,85 @@ acompanha a troca. Tudo vem no mesmo pedaço de JavaScript do cenário.
   e do X, que PageDown com o Painel aberto não troca de andar, que nenhum quadro sai com a cena pausada
   e, com três segundos de relógio real, que o dia anda com o Painel aberto.
 
-Ficam para a PR seguinte (`feat/tecnologia-acoes`): cobrar o responsável, reatribuir HU, pedir ao bot e
-o cadastro com vínculo do GitHub. O lugar natural delas é a linha do item no painel e na árvore; não há
-botão morto por enquanto. Mensagem entre pessoas continua fora: o modelo não tem, as visões não inventam.
+Mensagem entre pessoas continua fora: o modelo não tem, as visões não inventam.
 
 `qa:tecnologia` prova, num bloco à parte, que **o prédio e o painel dizem o mesmo**: em 10:40, 11:21,
 14:00 e 15:20, com o relógio parado e levado por `jumpToClock`, compara `trackingAnswers` com os `data-*`
 do painel (ids, não texto), com a árvore de Projetos e com o prédio (saúde no quadro via `data-health`,
 lugares pelo plano e pela cena, a lua de "não perturbe" de quem está em foco). Também troca de visão por
 clique, teclado e URL, Esc em camadas, celular sem rolagem lateral e que sem `cenario` nada é baixado.
+
+### Ações: cobrar, reatribuir, pedir ao bot
+
+As ações aparecem onde a pergunta aparece, com uma implementação só (`src/tech/TechActions.tsx`):
+
+| Onde | O que pede ação | Ação |
+| ---- | --------------- | ---- |
+| Painel · HUs travadas | quem a trava espera | **Cobrar** essa pessoa |
+| Painel · HUs paradas | ninguém mexe | **Cobrar** e **Reatribuir** |
+| Painel · PRs esperando revisão | quem pode revisar agora | **Pulse: pedir revisão** e **Pulse: resumir o PR** |
+| Painel · HUs sem critério | ninguém sabe quando acaba | **Atlas: completar critérios** |
+| Painel · PRs sem autor | login sem pessoa | **Vincular no cadastro** |
+| Gaveta do épico, gaveta da pessoa, árvore de Projetos (HU aberta) | cada HU e cada PR aberto | as mesmas, conforme o item |
+
+- **Cada botão abre um painel que diz o que vai acontecer antes de enviar.** Cobrar mostra para quem vai
+  ("Cobrar Marina": quem a trava espera, o QA se a HU está em QA, senão quem responde pela HU), onde a
+  pessoa está agora e a **mensagem do Lipp HQ** que sai no Slack, palavra por palavra. É o único texto
+  que existe: ninguém escreve em nome de ninguém. Reatribuir lista o squad com a carga de cada um (HUs,
+  PRs, revisões, de `personLoad`), quem está fora com o motivo ("Férias até 16/11") e o responsável
+  atual, que não se escolhe; confirmar diz "A HU-37 sai de Bianca Sales e vai para Tiago Nunes". Pedir
+  ao bot diz o que o bot faz (o Atlas para o Notion, o Pulse para o GitHub; pedir revisão já nomeia quem
+  está livre pela agenda) e se ele começa já ou depois da tarefa atual.
+- **Uma fronteira só.** Enviar chama `useTechStore.perform`, que chama `ActivityRuntime.perform`, que
+  chama `ActivitySource.perform`: nenhuma tela muda o estado. Quem cobrar e o texto da mensagem saem de
+  `src/activity/actions.ts`, usado pela tela e pela simulação, então o botão nunca cobra outra pessoa que
+  não a anunciada.
+- **Depois.** O resultado vira aviso (`aria-live="polite"`). A HU cobrada mostra "Cobrado às 10:05,
+  aguardando resposta de Marina" (também na coluna de sinais da árvore) até a resposta chegar pela
+  simulação, quando vira "Marina respondeu às 10:17". A resposta é lida do feed (`nudgeStatus`): a pessoa
+  cobrada mexeu na HU no Notion, ou a HU destravou ou foi concluída. O pedido ao bot mostra "Atlas
+  trabalhando desde 10:50" e depois o resultado; o robô sai do elevador e vai ao lugar (o cartão do
+  épico no quadro, ou a mesa de quem abriu o PR), como nas rotinas.
+- **Teclado.** Os botões são botões; o painel recebe o foco (Enviar, ou a primeira pessoa da lista) e
+  o Esc fecha de dentro para fora: o painel da ação, depois o cadastro, depois a gaveta, depois a visão.
+  Fechado, o foco volta ao botão. Um painel aberto por vez na tela.
+- **Consequência de verdade.** Cobrar a HU-27 às 10:05 faz a Marina decidir entre uma chamada e outra
+  (10:17): o épico Login sem senha destrava de manhã. Sem cobrança, a decisão só sai depois do
+  refinamento (15:08).
+
+### Cadastro do squad
+
+Uma gaveta, não uma quarta visão: o cadastro não responde pergunta da daily, é onde se arruma a
+identidade. Como gaveta, abre de qualquer visão sem tirar o que está por baixo, e o efeito do vínculo
+aparece ao lado. Abre pelo botão **Cadastro** da barra do cenário (no celular, só o ícone), pelo aviso
+da gaveta de quem não vinculou o GitHub (agora com **Vincular**, que já abre o campo da pessoa) e pelo
+PR sem autor no Painel.
+
+- Para cada pessoa: nome, cargo e papel, e-mail corporativo e as fontes que a reconhecem (Notion, Slack e
+  Microsoft 365 sempre, pelo e-mail; GitHub só com o login vinculado). No topo, a cobertura por fonte
+  (`identityCoverage`: GitHub 6/8 no começo do dia) e os **logins do GitHub sem pessoa**
+  (`unidentifiedLogins`), com os PRs em que aparecem; para cada login, um atalho preenche o campo de
+  quem ainda não vinculou, e a pessoa confirma.
+- **Vincular** é digitar o login, **trocar** e **desvincular** também (desvincular pede confirmação e
+  avisa que os PRs voltam a "autor não identificado"). Os erros de `LINK_PROBLEM_LABEL` aparecem junto
+  do campo (`aria-invalid`, `role="alert"`): login inválido, login já vinculado a outra pessoa, e-mail
+  fora do cadastro. Campo vazio pede o login em vez de desvincular por engano.
+- Tudo é a ação `vincular_github`. Como a ligação é feita na leitura, ao vincular o `tnunes-dev` os PRs
+  que já existiam (#140, mesclado ontem, e #147, de hoje) passam a mostrar o Tiago em todas as visões,
+  saem de "sem autor" e entram na carga dele.
+- **Na demonstração, o login é digitado. Com os conectores, o vínculo será "Entrar com GitHub"
+  (OAuth):** a pessoa entra na própria conta e o login chega confirmado pelo GitHub, sem digitação e
+  sem como vincular o login de outra pessoa. A ação continua a mesma.
+
+`qa:tecnologia` prova as ações e o cadastro num bloco no fim (`HQ_TECH_ACOES=1` roda só ele), pela
+interface, com o relógio parado e `jumpToClock`: cobra a HU-27 às 10:05 (o botão diz "Cobrar Marina",
+a mensagem enviada é a mostrada, a HU fica "aguardando"; às 10:30 ela destravou às 10:17, contra 15:08
+no mesmo dia sem cobrança, e o E-1 deixou de estar travado); reatribui a HU-37 da Bianca para o Tiago
+pela árvore e confere árvore, painel (carga) e gaveta da pessoa, e que o Painel segue batendo com
+`trackingAnswers`; pede ao Atlas os critérios da HU-40 pela gaveta do épico (começa já, entra em "bots
+hoje", o robô chega ao cartão do E-5 no quadro); e no cadastro tenta "tiago nunes" (inválido) e
+"rokabe" (em uso) antes de vincular `tnunes-dev`, conferindo que o #147 sai de `semAutor` e mostra o
+Tiago no Painel, na árvore e nas gavetas. Captura cada ação em 1440×900 e o cadastro também em 390×844.
 
 ### A fronteira simulação/conector (`source.ts`)
 
