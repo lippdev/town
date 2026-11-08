@@ -308,6 +308,9 @@ export function OfficeCameraRig({ stage }: { stage: HTMLElement }) {
         else store.goToView("exterior");
         return;
       }
+      // Uma camada cobrindo a cena (Projetos ou Painel do cenário): a câmera não mexe por baixo,
+      // nem com o foco no body depois de fechar uma gaveta. Só o Esc passa.
+      if (stage.ownerDocument.querySelector("[data-scene-cover]")) return;
       if ((event.key === "PageUp" || event.key === "PageDown") && store.mode === "demo") {
         event.preventDefault();
         store.goToView(neighborView(store.buildingView, event.key === "PageUp" ? 1 : -1));
