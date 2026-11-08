@@ -4,6 +4,7 @@ import type { ActivityState } from "@/activity/events";
 import { PLACE_LABEL, type HealthLevel, type PlaceKind } from "@/activity/selectors";
 import { ageLabel, clockLabel, spanLabel, whenLabel } from "@/activity/time";
 import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type Person, type PullRequest, type Subject } from "@/activity/types";
+import { ActionPlace, PrActions, StoryActions } from "./TechActions";
 import { PrAuthor, Section } from "./TechHud";
 import { dailyBoard, destinationOf, subjectKey, type DailyBoard } from "./techViews";
 import { HealthBadge, openDestination, openPerson, openSubject, useNow, ViewHead, Who } from "./viewParts";
@@ -100,7 +101,7 @@ export function DailyPanel() {
   const presenceCount = (kind: PlaceKind) => board.presence[kind].length;
   const firstBlocked = board.blocked[0];
   return (
-    <>
+    <ActionPlace.Provider value="painel">
       <ViewHead title="Painel">Acompanhamento do squad: o que precisa de ação primeiro, depois épicos, time e bots</ViewHead>
       <div className="tv-scroll">
         <div className="tv-panel" data-panel>
@@ -139,6 +140,7 @@ export function DailyPanel() {
                         <span>
                           Responsável <Who person={item.assignee} />
                         </span>
+                        <StoryActions story={item.story} only={["cobrar"]} />
                       </>
                     }
                   >
@@ -210,6 +212,7 @@ export function DailyPanel() {
                             </>
                           )}
                         </span>
+                        <PrActions pr={item.pr} />
                       </>
                     }
                   >
@@ -228,9 +231,12 @@ export function DailyPanel() {
                     label={item.story.title}
                     data={{ "data-story": item.story.id }}
                     extra={
-                      <span>
-                        Responsável <Who person={item.assignee} />
-                      </span>
+                      <>
+                        <span>
+                          Responsável <Who person={item.assignee} />
+                        </span>
+                        <StoryActions story={item.story} only={["cobrar", "reatribuir"]} />
+                      </>
                     }
                   >
                     {STORY_STATUS_LABEL[item.story.status]} · sem movimento há {spanLabel(item.idleMs)} · {item.epic?.id} {item.epic?.title}
@@ -247,9 +253,12 @@ export function DailyPanel() {
                     label={item.story.title}
                     data={{ "data-story": item.story.id }}
                     extra={
-                      <span>
-                        Responsável <Who person={item.assignee} />
-                      </span>
+                      <>
+                        <span>
+                          Responsável <Who person={item.assignee} />
+                        </span>
+                        <StoryActions story={item.story} only={["criterios"]} />
+                      </>
                     }
                   >
                     {STORY_STATUS_LABEL[item.story.status]} · {item.epic?.id} {item.epic?.title}
@@ -258,7 +267,14 @@ export function DailyPanel() {
               </PanelList>
               <PanelList name="sem-autor" title="PRs sem autor identificado" count={board.withoutAuthor.length} empty="Todo PR aberto tem autor no cadastro." hint="O login do GitHub não está vinculado a ninguém do cadastro: o PR não conta na carga de ninguém.">
                 {board.withoutAuthor.map((item) => (
-                  <Item key={item.pr.number} subject={{ kind: "pr", number: item.pr.number }} state={state} id={`#${item.pr.number}`} label={item.pr.title} data={{ "data-pr": String(item.pr.number) }}>
+                  <Item
+                    key={item.pr.number}
+                    subject={{ kind: "pr", number: item.pr.number }}
+                    state={state}
+                    id={`#${item.pr.number}`}
+                    label={item.pr.title}
+                    data={{ "data-pr": String(item.pr.number) }}
+                  >
                     <span className="tech-unknown">autor não identificado</span> · login {item.pr.author} · {item.story ? item.story.id : "sem HU"}
                   </Item>
                 ))}
@@ -398,6 +414,6 @@ export function DailyPanel() {
           <p className="panel-warn tv-privacy">Squad fictício num dia simulado. Mensagens entre pessoas não entram aqui: só status, presença, agenda, Notion, GitHub e o que os bots fizeram.</p>
         </div>
       </div>
-    </>
+    </ActionPlace.Provider>
   );
 }

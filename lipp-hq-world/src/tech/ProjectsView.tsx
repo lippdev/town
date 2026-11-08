@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import type { ActivityState } from "@/activity/events";
+import { nudgeStatus } from "@/activity/actions";
 import { HEALTH_LABEL } from "@/activity/selectors";
-import { ageLabel, whenLabel } from "@/activity/time";
+import { ageLabel, clockLabel, whenLabel } from "@/activity/time";
 import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL } from "@/activity/types";
+import { ActionPlace, PrActions, StoryActions } from "./TechActions";
 import { PrLine } from "./TechHud";
 import { HEALTH_COLOR } from "./techPlaces";
 import { useTechStore } from "./techStore";
@@ -26,6 +28,8 @@ function Toggle({ open, label, controls, onToggle }: { open: boolean; label: str
 function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: boolean; onToggle: () => void; state: ActivityState }) {
   const { story } = node;
   const selected = useTechStore((store) => store.selectedEpicId === story.epicId && store.highlightStoryId === story.id);
+  const nudge = nudgeStatus(state, story.id);
+  const waiting = nudge !== null && nudge.answeredAt === null;
   return (
     <li
       className={selected ? "tv-node tv-story current" : "tv-node tv-story"}
@@ -33,6 +37,8 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
       data-blocked={node.blocked ? "true" : undefined}
       data-stale={node.stale ? "true" : undefined}
       data-no-criteria={node.withoutCriteria ? "true" : undefined}
+      data-assignee={story.assignee ?? undefined}
+      data-nudge={waiting ? "aguardando" : undefined}
     >
       <div className="tv-row">
         <span className="tv-name">
@@ -61,7 +67,12 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
               {riskLabel(risk)}
             </Flag>
           ))}
-          {!needsAttention(node) && <span className="tv-dim">—</span>}
+          {waiting && (
+            <Flag tone="dim" title="O Lipp HQ cobrou pelo Slack; a HU muda quando a pessoa responder">
+              Cobrado {clockLabel(nudge.at)} · aguardando
+            </Flag>
+          )}
+          {!needsAttention(node) && !waiting && <span className="tv-dim">—</span>}
         </span>
         <span className="tv-cell" data-label="Critérios">
           {story.criteria.length ? `${node.criteriaDone}/${story.criteria.length} critérios` : <span className="tv-dim">sem critério</span>}
@@ -72,6 +83,7 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
       </div>
       {open && (
         <div className="tv-detail" id={`tv-detail-${story.id}`}>
+          <StoryActions story={story} />
           {node.blocked && (
             <p className="tv-blocked">
               Travada desde {whenLabel(node.blocked.since, state.at)}
@@ -98,7 +110,7 @@ function StoryRow({ node, open, onToggle, state }: { node: StoryNode; open: bool
           {node.prs.length ? (
             <ul className="tech-list">
               {node.prs.map((pr) => (
-                <PrLine key={pr.number} state={state} pr={pr} detailed />
+                <PrLine key={pr.number} state={state} pr={pr} detailed actions={<PrActions pr={pr} />} />
               ))}
             </ul>
           ) : (
@@ -218,7 +230,7 @@ export function ProjectsView() {
     });
   const shown = onlyAttention ? attentionOnly(tree) : tree;
   return (
-    <>
+    <ActionPlace.Provider value="projetos">
       <ViewHead
         title="Projetos"
         tools={
@@ -260,6 +272,6 @@ export function ProjectsView() {
           </ul>
         </div>
       </div>
-    </>
+    </ActionPlace.Provider>
   );
 }
