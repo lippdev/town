@@ -384,14 +384,15 @@ function PauseWhenCovered() {
     // O tempo parado não conta, como se a cena tivesse congelado.
     const elapsed = clock.elapsedTime;
     setFrameloop("never");
-    // O laço do R3F segue desenhando com frameloop "never" enquanto internal.frames > 0, e todo
-    // invalidate() feito no modo "always" (prop mudada pelo React, useFrame pedindo mais um quadro)
-    // deixa 1 ou 2 ali. Sem zerar, um quadro inteiro (mais de 1 s sem GPU) saía depois da pausa.
+    // O laço do R3F segue desenhando com frameloop "never" enquanto internal.frames > 0, e qualquer
+    // set na store dele (inclusive um setFrameloop("always") logo antes) invalida e deixa 1 ali. Por
+    // garantia zera: um quadro devido sai depois da pausa e, sem GPU, leva mais de 1 s.
     const { internal } = get();
     techSceneRuntime.pendingAtPause.push(internal.frames);
     internal.frames = 0;
     return () => {
       techSceneRuntime.paused = false;
+      // O set do setFrameloop invalida (rootStore.subscribe), e isso religa o laço parado.
       setFrameloop("always");
       clock.elapsedTime = elapsed;
     };

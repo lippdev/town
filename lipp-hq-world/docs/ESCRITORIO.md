@@ -375,7 +375,7 @@ acompanha a troca. Tudo vem no mesmo pedaço de JavaScript do cenário.
   das etiquetas não trabalha e o palco nem é composto (`visibility: hidden`); volta sozinho ao prédio. Só
   para com a cena pronta e fora de viagem. O `setFrameloop` do R3F 9.8 zera `clock.elapsedTime`, que
   conta o voo e o balanço dos robôs: a pausa guarda o tempo e devolve ao voltar, e zera os quadros que
-  o R3F ainda devia (`internal.frames`, deixados por `invalidate()` no modo "always"), que senão saíam
+  o R3F ainda devia (`internal.frames`: todo `set` na store do R3F invalida), que senão saíam
   depois da pausa. O monitor de desempenho sai durante a pausa e volta zerado, para o tempo parado não
   contar como 0 fps. Medido no servidor sem GPU (swiftshader, 1440×900): o andar
   da Tecnologia desenha 6 quadros por segundo; com o Painel aberto, 0. A primeira captura com o Painel
