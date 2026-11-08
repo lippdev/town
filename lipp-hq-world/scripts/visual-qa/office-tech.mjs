@@ -800,6 +800,13 @@ try {
     await tech(acts, "jumpToClock", "10:50");
     await toView(acts, "predio");
     await acts.waitForFunction(() => !window.__HQ_TECH_QA__.render().paused);
+    // Abrir pessoas pelo Painel deixou a câmera enquadrada num canto: volta ao andar inteiro, onde o
+    // quadro dos épicos e o robô aparecem na captura.
+    const framed = acts.locator(".office-focus .office-button.primary");
+    if (await framed.isVisible()) {
+      await framed.click();
+      await settled(acts);
+    }
     const before = (await tech(acts, "answers")).botsHoje;
     await acts.locator('[data-epic-card="E-5"]').focus();
     await acts.keyboard.press("Enter");
@@ -957,9 +964,17 @@ try {
         drawerOutside: drawer.right > window.innerWidth + 1 || drawer.left < -1,
         topOutside: items.some((box) => box.right > window.innerWidth + 1),
         topOverlap: items.some((box, index) => items.slice(index + 1).some((other) => other.left < box.right - 1 && other.right > box.left + 1)),
+        // A hora inteira à vista: nem cortada dentro do relógio, nem embaixo das abas.
+        clockCut: (() => {
+          const time = document.querySelector("[data-sim-time]");
+          const box = time.getBoundingClientRect();
+          const tabs = document.querySelector("[data-tech-views]").getBoundingClientRect();
+          return time.scrollWidth > time.clientWidth + 1 || box.right > tabs.left + 1 || box.right > time.parentElement.getBoundingClientRect().right + 1;
+        })(),
       };
     });
-    assert.deepEqual(layout, { page: 0, drawerOutside: false, topOutside: false, topOverlap: false }, JSON.stringify(layout));
+    assert.deepEqual(layout, { page: 0, drawerOutside: false, topOutside: false, topOverlap: false, clockCut: false }, JSON.stringify(layout));
+    assert.match(await acts.locator("[data-sim-time]").innerText(), /\d{2}:\d{2}$/);
     await acts.click(`[data-registry-edit="${EMAIL("caio.rezende")}"]`);
     await acts.waitForSelector(`[data-registry-form="${EMAIL("caio.rezende")}"]`);
     await shot(acts, "cadastro-390");
