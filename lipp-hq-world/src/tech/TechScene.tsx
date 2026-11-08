@@ -33,8 +33,8 @@ export const techSceneRuntime = {
   /** Quadros desenhados desde a abertura, e se o render está parado por Projetos ou Painel. */
   frames: 0,
   paused: false,
-  /** Quadros que o R3F ainda devia (internal.frames) no instante da pausa, e quantos saíram parado. */
-  pendingAtPause: 0,
+  /** Quadros que o R3F ainda devia (internal.frames) em cada pausa, e quantos saíram com a cena parada. */
+  pendingAtPause: [] as number[],
   pausedFrames: 0,
 };
 
@@ -388,7 +388,7 @@ function PauseWhenCovered() {
     // invalidate() feito no modo "always" (prop mudada pelo React, useFrame pedindo mais um quadro)
     // deixa 1 ou 2 ali. Sem zerar, um quadro inteiro (mais de 1 s sem GPU) saía depois da pausa.
     const { internal } = get();
-    techSceneRuntime.pendingAtPause = internal.frames;
+    techSceneRuntime.pendingAtPause.push(internal.frames);
     internal.frames = 0;
     return () => {
       techSceneRuntime.paused = false;
