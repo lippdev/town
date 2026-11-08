@@ -243,7 +243,8 @@ Puro TypeScript, sem React nem three, coberto por `tests/unit/activity.test.ts`.
   evento sobre algo que não existe é ignorado.
 - **Perguntas de acompanhamento** (`selectors.ts`): o que trava o épico X, HUs paradas há mais de N,
   PRs esperando revisão e quem pode revisar agora (dev ou tech lead com GitHub vinculado, que não é o
-  autor, está na mesa e não tem reunião nos próximos 30 minutos; foco conta como "não perturbe"), HUs
+  autor, está na mesa e não tem reunião nos próximos 30 minutos; foco conta como "não perturbe"; quando
+  ninguém pode, `upcomingReviewers` diz quem fica livre hoje e quando, pela mesma regra), HUs
   prontas ou em curso sem critério de aceite, o que os bots fizeram hoje, quem está em reunião, huddle,
   foco ou fora, carga por pessoa e saúde do épico (no prazo, em risco, travado) com o motivo de cada
   ponto. `trackingAnswers` junta as respostas: é por ela que a prova confere que o prédio e o painel
@@ -347,24 +348,46 @@ acompanha a troca. Tudo vem no mesmo pedaço de JavaScript do cenário.
   rótulo do quadro, HU travada (desde quando, esperando quem), parada ou sem critério, os riscos do
   épico que caem na HU (CI quebrado, PR sem revisão, responsável fora), critérios marcados ou não e os
   PRs ligados, com estado, CI, revisões e "autor não identificado" quando o GitHub não está vinculado.
-  Abre de cara o que pede atenção; o filtro "Pede atenção" esconde o que está em dia.
+  O motivo que é do próprio épico (entrega perto com pouco pronto) aparece na linha dele, ao lado do selo.
+  Abre de cara o que pede atenção; o filtro "Pede atenção" esconde o que está em dia. É uma lista
+  aninhada (não um `tree` do ARIA): cada nível tem o botão de expandir com `aria-expanded` e
+  `aria-controls`.
 - **Painel** responde à daily de cima para baixo. No topo, os números com contexto (a travada mais
   antiga e quem ela espera, o PR que espera há mais tempo e quantos podem revisar agora, épicos por
   saúde, quem está disponível). Depois, **precisa de ação**: HUs travadas (desde quando, esperando quem,
   e onde essa pessoa está agora), PRs esperando revisão (há quanto tempo, a quem foi pedida e quem pode
-  revisar agora, pela regra de `reviewCandidates`), HUs paradas, sem critério e PRs sem autor. Ao lado,
+  revisar agora, pela regra de `reviewCandidates`; na daily, com o squad todo na sala, quem fica livre e
+  quando, "Renata livre às 09:45", e o resumo diz "ninguém livre agora · próxima às 09:45"), HUs
+  paradas, sem critério e PRs sem autor; o número do grupo conta HUs e PRs distintos. Ao lado,
   a saúde de cada épico com os motivos, o time agora (reunião, chamada, huddle, foco, fora, na mesa) e
-  o que os bots fizeram hoje. Embaixo, a carga por pessoa: HUs, PRs abertos e revisões pedidas.
+  o que os bots fizeram hoje. Embaixo, a carga por pessoa: HUs, PRs abertos e revisões pedidas (cada
+  número de PR abre a gaveta da pessoa).
 - **Tudo leva à origem.** Abrir um épico, HU, PR ou motivo abre a gaveta do épico que o prédio já tem,
-  com a HU em destaque (a gaveta rola até ela); um nome abre a gaveta da pessoa. Não há gaveta
-  duplicada. **Esc** fecha a gaveta primeiro; o seguinte volta ao prédio.
+  com a HU em destaque (a gaveta rola até ela); um nome abre a gaveta da pessoa; PR sem HU abre quem o
+  abriu. O que não tem origem (PR sem HU nem autor no cadastro, bot com alvo reunião) não parece
+  clicável. Não há gaveta duplicada. **Esc** fecha a gaveta primeiro; o seguinte volta ao prédio.
+- **Teclado.** O Tab da aba entra no painel dela (o Shift+Tab do começo volta à aba), embora a seção
+  venha depois da navegação lateral no DOM. Fechar a gaveta (X ou Esc) devolve o foco a quem a abriu;
+  sair da visão devolve à aba Prédio. Com a visão aberta (`data-scene-cover`), as teclas da câmera
+  (PageUp/PageDown, setas, +/-) não agem na cena escondida; só o Esc passa. Com Conversas, Equipe ou
+  Kanban por cima, a visão fica `inert` e escondida.
 - **A cena para.** Com Projetos ou Painel cobrindo o 3D, o render vai para `frameloop="never"`, o laço
   das etiquetas não trabalha e o palco nem é composto (`visibility: hidden`); volta sozinho ao prédio. Só
-  para com a cena pronta e fora de viagem. Medido no servidor sem GPU (swiftshader, 1440×900): o andar
+  para com a cena pronta e fora de viagem. O `setFrameloop` do R3F 9.8 zera `clock.elapsedTime`, que
+  conta o voo e o balanço dos robôs: a pausa guarda o tempo e devolve ao voltar, e zera os quadros que
+  o R3F ainda devia (`internal.frames`, deixados por `invalidate()` no modo "always"), que senão saíam
+  depois da pausa. O monitor de desempenho sai durante a pausa e volta zerado, para o tempo parado não
+  contar como 0 fps. Medido no servidor sem GPU (swiftshader, 1440×900): o andar
   da Tecnologia desenha 6 quadros por segundo; com o Painel aberto, 0. A primeira captura com o Painel
   aberto caiu de 28 s para 9 s quando o canvas deixou de ser composto por baixo.
 - **Largura.** A visão mede a si mesma (container query): com a gaveta aberta ao lado, ou no celular,
   a árvore vira linhas com a propriedade rotulada, em vez de cortar colunas.
+- **Prova.** O bloco das visões do `qa:tecnologia` (`HQ_ONLY=visoes` roda só ele) compara painel,
+  árvore e prédio com `trackingAnswers` às 09:00, 09:35 (dentro da daily), 10:40, 11:21, 14:00, 15:20
+  e 17:55: listas, os seis grupos do time, o resumo de disponíveis, quem pode revisar e quem fica livre,
+  cada motivo de cada épico por tipo e sujeito, a carga por pessoa. Confere também o foco depois do Esc
+  e do X, que PageDown com o Painel aberto não troca de andar, que nenhum quadro sai com a cena pausada
+  e, com três segundos de relógio real, que o dia anda com o Painel aberto.
 
 Ficam para a PR seguinte (`feat/tecnologia-acoes`): cobrar o responsável, reatribuir HU, pedir ao bot e
 o cadastro com vínculo do GitHub. O lugar natural delas é a linha do item no painel e na árvore; não há

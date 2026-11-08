@@ -39,7 +39,7 @@ Próximos passos, nesta ordem:
 2. ~~`feat/tecnologia-visoes`~~ (#114): seletor **Prédio | Projetos | Painel** (`?visao=`),
    árvore estilo Notion e painel da daily, os dois montados pelos seletores de `trackingAnswers`;
    abrir um item usa a gaveta do prédio; o render 3D para com a visão aberta. O `qa:tecnologia`
-   prova em quatro horas do dia que painel, árvore e prédio dizem o mesmo.
+   prova em sete horas do dia (de 09:00 a 17:55, uma dentro da daily) que painel, árvore e prédio dizem o mesmo; `HQ_ONLY=visoes` roda só esse bloco.
 3. `feat/tecnologia-acoes`: interface de cobrar o responsável, reatribuir HU, pedir ao bot, e a
    tela de cadastro com vínculo do GitHub. A lógica já está no modelo, testada.
 4. Squad na barra lateral.
