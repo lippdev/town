@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { FlaskConical, Pause, Play, RotateCcw, X } from "lucide-react";
 import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
-import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, whereIs } from "@/activity/selectors";
+import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
 import { prAuthor } from "@/activity/identity";
 import { SPEEDS } from "@/activity/simulation";
 import { at, clockLabel, whenLabel } from "@/activity/time";
@@ -58,6 +58,12 @@ function techQaApi() {
       const { state } = useTechStore.getState();
       const pr = state.prs.find((item) => item.number === number);
       return pr ? reviewCandidates(state, pr).map((candidate) => candidate.person.email) : [];
+    },
+    /** Ninguém livre agora: quem fica livre e quando, "email@09:45". */
+    upcoming: (number: number) => {
+      const { state } = useTechStore.getState();
+      const pr = state.prs.find((item) => item.number === number);
+      return pr ? upcomingReviewers(state, pr).map((item) => `${item.person.email}@${clockLabel(item.freeAt)}`) : [];
     },
     stories: () => useTechStore.getState().state.stories.map((story) => story.id),
     reasons: (epicId: string) => blockersOf(useTechStore.getState().state, epicId).map((reason) => reason.text),

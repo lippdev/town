@@ -22,6 +22,7 @@ import {
   storiesOf,
   storiesWithoutCriteria,
   storyOf,
+  upcomingReviewers,
   waitingSince,
   whereIs,
   type EpicHealth,
@@ -29,6 +30,7 @@ import {
   type HealthReason,
   type PlaceKind,
   type ReviewCandidate,
+  type UpcomingReviewer,
   type Whereabouts,
 } from "@/activity/selectors";
 import { clockLabel as clock } from "@/activity/time";
@@ -200,6 +202,8 @@ export interface ReviewItem {
   /** Revisões pedidas e ainda sem resposta, com a pessoa quando o login é de alguém. */
   requested: Array<{ login: string; person: PersonTag | null; where: PlaceKind | null }>;
   candidates: ReviewCandidate[];
+  /** Ninguém livre agora: quem fica livre e quando, do mais cedo para o mais tarde. */
+  upcoming: UpcomingReviewer[];
 }
 
 export interface CriteriaItem {
@@ -352,6 +356,7 @@ export function dailyBoard(state: ActivityState): DailyBoard {
         return { login, person: person ? personTag(state, person.email) : null, where: person ? whereIs(state, person.email).kind : null };
       }),
       candidates: reviewCandidates(state, pr),
+      upcoming: upcomingReviewers(state, pr),
     })),
     withoutCriteria: storiesWithoutCriteria(state).map((story) => ({ story, epic: epicOfStory(story), assignee: personTag(state, story.assignee) })),
     withoutAuthor: prsWithoutAuthor(state)

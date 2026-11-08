@@ -16,7 +16,7 @@ import { HealthBadge, openDestination, openSubject, useNow, ViewHead, Who } from
 /** Um número com o contexto que o torna útil, e o atalho para a lista dele. */
 function Tile({ id, label, value, context, tone, target }: { id: string; label: string; value: number | string; context: string; tone: "red" | "amber" | "ok" | "dim"; target: string }) {
   return (
-    <a className={`tv-tile tv-tile-${tone}`} href={`#${target}`} data-panel-count={id} data-value={value} onClick={(event) => {
+    <a className={`tv-tile tv-tile-${tone}`} href={`#${target}`} data-panel-count={id} data-value={value} data-context={context} onClick={(event) => {
       event.preventDefault();
       const section = document.getElementById(target);
       section?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -77,6 +77,11 @@ export function DailyPanel() {
   const health = { travado: 0, "em-risco": 0, "no-prazo": 0 } as Record<HealthLevel, number>;
   for (const item of board.epics) health[item.health.level] += 1;
   const freeReviewers = new Set(board.reviews.flatMap((item) => item.candidates.map((candidate) => candidate.person.email)));
+  // Na daily ninguém está livre: o resumo diz quando abre a primeira vaga.
+  const nextFree = Math.min(...board.reviews.flatMap((item) => item.upcoming.map((upcoming) => upcoming.freeAt)));
+  const reviewersContext = freeReviewers.size
+    ? `${freeReviewers.size} ${freeReviewers.size === 1 ? "pessoa livre" : "pessoas livres"} para revisar`
+    : `ninguém livre agora${Number.isFinite(nextFree) ? ` · próxima às ${clockLabel(nextFree)}` : ""}`;
   const action = board.blocked.length + board.reviews.length + board.stale.length + board.withoutCriteria.length + board.withoutAuthor.length;
   const presenceCount = (kind: PlaceKind) => board.presence[kind].length;
   const firstBlocked = board.blocked[0];
@@ -87,7 +92,7 @@ export function DailyPanel() {
         <div className="tv-panel" data-panel>
           <nav className="tv-tiles" aria-label="Resumo do painel">
             <Tile id="travadas" label="HUs travadas" value={board.blocked.length} tone={board.blocked.length ? "red" : "ok"} target="painel-travadas" context={firstBlocked ? `mais antiga ${ageLabel(state.at - firstBlocked.since)}${firstBlocked.waitingOn ? `, espera ${firstBlocked.waitingOn.name.split(" ")[0]}` : ""}` : "nada travado"} />
-            <Tile id="revisoes" label="PRs esperando revisão" value={board.reviews.length} tone={board.reviews.length ? "amber" : "ok"} target="painel-revisoes" context={board.reviews.length ? `mais antigo ${ageLabel(oldest(board.reviews, (item) => item.waitingMs))} · ${freeReviewers.size} ${freeReviewers.size === 1 ? "pessoa livre" : "pessoas livres"} para revisar` : "fila vazia"} />
+            <Tile id="revisoes" label="PRs esperando revisão" value={board.reviews.length} tone={board.reviews.length ? "amber" : "ok"} target="painel-revisoes" context={board.reviews.length ? `mais antigo ${ageLabel(oldest(board.reviews, (item) => item.waitingMs))} · ${reviewersContext}` : "fila vazia"} />
             <Tile id="paradas" label="HUs paradas" value={board.stale.length} tone={board.stale.length ? "amber" : "ok"} target="painel-paradas" context={board.stale.length ? `sem movimento no Notion há ${spanLabel(oldest(board.stale, (item) => item.idleMs))} na pior` : "tudo se mexendo"} />
             <Tile id="sem-criterio" label="HUs sem critério" value={board.withoutCriteria.length} tone={board.withoutCriteria.length ? "amber" : "ok"} target="painel-sem-criterio" context="prontas ou em curso" />
             <Tile id="epicos" label="Épicos travados ou em risco" value={health.travado + health["em-risco"]} tone={health.travado ? "red" : health["em-risco"] ? "amber" : "ok"} target="painel-epicos" context={`${health.travado} travado · ${health["em-risco"]} em risco · ${health["no-prazo"]} no prazo`} />
@@ -124,7 +129,7 @@ export function DailyPanel() {
                   </Item>
                 ))}
               </PanelList>
-              <PanelList name="revisoes" title="PRs esperando revisão" count={board.reviews.length} empty="Nenhum PR esperando revisão." hint="Quem pode revisar agora: dev ou tech lead com GitHub vinculado, na mesa, sem reunião nos próximos 30 min. Quem está em foco fica de fora.">
+              <PanelList name="revisoes" title="PRs esperando revisão" count={board.reviews.length} empty="Nenhum PR esperando revisão." hint="Quem pode revisar agora: dev ou tech lead com GitHub vinculado, na mesa, sem reunião nos próximos 30 min. Quem está em foco fica de fora. Sem ninguém livre, a agenda diz quem fica livre e quando.">
                 {board.reviews.map((item) => (
                   <Item
                     key={item.pr.number}
@@ -132,7 +137,7 @@ export function DailyPanel() {
                     state={state}
                     id={`#${item.pr.number}`}
                     label={item.pr.title}
-                    data={{ "data-pr": String(item.pr.number), "data-candidates": item.candidates.map((candidate) => candidate.person.email).join(",") }}
+                    data={{ "data-pr": String(item.pr.number), "data-candidates": item.candidates.map((candidate) => candidate.person.email).join(","), "data-upcoming": item.candidates.length ? "" : item.upcoming.map((upcoming) => `${upcoming.person.email}@${clockLabel(upcoming.freeAt)}`).join(",") }}
                     extra={
                       <>
                         <span>
@@ -166,7 +171,26 @@ export function DailyPanel() {
                               </span>
                             ))
                           ) : (
-                            <span className="tv-dim">ninguém livre agora</span>
+                            <>
+                              <span className="tv-dim">ninguém livre agora</span>
+                              {item.upcoming.length > 0 ? (
+                                <span className="tv-upcoming" data-review-upcoming>
+                                  {" · "}
+                                  {item.upcoming.map((upcoming, index) => (
+                                    <span key={upcoming.person.email} data-upcoming={upcoming.person.email} data-free-at={clockLabel(upcoming.freeAt)}>
+                                      {index > 0 && ", "}
+                                      <Who person={{ email: upcoming.person.email, name: upcoming.person.name, away: null }} /> livre às {clockLabel(upcoming.freeAt)}
+                                      <span className="tv-dim">
+                                        {" "}
+                                        ({upcoming.pending} na fila{upcoming.freeUntil ? `, até ${clockLabel(upcoming.freeUntil)}` : ""})
+                                      </span>
+                                    </span>
+                                  ))}
+                                </span>
+                              ) : (
+                                <span className="tv-dim"> · ninguém fica livre hoje pela agenda</span>
+                              )}
+                            </>
                           )}
                         </span>
                       </>
