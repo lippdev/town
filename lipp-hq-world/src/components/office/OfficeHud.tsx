@@ -301,7 +301,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
             <TechRosterSection
               matches={matches}
               searching={searching}
-              collapsed={collapsedTeams.includes("tecnologia-squad")}
+              collapsed={!searching && collapsedTeams.includes("tecnologia-squad")}
               onToggle={() => toggleTeam("tecnologia-squad")}
               onSelect={() => {
                 onView("escritorio");

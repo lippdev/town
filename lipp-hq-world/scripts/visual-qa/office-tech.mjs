@@ -1093,6 +1093,23 @@ try {
     const saved = await barra.evaluate(() => JSON.parse(localStorage.getItem("lipp-hq.sidebar.equipes-recolhidas") || "[]"));
     assert.ok(saved.includes("tecnologia-squad"));
 
+    // A busca abre a equipe mesmo se estiver recolhida: quem foi encontrado nunca fica escondido
+    const search = barra.locator(".office-roster-search");
+    await search.fill("QA");
+    await barra.waitForFunction(
+      () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "false"
+    );
+    const visibleMember = barra.locator("[data-squad-member]");
+    assert.ok(await visibleMember.isVisible(), "Rafael visível com a equipe aberta pela busca");
+    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("rafael.coutinho"));
+
+    // Limpar a busca faz a seção voltar ao estado recolhido
+    await search.fill("");
+    await barra.waitForFunction(
+      () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "true"
+    );
+    assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+
     await toggle.click();
     await barra.waitForFunction(
       () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "false"
