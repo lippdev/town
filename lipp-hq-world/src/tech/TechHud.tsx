@@ -67,7 +67,7 @@ function techQaApi() {
     },
     stories: () => useTechStore.getState().state.stories.map((story) => story.id),
     reasons: (epicId: string) => blockersOf(useTechStore.getState().state, epicId).map((reason) => reason.text),
-    render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused }),
+    render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused, pendingAtPause: techSceneRuntime.pendingAtPause, pausedFrames: techSceneRuntime.pausedFrames }),
   };
 }
 

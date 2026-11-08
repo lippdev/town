@@ -33,6 +33,9 @@ export const techSceneRuntime = {
   /** Quadros desenhados desde a abertura, e se o render está parado por Projetos ou Painel. */
   frames: 0,
   paused: false,
+  /** Quadros que o R3F ainda devia (internal.frames) no instante da pausa, e quantos saíram parado. */
+  pendingAtPause: 0,
+  pausedFrames: 0,
 };
 
 /** O passo mais longo de animação; o mesmo teto do `HumanActor`. */
@@ -368,6 +371,7 @@ function TechBots() {
 function PauseWhenCovered() {
   const setFrameloop = useThree((state) => state.setFrameloop);
   const clock = useThree((state) => state.clock);
+  const get = useThree((state) => state.get);
   const covered = useTechStore((store) => store.view !== "predio");
   const ready = useOfficeStore((state) => state.load === "ready" && !state.traveling);
   const paused = covered && ready;
@@ -380,14 +384,21 @@ function PauseWhenCovered() {
     // O tempo parado não conta, como se a cena tivesse congelado.
     const elapsed = clock.elapsedTime;
     setFrameloop("never");
+    // O laço do R3F segue desenhando com frameloop "never" enquanto internal.frames > 0, e todo
+    // invalidate() feito no modo "always" (prop mudada pelo React, useFrame pedindo mais um quadro)
+    // deixa 1 ou 2 ali. Sem zerar, um quadro inteiro (mais de 1 s sem GPU) saía depois da pausa.
+    const { internal } = get();
+    techSceneRuntime.pendingAtPause = internal.frames;
+    internal.frames = 0;
     return () => {
       techSceneRuntime.paused = false;
       setFrameloop("always");
       clock.elapsedTime = elapsed;
     };
-  }, [paused, setFrameloop, clock]);
+  }, [paused, setFrameloop, clock, get]);
   useFrame(() => {
     techSceneRuntime.frames += 1;
+    if (techSceneRuntime.paused) techSceneRuntime.pausedFrames += 1;
   });
   return null;
 }
