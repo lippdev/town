@@ -19,6 +19,7 @@ const LOOK_DATE = "2026-11-10T00:00:00.000Z";
 
 export const squadHumanId = (email: string) => `squad-${email.split("@")[0]!.replace(/\./g, "-")}`;
 export const emailOfHuman = (id: string) => SQUAD.find((person) => squadHumanId(person.email) === id)?.email ?? null;
+export const personTopColor = (email: string) => LOOK[email]?.colors.top ?? "#7c2d3a";
 
 function hash(value: string) {
   let result = 0;
