@@ -484,8 +484,17 @@ function EpicDrawer() {
   );
 }
 
+/** Quanto tempo um aviso fica à vista; a leitura de tela já o anunciou ao chegar. */
+const NOTICE_MS = 15_000;
+
 function Notices() {
   const notices = useTechStore((store) => store.notices);
+  const newest = notices.at(-1)?.id ?? null;
+  useEffect(() => {
+    if (newest === null) return;
+    const timer = window.setTimeout(() => useTechStore.getState().dismissNotice(newest), NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [newest]);
   if (notices.length === 0) return null;
   return (
     <div className="tech-notices" role="status" aria-live="polite">

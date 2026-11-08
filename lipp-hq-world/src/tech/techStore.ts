@@ -160,7 +160,7 @@ export const useTechStore = create<TechState>((set, get) => ({
     noticeId += 1;
     const notice: Notice = { id: noticeId, text: result.ok ? result.note : result.problem, tone: result.ok ? "ok" : "erro" };
     const record: ActionRecord = { at: runtime.state.at, ok: result.ok, text: notice.text };
-    set({ ...derived(runtime.state), notices: [...get().notices.slice(-3), notice], records: { ...get().records, [actionKey(action)]: record } });
+    set({ ...derived(runtime.state), notices: [...get().notices.slice(-1), notice], records: { ...get().records, [actionKey(action)]: record } });
     return result;
   },
   // Épico, pessoa, bot e cadastro dividem a gaveta: abrir um fecha os outros.
@@ -173,11 +173,12 @@ export const useTechStore = create<TechState>((set, get) => ({
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`);
   },
   dismissNotice: (id) => set({ notices: get().notices.filter((notice) => notice.id !== id) }),
-  setOpenAction: (openAction) => set({ openAction }),
+  // Abrir outra ação tira da frente os avisos antigos: eles já foram lidos e cobririam o painel.
+  setOpenAction: (openAction) => set(openAction ? { openAction, notices: [] } : { openAction }),
   openRegistry: (focus = null) => {
     useHQStore.getState().clearSelection();
     useOfficeStore.getState().clearHuman();
-    set({ registry: { focus }, selectedEpicId: null, highlightStoryId: null, openAction: null });
+    set({ registry: { focus }, selectedEpicId: null, highlightStoryId: null, openAction: null, notices: [] });
   },
   closeRegistry: () => set({ registry: null }),
 }));

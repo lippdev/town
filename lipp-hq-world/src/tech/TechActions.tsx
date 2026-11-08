@@ -209,7 +209,19 @@ export function ReassignAction({ story }: { story: Story }) {
               const autofocus = choice === null ? options.findIndex((item) => !item.current) === index : choice === option.person.email;
               return (
                 <label key={option.person.email} className={option.current ? "ta-person current" : "ta-person"} data-assignee-option={option.person.email} data-away={option.away ? "true" : undefined}>
-                  <input type="radio" name={group} value={option.person.email} checked={choice === option.person.email} disabled={option.current} onChange={() => setChoice(option.person.email)} data-autofocus={autofocus ? true : undefined} />
+                  <input
+                    type="radio"
+                    name={group}
+                    value={option.person.email}
+                    checked={choice === option.person.email}
+                    disabled={option.current}
+                    onChange={() => {
+                      setChoice(option.person.email);
+                      // A confirmação aparece embaixo da lista: traz o botão para a vista.
+                      requestAnimationFrame(() => document.getElementById(panel.domId)?.querySelector("[data-action-confirm]")?.scrollIntoView({ block: "nearest" }));
+                    }}
+                    data-autofocus={autofocus ? true : undefined}
+                  />
                   <span className="ta-person-name">
                     <strong>{option.person.name}</strong>
                     <small>{option.person.title}</small>
