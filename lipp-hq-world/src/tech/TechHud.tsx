@@ -80,7 +80,7 @@ function techQaApi() {
         return [person.email, { stories: load.stories.length, prs: load.prs.length, reviews: load.reviews.length }];
       }));
     },
-    render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused, pendingAtPause: [...techSceneRuntime.pendingAtPause], pausedFrames: techSceneRuntime.pausedFrames }),
+    render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused, pendingAtPause: [...techSceneRuntime.pendingAtPause], pausedFrames: techSceneRuntime.pausedFrames, loop: techSceneRuntime.loop() }),
   };
 }
 

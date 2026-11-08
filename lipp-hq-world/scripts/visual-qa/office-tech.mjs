@@ -572,6 +572,7 @@ try {
       return ((await tech(views, "render")).frames - start) / 3;
     };
     report.visoes.quadrosPorSegundo = { predio: await sample() };
+    const running = (await tech(views, "render")).loop;
     await views.click('[data-view-tab="painel"]');
     await viewIs(views, "painel");
     await views.waitForFunction(() => window.__HQ_TECH_QA__.render().paused);
@@ -579,7 +580,9 @@ try {
     const later = await tech(views, "render");
     // pendingAtPause: quadros que o R3F ainda devia em cada pausa (invalidate do modo "always"); a cena os
     // descarta, e nenhum quadro sai com a visão aberta, nem durante a amostra nem entre ela e a pausa.
-    report.visoes.pausa = { devidosEmCadaPausa: later.pendingAtPause, quadrosParado: later.pausedFrames };
+    report.visoes.pausa = { devidosEmCadaPausa: later.pendingAtPause, quadrosParado: later.pausedFrames, lacoNoPredio: running, lacoNoPainel: later.loop };
+    assert.equal(running.frameloop, "always");
+    assert.deepEqual({ frameloop: later.loop.frameloop, pending: later.loop.pending }, { frameloop: "never", pending: 0 }, "com o Painel aberto o laço está parado e sem quadro devido");
     assert.ok(report.visoes.quadrosPorSegundo.predio > 0);
     assert.equal(report.visoes.quadrosPorSegundo.painel, 0, `com o Painel aberto saiu quadro: ${JSON.stringify(report.visoes.pausa)}`);
     assert.equal(later.pausedFrames, 0, "nenhum quadro desenhado com a cena pausada, em nenhuma das pausas da página");

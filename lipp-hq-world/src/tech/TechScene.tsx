@@ -36,6 +36,8 @@ export const techSceneRuntime = {
   /** Quadros que o R3F ainda devia (internal.frames) em cada pausa, e quantos saíram com a cena parada. */
   pendingAtPause: [] as number[],
   pausedFrames: 0,
+  /** O estado do laço do R3F (modo, quadros devidos, ativo), para a prova. */
+  loop: (): { frameloop: string; pending: number; active: boolean } | null => null,
 };
 
 /** O passo mais longo de animação; o mesmo teto do `HumanActor`. */
@@ -397,6 +399,12 @@ function PauseWhenCovered() {
       clock.elapsedTime = elapsed;
     };
   }, [paused, setFrameloop, clock, get]);
+  useEffect(() => {
+    techSceneRuntime.loop = () => {
+      const { frameloop, internal } = get();
+      return { frameloop, pending: internal.frames, active: internal.active };
+    };
+  }, [get]);
   useFrame(() => {
     techSceneRuntime.frames += 1;
     if (techSceneRuntime.paused) techSceneRuntime.pausedFrames += 1;
