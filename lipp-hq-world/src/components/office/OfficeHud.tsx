@@ -699,7 +699,7 @@ export function OfficeHud({ live }: { live: boolean }) {
       {!live && <HumanPanel />}
       {!live && TECH && (
         <Suspense fallback={null}>
-          <TechViewLayer />
+          <TechViewLayer covered={view !== "escritorio"} />
           <TechHud />
         </Suspense>
       )}

@@ -39,7 +39,7 @@ export function TechViewSwitch() {
     } else if (event.key === "Tab" && !event.shiftKey && view !== "predio") {
       // A visão vem depois da navegação lateral no DOM: o Tab da aba vai direto para o painel dela.
       const panel = document.getElementById(PANEL_ID[view]);
-      if (panel) {
+      if (panel && !panel.inert) {
         event.preventDefault();
         panel.focus();
       }
@@ -82,8 +82,12 @@ export function TechViewSwitch() {
 const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 const focusLost = () => !document.activeElement || document.activeElement === document.body;
 
-/** Projetos ou Painel por cima da cena. O Esc fecha a gaveta antes; depois volta ao prédio. */
-export function TechViewLayer() {
+/**
+ * Projetos ou Painel por cima da cena. O Esc fecha a gaveta antes; depois volta ao prédio.
+ * `covered`: outra tela do HUD (Conversas, Equipe, Kanban) está por cima, e a visão sai do Tab e do
+ * leitor de tela até ela fechar.
+ */
+export function TechViewLayer({ covered = false }: { covered?: boolean }) {
   const view = useTechStore((store) => store.view);
   const section = useRef<HTMLElement>(null);
   const epic = useTechStore((store) => Boolean(store.selectedEpicId));
@@ -114,10 +118,10 @@ export function TechViewLayer() {
   useEffect(() => {
     const was = hadDrawer.current;
     hadDrawer.current = drawer;
-    if (!was || drawer || view === "predio" || !focusLost()) return;
+    if (!was || drawer || view === "predio" || covered || !focusLost()) return;
     const opener = takeOpener();
     (opener?.isConnected && section.current?.contains(opener) ? opener : section.current)?.focus({ preventScroll: true });
-  }, [drawer, view]);
+  }, [drawer, view, covered]);
   if (view === "predio") return null;
   const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key === "Tab" && event.shiftKey && section.current) {
@@ -139,6 +143,8 @@ export function TechViewLayer() {
       role="tabpanel"
       aria-labelledby={tabId(view)}
       tabIndex={-1}
+      inert={covered}
+      data-covered={covered ? "true" : undefined}
       data-tech-view={view}
       data-scene-keys-off
       data-scene-cover
