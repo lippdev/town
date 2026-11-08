@@ -223,6 +223,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   const mode = useOfficeStore((state) => state.mode);
   const [query, setQuery] = useState("");
   const [collapsedTeams, setCollapsedTeams] = useState(readCollapsedTeams);
+  const [squadMatches, setSquadMatches] = useState<number | null>(null);
   const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
   const filtered = bots.filter((bot) => matches(`${bot.name} ${bot.role}`));
   const searching = query.trim().length > 0;
@@ -302,6 +303,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
               searching={searching}
               collapsed={!searching && collapsedTeams.includes("tecnologia-squad")}
               onToggle={() => toggleTeam("tecnologia-squad")}
+              onMatchesChange={setSquadMatches}
               onSelect={() => {
                 onView("escritorio");
                 if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
@@ -309,7 +311,9 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
             />
           </Suspense>
         )}
-        {filtered.length === 0 && <p className="office-roster-empty">Nenhum agente encontrado.</p>}
+        {filtered.length === 0 && (!TECH || !searching || squadMatches === 0) && (
+          <p className="office-roster-empty">Nenhum agente encontrado.</p>
+        )}
         {mode === "demo" && <PeopleList matches={matches} onSelect={(humanId) => {
           // Como na linha de bot: a cena precisa estar à vista para a seleção ter efeito.
           onView("escritorio");

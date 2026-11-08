@@ -1,4 +1,4 @@
-import { type CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { ChevronDown, PersonStanding } from "lucide-react";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { personTopColor, squadHumanId } from "./techPeople";
@@ -11,17 +11,29 @@ export interface TechRosterSectionProps {
   collapsed: boolean;
   onToggle: () => void;
   onSelect: () => void;
+  onMatchesChange?: (count: number | null) => void;
 }
 
 /**
  * Seção "Tecnologia · squad" na barra lateral: as 8 pessoas do squad simulado
  * com estado agora em tempo real pelo relógio da simulação.
  */
-export function TechRosterSection({ matches, searching, collapsed, onToggle, onSelect }: TechRosterSectionProps) {
+export function TechRosterSection({ matches, searching, collapsed, onToggle, onSelect, onMatchesChange }: TechRosterSectionProps) {
   const state = useTechStore((store) => store.state);
   const selectedHumanId = useOfficeStore((store) => store.selectedHumanId);
 
   const people = state.people.filter((person) => matchesSquadPerson(person, matches));
+
+  useEffect(() => {
+    onMatchesChange?.(searching ? people.length : null);
+    return () => {
+      onMatchesChange?.(null);
+    };
+  }, [onMatchesChange, searching, people.length]);
+
+  if (searching && people.length === 0) {
+    return null;
+  }
 
   const selectPerson = (email: string) => {
     if (useTechStore.getState().view !== "predio") {

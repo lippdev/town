@@ -1076,8 +1076,18 @@ try {
     assert.match(await visibleMember.textContent(), /QA/);
     assert.equal(await barra.locator("[data-agent-row]").count(), 0);
     assert.equal(await barra.locator("[data-person-row]").count(), 0);
+    // Mensagem de nenhum agente não aparece quando o squad tem resultado
+    assert.equal(await barra.locator(".office-roster-empty").count(), 0);
 
     await shot(barra, "barra-lateral-busca-qa-1440");
+
+    // Com busca que não casa ninguém do squad, a seção não deve aparecer
+    await search.fill("inexistente-xyz");
+    await barra.waitForFunction(() => document.querySelectorAll('[data-roster-section="tecnologia-squad"]').length === 0);
+    assert.equal(await barra.locator('[data-roster-section="tecnologia-squad"]').count(), 0);
+    const emptyNotice = barra.locator(".office-roster-empty");
+    assert.ok(await emptyNotice.isVisible(), "aviso de nenhum agente visível quando squad não tem resultado");
+    assert.match(await emptyNotice.textContent(), /Nenhum agente encontrado/);
 
     await search.fill("");
     await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 8);
