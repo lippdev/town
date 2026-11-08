@@ -73,9 +73,7 @@ function PersonEntry({ person, editing, unlinking, onEdit, onUnlink, onDone, pre
     <>
       <div className="tr-person-head">
         <strong>{person.name}</strong>
-        <small>
-          {person.title} · {ROLE_LABEL[person.role]}
-        </small>
+        <small>{person.title === ROLE_LABEL[person.role] ? person.title : `${person.title} · ${ROLE_LABEL[person.role]}`}</small>
       </div>
       <span className="tr-email">{person.email}</span>
       <ul className="tr-sources" aria-label="Fontes que reconhecem a pessoa">

@@ -95,3 +95,12 @@
 .tech-row > .ta-bar { flex: 1 0 100%; padding-left: 56px; }
 .tr-link-button { margin-left: 8px; vertical-align: baseline; }
 @media (max-width: 760px) { .tech-row > .ta-bar { padding-left: 0; } }
+
+/* Celular: com o botão do cadastro na barra, o selo Simulação fica só com o ícone (o nome segue no
+   title e para o leitor de tela) e a hora nunca encolhe. */
+.tech-time { flex: none; }
+@media (max-width: 480px) {
+  .office-chip.tech-chip { gap: 0; padding-inline: 6px; font-size: 0; }
+  .office-chip.tech-chip svg { width: 13px; height: 13px; }
+  .tech-registry-button { padding: 5px 8px; }
+}
