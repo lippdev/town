@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { FlaskConical, Pause, Play, RotateCcw, X } from "lucide-react";
 import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
-import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
+import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, presenceBuckets, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
 import { prAuthor } from "@/activity/identity";
 import { SPEEDS } from "@/activity/simulation";
 import { at, clockLabel, whenLabel } from "@/activity/time";
@@ -14,6 +14,7 @@ import { emailOfHuman, squadHumanId, squadHumans } from "./techPeople";
 import { HEALTH_COLOR, TECH_FLOOR_ID } from "./techPlaces";
 import { techSceneRuntime } from "./TechScene";
 import { useTechStore, type TechView } from "./techStore";
+import { subjectKey } from "./techViews";
 import "./tech.css";
 
 declare global {
@@ -67,6 +68,18 @@ function techQaApi() {
     },
     stories: () => useTechStore.getState().state.stories.map((story) => story.id),
     reasons: (epicId: string) => blockersOf(useTechStore.getState().state, epicId).map((reason) => reason.text),
+    /** Os motivos do épico como "tipo|sujeito" ("pr-sem-revisao|pr:142"), na ordem da gaveta. */
+    reasonKeys: (epicId: string) => blockersOf(useTechStore.getState().state, epicId).map((reason) => `${reason.kind}|${subjectKey(reason.subject)}`),
+    /** Os seis grupos do "Time agora", inclusive chamada e mesa. */
+    presence: () => presenceBuckets(useTechStore.getState().state),
+    /** Carga por pessoa: quantas HUs, PRs abertos e revisões pedidas. */
+    load: () => {
+      const { state } = useTechStore.getState();
+      return Object.fromEntries(state.people.map((person) => {
+        const load = personLoad(state, person.email)!;
+        return [person.email, { stories: load.stories.length, prs: load.prs.length, reviews: load.reviews.length }];
+      }));
+    },
     render: () => ({ frames: techSceneRuntime.frames, paused: techSceneRuntime.paused, pendingAtPause: [...techSceneRuntime.pendingAtPause], pausedFrames: techSceneRuntime.pausedFrames }),
   };
 }
