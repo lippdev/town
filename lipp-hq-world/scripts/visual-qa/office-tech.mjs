@@ -817,7 +817,8 @@ try {
     assert.equal((await tech(acts, "answers")).botsHoje, before + 1);
     // O robô vai até o cartão do E-5 no quadro.
     const visit = await tech(acts, "visit", task.id);
-    const card = (await tech(acts, "board")).find((entry) => entry.epicId === "E-5");
+    // O cartão do E-5 sobre o quadro guarda a posição dele na cena (data-x).
+    const card = { x: Number(await acts.getAttribute('[data-epic-card="E-5"]', "data-x")) };
     assert.equal(visit.node, "quadro");
     assert.ok(Math.abs(visit.x - card.x) < 0.01, `o lugar da visita é o cartão do E-5 (${visit.x} × ${card.x})`);
     await acts.waitForFunction((id) => window.__HQ_TECH_QA__.robots().some((robot) => robot.taskId === id && robot.arrived), task.id, { timeout: after(90000) });
@@ -849,10 +850,25 @@ try {
     await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "13:45");
     assert.deepEqual((await tech(acts, "answers")).semAutor, [147]);
     assert.match(await acts.locator('[data-panel-list="sem-autor"] > [data-pr="147"]').textContent(), /tnunes-dev/);
-    // Da gaveta do Tiago: o aviso que já existia ganha "Vincular".
+    // O app não sabe de quem é um login sem vínculo: a gaveta de quem não vinculou não sugere nenhum.
+    // O Caio (design) não abre PR: o aviso é neutro, sem falar de PR não identificado.
+    await acts.click(`[data-panel-load="${EMAIL("caio.rezende")}"] th [data-person]`);
+    const caio = `[data-tech-person="${EMAIL("caio.rezende")}"]`;
+    await acts.waitForSelector(`${caio} [data-github-missing]`);
+    const caioText = await acts.locator(caio).textContent();
+    assert.doesNotMatch(caioText, /tnunes-dev/, "a gaveta do Caio não atribui a ele o login do Tiago");
+    const caioWarn = (await acts.locator(`${caio} [data-github-missing]`).textContent()).trim();
+    assert.match(caioWarn, /^GitHub não vinculado\./);
+    assert.doesNotMatch(caioWarn, /não identificado|carga/, "tom neutro para quem não abre PR");
+    assert.ok(await acts.locator(`${caio} [data-open-registry="${EMAIL("caio.rezende")}"]`).isVisible());
+    await shot(acts, "cadastro-gaveta-caio-1440");
+    await acts.keyboard.press("Escape");
+    await acts.waitForFunction(() => !document.querySelector("[data-tech-person]"));
+    // Da gaveta do Tiago: "GitHub não vinculado" e "Vincular", também sem login sugerido.
     await acts.click(`[data-panel-load="${EMAIL("tiago.nunes")}"] th [data-person]`);
     const person = `[data-tech-person="${EMAIL("tiago.nunes")}"]`;
     await acts.waitForSelector(`${person} [data-github-missing]`);
+    assert.doesNotMatch(await acts.locator(person).textContent(), /tnunes-dev/, "nem a do Tiago adivinha o login");
     await acts.click(`${person} [data-open-registry]`);
     await acts.waitForSelector("[data-tech-registry]");
     assert.equal(await acts.locator("[data-tech-person]").count(), 0, "o cadastro usa o lugar da gaveta");
