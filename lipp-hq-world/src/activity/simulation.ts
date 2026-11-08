@@ -1,3 +1,4 @@
+import { botForTask, nudgeTarget, nudgeText } from "./actions";
 import { applyEvent, type ActivityEvent, type ActivityState } from "./events";
 import { LINK_PROBLEM_LABEL, linkGithub } from "./identity";
 import {
@@ -437,14 +438,11 @@ export class SimulatedDay implements ActivitySource {
       case "cobrar": {
         const story = storyOf(state, action.storyId);
         if (!story || story.status === "concluida") return { ok: false, problem: "Essa HU não está aberta." };
-        // Quem destrava: a pessoa esperada, o QA em QA, senão o responsável.
-        const qa = state.people.find((item) => item.role === "qa")?.email ?? null;
-        const target = story.blocked?.waitingOn ?? (story.status === "qa" ? qa : story.assignee);
+        // Quem destrava: a pessoa esperada, o QA em QA, senão o responsável. A tela mostra a mesma
+        // pessoa e o mesmo texto antes de enviar (`nudgePreview`).
+        const target = nudgeTarget(state, story)?.email;
         if (!target) return { ok: false, problem: "A HU não tem responsável para cobrar." };
-        const name = firstName(state, target);
-        const text = story.blocked
-          ? `Oi, ${name}! A ${story.id} (${story.title}) está travada ${ageLabel(now - story.blocked.since)} esperando você: ${story.blocked.reason}`
-          : `Oi, ${name}! A ${story.id} (${story.title}) está em "${STORY_STATUS_LABEL[story.status]}" sem atualização ${ageLabel(now - story.updatedAt)}. Ainda é isso?`;
+        const text = nudgeText(state, story, target, now);
         const answerAt = now + 12 * MINUTE;
         const wasBlocked = Boolean(story.blocked);
         // Responde quando der: numa chamada dá para olhar o Slack; em sala, huddle ou fora, não.
@@ -487,7 +485,7 @@ export class SimulatedDay implements ActivitySource {
         };
       }
       case "pedir_bot": {
-        const botId = action.task === "completar_criterios" ? AUTOMATION_BOTS.notion : AUTOMATION_BOTS.github;
+        const botId = botForTask(action.task);
         if (action.target.kind === "pr" && !prOf(state, action.target.number)) return { ok: false, problem: "PR não encontrado." };
         if (action.target.kind === "story" && !storyOf(state, action.target.id)) return { ok: false, problem: "HU não encontrada." };
         const start = Math.max(now, this.botBusy.get(botId) ?? now);
