@@ -279,7 +279,6 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
                     return <button key={bot.id} type="button" aria-pressed={active} data-agent-row={bot.id} title={bot.role} className={active ? "office-roster-bot active" : "office-roster-bot"} onClick={() => {
                       if (view === "conversas") { onConversation(bot.id); return; }
                       onView("escritorio");
-                      if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
                       useOfficeStore.getState().selectBot(bot.id);
                     }}>
                       <span className="office-agent-avatar" style={{ "--agent-color": bot.color } as React.CSSProperties} aria-hidden>
@@ -314,7 +313,6 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
         {mode === "demo" && <PeopleList matches={matches} onSelect={(humanId) => {
           // Como na linha de bot: a cena precisa estar à vista para a seleção ter efeito.
           onView("escritorio");
-          if (window.innerWidth <= SIDEBAR_OVERLAY_WIDTH) onToggle();
           useOfficeStore.getState().selectHuman(humanId);
         }} />}
       </div>
