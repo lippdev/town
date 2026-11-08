@@ -49,6 +49,7 @@ function trimShadowCasters(root: { traverse: (fn: (node: unknown) => void) => vo
 export function QualityController({ shadowEvery = SHADOW_EVERY }: { shadowEvery?: Record<"alta" | "leve", number> } = {}) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
+  const frameloop = useThree((state) => state.frameloop);
   const setAutoQuality = useHQStore((state) => state.setAutoQuality);
   const frame = useRef(0);
   const [measuring, setMeasuring] = useState(false);
@@ -80,7 +81,9 @@ export function QualityController({ shadowEvery = SHADOW_EVERY }: { shadowEvery?
     if (frame.current === 0) gl.shadowMap.needsUpdate = true;
   });
 
-  if (!measuring) return null;
+  // Com o laço parado (frameloop "never", uma visão cobrindo a cena), o monitor sai e volta zerado:
+  // senão o primeiro quadro depois da pausa mede o tempo parado como 0 fps e puxa a qualidade para baixo.
+  if (!measuring || frameloop === "never") return null;
   // só desce: a leve sempre sobra fps, então subir de volta faria a cena
   // alternar entre as duas. Quem quiser alta escolhe "Alta" no seletor.
   return (
