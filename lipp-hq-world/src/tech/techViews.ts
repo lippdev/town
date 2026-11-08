@@ -287,6 +287,18 @@ export function subjectLabel(state: ActivityState, subject: Subject): string {
   }
 }
 
+/** "pr:142", "story:HU-31", "epic:E-2": o sujeito de um motivo numa chave só, para a prova comparar. */
+export function subjectKey(subject: Subject): string {
+  switch (subject.kind) {
+    case "pr":
+      return `pr:${subject.number}`;
+    case "person":
+      return `person:${subject.email}`;
+    default:
+      return `${subject.kind}:${subject.id}`;
+  }
+}
+
 /** Onde um item do painel leva: a gaveta do épico (com a HU em destaque) ou a da pessoa. */
 export type Destination = { kind: "epic"; epicId: string; storyId: string | null } | { kind: "person"; email: string };
 
@@ -299,8 +311,12 @@ export function destinationOf(state: ActivityState, subject: Subject): Destinati
       return story ? { kind: "epic", epicId: story.epicId, storyId: story.id } : null;
     }
     case "pr": {
+      // PR sem HU leva a quem o abriu; sem HU e sem autor no cadastro, a lugar nenhum.
       const pr = prOf(state, subject.number);
-      return pr?.storyId ? destinationOf(state, { kind: "story", id: pr.storyId }) : null;
+      if (!pr) return null;
+      if (pr.storyId) return destinationOf(state, { kind: "story", id: pr.storyId });
+      const author = prAuthor(directory(state), pr);
+      return author ? { kind: "person", email: author.email } : null;
     }
     case "person":
       return personOf(state, subject.email) ? { kind: "person", email: subject.email } : null;

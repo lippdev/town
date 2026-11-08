@@ -4,7 +4,7 @@ import { DEFAULT_SEED, simulatedStateAt } from "@/activity/simulation";
 import { EMAIL } from "@/activity/squad";
 import { DAY_END, DAY_START, MINUTE, at, clockLabel } from "@/activity/time";
 import { searchWithView, viewFrom } from "@/tech/techStore";
-import { attentionExpansion, attentionOnly, dailyBoard, destinationOf, fullExpansion, needsAttention, personTag, projectTree, subjectLabel } from "@/tech/techViews";
+import { attentionExpansion, attentionOnly, dailyBoard, destinationOf, fullExpansion, needsAttention, personTag, projectTree, subjectKey, subjectLabel } from "@/tech/techViews";
 
 const day = (until: number) => simulatedStateAt(DEFAULT_SEED, until);
 /** Um instante a cada 20 minutos do dia simulado. */
@@ -216,6 +216,15 @@ describe("visão Painel: as respostas da daily", () => {
     expect(destinationOf(state, { kind: "person", email: EMAIL.diego })).toEqual({ kind: "person", email: EMAIL.diego });
     expect(destinationOf(state, { kind: "story", id: "HU-999" })).toBeNull();
     expect(destinationOf(state, { kind: "channel", id: "squad" })).toBeNull();
+    expect(destinationOf(state, { kind: "meeting", id: "daily" })).toBeNull();
+    // PR sem HU leva a quem abriu; sem HU e com login que ninguém vinculou, a lugar nenhum.
+    const loose = { ...state, prs: state.prs.map((item) => (item.number === pr.number ? { ...item, storyId: null } : item)) };
+    const author = state.people.find((person) => person.github === pr.author)!;
+    expect(destinationOf(loose, { kind: "pr", number: pr.number })).toEqual({ kind: "person", email: author.email });
+    const nobody = { ...loose, prs: loose.prs.map((item) => (item.number === pr.number ? { ...item, author: "login-solto" } : item)) };
+    expect(destinationOf(nobody, { kind: "pr", number: pr.number })).toBeNull();
+    expect(subjectKey({ kind: "pr", number: 142 })).toBe("pr:142");
+    expect(subjectKey({ kind: "story", id: "HU-31" })).toBe("story:HU-31");
     expect(subjectLabel(state, { kind: "pr", number: 142 })).toBe("PR #142");
     expect(subjectLabel(state, { kind: "epic", id: "E-1" })).toBe("E-1 · Login sem senha");
   });

@@ -3,10 +3,10 @@ import { Moon } from "lucide-react";
 import type { ActivityState } from "@/activity/events";
 import { PLACE_LABEL, type HealthLevel, type PlaceKind } from "@/activity/selectors";
 import { ageLabel, clockLabel, spanLabel, whenLabel } from "@/activity/time";
-import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type Subject } from "@/activity/types";
+import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type Person, type PullRequest, type Subject } from "@/activity/types";
 import { PrAuthor, Section } from "./TechHud";
-import { dailyBoard, destinationOf, type DailyBoard } from "./techViews";
-import { HealthBadge, openDestination, openSubject, useNow, ViewHead, Who } from "./viewParts";
+import { dailyBoard, destinationOf, subjectKey, type DailyBoard } from "./techViews";
+import { HealthBadge, openDestination, openPerson, openSubject, useNow, ViewHead, Who } from "./viewParts";
 
 /**
  * A visão Painel: o dashboard de acompanhamento com os mesmos dados da cena. Responde à daily de
@@ -66,6 +66,18 @@ function PanelList({ name, title, count, empty, children, hint }: { name: string
       </ul>
     </Section>
   );
+}
+
+/** Os PRs da carga de alguém: cada número abre a gaveta da pessoa, onde eles estão listados. */
+function LoadLinks({ prs, person, what }: { prs: readonly PullRequest[]; person: Person; what: string }) {
+  return prs.map((pr, index) => (
+    <span key={pr.number}>
+      {index > 0 && " "}
+      <button type="button" className="tech-link" data-load-pr={pr.number} onClick={() => openPerson(person.email)} title={`#${pr.number} ${pr.title} (${what}): abrir ${person.name}`}>
+        #{pr.number}
+      </button>
+    </span>
+  ));
 }
 
 const PRESENCE_ORDER: PlaceKind[] = ["reuniao", "chamada", "huddle", "foco", "fora", "mesa"];
@@ -242,7 +254,7 @@ export function DailyPanel() {
               <PanelList name="sem-autor" title="PRs sem autor identificado" count={board.withoutAuthor.length} empty="Todo PR aberto tem autor no cadastro." hint="O login do GitHub não está vinculado a ninguém do cadastro: o PR não conta na carga de ninguém.">
                 {board.withoutAuthor.map((item) => (
                   <Item key={item.pr.number} subject={{ kind: "pr", number: item.pr.number }} state={state} id={`#${item.pr.number}`} label={item.pr.title} data={{ "data-pr": String(item.pr.number) }}>
-                    login {item.pr.author} · {item.story ? item.story.id : "sem HU"}
+                    <span className="tech-unknown">autor não identificado</span> · login {item.pr.author} · {item.story ? item.story.id : "sem HU"}
                   </Item>
                 ))}
               </PanelList>
@@ -268,7 +280,7 @@ export function DailyPanel() {
                           {item.reasons.map((reason) => {
                             const destination = destinationOf(state, reason.subject);
                             return (
-                              <li key={reason.text} className={`reason-${reason.kind}`}>
+                              <li key={reason.text} className={`reason-${reason.kind}`} data-reason-kind={reason.kind} data-reason-subject={subjectKey(reason.subject)}>
                                 {destination ? (
                                   <button type="button" className="tech-link" onClick={() => openDestination(destination)}>
                                     {reason.text}
@@ -362,11 +374,15 @@ export function DailyPanel() {
                       </td>
                       <td>
                         {item.github ? <strong>{item.prs.length}</strong> : <span className="tech-unknown" title="Sem GitHub vinculado: os PRs aparecem como autor não identificado">sem GitHub</span>}
-                        <small>{item.prs.map((pr) => `#${pr.number}`).join(" ")}</small>
+                        <small>
+                          <LoadLinks prs={item.prs} person={item.person} what="PR aberto" />
+                        </small>
                       </td>
                       <td>
                         {item.github ? <strong>{item.reviews.length}</strong> : <span className="tv-dim">—</span>}
-                        <small>{item.reviews.map((pr) => `#${pr.number}`).join(" ")}</small>
+                        <small>
+                          <LoadLinks prs={item.reviews} person={item.person} what="revisão pedida" />
+                        </small>
                       </td>
                     </tr>
                   ))}
