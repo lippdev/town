@@ -119,7 +119,8 @@ try {
   await check("o cenário abre no prédio, com o selo Simulação e o relógio do dia", async () => {
     assert.equal((await office(page)).buildingView, "exterior");
     await page.waitForFunction(() => window.__HQ_TECH_QA__);
-    assert.ok(await page.locator("[data-tech-clock] .tech-chip").isVisible());
+    // O relógio mora num pedaço de JS à parte: pode chegar depois do gancho da prova.
+    await page.locator("[data-tech-clock] .tech-chip").waitFor({ state: "visible", timeout: after(30000) });
     assert.match(await page.locator("[data-sim-time]").textContent(), /ter 10\/11 · 09:20/);
     assert.ok(await page.locator('[data-floor-selector] [data-view="expansao-2"]').isVisible(), "a Tecnologia tem botão próprio no seletor");
     await shot(page, "exterior-cenario");
