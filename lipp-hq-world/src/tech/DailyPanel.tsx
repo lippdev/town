@@ -94,7 +94,9 @@ export function DailyPanel() {
   const reviewersContext = freeReviewers.size
     ? `${freeReviewers.size} ${freeReviewers.size === 1 ? "pessoa livre" : "pessoas livres"} para revisar`
     : `ninguém livre agora${Number.isFinite(nextFree) ? ` · próxima às ${clockLabel(nextFree)}` : ""}`;
-  const action = board.blocked.length + board.reviews.length + board.stale.length + board.withoutCriteria.length + board.withoutAuthor.length;
+  // HUs e PRs distintos: um PR sem autor e esperando revisão é um PR só, como uma HU travada sem critério.
+  const actionStories = new Set([...board.blocked, ...board.stale, ...board.withoutCriteria].map((item) => item.story.id));
+  const actionPrs = new Set([...board.reviews, ...board.withoutAuthor].map((item) => item.pr.number));
   const presenceCount = (kind: PlaceKind) => board.presence[kind].length;
   const firstBlocked = board.blocked[0];
   return (
@@ -112,9 +114,12 @@ export function DailyPanel() {
           </nav>
 
           <div className="tv-columns-2">
-            <div className="tv-col" aria-label="Precisa de ação">
+            <div className="tv-col">
               <h3 className="tv-group">
-                Precisa de ação <small data-panel-action-count>{action}</small>
+                Precisa de ação{" "}
+                <small data-panel-action-count data-stories={actionStories.size} data-prs={actionPrs.size}>
+                  {actionStories.size} {actionStories.size === 1 ? "HU" : "HUs"} · {actionPrs.size} {actionPrs.size === 1 ? "PR" : "PRs"}
+                </small>
               </h3>
               <PanelList name="travadas" title="HUs travadas" count={board.blocked.length} empty="Nenhuma HU travada.">
                 {board.blocked.map((item) => (
@@ -260,7 +265,7 @@ export function DailyPanel() {
               </PanelList>
             </div>
 
-            <div className="tv-col" aria-label="Contexto">
+            <div className="tv-col">
               <Section title="Saúde dos épicos" count={board.epics.length} id="painel-epicos">
                 <ul className="tech-list tv-list" data-panel-list="epicos">
                   {board.epics.map((item) => (
