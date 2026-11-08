@@ -566,12 +566,16 @@ try {
     await views.click('[data-view-tab="predio"]');
     await viewIs(views, "predio");
     await views.waitForFunction(() => !window.__HQ_TECH_QA__.render().paused);
+    const start = (await tech(views, "render")).frames;
+    const startedAt = Date.now();
+    await views.waitForFunction((count) => window.__HQ_TECH_QA__.render().frames >= count + 2, start, { timeout: after(60000) });
+    const frames = (await tech(views, "render")).frames;
+    report.visoes.quadrosPorSegundo = { predio: (frames - start) / ((Date.now() - startedAt) / 1000) };
     const sample = async () => {
       const start = (await tech(views, "render")).frames;
       await views.waitForTimeout(3000);
       return ((await tech(views, "render")).frames - start) / 3;
     };
-    report.visoes.quadrosPorSegundo = { predio: await sample() };
     const running = (await tech(views, "render")).loop;
     await views.click('[data-view-tab="painel"]');
     await viewIs(views, "painel");
