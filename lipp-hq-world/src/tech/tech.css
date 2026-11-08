@@ -133,6 +133,63 @@
 .tech-notice .panel-close { margin-left: auto; }
 .tech-notice.erro { color: #ec8f7a; }
 
+/* Seção do squad na barra lateral */
+.office-section-toggle .office-chip.tech-chip {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.office-roster-bot.tech-squad-bot {
+  height: auto;
+  min-height: 44px;
+  padding: 5px 8px;
+  align-items: center;
+}
+.tech-squad-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.tech-squad-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.tech-squad-name {
+  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--ui-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tech-squad-role {
+  color: var(--ui-dim);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tech-squad-state {
+  margin-left: 0 !important;
+  font-size: 11.5px;
+  color: var(--ui-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Tela estreita: fica o selo e a hora. Demonstração e o link da frota cedem o lugar. */
 @media (max-width: 760px) {
   .tech-speeds, .tech-clock .office-icon, .tech-date { display: none; }
