@@ -305,7 +305,7 @@ valem.
   perturbe"), Em reunião · Daily até 09:45, Em huddle, Em chamada, Fora/Férias. Clicar em qualquer membro
   abre a gaveta dele (e navega para o andar da Tecnologia caso esteja em outro pavimento); no celular
   (largura <= 480px), fecha a barra lateral ao selecionar. A busca filtra por nome e papel (ex.: "QA"
-  isola o Rafael). Recolher a seção persiste em `localStorage` (`hq:collapsed-teams`). O carregamento
+  isola o Rafael). Recolher a seção persiste em `localStorage` (`COLLAPSED_TEAMS_KEY` via `toggleTeam`). O carregamento
   é feito por slot dinâmico (`lazy`), garantindo que sem cenário nada de `src/tech/` seja baixado.
 - **Esc** fecha primeiro a gaveta do cenário (`escapeLayers`), depois segue como no resto do prédio.
 
