@@ -1,7 +1,7 @@
 # Trabalho em andamento
 
 Ponto de retomada para continuar de outro computador ou em outra sessão. Atualize ao pausar
-ou ao fechar um ciclo. Última atualização: 2026-11-07.
+ou ao fechar um ciclo. Última atualização: 2026-11-08.
 
 ## Onde estamos
 
@@ -29,15 +29,17 @@ recebe conectores de verdade sem mexer na cena.
 | - | - | - |
 | [#111](https://github.com/lippdev/town/pull/111) | `feat/tecnologia-modelo` → `main` | Pronta para revisão: modelo, identidade, simulação determinística, seletores, `ActivitySource` |
 | [#112](https://github.com/lippdev/town/pull/112) | `feat/tecnologia-andar` → `feat/tecnologia-modelo` | Pronta para revisão: andar da Tecnologia, quadro de épicos, gavetas, relógio da simulação; `qa:tecnologia` completo para a cena |
+| [#114](https://github.com/lippdev/town/pull/114) | `feat/tecnologia-visoes` → `feat/tecnologia-andar` | Pronta para revisão: visões Projetos e Painel com os mesmos dados; prova "o prédio e o painel dizem o mesmo" |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
    cena, inclusive em máquina lenta sem GPU. As provas de "mesmas respostas no prédio e no
    painel", das três ações e do cadastro do GitHub vão com as PRs que criam essas telas (passos
    2 e 3), que acrescentam suas provas ao roteiro.
-2. `feat/tecnologia-visoes`, a partir da #112: visões **Projetos** (árvore estilo Notion) e
-   **Painel** (dashboard com os mesmos dados, usando `trackingAnswers`). O painel não pode ser
-   propositalmente fraco: ele existe para a comparação ser justa.
+2. ~~`feat/tecnologia-visoes`~~ (#114): seletor **Prédio | Projetos | Painel** (`?visao=`),
+   árvore estilo Notion e painel da daily, os dois montados pelos seletores de `trackingAnswers`;
+   abrir um item usa a gaveta do prédio; o render 3D para com a visão aberta. O `qa:tecnologia`
+   prova em quatro horas do dia que painel, árvore e prédio dizem o mesmo.
 3. `feat/tecnologia-acoes`: interface de cobrar o responsável, reatribuir HU, pedir ao bot, e a
    tela de cadastro com vínculo do GitHub. A lógica já está no modelo, testada.
 4. Squad na barra lateral.
@@ -111,6 +113,8 @@ Armadilhas conhecidas:
 - **Hora:** o céu segue o relógio. Roteiros que medem pixels fixam `&hora=12:00`.
 - **Chegada do chefe:** é sorteada (carro ou helicóptero). Roteiros fixam `&chegada=carro`.
 - **Paralelo:** rodar vários roteiros ao mesmo tempo já derrubou o navegador; rode um por vez.
+  Com mais de um subagente na máquina, confira antes `ps -eo args | grep "[n]ode scripts/visual-qa"`
+  e só comece com ele vazio: dois roteiros juntos estouram capturas e esperas dos dois lados.
 - **Hora simulada:** roteiros que dependem da hora simulada pausam e saltam o relógio
   (`__HQ_TECH_QA__.pause` e `jumpToClock`), em vez de esperar o dia andar, e ligam o tempo real da
   cena (`realTime`) para o squad não andar em câmera lenta a um quadro por segundo; nesta classe de
