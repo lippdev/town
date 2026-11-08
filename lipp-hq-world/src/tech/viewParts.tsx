@@ -14,9 +14,19 @@ import "./tech-views.css";
 /** Pedaços comuns às visões Projetos e Painel: ir até a origem, o Esc, saúde, pessoa e cabeçalho. */
 // ─── Navegar até a origem ───────────────────────────────────────────────────
 
+/** Quem abriu a gaveta a partir de uma visão: o foco volta para ele quando ela fecha. */
+let opener: HTMLElement | null = null;
+export function takeOpener(): HTMLElement | null {
+  const element = opener;
+  opener = null;
+  return element;
+}
+
 /** Abre a gaveta que o prédio já tem: a do épico (com a HU em destaque) ou a da pessoa. */
 export function openDestination(destination: Destination | null) {
   if (!destination) return;
+  const active = typeof document === "undefined" ? null : document.activeElement;
+  if (active instanceof HTMLElement && active.closest("[data-tech-view]")) opener = active;
   if (destination.kind === "epic") {
     useHQStore.getState().clearSelection();
     useOfficeStore.getState().clearHuman();

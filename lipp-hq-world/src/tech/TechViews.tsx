@@ -1,10 +1,11 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useHQStore } from "@/state/useHQStore";
 import { Building2, FolderTree, LayoutDashboard } from "lucide-react";
 import { escapeLayers, useOfficeStore } from "@/world/office/officeStore";
 import { DailyPanel } from "./DailyPanel";
 import { ProjectsView } from "./ProjectsView";
 import { TECH_VIEWS, TECH_VIEW_LABEL, useTechStore, type TechView } from "./techStore";
-import { closeViewLayer, escapeFromView } from "./viewParts";
+import { closeViewLayer, escapeFromView, takeOpener } from "./viewParts";
 
 /**
  * As visões Projetos e Painel do cenário: os mesmos dados da cena, lidos do mesmo `useTechStore`,
@@ -35,6 +36,13 @@ export function TechViewSwitch() {
     } else if (event.key === "Home" || event.key === "End") {
       event.preventDefault();
       choose(event.key === "Home" ? TECH_VIEWS[0] : TECH_VIEWS[TECH_VIEWS.length - 1]!, true);
+    } else if (event.key === "Tab" && !event.shiftKey && view !== "predio") {
+      // A visão vem depois da navegação lateral no DOM: o Tab da aba vai direto para o painel dela.
+      const panel = document.getElementById(PANEL_ID[view]);
+      if (panel) {
+        event.preventDefault();
+        panel.focus();
+      }
     } else escapeFromView(event);
   };
   return (
@@ -70,9 +78,18 @@ export function TechViewSwitch() {
 
 // ─── A camada ────────────────────────────────────────────────────────────────
 
+/** O que recebe o Tab dentro da visão, para saber se o Shift+Tab sai dela. */
+const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+const focusLost = () => !document.activeElement || document.activeElement === document.body;
+
 /** Projetos ou Painel por cima da cena. O Esc fecha a gaveta antes; depois volta ao prédio. */
 export function TechViewLayer() {
   const view = useTechStore((store) => store.view);
+  const section = useRef<HTMLElement>(null);
+  const epic = useTechStore((store) => Boolean(store.selectedEpicId));
+  const human = useOfficeStore((state) => Boolean(state.selectedHumanId));
+  const bot = useHQStore((state) => Boolean(state.selectedBotId));
+  const drawer = epic || human || bot;
   useEffect(() => {
     escapeLayers.add(closeViewLayer);
     return () => {
@@ -85,9 +102,48 @@ export function TechViewLayer() {
     const id = useOfficeStore.getState().selectedHumanId;
     if (id?.startsWith("squad-")) useOfficeStore.getState().selectHuman(id);
   }, [view]);
+  // Saindo da visão (Esc), o foco que estava nela cai no body: volta para a aba ativa.
+  const lastView = useRef(view);
+  useEffect(() => {
+    const was = lastView.current;
+    lastView.current = view;
+    if (was !== view && view === "predio" && focusLost()) document.getElementById(tabId(view))?.focus();
+  }, [view]);
+  // Fechando a gaveta (X ou Esc) com a visão aberta: o foco volta a quem a abriu, ou ao painel.
+  const hadDrawer = useRef(drawer);
+  useEffect(() => {
+    const was = hadDrawer.current;
+    hadDrawer.current = drawer;
+    if (!was || drawer || view === "predio" || !focusLost()) return;
+    const opener = takeOpener();
+    (opener?.isConnected && section.current?.contains(opener) ? opener : section.current)?.focus({ preventScroll: true });
+  }, [drawer, view]);
   if (view === "predio") return null;
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Tab" && event.shiftKey && section.current) {
+      // Do começo do painel, o Shift+Tab volta à aba que o controla, e não à navegação lateral.
+      const first = section.current.querySelector<HTMLElement>(TABBABLE);
+      if (event.target === section.current || event.target === first) {
+        event.preventDefault();
+        document.getElementById(tabId(view))?.focus();
+      }
+      return;
+    }
+    escapeFromView(event);
+  };
   return (
-    <section className="tech-view" id={PANEL_ID[view]} role="tabpanel" aria-labelledby={tabId(view)} data-tech-view={view} data-scene-keys-off onKeyDown={escapeFromView}>
+    <section
+      ref={section}
+      className="tech-view"
+      id={PANEL_ID[view]}
+      role="tabpanel"
+      aria-labelledby={tabId(view)}
+      tabIndex={-1}
+      data-tech-view={view}
+      data-scene-keys-off
+      data-scene-cover
+      onKeyDown={onKeyDown}
+    >
       {view === "projetos" ? <ProjectsView /> : <DailyPanel />}
     </section>
   );
