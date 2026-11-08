@@ -10,6 +10,7 @@ import { AVAILABILITY_LABEL, CI_LABEL, EPIC_STATUS_LABEL, REVIEW_LABEL, ROLE_LAB
 import { useDrawerInset } from "@/components/office/OfficeHud";
 import { useHQStore } from "@/state/useHQStore";
 import { escapeLayers, useOfficeStore } from "@/world/office/officeStore";
+import { ActionPlace, PrActions, StoryActions } from "./TechActions";
 import { emailOfHuman, squadHumanId, squadHumans } from "./techPeople";
 import { HEALTH_COLOR, TECH_FLOOR_ID } from "./techPlaces";
 import { techSceneRuntime } from "./TechScene";
@@ -96,11 +97,16 @@ function useTechBoot() {
     }, 200);
     window.__HQ_TECH_QA__ = techQaApi();
     // Épico e pessoa dividem a gaveta: abrir um fecha o outro.
+    const yieldDrawer = () => {
+      useTechStore.getState().selectEpic(null);
+      useTechStore.getState().closeRegistry();
+      useTechStore.getState().setOpenAction(null);
+    };
     const offOffice = useOfficeStore.subscribe((state, previous) => {
-      if (state.selectedHumanId && state.selectedHumanId !== previous.selectedHumanId) useTechStore.getState().selectEpic(null);
+      if (state.selectedHumanId && state.selectedHumanId !== previous.selectedHumanId) yieldDrawer();
     });
     const offBots = useHQStore.subscribe((state, previous) => {
-      if (state.selectedBotId && state.selectedBotId !== previous.selectedBotId) useTechStore.getState().selectEpic(null);
+      if (state.selectedBotId && state.selectedBotId !== previous.selectedBotId) yieldDrawer();
     });
     return () => {
       window.clearInterval(timer);
@@ -170,7 +176,7 @@ const PR_STATE_LABEL = { open: "aberto", merged: "mesclado", closed: "fechado" }
 const reviewerName = (state: ActivityState, login: string) => personOf(state, state.people.find((person) => person.github === login)?.email ?? null)?.name ?? login;
 
 /** Um PR numa linha. `detailed` acrescenta o estado e todas as revisões, para a árvore de Projetos. */
-export function PrLine({ state, pr, detailed = false }: { state: ActivityState; pr: PullRequest; detailed?: boolean }) {
+export function PrLine({ state, pr, detailed = false, actions }: { state: ActivityState; pr: PullRequest; detailed?: boolean; actions?: ReactNode }) {
   const last = pr.reviews.at(-1);
   return (
     <li className="tech-row" data-pr={pr.number} data-pr-state={pr.state}>
@@ -194,11 +200,12 @@ export function PrLine({ state, pr, detailed = false }: { state: ActivityState; 
         </small>
         {pr.summary && <small className="tech-summary" data-pr-summary>Resumo do {pr.summary.by === "pulse" ? "Pulse" : pr.summary.by}: {pr.summary.text}</small>}
       </span>
+      {actions}
     </li>
   );
 }
 
-export function StoryLine({ story, onOpen }: { story: Story; onOpen?: () => void }) {
+export function StoryLine({ story, onOpen, actions }: { story: Story; onOpen?: () => void; actions?: ReactNode }) {
   const criteria = story.criteria.length ? `${story.criteria.filter((criterion) => criterion.done).length}/${story.criteria.length} critérios` : "sem critério";
   const body = (
     <>
@@ -221,6 +228,7 @@ export function StoryLine({ story, onOpen }: { story: Story; onOpen?: () => void
       ) : (
         body
       )}
+      {actions}
     </li>
   );
 }
@@ -240,6 +248,7 @@ function PersonDrawer() {
   const history = personHistory(state, email, 60).filter((event) => !isNoise(event)).slice(0, 14);
   const unknownLogins = !person.github ? [...new Set(state.prs.filter((pr) => !prAuthor(directory(state), pr)).map((pr) => pr.author))] : [];
   return (
+    <ActionPlace.Provider value="gaveta-pessoa">
     <aside ref={node} className="drawer office-demo-panel tech-drawer" aria-label={`Pessoa ${person.name}`} data-tech-person={email}>
       <header className="drawer-head">
         <div className="drawer-title">
@@ -290,7 +299,7 @@ function PersonDrawer() {
         <Section title="HUs" count={load.stories.length}>
           <ul className="tech-list">
             {load.stories.map((story) => (
-              <StoryLine key={story.id} story={story} onOpen={() => useTechStore.getState().selectEpic(story.epicId, story.id)} />
+              <StoryLine key={story.id} story={story} onOpen={() => useTechStore.getState().selectEpic(story.epicId, story.id)} actions={<StoryActions story={story} />} />
             ))}
             {load.stories.length === 0 && <li className="tech-empty">Nenhuma HU aberta no nome dela.</li>}
           </ul>
@@ -299,7 +308,7 @@ function PersonDrawer() {
           {person.github ? (
             <ul className="tech-list">
               {load.prs.map((pr) => (
-                <PrLine key={pr.number} state={state} pr={pr} />
+                <PrLine key={pr.number} state={state} pr={pr} actions={<PrActions pr={pr} />} />
               ))}
               {load.prs.length === 0 && <li className="tech-empty">Nenhum PR aberto por @{person.github}.</li>}
             </ul>
@@ -332,6 +341,7 @@ function PersonDrawer() {
         <p className="panel-warn">Pessoa fictícia, num dia simulado. Mensagens entre pessoas não entram aqui: só status, presença, agenda e o que o Lipp HQ enviou.</p>
       </div>
     </aside>
+    </ActionPlace.Provider>
   );
 }
 
@@ -362,6 +372,7 @@ function EpicDrawer() {
   const project = state.projects.find((item) => item.id === epic.projectId);
   const suggested = githubSuggestedStatus(state, epic);
   return (
+    <ActionPlace.Provider value="gaveta-epico">
     <aside ref={node} className="drawer office-demo-panel tech-drawer" aria-label={`Épico ${epic.title}`} data-tech-epic={epic.id}>
       <header className="drawer-head">
         <div className="drawer-title">
@@ -412,6 +423,7 @@ function EpicDrawer() {
                     "sem responsável"
                   )}
                 </p>
+                <StoryActions story={story} />
                 {story.criteria.length > 0 && (
                   <ul className="tech-criteria">
                     {story.criteria.map((criterion) => (
@@ -424,7 +436,7 @@ function EpicDrawer() {
                 )}
                 <ul className="tech-list">
                   {prsOfStory(state, story.id).map((pr) => (
-                    <PrLine key={pr.number} state={state} pr={pr} />
+                    <PrLine key={pr.number} state={state} pr={pr} actions={<PrActions pr={pr} />} />
                   ))}
                 </ul>
               </li>
@@ -433,6 +445,7 @@ function EpicDrawer() {
         </Section>
       </div>
     </aside>
+    </ActionPlace.Provider>
   );
 }
 
