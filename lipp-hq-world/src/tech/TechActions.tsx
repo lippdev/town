@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { ArrowRightLeft, Bot, Megaphone, type LucideIcon } from "lucide-react";
-import { assigneeOptions, botRequestPreview, lastBotRequest, nudgePreview, nudgeStatus, type NudgeReason, type RequestableTask } from "@/activity/actions";
+import { NUDGE_CHANNEL, assigneeOptions, botRequestPreview, lastBotRequest, nudgePreview, nudgeStatus, type NudgeReason, type RequestableTask } from "@/activity/actions";
 import { PLACE_LABEL, personOf, prsAwaitingReview } from "@/activity/selectors";
 import type { AppAction } from "@/activity/source";
 import { clockLabel } from "@/activity/time";
@@ -94,7 +94,6 @@ function Panel({ panel, title, kind, children, confirm }: { panel: PanelHandle; 
 
 const NUDGE_REASON: Record<NudgeReason, string> = {
   trava: "É quem a trava espera",
-  qa: "A HU está em QA: a cobrança vai para o QA",
   responsavel: "É quem responde pela HU",
 };
 
@@ -128,7 +127,7 @@ export function NudgeAction({ story }: { story: Story }) {
                 if (run(action).ok) panel.close();
               }}
             >
-              Enviar a {name}
+              Enviar no {NUDGE_CHANNEL}
             </button>
           }
         >
@@ -137,10 +136,12 @@ export function NudgeAction({ story }: { story: Story }) {
             {later ? `: a resposta vem quando ${name} puder olhar o Slack` : ""}
           </p>
           <figure className="ta-message" data-nudge-message>
-            <figcaption>Mensagem do Lipp HQ no Slack, para {preview.person.name}</figcaption>
+            <figcaption>
+              Mensagem do Lipp HQ no {NUDGE_CHANNEL}, marcando {preview.person.name}
+            </figcaption>
             <blockquote>{preview.text}</blockquote>
           </figure>
-          <p className="ta-note">É o único texto que sai: a mensagem do próprio Lipp HQ. Ninguém escreve em nome de ninguém.</p>
+          <p className="ta-note">Sai no canal do squad, à vista do time, e não por mensagem direta. É o único texto que sai: a mensagem do próprio Lipp HQ. Ninguém escreve em nome de ninguém.</p>
         </Panel>
       )}
     </>

@@ -104,7 +104,7 @@ export function involves(state: ActivityState, event: ActivityEvent, email: stri
   const person = resolveActor(directory(state), event.actor);
   if (person?.email === email) return true;
   if (event.subject.kind === "person" && event.subject.email === email) return true;
-  if (event.type === "slack.app_message" && event.data.to === email) return true;
+  if (event.type === "slack.app_message" && (event.data.to === email || event.data.mentions?.includes(email))) return true;
   if (event.type === "notion.story_assigned" && event.data.assignee === email) return true;
   const login = personOf(state, email)?.github;
   return Boolean(login && event.type === "github.review_requested" && event.data.reviewer === login);

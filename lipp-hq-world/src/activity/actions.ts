@@ -1,48 +1,53 @@
 import type { ActivityState } from "./events";
 import { resolveActor } from "./identity";
 import { botTasksRunning, directory, firstName, personLoad, personOf, prOf, reviewCandidates, storyOf, whereIs, type PersonLoad, type PlaceKind } from "./selectors";
-import { AUTOMATION_BOTS } from "./squad";
+import { AUTOMATION_BOTS, DAILY_CHANNEL } from "./squad";
 import type { AppAction } from "./source";
-import { ageLabel } from "./time";
+import { sinceLabel } from "./time";
 import { BOT_TASK_LABEL, STORY_STATUS_LABEL, type BotTask, type Instant, type Person, type Story, type Subject } from "./types";
 
 /**
  * O que a tela precisa saber em volta de cada ação: antes de enviar (para quem vai, o que diz, quem
  * pode receber, se o bot está livre) e depois (a cobrança está esperando resposta?). A simulação usa
- * as mesmas funções para decidir, então o botão "Cobrar Marina" nunca cobra outra pessoa.
+ * as mesmas funções para decidir, então o botão "Cobrar Marina" nunca cobra outra pessoa. A cobrança
+ * sai no canal do squad, marcando a pessoa, nunca por mensagem direta.
  */
 
 // ─── Cobrar ──────────────────────────────────────────────────────────────────
 
-/** Por que essa pessoa: é quem a trava espera, é o QA da HU em QA, ou é a responsável. */
-export type NudgeReason = "trava" | "qa" | "responsavel";
+/** Por que essa pessoa: é quem a trava espera, ou é quem responde pela HU. */
+export type NudgeReason = "trava" | "responsavel";
 
-export function nudgeTarget(state: ActivityState, story: Story): { email: string; reason: NudgeReason } | null {
+export function nudgeTarget(_state: ActivityState, story: Story): { email: string; reason: NudgeReason } | null {
   if (story.blocked?.waitingOn) return { email: story.blocked.waitingOn, reason: "trava" };
-  const qa = state.people.find((person) => person.role === "qa")?.email ?? null;
-  if (story.status === "qa" && qa) return { email: qa, reason: "qa" };
   return story.assignee ? { email: story.assignee, reason: "responsavel" } : null;
 }
 
+/** Onde a cobrança sai: no canal do squad, à vista do time, marcando quem precisa agir. */
+export const NUDGE_CHANNEL = `#${DAILY_CHANNEL}`;
+
 /**
- * O motivo da trava como entra na mensagem, depois de "esperando você.": o Notion costuma escrever
- * "Esperando decisão de produto: o link vale…", e repetir o "esperando" lê mal. Vira
- * "decisão de produto — o link vale…".
+ * O motivo da trava como o Notion escreve ("Esperando decisão de produto: o link vale…") partido em
+ * o que se espera ("decisão de produto") e o porquê ("o link vale…"). Sem esse formato, só o porquê.
  */
-export function nudgeReason(reason: string): string {
+export function blockerParts(reason: string): { what: string | null; why: string } {
   const text = reason.trim();
-  const waiting = /^esperando\s+/i.exec(text);
-  const rest = waiting ? text.slice(waiting[0].length) : text;
-  const lead = waiting ? rest.charAt(0).toLocaleLowerCase("pt-BR") + rest.slice(1) : rest;
-  return lead.replace(/:\s+/, " — ");
+  const match = /^esperando\s+(.+?):\s+(.+)$/i.exec(text);
+  return match ? { what: match[1]!, why: match[2]! } : { what: null, why: text.replace(/^esperando\s+/i, "") };
 }
 
-/** A mensagem do Lipp HQ para quem destrava. É o único texto que a ação cria. */
+/**
+ * A mensagem do Lipp HQ no canal do squad, marcando quem destrava. Tom leve: diz o que espera e
+ * desde quando, e pergunta se a pessoa consegue olhar. É o único texto que a ação cria.
+ */
 export function nudgeText(state: ActivityState, story: Story, email: string, now: Instant = state.at): string {
   const name = firstName(state, email);
-  return story.blocked
-    ? `Oi, ${name}! A ${story.id} (${story.title}) está travada ${ageLabel(now - story.blocked.since)} esperando você. Motivo: ${nudgeReason(story.blocked.reason)}`
-    : `Oi, ${name}! A ${story.id} (${story.title}) está em "${STORY_STATUS_LABEL[story.status]}" sem atualização ${ageLabel(now - story.updatedAt)}. Ainda é isso?`;
+  if (story.blocked) {
+    const { what, why } = blockerParts(story.blocked.reason);
+    const waiting = what ? `está esperando uma ${what} sua` : "está travada esperando você";
+    return `@${name}, a ${story.id} ${waiting} desde ${sinceLabel(story.blocked.since, now)}, consegue olhar? Motivo: ${why}`;
+  }
+  return `@${name}, a ${story.id} (${story.title}) está em "${STORY_STATUS_LABEL[story.status]}" sem atualização desde ${sinceLabel(story.updatedAt, now)}. Ainda é isso, ou tem algo travando?`;
 }
 
 export interface NudgePreview {
@@ -64,6 +69,7 @@ export function nudgePreview(state: ActivityState, storyId: string): NudgePrevie
 }
 
 export interface NudgeStatus {
+  /** Quem foi marcado na cobrança. */
   to: string;
   at: Instant;
   text: string;
@@ -88,18 +94,19 @@ export function nudgeStatus(state: ActivityState, storyId: string): NudgeStatus 
   if (index < 0) return null;
   const sent = state.feed[index]!;
   if (sent.type !== "slack.app_message") return null;
+  const to = sent.data.mentions?.[0] ?? sent.data.to;
   const dir = directory(state);
   let answeredAt: Instant | null = null;
   for (const event of state.feed.slice(index + 1)) {
     if (event.subject.kind !== "story" || event.subject.id !== storyId) continue;
-    const byTarget = event.source === "notion" && resolveActor(dir, event.actor)?.email === sent.data.to;
+    const byTarget = event.source === "notion" && resolveActor(dir, event.actor)?.email === to;
     const resolved = event.type === "notion.story_unblocked" || (event.type === "notion.story_status" && event.data.status === "concluida");
     if (byTarget || resolved) {
       answeredAt = event.at;
       break;
     }
   }
-  return { to: sent.data.to, at: sent.at, text: sent.data.text, answeredAt };
+  return { to, at: sent.at, text: sent.data.text, answeredAt };
 }
 
 // ─── Reatribuir ──────────────────────────────────────────────────────────────
@@ -167,7 +174,7 @@ export function botRequestPreview(state: ActivityState, task: RequestableTask, t
     } else {
       const free = reviewCandidates(state, pr).filter((candidate) => !pr.reviewers.includes(candidate.person.github!));
       plan = free.length
-        ? `${bot} pede a revisão do PR #${pr.number} a quem está livre agora pela agenda (${free.map((candidate) => candidate.person.name.split(" ")[0]).join(", ")}) e manda a mensagem do app.`
+        ? `${bot} pede a revisão do PR #${pr.number} a quem está livre agora pela agenda (${free.map((candidate) => candidate.person.name.split(" ")[0]).join(", ")}) e marca a pessoa no ${NUDGE_CHANNEL}.`
         : `Ninguém está livre agora pela agenda: ${bot} confere de novo quando começar e explica quem está ocupado.`;
     }
   } else if (target.kind === "story") {
