@@ -250,6 +250,23 @@ Puro TypeScript, sem React nem three, coberto por `tests/unit/activity.test.ts`.
   ponto. `trackingAnswers` junta as respostas: é por ela que a prova confere que o prédio e o painel
   dizem o mesmo.
 
+### O squad e os projetos
+
+O squad tem o formato do time real, uma pessoa por papel, com nomes fictícios: **Marina Lopes** (PO
+sênior), **Bianca Sales** (PO júnior, de férias), **Caio Rezende** (UX), **Renata Okabe** (tech lead),
+**Diego Martins** (dev back-end), **Luana Ferraz** (dev front-end) e **Otávio Prado** (diretor de
+tecnologia), que senta no andar junto com o squad e não é convidado da daily. Revisa código quem é dev ou
+tech lead; PO, UX e diretor não.
+
+Todos os projetos são produtos do app central **HubSmart**, cada um com épicos nas trilhas de discovery e
+delivery:
+
+| Projeto | Épicos |
+| - | - |
+| HubSmart · Franquias (franqueados e gestão das franquias) | E-1 Acesso do franqueado sem senha, E-2 Boleto de royalties do franqueado, E-3 Pesquisa com franqueados |
+| HubSmart · Previdência Icatu (contratação com gestão de admin) | E-4 Contratação de previdência Icatu, E-5 Gestão de admin da previdência |
+| HubSmart · Vendedor BeSmart | E-6 Comissão do vendedor BeSmart |
+
 ### A simulação
 
 `SimulatedDay` gera um dia de trabalho, terça 10/11/2026 das 9h às 18h, determinístico pela semente
@@ -257,13 +274,15 @@ Puro TypeScript, sem React nem three, coberto por `tests/unit/activity.test.ts`.
 mexe nos minutos e no movimento dos canais; as situações são sempre as mesmas, para haver o que mostrar.
 Na velocidade 1, o dia passa em 15 minutos.
 
-- A HU-27 está travada desde ontem esperando decisão da PM, que passa o dia em reuniões: o épico Login
-  sem senha só destrava depois do refinamento, a menos que alguém cobre antes.
-- O PR #142 está aberto há quatro dias sem revisão, até a rotina do Pulse cobrar quem está livre.
-- O CI do PR #145 quebra durante o foco da Luana e é consertado; a Renata aprova depois do huddle.
-- A daily é o huddle do canal do squad às 09:30 (ver abaixo); o refinamento na sala; chamadas remotas na
-  mesa; três huddles; almoço; a Bianca de férias, com HU no nome dela; o Tiago chega depois da daily e
-  abre PR com um login que não vinculou.
+- A HU-27 está travada desde ontem às 17h esperando decisão da PO sênior, que passa o dia em reuniões:
+  o épico Acesso do franqueado sem senha só destrava depois do refinamento, a menos que alguém cobre antes.
+- O PR #142 está aberto há quatro dias sem revisor; na daily, a tech lead é quem fica livre às 09:45, e
+  a rotina do Pulse a marca no canal do squad às 11h.
+- A Luana abre PRs com um login do GitHub que não vinculou: o #145 (o CI quebra durante o foco dela e é
+  consertado; a Renata aprova depois do huddle) e o #147, à tarde, aparecem com "autor não identificado".
+- A daily é o huddle do #squad-hubsmart às 09:30 (ver abaixo); o refinamento na sala; chamadas remotas na
+  mesa (o diretor tem comitê, planejamento e a reunião com a Icatu); três huddles; almoço; a PO júnior de
+  férias, com HU no nome dela. Sem QA no squad, a PO aceita ou devolve o que está em QA.
 - Deploys em homologação e em produção; um épico de discovery é validado e outro passa para o delivery.
 - Rotinas dos bots da Operação: o Forge prepara a pauta da daily, o Atlas atualiza o status dos épicos a
   partir do GitHub, e o Pulse cobra a revisão parada. O resultado é calculado pelos mesmos seletores.
@@ -272,8 +291,8 @@ Na velocidade 1, o dia passa em 15 minutos.
 
 A daily está na agenda (convite das 09:30 às 09:45), mas acontece num huddle do canal do squad
 (`huddleChannel` no evento da agenda). Às 09:30 a tech lead abre o huddle, quem está no escritório entra
-nos dois primeiros minutos e o Caio entra atrasado, às 09:36 ou 09:37 pela semente. A Bianca (férias) e o
-Tiago (chega às 10:12) não entram.
+nos dois primeiros minutos e o Caio entra atrasado, às 09:36 ou 09:37 pela semente. A Bianca (férias) não
+entra; o diretor não é convidado e fica na mesa.
 
 - **Na sala está quem entrou no huddle**, convidado ou não (`whereIs`). O convidado que não entrou fica
   onde está; ninguém vai à sala antes de entrar, e os lugares seguem a ordem de entrada.
@@ -282,15 +301,15 @@ Tiago (chega às 10:12) não entram.
   de 09:38, "ausente". Quem entra atrasado sai da lista e vai para a sala. Quem entrou e saiu antes do
   fim não vira ausente.
 - Um seletor só, `dailyAttendance(state, at)`, alimenta os três lugares: o **quadro da daily** sobre a
-  sala de reunião no andar, a seção **"Daily · huddle em #squad-portal"** no topo do Painel (com onde
+  sala de reunião no andar, a seção **"Daily · huddle em #squad-hubsmart"** no topo do Painel (com onde
   está quem não entrou: férias, fora, na mesa) e o rótulo da **barra lateral** ("Daily · ainda não
   entrou", "Daily · ausente"). Fora da daily, nada aparece.
 - O Teams não marca "em reunião" na daily: o huddle é do Slack.
 
 `qa:tecnologia` prova num bloco à parte (`HQ_ONLY=daily`), com o relógio parado e movimento reduzido:
-às 09:35 o Caio, o Tiago e a Bianca aparecem como "ainda não entrou" no quadro, no Painel e na barra,
-iguais a `dailyAttendance`; às 09:40 a Bianca e o Tiago aparecem como ausentes nos três e o Caio está
-sentado na sala; às 09:46 nada fica marcado.
+às 09:35 o Caio e a Bianca aparecem como "ainda não entrou" no quadro, no Painel e na barra, iguais a
+`dailyAttendance`, e o diretor em lista nenhuma; às 09:40 a Bianca aparece como ausente nos três e o Caio
+está sentado na sala; às 09:46 nada fica marcado.
 
 ### O andar da Tecnologia
 
@@ -301,7 +320,7 @@ linha da Expansão. `?hora_sim=HH:MM` abre o dia numa hora, `?velocidade=1|2|4|8
 valem.
 
 - **Planta** (`TECH_FLOOR` em `officeExpansion.ts`): o quadro dos épicos na parede do fundo, duas ilhas
-  com as oito mesas do squad, a sala de reunião com oito lugares (quatro de frente para a câmera) e o
+  com as oito mesas (sete do squad, com o diretor), a sala de reunião com oito lugares (quatro de frente para a câmera) e o
   canto do huddle perto dos elevadores. Não há figurante: quem está ali é o squad simulado.
 - **Cada pessoa** é uma `HumanFigure` com aparência própria (`src/tech/techPeople.ts`) e uma mesa. O plano
   (`personPlans`) diz onde ela deve estar: reunião presencial na agenda leva à sala (oito minutos do
@@ -321,16 +340,16 @@ valem.
 - **A gaveta da pessoa**: agora (o que faz, até quando, Teams e Slack), agenda do dia, HUs, PRs abertos,
   revisões pedidas e o histórico do dia. Quem não vinculou o GitHub vê "GitHub não vinculado" e **Vincular**, que
   abre o cadastro nessa pessoa. A gaveta não sugere login: o app não sabe de quem é um login sem vínculo
-  (os logins sem pessoa ficam no cadastro, onde se escolhe a quem vincular). Para quem abre PR (dev,
-  tech lead, QA) o aviso diz que PRs e revisões não entram na carga até o vínculo; para produto e design
-  o tom é neutro.
+  (os logins sem pessoa ficam no cadastro, onde se escolhe a quem vincular). Para quem abre PR (dev e
+  tech lead) o aviso diz que PRs e revisões não entram na carga até o vínculo; para produto, UX e
+  diretoria o tom é neutro.
 - **Squad na barra lateral:** com o cenário ligado, o Roster ganha a seção **"Tecnologia · squad"**
-  (com selo "Simulação" e contagem de 8 pessoas). Lista as oito pessoas com cargo e estado em tempo
+  (com selo "Simulação" e contagem de 7 pessoas). Lista as sete pessoas com cargo e estado em tempo
   real calculado pelos seletores puros (`whereIs`, `doingNow`, `PLACE_LABEL`): Na mesa, Em foco 🌙 ("não
   perturbe"), Em reunião · Daily até 09:45, Em huddle, Em chamada, Fora/Férias. Clicar em qualquer membro
   abre a gaveta dele (e navega para o andar da Tecnologia caso esteja em outro pavimento); no celular
-  (largura <= 480px), fecha a barra lateral ao selecionar. A busca filtra por nome e papel (ex.: "QA"
-  isola o Rafael). Recolher a seção persiste em `localStorage` (`COLLAPSED_TEAMS_KEY` via `toggleTeam`). O carregamento
+  (largura <= 480px), fecha a barra lateral ao selecionar. A busca filtra por nome e papel (ex.: "diretor"
+  isola o Otávio, "PO" mostra as duas POs). Recolher a seção persiste em `localStorage` (`COLLAPSED_TEAMS_KEY` via `toggleTeam`). O carregamento
   é feito por slot dinâmico (`lazy`), garantindo que sem cenário nada de `src/tech/` seja baixado.
 - **Esc** fecha primeiro a gaveta do cenário (`escapeLayers`), depois segue como no resto do prédio.
 
@@ -347,7 +366,7 @@ ele, a vista inicial continua o prédio fechado; o squad, o quadro e os robôs s
 | Exterior sem cenário   | 36       | 121 mil    |
 | Exterior com cenário   | 36       | 121 mil    |
 
-As 28 chamadas a mais são as oito pessoas (cinco figurantes saem), as cadeiras ocupáveis e o quadro.
+As 28 chamadas a mais (medidas com o squad antigo, de oito) são as pessoas (cinco figurantes saem), as cadeiras ocupáveis e o quadro.
 
 `pnpm qa:tecnologia` prova o cenário: abre, o dia anda, pausa e muda de velocidade, a daily leva o
 squad à sala e devolve, huddle, o épico destrava no quadro, gaveta da pessoa e do épico, robô da rotina,
@@ -448,11 +467,15 @@ As ações aparecem onde a pergunta aparece, com uma implementação só (`src/t
 | Gaveta do épico, gaveta da pessoa, árvore de Projetos (HU aberta) | cada HU e cada PR aberto | as mesmas, conforme o item |
 
 - **Cada botão abre um painel que diz o que vai acontecer antes de enviar.** Cobrar mostra para quem vai
-  ("Cobrar Marina": quem a trava espera, o QA se a HU está em QA, senão quem responde pela HU), onde a
-  pessoa está agora e a **mensagem do Lipp HQ** que sai no Slack, palavra por palavra. É o único texto
+  ("Cobrar Marina": quem a trava espera, senão quem responde pela HU), onde a pessoa está agora e a
+  **mensagem do Lipp HQ**, palavra por palavra. A cobrança sai **no canal do squad (#squad-hubsmart),
+  marcando a pessoa**, nunca por mensagem direta, em tom leve: "@Marina, a HU-27 está esperando uma
+  decisão de produto sua desde ontem às 17h, consegue olhar? Motivo: o link vale 15 minutos ou 24
+  horas?". HU parada pergunta se ainda é isso ("… sem atualização desde dom às 11h20. Ainda é isso, ou
+  tem algo travando?"). O Pulse, ao pedir revisão, também marca a pessoa no canal. É o único texto
   que existe: ninguém escreve em nome de ninguém. Reatribuir lista o squad com a carga de cada um (HUs,
   PRs, revisões, de `personLoad`), quem está fora com o motivo ("Férias até 16/11") e o responsável
-  atual, que não se escolhe; confirmar diz "A HU-37 sai de Bianca Sales e vai para Tiago Nunes". Pedir
+  atual, que não se escolhe; confirmar diz "A HU-37 sai de Bianca Sales e vai para Marina Lopes". Pedir
   ao bot diz o que o bot faz (o Atlas para o Notion, o Pulse para o GitHub; pedir revisão já nomeia quem
   está livre pela agenda) e se ele começa já ou depois da tarefa atual.
 - **Uma fronteira só.** Enviar chama `useTechStore.perform`, que chama `ActivityRuntime.perform`, que
@@ -469,8 +492,8 @@ As ações aparecem onde a pergunta aparece, com uma implementação só (`src/t
   o Esc fecha de dentro para fora: o painel da ação, depois o cadastro, depois a gaveta, depois a visão.
   Fechado, o foco volta ao botão. Um painel aberto por vez na tela.
 - **Consequência de verdade.** Cobrar a HU-27 às 10:05 faz a Marina decidir entre uma chamada e outra
-  (10:17): o épico Login sem senha destrava de manhã. Sem cobrança, a decisão só sai depois do
-  refinamento (15:08).
+  (10:17): o épico Acesso do franqueado sem senha destrava de manhã. Sem cobrança, a decisão só sai
+  depois do refinamento (15:06 na semente 7).
 
 ### Cadastro do squad
 
@@ -482,29 +505,30 @@ PR sem autor no Painel.
 
 - Para cada pessoa: nome, cargo e papel, e-mail corporativo e as fontes que a reconhecem (Notion, Slack e
   Microsoft 365 sempre, pelo e-mail; GitHub só com o login vinculado). No topo, a cobertura por fonte
-  (`identityCoverage`: GitHub 6/8 no começo do dia) e os **logins do GitHub sem pessoa**
+  (`identityCoverage`: GitHub 3/7 no começo do dia) e os **logins do GitHub sem pessoa**
   (`unidentifiedLogins`), com os PRs em que aparecem; para cada login, um atalho preenche o campo de
   quem ainda não vinculou, e a pessoa confirma.
 - **Vincular** é digitar o login, **trocar** e **desvincular** também (desvincular pede confirmação e
   avisa que os PRs voltam a "autor não identificado"). Os erros de `LINK_PROBLEM_LABEL` aparecem junto
   do campo (`aria-invalid`, `role="alert"`): login inválido, login já vinculado a outra pessoa, e-mail
   fora do cadastro. Campo vazio pede o login em vez de desvincular por engano.
-- Tudo é a ação `vincular_github`. Como a ligação é feita na leitura, ao vincular o `tnunes-dev` os PRs
-  que já existiam (#140, mesclado ontem, e #147, de hoje) passam a mostrar o Tiago em todas as visões,
-  saem de "sem autor" e entram na carga dele.
+- Tudo é a ação `vincular_github`. Como a ligação é feita na leitura, ao vincular o `luaferraz` os PRs
+  que já existiam (#140, mesclado ontem, #145 e #147, de hoje) passam a mostrar a Luana em todas as
+  visões, saem de "sem autor" e entram na carga dela.
 - **Na demonstração, o login é digitado. Com os conectores, o vínculo será "Entrar com GitHub"
   (OAuth):** a pessoa entra na própria conta e o login chega confirmado pelo GitHub, sem digitação e
   sem como vincular o login de outra pessoa. A ação continua a mesma.
 
 `qa:tecnologia` prova as ações e o cadastro num bloco no fim (`HQ_ONLY=acoes` roda só ele), pela
 interface, com o relógio parado e `jumpToClock`: cobra a HU-27 às 10:05 (o botão diz "Cobrar Marina",
-a mensagem enviada é a mostrada, a HU fica "aguardando"; às 10:30 ela destravou às 10:17, contra 15:08
-no mesmo dia sem cobrança, e o E-1 deixou de estar travado); reatribui a HU-37 da Bianca para o Tiago
+a mensagem enviada é a mostrada, sai no #squad-hubsmart marcando a Marina, a HU fica "aguardando"; às
+10:30 ela destravou às 10:17, contra 15:06
+no mesmo dia sem cobrança, e o E-1 deixou de estar travado); reatribui a HU-37 da Bianca para a Marina
 pela árvore e confere árvore, painel (carga) e gaveta da pessoa, e que o Painel segue batendo com
 `trackingAnswers`; pede ao Atlas os critérios da HU-40 pela gaveta do épico (começa já, entra em "bots
-hoje", o robô chega ao cartão do E-5 no quadro); e no cadastro tenta "tiago nunes" (inválido) e
-"rokabe" (em uso) antes de vincular `tnunes-dev`, conferindo que o #147 sai de `semAutor` e mostra o
-Tiago no Painel, na árvore e nas gavetas. Captura cada ação em 1440×900 e o cadastro também em 390×844.
+hoje", o robô chega ao cartão do E-5 no quadro); e no cadastro tenta "luana ferraz" (inválido) e
+"rokabe" (em uso) antes de vincular `luaferraz`, conferindo que o #147 sai de `semAutor` e que ele, o
+#145 e o #140 mostram a Luana no Painel, na árvore e nas gavetas. Captura cada ação em 1440×900 e o cadastro também em 390×844.
 
 ### A fronteira simulação/conector (`source.ts`)
 

@@ -33,6 +33,7 @@ recebe conectores de verdade sem mexer na cena.
 | [#115](https://github.com/lippdev/town/pull/115) | `feat/tecnologia-acoes` → `feat/tecnologia-visoes` | Pronta para revisão: cobrar, reatribuir e pedir ao bot onde a pergunta aparece; cadastro com vínculo do GitHub; prova pela interface |
 | [#116](https://github.com/lippdev/town/pull/116) | `feat/tecnologia-barra-lateral` → `feat/tecnologia-acoes` | Pronta para revisão: squad na barra lateral com status sincronizado ao relógio, busca, recolhimento e abertura da gaveta |
 | [#117](https://github.com/lippdev/town/pull/117) | `feat/tecnologia-daily-huddle` → `feat/tecnologia-barra-lateral` | Pronta para revisão: a daily é o huddle do Slack; na sala quem entrou, "ainda não entrou" até 09:38 e ausente depois, iguais no prédio, no Painel e na barra (`dailyAttendance`) |
+| [#118](https://github.com/lippdev/town/pull/118) | `feat/tecnologia-squad-hubsmart` → `feat/tecnologia-daily-huddle` | Pronta para revisão: squad no formato do time real (uma pessoa por papel, diretor no andar), projetos HubSmart (Franquias, Previdência Icatu, Vendedor BeSmart) e cobrança no canal do squad marcando a pessoa |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
@@ -51,14 +52,17 @@ Próximos passos, nesta ordem:
    (`HQ_ONLY=acoes` roda só esse bloco): cobrar a HU-27 às 10:05 destrava o Login sem senha às 10:17,
    contra 15:08 sem cobrança.
 4. ~~Squad na barra lateral~~ (`feat/tecnologia-barra-lateral`): seção "Tecnologia · squad" (selo "Simulação"),
-   8 pessoas com estado sincronizado ao relógio pelos seletores puros, busca (nome e papel),
+   pessoas do squad com estado sincronizado ao relógio pelos seletores puros, busca (nome e papel),
    recolher persistido em localStorage, clique abre gaveta e leva ao andar 2, slot com import dinâmico
    preservando zero download sem cenário; prova automatizada em 1440×900 e 390×844 no visual-qa.
 5. ~~A daily é o huddle~~ (`feat/tecnologia-daily-huddle`, #117): quem entra no huddle do canal do
    squad vai à sala; ausente é o convidado da agenda que não entrou, com tolerância de 8 minutos
    ("ainda não entrou" até 09:38). Seletor `dailyAttendance`, quadro da daily na sala, seção no Painel e
    rótulo na barra; `HQ_ONLY=daily` prova os três às 09:35 e 09:40.
-6. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
+6. ~~Squad HubSmart~~ (`feat/tecnologia-squad-hubsmart`, #118): sete pessoas, uma por papel (dev front-end,
+   dev back-end, UX, PO sênior, PO júnior, tech lead e diretor, que senta no andar e não vai à daily);
+   projetos do HubSmart; a cobrança sai no #squad-hubsmart marcando a pessoa, em tom leve.
+7. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
    3 a 5 pessoas, medindo tempo, acerto e se a pessoa sabe o que fazer em seguida.
 
 Depois do experimento, se valer: ligar conectores reais (apps e permissões de admin no
