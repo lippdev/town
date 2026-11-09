@@ -142,13 +142,17 @@ export const PULL_REQUESTS: readonly PullRequest[] = [
   pr(144, "Atualiza o Node do build para 22", "chore/node-22", LOGIN.renata, { openedAt: at(18, 0, -1), updatedAt: at(18, 5, -1), reviewers: [LOGIN.diego] }),
 ];
 
-const meeting = (id: string, title: string, start: number, end: number, attendees: readonly string[], place: CalendarEvent["place"]): CalendarEvent => ({ id, title, start, end, attendees: [...attendees], place });
+const meeting = (id: string, title: string, start: number, end: number, attendees: readonly string[], place: CalendarEvent["place"], huddleChannel?: string): CalendarEvent => ({ id, title, start, end, attendees: [...attendees], place, ...(huddleChannel ? { huddleChannel } : {}) });
+
+/** O canal do squad, onde a daily acontece em huddle. */
+export const DAILY_CHANNEL = "squad-portal";
 
 const PRESENT = [EMAIL.marina, EMAIL.caio, EMAIL.renata, EMAIL.diego, EMAIL.luana, EMAIL.tiago, EMAIL.rafael];
 
 /** A agenda do dia, como o Outlook devolveria: título, horário, quem vai e onde. */
 export const CALENDAR: readonly CalendarEvent[] = [
-  meeting("daily", "Daily", at(9, 30), at(9, 45), [...PRESENT, EMAIL.bianca], "sala"),
+  // A daily é o huddle do canal do squad: vai à sala quem entra nele; o convite diz quem faltou.
+  meeting("daily", "Daily", at(9, 30), at(9, 45), [...PRESENT, EMAIL.bianca], "sala", DAILY_CHANNEL),
   meeting("cliente-portal", "Alinhamento com o cliente do Portal", at(10, 0), at(11, 30), [EMAIL.marina], "remoto"),
   meeting("entrevista", "Entrevista técnica", at(10, 30), at(11, 15), [EMAIL.diego], "remoto"),
   meeting("comite", "Comitê de produto", at(11, 30), at(12, 0), [EMAIL.marina], "remoto"),

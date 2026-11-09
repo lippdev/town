@@ -166,8 +166,9 @@ export class SimulatedDay implements ActivitySource {
     ];
     for (const [email, hour, minute] of departures) later(hour, minute, (when) => statusAt(when, email, null), (when) => presenceAt(when, email, "offline"));
 
-    // Reunião: o Teams põe "em reunião" quem está conectado, e devolve ao fim.
-    for (const meeting of CALENDAR) {
+    // Reunião: o Teams põe "em reunião" quem está conectado, e devolve ao fim. A daily é huddle do
+    // Slack, que o Teams não vê.
+    for (const meeting of CALENDAR.filter((entry) => !entry.huddleChannel)) {
       this.schedule(meeting.start, (state, when) => ({
         events: meeting.attendees.filter((email) => state.presence[email] && state.presence[email] !== "offline").map((email) => presenceAt(when, email, "reuniao")),
       }));
@@ -214,6 +215,8 @@ export class SimulatedDay implements ActivitySource {
         this.schedule(leave, only(draft(leave, "slack", person(email), subject, "slack.huddle_left", { huddleId: huddle.id })));
       });
     }
+
+    this.dailyHuddle();
 
     // HU-29: PR aberto, CI quebra durante o foco da Luana, ela conserta, a Renata aprova, mescla e sobe.
     later(9, 50, (when) => draft(when, "github", gh(LOGIN.luana), prSubject(145), "github.pr_opened", { number: 145, title: "HU-29: tela de confira seu e-mail", branch: "feat/HU-29-confira-email", draft: false, reviewers: [LOGIN.renata] }));
@@ -262,6 +265,33 @@ export class SimulatedDay implements ActivitySource {
         when += this.rng.int(lunchtime ? 18 : 6, lunchtime ? 35 : 22) * MINUTE;
       }
     }
+  }
+
+  /**
+   * A daily é o huddle do canal do squad. A tech lead abre às 09:30, quem está no escritório entra
+   * no primeiro par de minutos, o Caio entra atrasado (dentro da tolerância) e quem está fora não
+   * entra. Os minutos vêm de um sorteio próprio da semente, para não mexer no resto do dia.
+   */
+  private dailyHuddle() {
+    const daily = CALENDAR.find((entry) => entry.huddleChannel)!;
+    const rng = random(this.seed + 101);
+    const subject: Subject = { kind: "huddle", id: "huddle-daily" };
+    const joins: Array<[string, Instant]> = [
+      [EMAIL.renata, daily.start],
+      ...[EMAIL.marina, EMAIL.diego, EMAIL.luana, EMAIL.rafael].map((email): [string, Instant] => [email, daily.start + rng.int(0, 2) * MINUTE]),
+      [EMAIL.caio, at(9, 36 + rng.int(0, 1))],
+    ];
+    joins.forEach(([email, join], index) => {
+      // Só entra quem está conectado: quem chega depois ou está de férias não aparece.
+      this.schedule(join, (state) =>
+        state.presence[email] && state.presence[email] !== "offline"
+          ? { events: [index === 0 ? draft(join, "slack", person(email), subject, "slack.huddle_started", { huddleId: "huddle-daily", channel: daily.huddleChannel! }) : draft(join, "slack", person(email), subject, "slack.huddle_joined", { huddleId: "huddle-daily" })] }
+          : { events: [] },
+      );
+    });
+    this.schedule(daily.end, (state) => ({
+      events: (state.huddles.find((huddle) => huddle.id === "huddle-daily" && huddle.endedAt === null)?.participants ?? []).map((email) => draft(daily.end, "slack", person(email), subject, "slack.huddle_left", { huddleId: "huddle-daily" })),
+    }));
   }
 
   // ─── Intenções reutilizáveis ───────────────────────────────────────────────
