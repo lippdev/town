@@ -33,7 +33,9 @@ const TECH = `${DEMO}&cenario=tecnologia`;
 // `PCFSoftShadowMap has been removed`: o `shadows="soft"` do prédio, que o three 0.186 troca pelo
 // PCFShadowMap (o desenho é o mesmo). Apareceu em máquina sem GPU; vem de antes do cenário e se
 // resolve no próprio prédio, fora desta prova.
-const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/, /PCFSoftShadowMap has been removed/];
+// `Mismatch between texture format and sampler type`: aviso do SwiftShader, que aparece em umas rodadas
+// e em outras não, com o mesmo build; nenhuma prova desenha diferente quando ele sai.
+const IGNORED = [/THREE\.Clock/, /GPU stall/, /GL Driver Message/, /Hermes/, /\/api\/hq\//, /Program Info Log/, /PCFSoftShadowMap has been removed/, /Mismatch between texture format and sampler type/];
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({
