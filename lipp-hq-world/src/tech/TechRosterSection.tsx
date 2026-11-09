@@ -16,7 +16,7 @@ export interface TechRosterSectionProps {
 }
 
 /**
- * Seção "Tecnologia · squad" na barra lateral: as 8 pessoas do squad simulado
+ * Seção "Tecnologia · squad" na barra lateral: as pessoas do squad simulado
  * com estado agora em tempo real pelo relógio da simulação.
  */
 export function TechRosterSection({ matches, searching, collapsed, onToggle, onSelect, onMatchesChange }: TechRosterSectionProps) {
