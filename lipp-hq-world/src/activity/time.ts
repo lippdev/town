@@ -38,6 +38,16 @@ export function whenLabel(instant: Instant, today: Instant = DAY_START): string 
   return sameDay ? clockLabel(instant) : `${WEEKDAY[date.getUTCDay()]} ${clockLabel(instant)}`;
 }
 
+/** "hoje às 9h30", "ontem às 17h", "sex às 16h10": desde quando, como se diz numa mensagem. */
+export function sinceLabel(instant: Instant, now: Instant): string {
+  const date = local(instant);
+  const days = Math.floor((now + BRASILIA) / DAY) - Math.floor((instant + BRASILIA) / DAY);
+  const minutes = date.getUTCMinutes();
+  const hour = `${date.getUTCHours()}h${minutes ? pad(minutes) : ""}`;
+  const day = days <= 0 ? "hoje" : days === 1 ? "ontem" : WEEKDAY[date.getUTCDay()];
+  return `${day} às ${hour}`;
+}
+
 /** "há 12 min", "há 3 h", "há 4 dias". */
 export function ageLabel(milliseconds: number): string {
   const minutes = Math.max(0, Math.round(milliseconds / MINUTE));

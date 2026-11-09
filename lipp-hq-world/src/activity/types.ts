@@ -24,14 +24,14 @@ export const SOURCE_LABEL: Record<Source, string> = {
 
 // ─── Pessoas e identidade ─────────────────────────────────────────────────────
 
-export type Role = "pm" | "design" | "techlead" | "dev" | "qa";
+export type Role = "po" | "design" | "techlead" | "dev" | "diretor";
 
 export const ROLE_LABEL: Record<Role, string> = {
-  pm: "Product manager",
-  design: "Design",
+  po: "Produto",
+  design: "UX",
   techlead: "Tech lead",
   dev: "Desenvolvimento",
-  qa: "Qualidade",
+  diretor: "Diretoria",
 };
 
 /**
@@ -42,7 +42,7 @@ export interface Person {
   email: string;
   name: string;
   role: Role;
-  /** Cargo como aparece no cadastro: "Dev back-end", "Tech lead"… */
+  /** Cargo como aparece no cadastro: "Dev back-end", "PO sênior", "Tech lead"… */
   title: string;
   /** Login do GitHub vinculado no cadastro; nulo é "ainda não vinculou". */
   github: string | null;
@@ -264,6 +264,8 @@ export interface AppMessage {
   from: { kind: "app" } | { kind: "bot"; botId: string };
   /** E-mail de quem recebe, ou "#canal". */
   to: string;
+  /** Quem a mensagem marca no canal (o "@Nome"): é a quem a cobrança se dirige. */
+  mentions?: string[];
   text: string;
   at: Instant;
   about: Subject | null;
