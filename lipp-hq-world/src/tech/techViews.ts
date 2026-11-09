@@ -5,6 +5,7 @@ import {
   blockedStories,
   blockersOf,
   botTasksToday,
+  dailyAttendance,
   directory,
   doingNow,
   epicHealth,
@@ -25,6 +26,7 @@ import {
   upcomingReviewers,
   waitingSince,
   whereIs,
+  type DailyAttendance,
   type EpicHealth,
   type HealthLevel,
   type HealthReason,
@@ -250,6 +252,8 @@ export interface LoadItem {
 }
 
 export interface DailyBoard {
+  /** A daily em curso (huddle do squad): quem está na sala, quem ainda não entrou, quem faltou. */
+  daily: DailyAttendance | null;
   blocked: BlockedItem[];
   stale: StaleItem[];
   reviews: ReviewItem[];
@@ -352,6 +356,7 @@ export function dailyBoard(state: ActivityState): DailyBoard {
     (Object.keys(buckets) as PlaceKind[]).map((kind) => [kind, buckets[kind].map((email) => ({ person: personOf(state, email)!, detail: presenceDetail(state, email, whereIs(state, email)) }))]),
   ) as Record<PlaceKind, PresenceItem[]>;
   return {
+    daily: dailyAttendance(state),
     blocked: blockedStories(state).map((story) => ({
       story,
       epic: epicOfStory(story),

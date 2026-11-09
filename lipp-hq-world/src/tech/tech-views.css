@@ -139,6 +139,8 @@ button.tv-item-main { cursor: pointer; }
 .tv-presence-label { display: inline-flex; align-items: center; gap: 5px; color: var(--ui-dim); }
 .tv-presence-label small { color: var(--ui-dim); }
 .tv-presence-foco { color: #c7b6f2; }
+.tv-daily-ainda-nao-entrou { color: #e8c37a; }
+.tv-daily-ausente { color: #ec8f7a; }
 .tv-presence-people { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tv-load-wrap { overflow-x: auto; }
 .tv-load { width: 100%; border-collapse: collapse; font-size: 12.5px; }

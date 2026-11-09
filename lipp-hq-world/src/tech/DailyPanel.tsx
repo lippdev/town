@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { Link2, Moon } from "lucide-react";
 import type { ActivityState } from "@/activity/events";
-import { PLACE_LABEL, type HealthLevel, type PlaceKind } from "@/activity/selectors";
+import { DAILY_MARK_LABEL, DAILY_MARKS, dailyGroups, PLACE_LABEL, whereIs, type DailyAttendance, type HealthLevel, type PlaceKind } from "@/activity/selectors";
 import { ageLabel, clockLabel, spanLabel, whenLabel } from "@/activity/time";
 import { EPIC_STATUS_LABEL, STORY_STATUS_LABEL, TRACK_LABEL, trackOf, type Person, type PullRequest, type Subject } from "@/activity/types";
 import { ActionPlace, PrActions, StoryActions } from "./TechActions";
@@ -84,6 +84,44 @@ function LoadLinks({ prs, person, what }: { prs: readonly PullRequest[]; person:
 
 const PRESENCE_ORDER: PlaceKind[] = ["reuniao", "chamada", "huddle", "foco", "fora", "mesa"];
 
+/** A daily agora: quem está na sala (entrou no huddle), quem ainda não entrou e quem faltou. */
+function DailyAttendanceBox({ state, daily }: { state: ActivityState; daily: DailyAttendance }) {
+  const groups = dailyGroups(daily);
+  // Onde está quem não entrou: férias, fora, na mesa.
+  const whereNow = (email: string) => {
+    const where = whereIs(state, email);
+    return where.kind === "fora" ? state.slackStatus[email]?.text ?? "fora" : PLACE_LABEL[where.kind].toLocaleLowerCase("pt-BR");
+  };
+  return (
+    <Section title={`${daily.meeting.title} · huddle em #${daily.meeting.huddleChannel}`} count={groups["na-sala"].length} id="painel-daily">
+      <p className="tv-hint">
+        Na sala está quem entrou no huddle. Convidado que não entrou aparece como "ainda não entrou" até {clockLabel(daily.graceUntil)} e como ausente depois.
+      </p>
+      <ul className="tv-presence" data-panel-daily>
+        {DAILY_MARKS.map((mark) => (
+          <li key={mark} data-daily-group={mark}>
+            <span className={`tv-presence-label tv-daily-${mark}`}>
+              {DAILY_MARK_LABEL[mark]} <small>{groups[mark].length}</small>
+            </span>
+            <span className="tv-presence-people">
+              {groups[mark].length === 0 && <span className="tv-dim">ninguém</span>}
+              {groups[mark].map((email) => {
+                const person = state.people.find((item) => item.email === email);
+                return (
+                  <span key={email} className="tv-presence-person" data-person={email}>
+                    <Who person={{ email, name: person?.name ?? email, away: null }} />
+                    {mark !== "na-sala" && <span className="tv-dim"> · {whereNow(email)}</span>}
+                  </span>
+                );
+              })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 export function DailyPanel() {
   const state = useNow();
   const board: DailyBoard = useMemo(() => dailyBoard(state), [state]);
@@ -114,6 +152,8 @@ export function DailyPanel() {
             <Tile id="epicos" label="Épicos travados ou em risco" value={health.travado + health["em-risco"]} tone={health.travado ? "red" : health["em-risco"] ? "amber" : "ok"} target="painel-epicos" context={`${health.travado} travado · ${health["em-risco"]} em risco · ${health["no-prazo"]} no prazo`} />
             <Tile id="time" label="Disponíveis agora" value={presenceCount("mesa")} tone="dim" target="painel-time" context={`de ${state.people.length} · ${presenceCount("reuniao") + presenceCount("chamada")} em reunião, ${presenceCount("huddle")} em huddle, ${presenceCount("foco")} em foco, ${presenceCount("fora")} fora`} />
           </nav>
+
+          {board.daily && <DailyAttendanceBox state={state} daily={board.daily} />}
 
           <div className="tv-columns-2">
             <div className="tv-col">
