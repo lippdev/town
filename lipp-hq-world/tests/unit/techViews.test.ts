@@ -142,10 +142,8 @@ describe("visão Painel: as respostas da daily", () => {
       expect(item.upcoming.map((upcoming) => upcoming.person.email)).toEqual(upcomingReviewers(state, item.pr).map((upcoming) => upcoming.person.email));
     }
     const pr142 = board.reviews.find((item) => item.pr.number === 142)!;
-    expect(pr142.upcoming.map((upcoming) => [upcoming.person.email, clockLabel(upcoming.freeAt)])).toEqual([
-      [EMAIL.luana, "09:45"],
-      [EMAIL.renata, "09:45"],
-    ]);
+    // O PR parado sem revisor: a tech lead fica livre logo depois da daily.
+    expect(pr142.upcoming.map((upcoming) => [upcoming.person.email, clockLabel(upcoming.freeAt)])).toEqual([[EMAIL.renata, "09:45"]]);
   });
 
   it("quem fica livre segue a regra de reviewCandidates no instante em que fica livre", () => {
@@ -175,7 +173,7 @@ describe("visão Painel: as respostas da daily", () => {
     const before = day(at(13, 35));
     const pr = prOf(before, 144)!;
     expect(reviewCandidates(before, pr)).toEqual([]);
-    expect(upcomingReviewers(before, pr).map((item) => clockLabel(item.freeAt))).toEqual(["15:00", "15:00"]);
+    expect(upcomingReviewers(before, pr).map((item) => clockLabel(item.freeAt))).toEqual(["15:00"]);
   });
 
   it("presença cobre o time inteiro, cada pessoa num lugar só", () => {
@@ -200,7 +198,7 @@ describe("visão Painel: as respostas da daily", () => {
     const state = day(at(14, 0));
     const load = dailyBoard(state).load;
     expect(load.map((item) => item.person.email)).toEqual(state.people.map((person) => person.email));
-    const tiago = load.find((item) => item.person.email === EMAIL.tiago)!;
+    const tiago = load.find((item) => item.person.email === EMAIL.luana)!;
     expect(tiago.github).toBe(false);
     expect(tiago.prs).toEqual([]);
     const diego = load.find((item) => item.person.email === EMAIL.diego)!;
@@ -226,7 +224,7 @@ describe("visão Painel: as respostas da daily", () => {
     expect(subjectKey({ kind: "pr", number: 142 })).toBe("pr:142");
     expect(subjectKey({ kind: "story", id: "HU-31" })).toBe("story:HU-31");
     expect(subjectLabel(state, { kind: "pr", number: 142 })).toBe("PR #142");
-    expect(subjectLabel(state, { kind: "epic", id: "E-1" })).toBe("E-1 · Login sem senha");
+    expect(subjectLabel(state, { kind: "epic", id: "E-1" })).toBe("E-1 · Acesso do franqueado sem senha");
   });
 });
 

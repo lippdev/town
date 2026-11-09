@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assigneeOptions, botForTask, botRequestPreview, lastBotRequest, nudgePreview, nudgeReason, nudgeStatus } from "@/activity/actions";
+import { assigneeOptions, blockerParts, botForTask, botRequestPreview, lastBotRequest, nudgePreview, nudgeStatus, nudgeText } from "@/activity/actions";
 import { epicHealth, storyOf } from "@/activity/selectors";
 import { DEFAULT_SEED, SimulatedDay } from "@/activity/simulation";
 import { ActivityRuntime, type AppAction } from "@/activity/source";
@@ -20,26 +20,32 @@ function runWith(steps: Array<[number, AppAction | null]>, seed = DEFAULT_SEED) 
 }
 
 describe("cobrar: o que a tela mostra antes e depois", () => {
-  it("o botão diz a quem vai e a mensagem é a mesma que sai", () => {
+  it("o botão diz a quem vai, e a mensagem que sai no canal marcando a pessoa é a mesma", () => {
     const { runtime } = runWith([[at(10, 5), null]]);
     const preview = nudgePreview(runtime.state, "HU-27")!;
     expect(preview).toMatchObject({ reason: "trava", person: { email: EMAIL.marina } });
-    // Lê como frase: sem repetir o "esperando" do motivo que veio do Notion.
-    expect(preview.text).toBe("Oi, Marina! A HU-27 (Definir expiração do link mágico) está travada há 17 h esperando você. Motivo: decisão de produto — o link vale 15 minutos ou 24 horas?");
+    // Tom leve, marcando a pessoa: o que se espera dela, desde quando, e o motivo do Notion.
+    expect(preview.text).toBe("@Marina, a HU-27 está esperando uma decisão de produto sua desde ontem às 17h, consegue olhar? Motivo: o link vale 15 minutos ou 24 horas?");
     expect(preview.text.match(/esperando/gi)).toHaveLength(1);
     runtime.perform({ kind: "cobrar", storyId: "HU-27" });
-    expect(runtime.state.messages.at(-1)!.text).toBe(preview.text);
+    expect(runtime.state.messages.at(-1)).toMatchObject({ text: preview.text, to: "#squad-hubsmart", mentions: [EMAIL.marina] });
   });
 
-  it("o motivo entra na mensagem sem repetir o esperando", () => {
-    expect(nudgeReason("Esperando decisão de produto: o link vale 15 minutos ou 24 horas?")).toBe("decisão de produto — o link vale 15 minutos ou 24 horas?");
-    expect(nudgeReason("esperando o jurídico")).toBe("o jurídico");
-    expect(nudgeReason("API do banco fora do ar")).toBe("API do banco fora do ar");
+  it("o motivo do Notion se parte em o que se espera e o porquê", () => {
+    expect(blockerParts("Esperando decisão de produto: o link vale 15 minutos ou 24 horas?")).toEqual({ what: "decisão de produto", why: "o link vale 15 minutos ou 24 horas?" });
+    expect(blockerParts("esperando o jurídico")).toEqual({ what: null, why: "o jurídico" });
+    expect(blockerParts("API do banco fora do ar")).toEqual({ what: null, why: "API do banco fora do ar" });
   });
 
-  it("HU em QA cobra o QA; sem trava, cobra o responsável; concluída não cobra", () => {
+  it("HU parada: pergunta se ainda é isso, com desde quando", () => {
     const { runtime } = runWith([[at(10), null]]);
-    expect(nudgePreview(runtime.state, "HU-30")).toMatchObject({ reason: "qa", person: { email: EMAIL.rafael } });
+    const story = storyOf(runtime.state, "HU-32")!;
+    expect(nudgeText(runtime.state, story, EMAIL.luana)).toBe('@Luana, a HU-32 (Enviar boleto de royalties por e-mail) está em "Em andamento" sem atualização desde dom às 11h20. Ainda é isso, ou tem algo travando?');
+  });
+
+  it("sem trava, cobra o responsável (inclusive em QA); concluída não cobra", () => {
+    const { runtime } = runWith([[at(10), null]]);
+    expect(nudgePreview(runtime.state, "HU-30")).toMatchObject({ reason: "responsavel", person: { email: EMAIL.luana } });
     expect(nudgePreview(runtime.state, "HU-32")).toMatchObject({ reason: "responsavel", person: { email: EMAIL.luana } });
     expect(nudgePreview(runtime.state, "HU-28")).toBeNull();
   });
@@ -56,7 +62,7 @@ describe("cobrar: o que a tela mostra antes e depois", () => {
   });
 
   it("sem cobrança não há status, e a mensagem de reatribuição não conta como cobrança", () => {
-    const { runtime } = runWith([[at(10, 30), { kind: "reatribuir", storyId: "HU-37", to: EMAIL.tiago }]]);
+    const { runtime } = runWith([[at(10, 30), { kind: "reatribuir", storyId: "HU-37", to: EMAIL.luana }]]);
     expect(nudgeStatus(runtime.state, "HU-27")).toBeNull();
     expect(nudgeStatus(runtime.state, "HU-37")).toBeNull();
   });
@@ -76,14 +82,14 @@ describe("reatribuir: quem pode receber", () => {
   it("todo o squad, com carga, quem está fora e o responsável atual", () => {
     const { runtime } = runWith([[at(10, 30), null]]);
     const options = assigneeOptions(runtime.state, "HU-37");
-    expect(options).toHaveLength(8);
+    expect(options).toHaveLength(7);
     const bianca = options.find((option) => option.person.email === EMAIL.bianca)!;
     expect(bianca.current).toBe(true);
     expect(bianca.away).toBe("Férias até 16/11");
-    const tiago = options.find((option) => option.person.email === EMAIL.tiago)!;
-    expect(tiago.current).toBe(false);
-    expect(tiago.away).toBeNull();
-    expect(tiago.load.stories.map((story) => story.id)).toEqual(expect.arrayContaining(["HU-30", "HU-33"]));
+    const luana = options.find((option) => option.person.email === EMAIL.luana)!;
+    expect(luana.current).toBe(false);
+    expect(luana.away).toBeNull();
+    expect(luana.load.stories.map((story) => story.id)).toEqual(expect.arrayContaining(["HU-30", "HU-33"]));
   });
 });
 

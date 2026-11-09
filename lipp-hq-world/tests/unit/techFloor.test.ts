@@ -39,7 +39,7 @@ describe("andar da Tecnologia", () => {
     expect(expansionRooms(TECH_FLOOR).map((room) => room.id)).toEqual(["expansao-2-hall", "expansao-2-fluxo", "expansao-2-squad", "expansao-2-huddle", "expansao-2-sala", "expansao-2-apoio"]);
     expect(TECH_FLOOR.figures).toEqual([]);
     expect(expansionSeats(TECH_FLOOR)).toHaveLength(16);
-    expect(new Set(Object.values(DESK_OF)).size).toBe(8);
+    expect(new Set(Object.values(DESK_OF)).size).toBe(7);
   });
 
   it("as zonas ficam dentro do andar e não se sobrepõem", () => {
@@ -90,12 +90,12 @@ describe("plano da cena", () => {
 
   it("vai para a sala alguns minutos antes da reunião e senta em lugares distintos", () => {
     const before = simulatedStateAt(7, at(13, 55));
-    expect(placeOf(before, EMAIL.rafael).place.zone).toBe("sala");
-    expect(placeOf(before, EMAIL.rafael).heading).toBe("indo para Refinamento");
+    expect(placeOf(before, EMAIL.luana).place.zone).toBe("sala");
+    expect(placeOf(before, EMAIL.luana).heading).toBe("indo para Refinamento");
     const during = simulatedStateAt(7, at(14, 20));
     const seats = personPlans(during).filter((plan) => plan.place.zone === "sala").map((plan) => plan.place.key);
-    expect(seats).toHaveLength(7);
-    expect(new Set(seats).size).toBe(7);
+    expect(seats).toHaveLength(5);
+    expect(new Set(seats).size).toBe(5);
   });
 
   it("a daily é o huddle: ninguém vai antes, e a sala é de quem entrou, cada um num lugar", () => {
@@ -104,8 +104,8 @@ describe("plano da cena", () => {
     expect(placeOf(during, EMAIL.caio).place.zone).toBe("squad");
     const later = simulatedStateAt(7, at(9, 40));
     const seats = personPlans(later).filter((plan) => plan.place.zone === "sala").map((plan) => plan.place.key);
-    expect(seats).toHaveLength(6);
-    expect(new Set(seats).size).toBe(6);
+    expect(seats).toHaveLength(5);
+    expect(new Set(seats).size).toBe(5);
     expect(placeOf(later, EMAIL.caio).place.zone).toBe("sala");
   });
 
@@ -113,7 +113,7 @@ describe("plano da cena", () => {
     expect(placeOf(simulatedStateAt(7, at(10, 20)), EMAIL.marina).place.zone).toBe("squad");
     expect(placeOf(simulatedStateAt(7, at(10, 20)), EMAIL.luana).place.zone).toBe("squad");
     const huddle = simulatedStateAt(7, at(11, 26));
-    expect(personPlans(huddle).filter((plan) => plan.place.zone === "huddle").map((plan) => plan.email).sort()).toEqual([EMAIL.diego, EMAIL.rafael, EMAIL.renata].sort());
+    expect(personPlans(huddle).filter((plan) => plan.place.zone === "huddle").map((plan) => plan.email).sort()).toEqual([EMAIL.diego, EMAIL.luana, EMAIL.renata].sort());
     expect(placeOf(simulatedStateAt(7, at(12, 30)), EMAIL.marina).place).toBe(ELEVATOR_PLACE);
     expect(placeOf(simulatedStateAt(7, at(9, 5)), EMAIL.bianca).place).toBe(ELEVATOR_PLACE);
   });

@@ -7,9 +7,9 @@ import { at } from "@/activity/time";
 describe("techRosterStatus", () => {
   const seed = DEFAULT_SEED;
 
-  it("às 09:35 formata os cinco do huddle como Em reunião e os convidados que não entraram como ainda não entrou", () => {
+  it("às 09:35 formata os quatro do huddle como Em reunião e os convidados que não entraram como ainda não entrou", () => {
     const state = simulatedStateAt(seed, at(9, 35));
-    for (const email of [EMAIL.marina, EMAIL.renata, EMAIL.diego, EMAIL.luana, EMAIL.rafael]) {
+    for (const email of [EMAIL.marina, EMAIL.renata, EMAIL.diego, EMAIL.luana]) {
       const status = formatSquadStatus(state, email);
       expect(status.whereKind).toBe("reuniao");
       expect(status.label).toBe("Em reunião · Daily até 09:45");
@@ -17,15 +17,15 @@ describe("techRosterStatus", () => {
     }
     const caio = formatSquadStatus(state, EMAIL.caio);
     expect(caio).toMatchObject({ whereKind: "mesa", label: "Daily · ainda não entrou", ariaLabel: "Daily · ainda não entrou (Na mesa)", daily: "ainda-nao-entrou" });
-    expect(formatSquadStatus(state, EMAIL.tiago)).toMatchObject({ whereKind: "fora", label: "Daily · ainda não entrou", daily: "ainda-nao-entrou" });
+    // O diretor não é convidado: segue com o estado de sempre.
+    expect(formatSquadStatus(state, EMAIL.otavio)).toMatchObject({ whereKind: "mesa", label: "Na mesa", daily: null });
     expect(formatSquadStatus(state, EMAIL.bianca)).toMatchObject({ whereKind: "fora", ariaLabel: "Daily · ainda não entrou (Férias)" });
   });
 
-  it("às 09:40 o Caio entrou e está na sala; Bianca e Tiago ausentes; depois da daily, a Bianca volta a Férias", () => {
+  it("às 09:40 o Caio entrou e está na sala; a Bianca ausente; depois da daily, a Bianca volta a Férias", () => {
     const state = simulatedStateAt(seed, at(9, 40));
     expect(formatSquadStatus(state, EMAIL.caio)).toMatchObject({ whereKind: "reuniao", daily: null });
     expect(formatSquadStatus(state, EMAIL.bianca)).toMatchObject({ whereKind: "fora", label: "Daily · ausente", ariaLabel: "Daily · ausente (Férias)", daily: "ausente" });
-    expect(formatSquadStatus(state, EMAIL.tiago)).toMatchObject({ label: "Daily · ausente", daily: "ausente" });
     expect(formatSquadStatus(simulatedStateAt(seed, at(9, 50)), EMAIL.bianca)).toMatchObject({ label: "Férias", daily: null });
   });
 
@@ -62,29 +62,16 @@ describe("techRosterStatus", () => {
     expect(status.label).toBe("Na mesa");
   });
 
-  it("filtra por nome e papel (inclusive 'QA' deixando apenas Rafael)", () => {
+  it("filtra por nome e papel (inclusive 'PO' deixando as duas POs)", () => {
     const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
-    const createMatcher = (query: string) => (text: string) =>
-      normalize(text).includes(normalize(query).trim());
+    const createMatcher = (query: string) => (text: string) => normalize(text).includes(normalize(query).trim());
+    const names = (query: string) => SQUAD.filter((p) => matchesSquadPerson(p, createMatcher(query))).map((p) => p.name);
 
-    const qaMatcher = createMatcher("QA");
-    const matchedQa = SQUAD.filter((p) => matchesSquadPerson(p, qaMatcher));
-    expect(matchedQa.map((p) => p.name)).toEqual(["Rafael Coutinho"]);
-
-    const leadMatcher = createMatcher("Tech Lead");
-    const matchedLead = SQUAD.filter((p) => matchesSquadPerson(p, leadMatcher));
-    expect(matchedLead.map((p) => p.name)).toEqual(["Renata Okabe"]);
-
-    const devMatcher = createMatcher("Dev");
-    const matchedDev = SQUAD.filter((p) => matchesSquadPerson(p, devMatcher));
-    expect(matchedDev.map((p) => p.name)).toEqual([
-      "Diego Martins",
-      "Luana Ferraz",
-      "Tiago Nunes",
-      "Bianca Sales",
-    ]);
-
-    const allMatcher = createMatcher("");
-    expect(SQUAD.filter((p) => matchesSquadPerson(p, allMatcher))).toHaveLength(8);
+    expect(names("PO")).toEqual(["Marina Lopes", "Bianca Sales"]);
+    expect(names("Tech Lead")).toEqual(["Renata Okabe"]);
+    expect(names("Dev")).toEqual(["Diego Martins", "Luana Ferraz"]);
+    expect(names("diretor")).toEqual(["Otávio Prado"]);
+    expect(names("UX")).toEqual(["Caio Rezende"]);
+    expect(names("")).toHaveLength(7);
   });
 });

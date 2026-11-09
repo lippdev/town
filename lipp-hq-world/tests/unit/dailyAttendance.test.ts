@@ -20,8 +20,8 @@ describe("a daily é o huddle do Slack", () => {
     const daily = dailyAttendance(state)!;
     expect(daily.meeting.id).toBe("daily");
     expect(daily.huddle?.channel).toBe(DAILY_CHANNEL);
-    expect([...daily.inRoom].sort()).toEqual([EMAIL.marina, EMAIL.renata, EMAIL.diego, EMAIL.luana, EMAIL.rafael].sort());
-    expect([...daily.notYet].sort()).toEqual([EMAIL.caio, EMAIL.tiago, EMAIL.bianca].sort());
+    expect([...daily.inRoom].sort()).toEqual([EMAIL.marina, EMAIL.renata, EMAIL.diego, EMAIL.luana].sort());
+    expect([...daily.notYet].sort()).toEqual([EMAIL.caio, EMAIL.bianca].sort());
     expect(daily.absent).toEqual([]);
     expect(daily.graceUntil).toBe(at(9, 30) + DAILY_GRACE_MS);
     expect(dailyMarkOf(daily, EMAIL.caio)).toBe("ainda-nao-entrou");
@@ -32,7 +32,10 @@ describe("a daily é o huddle do Slack", () => {
     const state = day(at(9, 40));
     const daily = dailyAttendance(state)!;
     expect(daily.notYet).toEqual([]);
-    expect([...daily.absent].sort()).toEqual([EMAIL.tiago, EMAIL.bianca].sort());
+    expect(daily.absent).toEqual([EMAIL.bianca]);
+    // O diretor não é convidado: nunca conta, e fica na mesa.
+    expect(dailyMarkOf(daily, EMAIL.otavio)).toBeNull();
+    expect(whereIs(state, EMAIL.otavio).kind).toBe("mesa");
     expect(daily.inRoom).toContain(EMAIL.caio);
     expect(whereIs(state, EMAIL.caio).kind).toBe("reuniao");
     // Às 09:38 em ponto já é ausente.

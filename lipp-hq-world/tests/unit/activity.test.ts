@@ -46,39 +46,39 @@ describe("identidade", () => {
     const dir = directoryOf(SQUAD);
     expect(resolveActor(dir, { kind: "person", email: "Marina.Lopes@lipp.example" })?.name).toBe("Marina Lopes");
     expect(resolveActor(dir, { kind: "github", login: "@DiegoMartins" })?.email).toBe(EMAIL.diego);
-    expect(resolveActor(dir, { kind: "github", login: LOGIN.tiago })).toBeNull();
+    expect(resolveActor(dir, { kind: "github", login: LOGIN.luana })).toBeNull();
     expect(resolveActor(dir, { kind: "bot", botId: "pulse" })).toBeNull();
-    expect(prAuthor(dir, { author: LOGIN.tiago })).toBeNull();
+    expect(prAuthor(dir, { author: LOGIN.luana })).toBeNull();
   });
 
   it("vincular o GitHub valida e-mail, formato e login repetido", () => {
     expect(linkGithub(SQUAD, "ninguem@lipp.example", "x")).toEqual({ problem: "email-desconhecido" });
-    expect(linkGithub(SQUAD, EMAIL.tiago, "-ruim")).toEqual({ problem: "login-invalido" });
-    expect(linkGithub(SQUAD, EMAIL.tiago, "a".repeat(40))).toEqual({ problem: "login-invalido" });
-    expect(linkGithub(SQUAD, EMAIL.tiago, LOGIN.diego)).toEqual({ problem: "login-em-uso" });
-    const linked = linkGithub(SQUAD, EMAIL.tiago, "@TNunes-Dev");
-    expect("people" in linked && linked.people.find((person) => person.email === EMAIL.tiago)?.github).toBe("tnunes-dev");
+    expect(linkGithub(SQUAD, EMAIL.luana, "-ruim")).toEqual({ problem: "login-invalido" });
+    expect(linkGithub(SQUAD, EMAIL.luana, "a".repeat(40))).toEqual({ problem: "login-invalido" });
+    expect(linkGithub(SQUAD, EMAIL.luana, LOGIN.diego)).toEqual({ problem: "login-em-uso" });
+    const linked = linkGithub(SQUAD, EMAIL.luana, "@LuaFerraz");
+    expect("people" in linked && linked.people.find((person) => person.email === EMAIL.luana)?.github).toBe("luaferraz");
     const unlinked = linkGithub(SQUAD, EMAIL.diego, "");
     expect("people" in unlinked && unlinked.people.find((person) => person.email === EMAIL.diego)?.github).toBeNull();
   });
 
   it("mostra o que falta para quem não vinculou", () => {
     const snapshot = squadSnapshot();
-    expect(unidentifiedLogins(snapshot.people, snapshot.prs)).toEqual([{ login: LOGIN.tiago, prs: 1, reviews: 0 }]);
+    expect(unidentifiedLogins(snapshot.people, snapshot.prs)).toEqual([{ login: LOGIN.luana, prs: 1, reviews: 1 }]);
     const coverage = identityCoverage(snapshot.people);
-    expect(coverage.filter((entry) => !entry.sources.github).map((entry) => entry.email).sort()).toEqual([EMAIL.caio, EMAIL.tiago].sort());
+    expect(coverage.filter((entry) => !entry.sources.github).map((entry) => entry.email).sort()).toEqual([EMAIL.bianca, EMAIL.caio, EMAIL.luana, EMAIL.otavio].sort());
     expect(coverage.every((entry) => entry.sources.notion && entry.sources.slack && entry.sources.m365)).toBe(true);
   });
 
   it("vincular pelo cadastro atribui também os PRs que já existiam", () => {
     const { runtime, notes } = runWith([
-      [at(10), { kind: "vincular_github", email: EMAIL.tiago, login: "tnunes-dev" }],
+      [at(10), { kind: "vincular_github", email: EMAIL.luana, login: "luaferraz" }],
       [at(10, 1), { kind: "vincular_github", email: EMAIL.caio, login: LOGIN.diego }],
     ]);
-    expect(notes[0]).toContain("@tnunes-dev");
+    expect(notes[0]).toContain("@luaferraz");
     expect(notes[1]).toContain("já está vinculado");
     const state = runtime.state;
-    expect(prAuthor(directory(state), prOf(state, 140)!)?.name).toBe("Tiago Nunes");
+    expect(prAuthor(directory(state), prOf(state, 140)!)?.name).toBe("Luana Ferraz");
     expect(unidentifiedLogins(state.people, state.prs)).toEqual([]);
     expect(state.feed.filter((item) => item.type === "app.github_linked")).toHaveLength(1);
   });
@@ -115,7 +115,7 @@ describe("eventos e estado agora", () => {
     const actor = (email: string) => ({ kind: "person" as const, email });
     const subject = { kind: "huddle" as const, id: "h" };
     let state: ActivityState = base();
-    state = applyEvent(state, event("h1", at(10), { type: "slack.huddle_started", source: "slack", actor: actor(EMAIL.diego), subject, data: { huddleId: "h", channel: "squad-portal" } }));
+    state = applyEvent(state, event("h1", at(10), { type: "slack.huddle_started", source: "slack", actor: actor(EMAIL.diego), subject, data: { huddleId: "h", channel: "squad-hubsmart" } }));
     state = applyEvent(state, event("h2", at(10, 1), { type: "slack.huddle_joined", source: "slack", actor: actor(EMAIL.luana), subject, data: { huddleId: "h" } }));
     state = applyEvent(state, event("h3", at(10, 5), { type: "slack.huddle_left", source: "slack", actor: actor(EMAIL.diego), subject, data: { huddleId: "h" } }));
     expect(state.huddles[0]).toMatchObject({ participants: [EMAIL.luana], endedAt: null });
@@ -134,16 +134,16 @@ describe("eventos e estado agora", () => {
 });
 
 describe("onde cada um está", () => {
-  it("daily na sala por quem entrou no huddle; Caio ainda na mesa, Tiago atrasado e Bianca de férias", () => {
+  it("daily na sala por quem entrou no huddle; Caio ainda na mesa, Bianca de férias e o diretor, que não é convidado, na mesa", () => {
     const state = day(at(9, 35));
     expect(whereIs(state, EMAIL.marina).kind).toBe("reuniao");
     expect(doingNow(state, EMAIL.renata)).toBe("Daily");
     // Convidado que não entrou no huddle não vai à sala.
     expect(whereIs(state, EMAIL.caio).kind).toBe("mesa");
-    expect(whereIs(state, EMAIL.tiago).kind).toBe("fora");
+    expect(whereIs(state, EMAIL.otavio).kind).toBe("mesa");
     expect(doingNow(state, EMAIL.bianca)).toBe("Férias até 16/11");
-    expect(presenceBuckets(state).reuniao).toHaveLength(5);
-    expect(presenceBuckets(day(at(9, 40))).reuniao).toHaveLength(6);
+    expect(presenceBuckets(state).reuniao).toHaveLength(4);
+    expect(presenceBuckets(day(at(9, 40))).reuniao).toHaveLength(5);
   });
 
   it("depois da daily cada um volta; reunião remota fica na mesa", () => {
@@ -155,8 +155,8 @@ describe("onde cada um está", () => {
 
   it("huddle junta quem entrou; almoço tira do andar", () => {
     const huddle = day(at(11, 26));
-    expect(presenceBuckets(huddle).huddle.sort()).toEqual([EMAIL.diego, EMAIL.rafael, EMAIL.renata].sort());
-    expect(doingNow(huddle, EMAIL.diego)).toBe("huddle em #squad-portal");
+    expect(presenceBuckets(huddle).huddle.sort()).toEqual([EMAIL.diego, EMAIL.luana, EMAIL.renata].sort());
+    expect(doingNow(huddle, EMAIL.diego)).toBe("huddle em #squad-hubsmart");
     const lunch = day(at(12, 30));
     expect(whereIs(lunch, EMAIL.marina).kind).toBe("fora");
     expect(doingNow(lunch, EMAIL.marina)).toBe("Almoço");
@@ -164,7 +164,7 @@ describe("onde cada um está", () => {
 
   it("o rótulo mostra a revisão em curso", () => {
     const state = day(at(11, 50));
-    expect(doingNow(state, EMAIL.renata)).toMatch(/PR #145/);
+    expect(doingNow(state, EMAIL.renata)).toMatch(/revisando PR #14[25]/);
   });
 
   it("nextFreeAt pula reuniões encostadas", () => {
@@ -185,15 +185,15 @@ describe("perguntas de acompanhamento", () => {
     const pr = prOf(state, 144)!;
     const names = reviewCandidates(state, pr).map((candidate) => candidate.person.email);
     expect(names).not.toContain(EMAIL.renata); // autora
-    expect(names).not.toContain(EMAIL.tiago); // sem GitHub vinculado
+    expect(names).not.toContain(EMAIL.luana); // sem GitHub vinculado
     expect(names).not.toContain(EMAIL.diego); // em entrevista
-    expect(names).not.toContain(EMAIL.luana); // em foco
-    expect(names).not.toContain(EMAIL.marina); // PM não revisa código
+    expect(names).not.toContain(EMAIL.marina); // PO não revisa código
+    expect(names).not.toContain(EMAIL.otavio); // diretor também não
     const later = day(at(13, 35));
     // Às 13h35 o refinamento das 14h já tira os dois; às 15h30, quem tem menos revisão pendente vem primeiro.
     expect(reviewCandidates(later, prOf(later, 144)!)).toEqual([]);
     const free = day(at(15, 30));
-    expect(reviewCandidates(free, prOf(free, 144)!).map((candidate) => candidate.person.email)).toEqual([EMAIL.luana, EMAIL.diego]);
+    expect(reviewCandidates(free, prOf(free, 144)!).map((candidate) => candidate.person.email)).toEqual([EMAIL.diego]);
   });
 
   it("HUs sem critério de aceite e paradas há mais de N", () => {
@@ -236,10 +236,10 @@ describe("perguntas de acompanhamento", () => {
 
   it("carga por pessoa", () => {
     const load = personLoad(day(at(9, 5)), EMAIL.diego)!;
-    expect(load.stories.map((story) => story.id)).toEqual(["HU-27", "HU-31", "HU-34"]);
+    expect(load.stories.map((story) => story.id)).toEqual(["HU-27", "HU-31", "HU-34", "HU-39"]);
     expect(load.prs.map((pr) => pr.number)).toEqual([142]);
     expect(load.reviews.map((pr) => pr.number)).toEqual([144]);
-    expect(personLoad(day(at(9, 5)), EMAIL.tiago)!.prs).toEqual([]);
+    expect(personLoad(day(at(9, 5)), EMAIL.luana)!.prs).toEqual([]);
   });
 });
 
@@ -289,7 +289,9 @@ describe("ações com efeito", () => {
     ]);
     expect(notes[0]).toContain("Marina Lopes");
     const message = runtime.state.messages.at(-1)!;
-    expect(message).toMatchObject({ from: { kind: "app" }, to: EMAIL.marina });
+    // No canal do squad, marcando a Marina: nada de mensagem direta.
+    expect(message).toMatchObject({ from: { kind: "app" }, to: "#squad-hubsmart", mentions: [EMAIL.marina] });
+    expect(message.text).toMatch(/^@Marina, /);
     expect(message.text).toContain("HU-27");
     expect(storyOf(runtime.state, "HU-27")!.blocked).toBeNull();
     expect(epicHealth(runtime.state, "E-1").level).not.toBe("travado");
@@ -307,11 +309,11 @@ describe("ações com efeito", () => {
 
   it("reatribuir tira a HU de quem está fora, e quem recebe começa", () => {
     const { runtime, notes } = runWith([
-      [at(10, 30), { kind: "reatribuir", storyId: "HU-37", to: EMAIL.tiago }],
+      [at(10, 30), { kind: "reatribuir", storyId: "HU-37", to: EMAIL.luana }],
       [at(10, 31), null],
     ]);
-    expect(notes[0]).toContain("Tiago Nunes");
-    expect(storyOf(runtime.state, "HU-37")!.assignee).toBe(EMAIL.tiago);
+    expect(notes[0]).toContain("Luana Ferraz");
+    expect(storyOf(runtime.state, "HU-37")!.assignee).toBe(EMAIL.luana);
     expect(blockersOf(runtime.state, "E-4").map((reason) => reason.kind)).not.toContain("responsavel-fora");
     runtime.advanceTo(at(12));
     expect(storyOf(runtime.state, "HU-37")!.status).toBe("andamento");
@@ -337,7 +339,7 @@ describe("ações com efeito", () => {
       [at(13, 40), null],
     ]);
     expect(runtime.state.botTasks.at(-1)!.result).toContain("Refinamento às 14:00");
-    expect(runtime.state.botTasks.at(-1)!.result).toContain("Tiago sem GitHub vinculado");
+    expect(runtime.state.botTasks.at(-1)!.result).toContain("Luana sem GitHub vinculado");
   });
 
   it("pedir ao bot para resumir e para cobrar revisão", () => {
@@ -353,7 +355,9 @@ describe("ações com efeito", () => {
     // O segundo pedido espera o Pulse terminar o primeiro.
     const [summary, nudge] = runtime.state.botTasks.slice(-2);
     expect(nudge!.startedAt).toBe(summary!.doneAt);
-    expect(pr.reviewers.length).toBeGreaterThan(1);
+    // Só o Diego está livre, e ele já tinha a revisão: o Pulse marca ele no canal de novo.
+    expect(pr.reviewers).toEqual([LOGIN.diego]);
+    expect(runtime.state.messages.at(-1)).toMatchObject({ to: "#squad-hubsmart", mentions: [EMAIL.diego] });
     runtime.advanceTo(DAY_END);
     expect(prOf(runtime.state, 144)!.state).toBe("merged");
   });
