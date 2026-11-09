@@ -89,13 +89,24 @@ describe("plano da cena", () => {
   const placeOf = (state: ReturnType<typeof simulatedStateAt>, email: string) => personPlans(state).find((plan) => plan.email === email)!;
 
   it("vai para a sala alguns minutos antes da reunião e senta em lugares distintos", () => {
-    const before = simulatedStateAt(7, at(9, 25));
-    expect(placeOf(before, EMAIL.renata).place.zone).toBe("sala");
-    expect(placeOf(before, EMAIL.renata).heading).toBe("indo para Daily");
-    const during = simulatedStateAt(7, at(9, 35));
+    const before = simulatedStateAt(7, at(13, 55));
+    expect(placeOf(before, EMAIL.rafael).place.zone).toBe("sala");
+    expect(placeOf(before, EMAIL.rafael).heading).toBe("indo para Refinamento");
+    const during = simulatedStateAt(7, at(14, 20));
     const seats = personPlans(during).filter((plan) => plan.place.zone === "sala").map((plan) => plan.place.key);
+    expect(seats).toHaveLength(7);
+    expect(new Set(seats).size).toBe(7);
+  });
+
+  it("a daily é o huddle: ninguém vai antes, e a sala é de quem entrou, cada um num lugar", () => {
+    expect(placeOf(simulatedStateAt(7, at(9, 25)), EMAIL.renata).place.zone).toBe("squad");
+    const during = simulatedStateAt(7, at(9, 35));
+    expect(placeOf(during, EMAIL.caio).place.zone).toBe("squad");
+    const later = simulatedStateAt(7, at(9, 40));
+    const seats = personPlans(later).filter((plan) => plan.place.zone === "sala").map((plan) => plan.place.key);
     expect(seats).toHaveLength(6);
     expect(new Set(seats).size).toBe(6);
+    expect(placeOf(later, EMAIL.caio).place.zone).toBe("sala");
   });
 
   it("chamada remota e foco ficam na mesa; huddle junta; quem saiu vai para o elevador", () => {

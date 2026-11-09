@@ -7,31 +7,26 @@ import { at } from "@/activity/time";
 describe("techRosterStatus", () => {
   const seed = DEFAULT_SEED;
 
-  it("às 09:35 formata os seis da daily como Em reunião e Bianca/Tiago como Fora/Férias", () => {
+  it("às 09:35 formata os cinco do huddle como Em reunião e os convidados que não entraram como ainda não entrou", () => {
     const state = simulatedStateAt(seed, at(9, 35));
-    const dailyEmails = [
-      EMAIL.marina,
-      EMAIL.caio,
-      EMAIL.renata,
-      EMAIL.diego,
-      EMAIL.luana,
-      EMAIL.rafael,
-    ];
-
-    for (const email of dailyEmails) {
+    for (const email of [EMAIL.marina, EMAIL.renata, EMAIL.diego, EMAIL.luana, EMAIL.rafael]) {
       const status = formatSquadStatus(state, email);
       expect(status.whereKind).toBe("reuniao");
       expect(status.label).toBe("Em reunião · Daily até 09:45");
-      expect(status.ariaLabel).toBe("Em reunião · Daily até 09:45");
+      expect(status.daily).toBeNull();
     }
+    const caio = formatSquadStatus(state, EMAIL.caio);
+    expect(caio).toMatchObject({ whereKind: "mesa", label: "Daily · ainda não entrou", ariaLabel: "Daily · ainda não entrou (Na mesa)", daily: "ainda-nao-entrou" });
+    expect(formatSquadStatus(state, EMAIL.tiago)).toMatchObject({ whereKind: "fora", label: "Daily · ainda não entrou", daily: "ainda-nao-entrou" });
+    expect(formatSquadStatus(state, EMAIL.bianca)).toMatchObject({ whereKind: "fora", ariaLabel: "Daily · ainda não entrou (Férias)" });
+  });
 
-    const tiago = formatSquadStatus(state, EMAIL.tiago);
-    expect(tiago.whereKind).toBe("fora");
-    expect(tiago.label).toBe("Fora");
-
-    const bianca = formatSquadStatus(state, EMAIL.bianca);
-    expect(bianca.whereKind).toBe("fora");
-    expect(bianca.label).toBe("Férias");
+  it("às 09:40 o Caio entrou e está na sala; Bianca e Tiago ausentes; depois da daily, a Bianca volta a Férias", () => {
+    const state = simulatedStateAt(seed, at(9, 40));
+    expect(formatSquadStatus(state, EMAIL.caio)).toMatchObject({ whereKind: "reuniao", daily: null });
+    expect(formatSquadStatus(state, EMAIL.bianca)).toMatchObject({ whereKind: "fora", label: "Daily · ausente", ariaLabel: "Daily · ausente (Férias)", daily: "ausente" });
+    expect(formatSquadStatus(state, EMAIL.tiago)).toMatchObject({ label: "Daily · ausente", daily: "ausente" });
+    expect(formatSquadStatus(simulatedStateAt(seed, at(9, 50)), EMAIL.bianca)).toMatchObject({ label: "Férias", daily: null });
   });
 
   it("às 11:21 formata quem está em huddle com Em huddle", () => {

@@ -134,13 +134,16 @@ describe("eventos e estado agora", () => {
 });
 
 describe("onde cada um está", () => {
-  it("daily na sala, Tiago atrasado e Bianca de férias", () => {
+  it("daily na sala por quem entrou no huddle; Caio ainda na mesa, Tiago atrasado e Bianca de férias", () => {
     const state = day(at(9, 35));
     expect(whereIs(state, EMAIL.marina).kind).toBe("reuniao");
     expect(doingNow(state, EMAIL.renata)).toBe("Daily");
+    // Convidado que não entrou no huddle não vai à sala.
+    expect(whereIs(state, EMAIL.caio).kind).toBe("mesa");
     expect(whereIs(state, EMAIL.tiago).kind).toBe("fora");
     expect(doingNow(state, EMAIL.bianca)).toBe("Férias até 16/11");
-    expect(presenceBuckets(state).reuniao).toHaveLength(6);
+    expect(presenceBuckets(state).reuniao).toHaveLength(5);
+    expect(presenceBuckets(day(at(9, 40))).reuniao).toHaveLength(6);
   });
 
   it("depois da daily cada um volta; reunião remota fica na mesa", () => {
