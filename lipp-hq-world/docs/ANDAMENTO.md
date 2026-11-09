@@ -1,7 +1,7 @@
 # Trabalho em andamento
 
 Ponto de retomada para continuar de outro computador ou em outra sessão. Atualize ao pausar
-ou ao fechar um ciclo. Última atualização: 2026-11-08.
+ou ao fechar um ciclo. Última atualização: 2026-11-09.
 
 ## Onde estamos
 
@@ -32,6 +32,7 @@ recebe conectores de verdade sem mexer na cena.
 | [#114](https://github.com/lippdev/town/pull/114) | `feat/tecnologia-visoes` → `feat/tecnologia-andar` | Pronta para revisão: visões Projetos e Painel com os mesmos dados; prova "o prédio e o painel dizem o mesmo" |
 | [#115](https://github.com/lippdev/town/pull/115) | `feat/tecnologia-acoes` → `feat/tecnologia-visoes` | Pronta para revisão: cobrar, reatribuir e pedir ao bot onde a pergunta aparece; cadastro com vínculo do GitHub; prova pela interface |
 | [#116](https://github.com/lippdev/town/pull/116) | `feat/tecnologia-barra-lateral` → `feat/tecnologia-acoes` | Pronta para revisão: squad na barra lateral com status sincronizado ao relógio, busca, recolhimento e abertura da gaveta |
+| [#117](https://github.com/lippdev/town/pull/117) | `feat/tecnologia-daily-huddle` → `feat/tecnologia-barra-lateral` | Pronta para revisão: a daily é o huddle do Slack; na sala quem entrou, "ainda não entrou" até 09:38 e ausente depois, iguais no prédio, no Painel e na barra (`dailyAttendance`) |
 
 Próximos passos, nesta ordem:
 1. ~~Completar o `qa:tecnologia` da #112~~ (concluído): o roteiro passa de ponta a ponta para a
@@ -53,7 +54,11 @@ Próximos passos, nesta ordem:
    8 pessoas com estado sincronizado ao relógio pelos seletores puros, busca (nome e papel),
    recolher persistido em localStorage, clique abre gaveta e leva ao andar 2, slot com import dinâmico
    preservando zero download sem cenário; prova automatizada em 1440×900 e 390×844 no visual-qa.
-5. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
+5. ~~A daily é o huddle~~ (`feat/tecnologia-daily-huddle`, #117): quem entra no huddle do canal do
+   squad vai à sala; ausente é o convidado da agenda que não entrou, com tolerância de 8 minutos
+   ("ainda não entrou" até 09:38). Seletor `dailyAttendance`, quadro da daily na sala, seção no Painel e
+   rótulo na barra; `HQ_ONLY=daily` prova os três às 09:35 e 09:40.
+6. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
    3 a 5 pessoas, medindo tempo, acerto e se a pessoa sabe o que fazer em seguida.
 
 Depois do experimento, se valer: ligar conectores reais (apps e permissões de admin no

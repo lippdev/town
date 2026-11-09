@@ -261,11 +261,36 @@ Na velocidade 1, o dia passa em 15 minutos.
   sem senha só destrava depois do refinamento, a menos que alguém cobre antes.
 - O PR #142 está aberto há quatro dias sem revisão, até a rotina do Pulse cobrar quem está livre.
 - O CI do PR #145 quebra durante o foco da Luana e é consertado; a Renata aprova depois do huddle.
-- Daily e refinamento na sala; chamadas remotas na mesa; três huddles; almoço; a Bianca de férias, com
-  HU no nome dela; o Tiago chega depois da daily e abre PR com um login que não vinculou.
+- A daily é o huddle do canal do squad às 09:30 (ver abaixo); o refinamento na sala; chamadas remotas na
+  mesa; três huddles; almoço; a Bianca de férias, com HU no nome dela; o Tiago chega depois da daily e
+  abre PR com um login que não vinculou.
 - Deploys em homologação e em produção; um épico de discovery é validado e outro passa para o delivery.
 - Rotinas dos bots da Operação: o Forge prepara a pauta da daily, o Atlas atualiza o status dos épicos a
   partir do GitHub, e o Pulse cobra a revisão parada. O resultado é calculado pelos mesmos seletores.
+
+### A daily é o huddle do Slack
+
+A daily está na agenda (convite das 09:30 às 09:45), mas acontece num huddle do canal do squad
+(`huddleChannel` no evento da agenda). Às 09:30 a tech lead abre o huddle, quem está no escritório entra
+nos dois primeiros minutos e o Caio entra atrasado, às 09:36 ou 09:37 pela semente. A Bianca (férias) e o
+Tiago (chega às 10:12) não entram.
+
+- **Na sala está quem entrou no huddle**, convidado ou não (`whereIs`). O convidado que não entrou fica
+  onde está; ninguém vai à sala antes de entrar, e os lugares seguem a ordem de entrada.
+- **Ausente é o convidado da agenda que não entrou no huddle.** Quem não foi convidado nunca conta.
+- **Tolerância de 8 minutos** (`DAILY_GRACE_MS`): até 09:38 quem não entrou "ainda não entrou"; a partir
+  de 09:38, "ausente". Quem entra atrasado sai da lista e vai para a sala. Quem entrou e saiu antes do
+  fim não vira ausente.
+- Um seletor só, `dailyAttendance(state, at)`, alimenta os três lugares: o **quadro da daily** sobre a
+  sala de reunião no andar, a seção **"Daily · huddle em #squad-portal"** no topo do Painel (com onde
+  está quem não entrou: férias, fora, na mesa) e o rótulo da **barra lateral** ("Daily · ainda não
+  entrou", "Daily · ausente"). Fora da daily, nada aparece.
+- O Teams não marca "em reunião" na daily: o huddle é do Slack.
+
+`qa:tecnologia` prova num bloco à parte (`HQ_ONLY=daily`), com o relógio parado e movimento reduzido:
+às 09:35 o Caio, o Tiago e a Bianca aparecem como "ainda não entrou" no quadro, no Painel e na barra,
+iguais a `dailyAttendance`; às 09:40 a Bianca e o Tiago aparecem como ausentes nos três e o Caio está
+sentado na sala; às 09:46 nada fica marcado.
 
 ### O andar da Tecnologia
 
@@ -280,7 +305,7 @@ valem.
   canto do huddle perto dos elevadores. Não há figurante: quem está ali é o squad simulado.
 - **Cada pessoa** é uma `HumanFigure` com aparência própria (`src/tech/techPeople.ts`) e uma mesa. O plano
   (`personPlans`) diz onde ela deve estar: reunião presencial na agenda leva à sala (oito minutos do
-  dia antes, para chegar a tempo), huddle do Slack ao canto do huddle, presença offline ou ausente ao
+  dia antes, para chegar a tempo; na daily, só quem entra no huddle), huddle do Slack ao canto do huddle, presença offline ou ausente ao
   elevador, onde a pessoa some. Foco e chamada remota ficam na mesa; foco ganha a lua de "não perturbe",
   sempre à vista. A cena levanta, anda pela rede de caminhos (`techPlaces.ts`, testada para não atravessar
   móvel), troca de casa e senta. Ninguém para no meio de um movimento: termina e segue o plano novo.
