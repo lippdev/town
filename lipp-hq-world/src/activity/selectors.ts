@@ -63,14 +63,34 @@ export const activeHuddleOf = (state: ActivityState, email: string) => state.hud
 
 const FOCUS = /foco|focus/i;
 
-/** Agenda e huddle mandam; depois vêm presença do Teams e status do Slack. */
+/** Huddle que começou até isto antes da reunião ainda é o dela (quem abre a daily um pouco antes). */
+const HUDDLE_EARLY_MS = 15 * MINUTE;
+
+/** O huddle de uma reunião feita no Slack (a daily): o do canal dela, aberto na janela dela. */
+export function huddleOfMeeting(state: ActivityState, meeting: CalendarEvent): Huddle | null {
+  if (!meeting.huddleChannel) return null;
+  return state.huddles.find((huddle) => huddle.channel === meeting.huddleChannel && huddle.startedAt >= meeting.start - HUDDLE_EARLY_MS && huddle.startedAt < meeting.end) ?? null;
+}
+
+/** A reunião em curso que acontece neste huddle, se houver. */
+const meetingOfHuddle = (state: ActivityState, huddle: Huddle) =>
+  state.calendar.find((entry) => entry.huddleChannel === huddle.channel && entry.start <= state.at && state.at < entry.end && huddleOfMeeting(state, entry)?.id === huddle.id) ?? null;
+
+/**
+ * Agenda e huddle mandam; depois vêm presença do Teams e status do Slack. Na reunião feita em
+ * huddle (a daily), a sala é de quem entrou no huddle, convidado ou não; convidado que não entrou
+ * segue onde estava.
+ */
 export function whereIs(state: ActivityState, email: string): Whereabouts {
   const presence = state.presence[email] ?? "offline";
   const none = { meeting: null, huddle: null, until: null };
   if (presence === "offline") return { kind: "fora", ...none };
-  const meeting = currentMeeting(state, email);
-  if (meeting?.place === "sala") return { kind: "reuniao", meeting, huddle: null, until: meeting.end };
   const huddle = activeHuddleOf(state, email);
+  const huddleMeeting = huddle ? meetingOfHuddle(state, huddle) : null;
+  if (huddleMeeting) return { kind: "reuniao", meeting: huddleMeeting, huddle, until: huddleMeeting.end };
+  const invited = currentMeeting(state, email);
+  const meeting = invited?.huddleChannel ? null : invited;
+  if (meeting?.place === "sala") return { kind: "reuniao", meeting, huddle: null, until: meeting.end };
   if (huddle) return { kind: "huddle", meeting: null, huddle, until: null };
   if (meeting) return { kind: "chamada", meeting, huddle: null, until: meeting.end };
   if (presence === "ausente") return { kind: "fora", ...none };
@@ -155,6 +175,61 @@ export function presenceBuckets(state: ActivityState): Record<PlaceKind, string[
   const buckets: Record<PlaceKind, string[]> = { mesa: [], foco: [], chamada: [], reuniao: [], huddle: [], fora: [] };
   for (const person of state.people) buckets[whereIs(state, person.email).kind].push(person.email);
   return buckets;
+}
+
+// ─── A daily é o huddle do Slack ─────────────────────────────────────────────
+
+/** Até quanto depois do início o convidado que não entrou ainda é "ainda não entrou", não ausente. */
+export const DAILY_GRACE_MS = 8 * MINUTE;
+
+export interface DailyAttendance {
+  meeting: CalendarEvent;
+  /** O huddle da reunião, se alguém já o começou. */
+  huddle: Huddle | null;
+  /** Quem está no huddle agora, e portanto na sala: convidado ou não. */
+  inRoom: string[];
+  /** Convidados que não entraram, ainda dentro da tolerância. */
+  notYet: string[];
+  /** Convidados que não entraram, passada a tolerância. Quem não foi convidado nunca conta. */
+  absent: string[];
+  /** A partir de quando quem não entrou conta como ausente. */
+  graceUntil: Instant;
+}
+
+/**
+ * Quem está na daily, quem ainda não entrou e quem faltou, pela regra: ausente é o convidado da
+ * agenda que não entrou no huddle. Nos primeiros 8 minutos ele "ainda não entrou"; quem entra
+ * atrasado sai da lista. Nulo fora de uma reunião feita em huddle. Prédio, Painel e barra lateral
+ * leem daqui.
+ */
+export function dailyAttendance(state: ActivityState, at: Instant = state.at): DailyAttendance | null {
+  const meeting = state.calendar.find((entry) => entry.huddleChannel && entry.start <= at && at < entry.end);
+  if (!meeting) return null;
+  const huddle = huddleOfMeeting(state, meeting);
+  // Entrou e saiu antes do fim continua tendo entrado: só falta quem nunca entrou.
+  const joined = new Set<string>();
+  for (const event of state.feed) {
+    if (event.at > at || event.actor.kind !== "person") continue;
+    if ((event.type === "slack.huddle_started" || event.type === "slack.huddle_joined") && event.data.huddleId === huddle?.id) joined.add(event.actor.email);
+  }
+  for (const email of huddle?.participants ?? []) joined.add(email);
+  const missing = meeting.attendees.filter((email) => !joined.has(email));
+  const graceUntil = meeting.start + DAILY_GRACE_MS;
+  const late = at < graceUntil;
+  return { meeting, huddle, inRoom: huddle?.endedAt === null ? [...huddle.participants] : [], notYet: late ? missing : [], absent: late ? [] : missing, graceUntil };
+}
+
+/** Os três grupos da daily, na ordem em que as telas mostram. */
+export const DAILY_MARKS = ["na-sala", "ainda-nao-entrou", "ausente"] as const;
+export type DailyMark = (typeof DAILY_MARKS)[number];
+export const DAILY_MARK_LABEL: Record<DailyMark, string> = { "na-sala": "Na sala", "ainda-nao-entrou": "Ainda não entrou", ausente: "Ausente" };
+
+export const dailyGroups = (attendance: DailyAttendance): Record<DailyMark, string[]> => ({ "na-sala": attendance.inRoom, "ainda-nao-entrou": attendance.notYet, ausente: attendance.absent });
+
+export function dailyMarkOf(attendance: DailyAttendance | null, email: string): DailyMark | null {
+  if (!attendance) return null;
+  const groups = dailyGroups(attendance);
+  return DAILY_MARKS.find((mark) => groups[mark].includes(email)) ?? null;
 }
 
 /** O próximo instante em que a pessoa sai de reunião, chamada ou huddle, a partir de `from`. */

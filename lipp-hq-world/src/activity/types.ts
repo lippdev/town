@@ -226,6 +226,11 @@ export interface CalendarEvent {
   attendees: string[];
   /** "sala" é a sala de reunião do andar; "remoto" é chamada, da própria mesa. */
   place: "sala" | "remoto";
+  /**
+   * A reunião acontece num huddle deste canal do Slack (a daily): quem está na sala é quem entrou
+   * no huddle, não quem foi convidado. O convite só diz quem falta.
+   */
+  huddleChannel?: string;
 }
 
 // ─── Slack (só sinais) ───────────────────────────────────────────────────────
