@@ -1,5 +1,5 @@
 import type { ActivityState } from "@/activity/events";
-import { whereIs, PLACE_LABEL, type PlaceKind } from "@/activity/selectors";
+import { DAILY_MARK_LABEL, dailyAttendance, dailyMarkOf, whereIs, PLACE_LABEL, type DailyAttendance, type DailyMark, type PlaceKind } from "@/activity/selectors";
 import { clockLabel } from "@/activity/time";
 import { ROLE_LABEL, type Person } from "@/activity/types";
 
@@ -7,10 +7,24 @@ export interface SquadStatusInfo {
   whereKind: PlaceKind;
   label: string;
   ariaLabel: string;
+  /** Na daily em curso: "ainda-nao-entrou" ou "ausente" para o convidado que não entrou no huddle. */
+  daily: DailyMark | null;
 }
 
-/** Formata o estado de uma pessoa do squad para a barra lateral em poucas palavras. */
-export function formatSquadStatus(state: ActivityState, email: string): SquadStatusInfo {
+/**
+ * Formata o estado de uma pessoa do squad para a barra lateral em poucas palavras. Durante a daily,
+ * o convidado que não entrou no huddle aparece como "ainda não entrou" ou "ausente", pela mesma
+ * regra do prédio e do Painel (`dailyAttendance`).
+ */
+export function formatSquadStatus(state: ActivityState, email: string, daily: DailyAttendance | null = dailyAttendance(state)): SquadStatusInfo {
+  const base = placeStatus(state, email);
+  const mark = dailyMarkOf(daily, email);
+  if (mark !== "ainda-nao-entrou" && mark !== "ausente") return { ...base, daily: null };
+  const label = `${daily!.meeting.title} · ${DAILY_MARK_LABEL[mark].toLocaleLowerCase("pt-BR")}`;
+  return { whereKind: base.whereKind, label, ariaLabel: `${label} (${base.ariaLabel})`, daily: mark };
+}
+
+function placeStatus(state: ActivityState, email: string): Omit<SquadStatusInfo, "daily"> {
   const where = whereIs(state, email);
   switch (where.kind) {
     case "mesa":

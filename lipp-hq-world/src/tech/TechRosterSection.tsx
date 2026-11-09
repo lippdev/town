@@ -2,6 +2,7 @@ import { useEffect, type CSSProperties } from "react";
 import { ChevronDown, PersonStanding } from "lucide-react";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { personTopColor, squadHumanId } from "./techPeople";
+import { dailyAttendance } from "@/activity/selectors";
 import { formatSquadStatus, matchesSquadPerson } from "./techRosterStatus";
 import { useTechStore } from "./techStore";
 
@@ -23,6 +24,7 @@ export function TechRosterSection({ matches, searching, collapsed, onToggle, onS
   const selectedHumanId = useOfficeStore((store) => store.selectedHumanId);
 
   const people = state.people.filter((person) => matchesSquadPerson(person, matches));
+  const daily = dailyAttendance(state);
 
   useEffect(() => {
     onMatchesChange?.(searching ? people.length : null);
@@ -66,7 +68,7 @@ export function TechRosterSection({ matches, searching, collapsed, onToggle, onS
       <div className="office-section-body" data-collapsed={collapsed} inert={collapsed}>
         <div className="office-team-list">
           {people.map((person) => {
-            const status = formatSquadStatus(state, person.email);
+            const status = formatSquadStatus(state, person.email, daily);
             const active = selectedHumanId === squadHumanId(person.email);
             const color = personTopColor(person.email);
             return (
@@ -78,6 +80,7 @@ export function TechRosterSection({ matches, searching, collapsed, onToggle, onS
                 data-squad-member={person.email}
                 data-where={status.whereKind}
                 data-state={status.whereKind}
+                data-daily={status.daily ?? undefined}
                 aria-pressed={active}
                 title={`${person.name} · ${person.title} · ${status.ariaLabel}`}
                 onClick={() => selectPerson(person.email)}

@@ -217,3 +217,5 @@
 .tech-daily-board strong { color: var(--ui-text); font-weight: 600; }
 .tech-daily-ainda-nao-entrou { color: #e8c37a; }
 .tech-daily-ausente { color: #ec8f7a; }
+.tech-squad-bot[data-daily="ainda-nao-entrou"] .tech-squad-state { color: #e8c37a; }
+.tech-squad-bot[data-daily="ausente"] .tech-squad-state { color: #ec8f7a; }
