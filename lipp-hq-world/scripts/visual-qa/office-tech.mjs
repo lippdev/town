@@ -133,13 +133,13 @@ try {
       await shot(page, "exterior-cenario");
     });
 
-    await check("entra na Tecnologia: squad nas mesas, Tiago e Bianca fora, quadro dos épicos na parede", async () => {
+    await check("entra na Tecnologia: squad e diretor nas mesas, Bianca fora, quadro dos épicos na parede", async () => {
       await page.click('[data-floor-selector] [data-view="expansao-2"]');
       await settled(page);
-      await sceneCaughtUp(page, [EMAIL("renata.okabe"), EMAIL("bianca.sales"), EMAIL("tiago.nunes")]);
+      await sceneCaughtUp(page, [EMAIL("renata.okabe"), EMAIL("bianca.sales"), EMAIL("otavio.prado")]);
       const scene = await tech(page, "scene");
       assert.equal(scene[EMAIL("bianca.sales")].hidden, true);
-      assert.equal(scene[EMAIL("tiago.nunes")].hidden, true);
+      assert.equal(scene[EMAIL("otavio.prado")].home, "mesa-4", "o diretor senta no andar, com o squad");
       assert.ok(await page.evaluate(() => window.__HQ_OFFICE_QA__.objectVisible("quadro-epicos")));
       assert.equal((await tech(page, "board")).length, 6);
       assert.equal(await page.locator("[data-epic-card]").count(), 6);
@@ -147,7 +147,7 @@ try {
     });
 
     await check("a daily (huddle) leva à sala quem entrou, o atrasado chega depois, e cada um volta à mesa", async () => {
-      const present = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
+      const present = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz"].map(EMAIL);
       // Daily das 9h30 às 9h45, no huddle do squad: às 09:35 quem entrou já está indo para a sala.
       await tech(page, "jumpToClock", "09:35");
       assert.equal((await tech(page, "plans")).find((plan) => plan.email === EMAIL("renata.okabe")).zone, "sala");
@@ -203,7 +203,7 @@ try {
 
     await check("huddle junta quem entrou no canto do huddle", async () => {
       await tech(page, "jumpToClock", "11:21");
-      const people = ["renata.okabe", "diego.martins", "rafael.coutinho"].map(EMAIL);
+      const people = ["renata.okabe", "diego.martins", "luana.ferraz"].map(EMAIL);
       await sceneCaughtUp(page, people, 90000);
       const scene = await tech(page, "scene");
       assert.ok(people.every((email) => scene[email].home.startsWith("huddle-")), JSON.stringify(scene));
@@ -211,7 +211,7 @@ try {
       await shot(page, "huddle");
     });
 
-    await check("o épico muda de saúde no quadro: Login sem senha destrava depois da decisão", async () => {
+    await check("o épico muda de saúde no quadro: Acesso do franqueado sem senha destrava depois da decisão", async () => {
       assert.equal((await tech(page, "board")).find((card) => card.epicId === "E-1").health, "travado");
       assert.equal(await page.getAttribute('[data-epic-card="E-1"]', "data-health"), "travado");
       await tech(page, "jumpToClock", "15:20");
@@ -693,7 +693,7 @@ try {
     await viewIs(page, name);
   };
 
-  await check("cobrar a HU-27 pelo Painel: o botão diz a quem vai e mostra a mensagem do app antes de enviar", async () => {
+  await check("cobrar a HU-27 pelo Painel: o botão diz a quem vai e mostra a mensagem que sai no canal, marcando a pessoa", async () => {
     await tech(acts, "jumpToClock", "10:05");
     await toView(acts, "painel");
     await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "10:05");
@@ -705,7 +705,8 @@ try {
     await panel.waitFor();
     assert.equal(await trigger.getAttribute("aria-expanded"), "true");
     const message = (await panel.locator("[data-nudge-message] blockquote").textContent()).trim();
-    assert.match(message, /^Oi, Marina! A HU-27 \(Definir expiração do link mágico\) está travada há \d+ h esperando você/);
+    assert.equal(message, "@Marina, a HU-27 está esperando uma decisão de produto sua desde ontem às 17h, consegue olhar? Motivo: o link vale 15 minutos ou 24 horas?");
+    assert.match(await panel.locator("[data-nudge-message] figcaption").textContent(), /#squad-hubsmart, marcando Marina Lopes/);
     assert.ok((await focused(acts)).actionConfirm !== undefined, "o foco vai para Enviar");
     await shot(acts, "acao-cobrar-previa-1440");
     // Esc fecha só o painel; a visão fica, e o foco volta ao botão.
@@ -721,11 +722,13 @@ try {
     await acts.waitForSelector(`${item} [data-nudge-status="aguardando"]`);
     const sent = (await tech(acts, "messages")).filter((entry) => entry.from.kind === "app");
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].to, EMAIL("marina.lopes"));
+    // No canal do squad, marcando a Marina: não é mensagem direta.
+    assert.equal(sent[0].to, "#squad-hubsmart");
+    assert.deepEqual(sent[0].mentions, [EMAIL("marina.lopes")]);
     assert.equal(sent[0].text, message, "sai exatamente a mensagem mostrada");
     assert.equal((await acts.locator(`${item} [data-nudge-status]`).textContent()).trim(), "Cobrado às 10:05, aguardando resposta de Marina");
     assert.equal(await acts.getAttribute(".tech-notices", "aria-live"), "polite");
-    assert.match(await acts.locator("[data-notice]").last().textContent(), /Mensagem enviada a Marina Lopes/);
+    assert.match(await acts.locator("[data-notice]").last().textContent(), /Mensagem enviada no #squad-hubsmart, marcando Marina Lopes/);
     // A árvore mostra o mesmo "aguardando".
     await toView(acts, "projetos");
     await acts.waitForSelector('[data-tree-story="HU-27"][data-nudge="aguardando"]');
@@ -733,7 +736,7 @@ try {
     await shot(acts, "acao-cobrar-enviada-1440");
   });
 
-  await check("a resposta vem pela simulação e o Login sem senha destrava antes do refinamento (sem cobrança, só depois)", async () => {
+  await check("a resposta vem pela simulação e o Acesso do franqueado sem senha destrava antes do refinamento (sem cobrança, só depois)", async () => {
     await tech(acts, "jumpToClock", "10:30");
     await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "10:30");
     assert.equal((await tech(acts, "story", "HU-27")).blocked, null);
@@ -770,9 +773,9 @@ try {
     assert.match(await bianca.textContent(), /responsável agora/);
     assert.ok(await bianca.locator("input").isDisabled(), "quem já é responsável não se escolhe");
     assert.equal(await panel.locator("[data-away]").count(), 1, "só a Bianca está fora às 10:40");
-    const load = await tech(acts, "loadOf", EMAIL("tiago.nunes"));
-    const tiago = panel.locator(`[data-assignee-option="${EMAIL("tiago.nunes")}"]`);
-    assert.equal(Number(await tiago.locator("[data-load-stories]").getAttribute("data-load-stories")), load.stories.length, "a carga mostrada é a de personLoad");
+    const load = await tech(acts, "loadOf", EMAIL("marina.lopes"));
+    const marina = panel.locator(`[data-assignee-option="${EMAIL("marina.lopes")}"]`);
+    assert.equal(Number(await marina.locator("[data-load-stories]").getAttribute("data-load-stories")), load.stories.length, "a carga mostrada é a de personLoad");
     assert.ok(await panel.locator("[data-action-confirm]").isDisabled(), "sem escolha, não confirma");
     // Esc dentro do grupo de opções fecha só o painel.
     assert.equal((await focused(acts)).tag, "INPUT", "o foco vai para a primeira opção");
@@ -781,29 +784,29 @@ try {
     assert.equal(await tech(acts, "view"), "projetos");
     await trigger.click();
     await panel.waitFor();
-    await tiago.locator("input").check();
-    assert.match(await panel.locator("[data-reassign-summary]").textContent(), /A HU-37 sai de Bianca Sales e vai para Tiago Nunes/);
+    await marina.locator("input").check();
+    assert.match(await panel.locator("[data-reassign-summary]").textContent(), /A HU-37 sai de Bianca Sales e vai para Marina Lopes/);
     await shot(acts, "acao-reatribuir-1440");
     await panel.locator("[data-action-confirm]").click();
-    await acts.waitForFunction((email) => document.querySelector('[data-tree-story="HU-37"]')?.dataset.assignee === email, EMAIL("tiago.nunes"));
-    assert.match(await acts.locator(`${row} > .tv-row [data-label="Responsável"]`).textContent(), /Tiago Nunes/);
-    assert.equal((await tech(acts, "story", "HU-37")).assignee, EMAIL("tiago.nunes"));
-    // Painel: a carga do Tiago tem a HU-37, a da Bianca não, e tudo bate com trackingAnswers.
+    await acts.waitForFunction((email) => document.querySelector('[data-tree-story="HU-37"]')?.dataset.assignee === email, EMAIL("marina.lopes"));
+    assert.match(await acts.locator(`${row} > .tv-row [data-label="Responsável"]`).textContent(), /Marina Lopes/);
+    assert.equal((await tech(acts, "story", "HU-37")).assignee, EMAIL("marina.lopes"));
+    // Painel: a carga da Marina tem a HU-37, a da Bianca não, e tudo bate com trackingAnswers.
     await toView(acts, "painel");
-    const after = await tech(acts, "loadOf", EMAIL("tiago.nunes"));
+    const after = await tech(acts, "loadOf", EMAIL("marina.lopes"));
     assert.ok(after.stories.includes("HU-37"));
-    assert.equal(await acts.getAttribute(`[data-panel-load="${EMAIL("tiago.nunes")}"]`, "data-stories"), String(after.stories.length));
+    assert.equal(await acts.getAttribute(`[data-panel-load="${EMAIL("marina.lopes")}"]`, "data-stories"), String(after.stories.length));
     assert.equal(await acts.getAttribute(`[data-panel-load="${EMAIL("bianca.sales")}"]`, "data-stories"), String((await tech(acts, "loadOf", EMAIL("bianca.sales"))).stories.length));
-    assert.match(await acts.locator(`[data-panel-load="${EMAIL("tiago.nunes")}"]`).textContent(), /HU-37/);
+    assert.match(await acts.locator(`[data-panel-load="${EMAIL("marina.lopes")}"]`).textContent(), /HU-37/);
     assert.doesNotMatch(await acts.locator(`[data-panel-load="${EMAIL("bianca.sales")}"]`).textContent(), /HU-37/);
     await panelMatches(acts, "10:40 depois de reatribuir");
     // A gaveta da pessoa mostra a HU nova.
-    await acts.click(`[data-panel-load="${EMAIL("tiago.nunes")}"] th [data-person]`);
-    await acts.waitForSelector(`[data-tech-person="${EMAIL("tiago.nunes")}"] [data-story="HU-37"]`);
+    await acts.click(`[data-panel-load="${EMAIL("marina.lopes")}"] th [data-person]`);
+    await acts.waitForSelector(`[data-tech-person="${EMAIL("marina.lopes")}"] [data-story="HU-37"]`);
     await shot(acts, "acao-reatribuir-gaveta-1440");
     await acts.keyboard.press("Escape");
     await acts.waitForFunction(() => !document.querySelector("[data-tech-person]"));
-    report.acoes.reatribuir = { hu: "HU-37", de: "Bianca Sales", para: "Tiago Nunes", cargaTiago: after.stories };
+    report.acoes.reatribuir = { hu: "HU-37", de: "Bianca Sales", para: "Marina Lopes", cargaMarina: after.stories };
   });
 
   await check("pedir ao Atlas pela gaveta do épico: começa já, entra em bots hoje e o robô vai até o cartão do quadro", async () => {
@@ -862,18 +865,18 @@ try {
     report.acoes.bot = { tarefa: task.id, inicio: "10:50", robo: { x: robot.x, z: robot.z }, cartao: card.x };
   });
 
-  await check("cadastro: vincular o login do Tiago tira o PR #147 de 'autor não identificado' em todas as visões; erros na tela", async () => {
+  await check("cadastro: vincular o login da Luana tira o PR #147 de 'autor não identificado' em todas as visões; erros na tela", async () => {
     await tech(acts, "jumpToClock", "13:45");
     await acts.waitForFunction(() => document.querySelector("[data-view-clock]")?.textContent === "13:45");
     assert.deepEqual((await tech(acts, "answers")).semAutor, [147]);
-    assert.match(await acts.locator('[data-panel-list="sem-autor"] > [data-pr="147"]').textContent(), /tnunes-dev/);
+    assert.match(await acts.locator('[data-panel-list="sem-autor"] > [data-pr="147"]').textContent(), /luaferraz/);
     // O app não sabe de quem é um login sem vínculo: a gaveta de quem não vinculou não sugere nenhum.
     // O Caio (design) não abre PR: o aviso é neutro, sem falar de PR não identificado.
     await acts.click(`[data-panel-load="${EMAIL("caio.rezende")}"] th [data-person]`);
     const caio = `[data-tech-person="${EMAIL("caio.rezende")}"]`;
     await acts.waitForSelector(`${caio} [data-github-missing]`);
     const caioText = await acts.locator(caio).textContent();
-    assert.doesNotMatch(caioText, /tnunes-dev/, "a gaveta do Caio não atribui a ele o login do Tiago");
+    assert.doesNotMatch(caioText, /luaferraz/, "a gaveta do Caio não atribui a ele o login da Luana");
     const caioWarn = (await acts.locator(`${caio} [data-github-missing]`).textContent()).trim();
     assert.match(caioWarn, /^GitHub não vinculado\./);
     assert.doesNotMatch(caioWarn, /não identificado|carga/, "tom neutro para quem não abre PR");
@@ -881,26 +884,27 @@ try {
     await shot(acts, "cadastro-gaveta-caio-1440");
     await acts.keyboard.press("Escape");
     await acts.waitForFunction(() => !document.querySelector("[data-tech-person]"));
-    // Da gaveta do Tiago: "GitHub não vinculado" e "Vincular", também sem login sugerido.
-    await acts.click(`[data-panel-load="${EMAIL("tiago.nunes")}"] th [data-person]`);
-    const person = `[data-tech-person="${EMAIL("tiago.nunes")}"]`;
+    // Da gaveta da Luana: "GitHub não vinculado" e "Vincular", também sem login sugerido.
+    await acts.click(`[data-panel-load="${EMAIL("luana.ferraz")}"] th [data-person]`);
+    const person = `[data-tech-person="${EMAIL("luana.ferraz")}"]`;
     await acts.waitForSelector(`${person} [data-github-missing]`);
-    assert.doesNotMatch(await acts.locator(person).textContent(), /tnunes-dev/, "nem a do Tiago adivinha o login");
+    assert.doesNotMatch(await acts.locator(person).textContent(), /luaferraz/, "nem a da Luana adivinha o login");
     await acts.click(`${person} [data-open-registry]`);
     await acts.waitForSelector("[data-tech-registry]");
     assert.equal(await acts.locator("[data-tech-person]").count(), 0, "o cadastro usa o lugar da gaveta");
-    const form = `[data-registry-form="${EMAIL("tiago.nunes")}"]`;
+    const form = `[data-registry-form="${EMAIL("luana.ferraz")}"]`;
     await acts.waitForSelector(form);
-    assert.ok((await focused(acts)).registryLogin !== undefined, "o foco cai no login do Tiago");
-    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "6");
-    const unknown = acts.locator('[data-registry-unknown="tnunes-dev"]');
-    assert.match(await unknown.textContent(), /tnunes-dev · 2 PRs/);
+    assert.ok((await focused(acts)).registryLogin !== undefined, "o foco cai no login da Luana");
+    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "3");
+    const unknown = acts.locator('[data-registry-unknown="luaferraz"]');
+    assert.match(await unknown.textContent(), /luaferraz · 3 PRs/);
     assert.match(await unknown.textContent(), /#140/);
+    assert.match(await unknown.textContent(), /#145/);
     assert.match(await unknown.textContent(), /#147/);
     await shot(acts, "cadastro-1440");
     // Login inválido e login em uso: o erro aparece na tela, junto do campo.
     const input = acts.locator(`${form} [data-registry-login]`);
-    await input.fill("tiago nunes");
+    await input.fill("luana ferraz");
     await acts.keyboard.press("Enter");
     await acts.waitForSelector(`${form} [data-registry-error]`);
     assert.equal((await acts.locator(`${form} [data-registry-error]`).textContent()).trim(), "Login do GitHub inválido: só letras, números e hífen, até 39.");
@@ -909,34 +913,34 @@ try {
     await input.fill("rokabe");
     await acts.keyboard.press("Enter");
     await acts.waitForFunction((selector) => document.querySelector(`${selector} [data-registry-error]`)?.textContent.trim() === "Esse login já está vinculado a outra pessoa.", form);
-    assert.equal((await tech(acts, "people")).find((entry) => entry.email === EMAIL("tiago.nunes")).github, null, "erro não muda o cadastro");
+    assert.equal((await tech(acts, "people")).find((entry) => entry.email === EMAIL("luana.ferraz")).github, null, "erro não muda o cadastro");
     // O certo.
-    await input.fill("tnunes-dev");
+    await input.fill("luaferraz");
     await acts.keyboard.press("Enter");
     await acts.waitForSelector(form, { state: "detached" });
-    assert.equal(await acts.getAttribute(`[data-registry-person="${EMAIL("tiago.nunes")}"] [data-registry-github]`, "data-registry-github"), "tnunes-dev");
+    assert.equal(await acts.getAttribute(`[data-registry-person="${EMAIL("luana.ferraz")}"] [data-registry-github]`, "data-registry-github"), "luaferraz");
     assert.equal(await acts.locator("[data-registry-unknown]").count(), 0, "nenhum login sem pessoa");
-    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "7");
-    assert.match(await acts.locator("[data-notice]").last().textContent(), /GitHub @tnunes-dev vinculado/);
-    assert.equal((await tech(acts, "pr", 147)).author, "tnunes-dev", "o PR não muda: a ligação é na leitura");
+    assert.equal(await acts.getAttribute("[data-registry-github-count]", "data-registry-github-count"), "4");
+    assert.match(await acts.locator("[data-notice]").last().textContent(), /GitHub @luaferraz vinculado/);
+    assert.equal((await tech(acts, "pr", 147)).author, "luaferraz", "o PR não muda: a ligação é na leitura");
     assert.deepEqual((await tech(acts, "answers")).semAutor, []);
     await shot(acts, "cadastro-vinculado-1440");
     await acts.keyboard.press("Escape");
     await acts.waitForFunction(() => !document.querySelector("[data-tech-registry]"));
     assert.equal(await tech(acts, "view"), "painel", "o Esc fecha o cadastro e a visão fica");
-    // Painel: sem autor vazio, o #147 com o Tiago na fila de revisão e na carga dele.
+    // Painel: sem autor vazio, o #147 com a Luana na fila de revisão e na carga dela.
     assert.equal(await acts.locator('[data-panel-list="sem-autor"] > [data-panel-item]').count(), 0);
     const review = acts.locator('[data-panel-list="revisoes"] > [data-panel-item][data-pr="147"]');
-    if (await review.count()) assert.match(await review.textContent(), /Autor Tiago Nunes/);
-    assert.ok((await tech(acts, "loadOf", EMAIL("tiago.nunes"))).prs.includes(147));
-    assert.match(await acts.locator(`[data-panel-load="${EMAIL("tiago.nunes")}"]`).textContent(), /#147/);
+    if (await review.count()) assert.match(await review.textContent(), /Autor Luana Ferraz/);
+    assert.ok((await tech(acts, "loadOf", EMAIL("luana.ferraz"))).prs.includes(147));
+    assert.match(await acts.locator(`[data-panel-load="${EMAIL("luana.ferraz")}"]`).textContent(), /#147/);
     await panelMatches(acts, "13:45 depois do vínculo");
-    // Projetos: o #147 (HU-33) e o antigo #140 (HU-30) mostram o Tiago.
+    // Projetos: o #147 (HU-33), o #145 (HU-29) e o antigo #140 (HU-30) mostram a Luana.
     await toView(acts, "projetos");
     await acts.click("[data-tree-expand-all]");
-    for (const [story, number] of [["HU-33", 147], ["HU-30", 140]]) {
+    for (const [story, number] of [["HU-33", 147], ["HU-29", 145], ["HU-30", 140]]) {
       const line = await acts.locator(`[data-tree-story="${story}"] [data-pr="${number}"]`).textContent();
-      assert.match(line, /Tiago Nunes/, `árvore · #${number}`);
+      assert.match(line, /Luana Ferraz/, `árvore · #${number}`);
       assert.doesNotMatch(line, /autor não identificado/);
     }
     assert.equal(await acts.locator("[data-tech-view] .tech-unknown").filter({ hasText: "autor não identificado" }).count(), 0);
@@ -945,15 +949,15 @@ try {
     await acts.locator('[data-epic-card="E-2"]').focus();
     await acts.keyboard.press("Enter");
     await acts.waitForSelector('[data-tech-epic="E-2"] [data-pr="147"]');
-    assert.match(await acts.locator('[data-tech-epic="E-2"] [data-pr="147"]').textContent(), /Tiago Nunes/);
+    assert.match(await acts.locator('[data-tech-epic="E-2"] [data-pr="147"]').textContent(), /Luana Ferraz/);
     await acts.keyboard.press("Escape");
     await acts.click('[data-registry-button]');
     await acts.waitForSelector("[data-tech-registry]");
-    await acts.click(`[data-registry-person="${EMAIL("tiago.nunes")}"] .ta-trigger:has-text("Ver Tiago")`);
+    await acts.click(`[data-registry-person="${EMAIL("luana.ferraz")}"] .ta-trigger:has-text("Ver Luana")`);
     await acts.waitForSelector(`${person} [data-pr="147"]`);
     assert.equal(await acts.locator(`${person} [data-github-missing]`).count(), 0);
     await acts.keyboard.press("Escape");
-    report.acoes.cadastro = { login: "tnunes-dev", semAutorAntes: [147], semAutorDepois: [], erros: ["login-invalido", "login-em-uso"] };
+    report.acoes.cadastro = { login: "luaferraz", semAutorAntes: [147], semAutorDepois: [], erros: ["login-invalido", "login-em-uso"] };
   });
 
   await check("cadastro no celular (390×844): abre pela barra, sem rolagem lateral, Esc fecha", async () => {
@@ -1052,7 +1056,8 @@ try {
   await check("09:35: quem ainda não entrou no huddle aparece como 'ainda não entrou' no prédio, no Painel e na barra", async () => {
     await tech(dailyPage, "jumpToClock", "09:35");
     const expected = await threePlaces(dailyPage, "09:35");
-    assert.deepEqual(expected["ainda-nao-entrou"], [EMAIL("bianca.sales"), EMAIL("caio.rezende"), EMAIL("tiago.nunes")].sort(), "o Caio (atrasado), o Tiago e a Bianca ainda não entraram");
+    assert.deepEqual(expected["ainda-nao-entrou"], [EMAIL("bianca.sales"), EMAIL("caio.rezende")].sort(), "o Caio (atrasado) e a Bianca ainda não entraram");
+    assert.ok(!Object.values(expected).flat().includes(EMAIL("otavio.prado")), "o diretor não é convidado: nunca conta");
     assert.deepEqual(expected.ausente, [], "dentro da tolerância ninguém é ausente");
     assert.equal(await tech(dailyPage, "where", EMAIL("caio.rezende")), "mesa", "fora do huddle, o Caio fica na mesa");
   });
@@ -1060,7 +1065,7 @@ try {
   await check("09:40: a ausente aparece como ausente nos três lugares, e o atrasado está na sala", async () => {
     await tech(dailyPage, "jumpToClock", "09:40");
     const expected = await threePlaces(dailyPage, "09:40");
-    assert.deepEqual(expected.ausente, [EMAIL("bianca.sales"), EMAIL("tiago.nunes")].sort(), "Bianca e Tiago não entraram");
+    assert.deepEqual(expected.ausente, [EMAIL("bianca.sales")], "a Bianca não entrou");
     assert.deepEqual(expected["ainda-nao-entrou"], []);
     assert.ok(expected["na-sala"].includes(EMAIL("caio.rezende")), "o Caio entrou atrasado");
     assert.equal((await tech(dailyPage, "plans")).find((plan) => plan.email === EMAIL("caio.rezende")).zone, "sala");
@@ -1088,8 +1093,8 @@ try {
   if (isClosed) await barra.click('[aria-label="Abrir navegação"]');
   await barra.waitForSelector('[data-roster-section="tecnologia-squad"]');
 
-  await check("às 09:35 a seção mostra os cinco do huddle 'Em reunião' e os convidados que não entraram", async () => {
-    const dailyEmails = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
+  await check("às 09:35 a seção mostra os quatro do huddle 'Em reunião' e os convidados que não entraram", async () => {
+    const dailyEmails = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz"].map(EMAIL);
     for (const email of dailyEmails) {
       const row = barra.locator(`[data-squad-member="${email}"]`);
       assert.ok(await row.isVisible(), `${email} visível na barra`);
@@ -1102,7 +1107,7 @@ try {
     }
 
     // Na tolerância, o convidado que não entrou no huddle "ainda não entrou", esteja na mesa ou fora.
-    for (const [name, where] of [["caio.rezende", "mesa"], ["tiago.nunes", "fora"], ["bianca.sales", "fora"]]) {
+    for (const [name, where] of [["caio.rezende", "mesa"], ["bianca.sales", "fora"]]) {
       const row = barra.locator(`[data-squad-member="${EMAIL(name)}"]`);
       assert.equal(await row.getAttribute("data-where"), await tech(barra, "where", EMAIL(name)));
       assert.equal(await row.getAttribute("data-where"), where);
@@ -1154,20 +1159,20 @@ try {
     await barra.waitForFunction(() => !document.querySelector("[data-tech-person]"));
   });
 
-  await check("busca 'QA' deixa só o Rafael", async () => {
+  await check("busca 'diretor' deixa só o Otávio", async () => {
     const search = barra.locator(".office-roster-search");
-    await search.fill("QA");
+    await search.fill("diretor");
     await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 1);
     const visibleMember = barra.locator("[data-squad-member]");
-    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("rafael.coutinho"));
-    assert.match(await visibleMember.textContent(), /Rafael Coutinho/);
-    assert.match(await visibleMember.textContent(), /QA/);
+    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("otavio.prado"));
+    assert.match(await visibleMember.textContent(), /Otávio Prado/);
+    assert.match(await visibleMember.textContent(), /Diretor de tecnologia/);
     assert.equal(await barra.locator("[data-agent-row]").count(), 0);
     assert.equal(await barra.locator("[data-person-row]").count(), 0);
     // Mensagem de nenhum agente não aparece quando o squad tem resultado
     assert.equal(await barra.locator(".office-roster-empty").count(), 0);
 
-    await shot(barra, "barra-lateral-busca-qa-1440");
+    await shot(barra, "barra-lateral-busca-diretor-1440");
 
     // Com busca que não casa ninguém do squad, a seção não deve aparecer
     await search.fill("inexistente-xyz");
@@ -1178,7 +1183,7 @@ try {
     assert.match(await emptyNotice.textContent(), /Nenhum agente encontrado/);
 
     await search.fill("");
-    await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 8);
+    await barra.waitForFunction(() => document.querySelectorAll("[data-squad-member]").length === 7);
   });
 
   await check("recolher a seção funciona e é lembrado no localStorage", async () => {
@@ -1193,13 +1198,13 @@ try {
 
     // A busca abre a equipe mesmo se estiver recolhida: quem foi encontrado nunca fica escondido
     const search = barra.locator(".office-roster-search");
-    await search.fill("QA");
+    await search.fill("diretor");
     await barra.waitForFunction(
       () => document.querySelector('[data-roster-section="tecnologia-squad"] .office-section-body')?.getAttribute("data-collapsed") === "false"
     );
     const visibleMember = barra.locator("[data-squad-member]");
-    assert.ok(await visibleMember.isVisible(), "Rafael visível com a equipe aberta pela busca");
-    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("rafael.coutinho"));
+    assert.ok(await visibleMember.isVisible(), "Otávio visível com a equipe aberta pela busca");
+    assert.equal(await visibleMember.getAttribute("data-squad-member"), EMAIL("otavio.prado"));
 
     // Limpar a busca faz a seção voltar ao estado recolhido
     await search.fill("");
@@ -1231,7 +1236,7 @@ try {
     await phone.click('[aria-label="Abrir navegação"]');
     await phone.waitForFunction(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "true");
     await phone.waitForSelector('[data-roster-section="tecnologia-squad"]');
-    assert.equal(await phone.locator("[data-squad-member]").count(), 8);
+    assert.equal(await phone.locator("[data-squad-member]").count(), 7);
 
     await shot(phone, "barra-lateral-squad-390");
 
