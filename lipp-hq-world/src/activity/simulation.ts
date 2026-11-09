@@ -1,4 +1,4 @@
-import { botForTask, nudgeTarget, nudgeText } from "./actions";
+import { NUDGE_CHANNEL, botForTask, nudgeTarget, nudgeText } from "./actions";
 import { applyEvent, type ActivityEvent, type ActivityState } from "./events";
 import { LINK_PROBLEM_LABEL, linkGithub } from "./identity";
 import {
@@ -18,7 +18,7 @@ import {
   waitingSince,
   whereIs,
 } from "./selectors";
-import { AUTOMATION_BOTS, CALENDAR, CHANNELS, EMAIL, LOGIN, SUGGESTED_CRITERIA, squadSnapshot } from "./squad";
+import { AUTOMATION_BOTS, CALENDAR, CHANNELS, DAILY_CHANNEL, EMAIL, LOGIN, LOGIN_BY_EMAIL, SUGGESTED_CRITERIA, squadSnapshot } from "./squad";
 import type { ActionResult, ActivitySource, AppAction } from "./source";
 import { DAY_END, DAY_START, MINUTE, ageLabel, at, clockLabel } from "./time";
 import type { Actor, ActivitySnapshot, BotTaskKind, Instant, Source, Subject } from "./types";
@@ -156,13 +156,13 @@ export class SimulatedDay implements ActivitySource {
       this.schedule(when, only(...events.map((make) => make(when))));
     };
 
-    // Chegadas: a Bianca está de férias, e o Tiago chega depois da daily.
+    // Chegadas: a Bianca está de férias; o diretor chega por último.
     const arrivals: Array<[string, number, number]> = [
-      [EMAIL.marina, 9, 1], [EMAIL.renata, 9, 3], [EMAIL.diego, 9, 7], [EMAIL.luana, 9, 11], [EMAIL.caio, 9, 16], [EMAIL.rafael, 9, 21], [EMAIL.tiago, 10, 12],
+      [EMAIL.marina, 9, 1], [EMAIL.renata, 9, 3], [EMAIL.diego, 9, 7], [EMAIL.luana, 9, 11], [EMAIL.caio, 9, 16], [EMAIL.otavio, 9, 21],
     ];
     for (const [email, hour, minute] of arrivals) later(hour, minute, (when) => presenceAt(when, email, "disponivel"));
     const departures: Array<[string, number, number]> = [
-      [EMAIL.rafael, 17, 30], [EMAIL.caio, 17, 40], [EMAIL.diego, 17, 44], [EMAIL.marina, 17, 50], [EMAIL.luana, 17, 54], [EMAIL.renata, 17, 57], [EMAIL.tiago, 17, 58],
+      [EMAIL.otavio, 17, 30], [EMAIL.caio, 17, 40], [EMAIL.diego, 17, 44], [EMAIL.marina, 17, 50], [EMAIL.luana, 17, 54], [EMAIL.renata, 17, 57],
     ];
     for (const [email, hour, minute] of departures) later(hour, minute, (when) => statusAt(when, email, null), (when) => presenceAt(when, email, "offline"));
 
@@ -181,7 +181,7 @@ export class SimulatedDay implements ActivitySource {
     const focus: Array<[string, [number, number], [number, number]]> = [
       [EMAIL.luana, [9, 50], [11, 0]],
       [EMAIL.renata, [13, 4], [13, 58]],
-      [EMAIL.tiago, [10, 40], [11, 50]],
+      [EMAIL.otavio, [10, 0], [10, 55]],
     ];
     for (const [email, [h1, m1], [h2, m2]] of focus) {
       later(h1, m1, (when) => statusAt(when, email, { emoji: "🎧", text: "Foco" }), (when) => presenceAt(when, email, "naoperturbe"));
@@ -190,7 +190,7 @@ export class SimulatedDay implements ActivitySource {
 
     // Almoço: cada um no seu horário.
     const lunch: Array<[string, number, number, number]> = [
-      [EMAIL.marina, 12, 0, 58], [EMAIL.rafael, 12, 0, 55], [EMAIL.diego, 12, 5, 55], [EMAIL.caio, 12, 10, 55], [EMAIL.luana, 12, 15, 60], [EMAIL.renata, 12, 20, 40], [EMAIL.tiago, 12, 40, 50],
+      [EMAIL.marina, 12, 0, 58], [EMAIL.otavio, 12, 0, 55], [EMAIL.diego, 12, 5, 55], [EMAIL.caio, 12, 10, 55], [EMAIL.luana, 12, 15, 60], [EMAIL.renata, 12, 20, 40],
     ];
     for (const [email, hour, minute, length] of lunch) {
       const start = this.jitter(hour, minute, 4);
@@ -201,8 +201,8 @@ export class SimulatedDay implements ActivitySource {
 
     // Huddles: só quem entrou e quando; o que se fala não existe aqui.
     const huddles: Array<{ id: string; channel: string; start: [number, number]; people: string[]; length: number }> = [
-      { id: "huddle-portal", channel: "squad-portal", start: [11, 17], people: [EMAIL.renata, EMAIL.diego, EMAIL.rafael], length: 22 },
-      { id: "huddle-vendas", channel: "squad-vendas", start: [15, 36], people: [EMAIL.tiago, EMAIL.rafael], length: 14 },
+      { id: "huddle-squad", channel: DAILY_CHANNEL, start: [11, 17], people: [EMAIL.renata, EMAIL.diego, EMAIL.luana], length: 22 },
+      { id: "huddle-icatu", channel: "previdencia-icatu", start: [15, 36], people: [EMAIL.otavio, EMAIL.marina], length: 14 },
       { id: "huddle-design", channel: "design", start: [16, 40], people: [EMAIL.caio, EMAIL.luana], length: 28 },
     ];
     for (const huddle of huddles) {
@@ -218,7 +218,8 @@ export class SimulatedDay implements ActivitySource {
 
     this.dailyHuddle();
 
-    // HU-29: PR aberto, CI quebra durante o foco da Luana, ela conserta, a Renata aprova, mescla e sobe.
+    // HU-29: PR aberto (com o login que a Luana não vinculou), CI quebra durante o foco dela, ela
+    // conserta, a Renata aprova, mescla e sobe.
     later(9, 50, (when) => draft(when, "github", gh(LOGIN.luana), prSubject(145), "github.pr_opened", { number: 145, title: "HU-29: tela de confira seu e-mail", branch: "feat/HU-29-confira-email", draft: false, reviewers: [LOGIN.renata] }));
     later(9, 51, (when) => draft(when, "notion", person(EMAIL.luana), storySubject("HU-29"), "notion.story_status", { storyId: "HU-29", status: "revisao" }));
     later(10, 4, (when) => draft(when, "github", gh("github-actions"), prSubject(145), "github.ci", { number: 145, state: "failure" }));
@@ -226,18 +227,18 @@ export class SimulatedDay implements ActivitySource {
     later(10, 57, (when) => draft(when, "github", gh("github-actions"), prSubject(145), "github.ci", { number: 145, state: "success" }));
     this.reviewWhenFree(this.jitter(11, 41, 1), EMAIL.renata, 145, { merge: true, deployTo: "homologacao" });
 
-    // HU-33: o Tiago abre PR com o login que ainda não vinculou.
-    later(13, 40, (when) => draft(when, "github", gh(LOGIN.tiago), prSubject(147), "github.pr_opened", { number: 147, title: "HU-33: histórico de boletos", branch: "feat/HU-33-historico", draft: false, reviewers: [LOGIN.diego] }));
-    later(13, 41, (when) => draft(when, "notion", person(EMAIL.tiago), storySubject("HU-33"), "notion.story_status", { storyId: "HU-33", status: "revisao" }));
+    // HU-33: a Luana abre outro PR, ainda com o login que não vinculou.
+    later(13, 40, (when) => draft(when, "github", gh(LOGIN.luana), prSubject(147), "github.pr_opened", { number: 147, title: "HU-33: histórico de boletos do franqueado", branch: "feat/HU-33-historico", draft: false, reviewers: [LOGIN.diego] }));
+    later(13, 41, (when) => draft(when, "notion", person(EMAIL.luana), storySubject("HU-33"), "notion.story_status", { storyId: "HU-33", status: "revisao" }));
     later(13, 50, (when) => draft(when, "github", gh("github-actions"), prSubject(147), "github.ci", { number: 147, state: "success" }));
     this.reviewWhenFree(this.jitter(16, 15, 2), EMAIL.diego, 147, { merge: true, deployTo: null, toQa: true });
 
     // HU-27: a decisão só sai depois do refinamento, a menos que alguém cobre antes.
     this.schedule(this.jitter(15, 8, 2), (state, when) => this.unblock(state, when, "HU-27", EMAIL.marina, "Decisão: o link vale 15 minutos e pode ser reenviado."));
 
-    // QA: um bug devolve a HU-34; a HU-30 passa.
-    later(15, 40, (when) => draft(when, "notion", person(EMAIL.rafael), storySubject("HU-34"), "notion.story_status", { storyId: "HU-34", status: "andamento" }));
-    later(16, 10, (when) => draft(when, "notion", person(EMAIL.rafael), storySubject("HU-30"), "notion.story_status", { storyId: "HU-30", status: "concluida" }));
+    // Aceite do PO: um bug devolve a HU-34; a HU-30 passa.
+    later(15, 40, (when) => draft(when, "notion", person(EMAIL.marina), storySubject("HU-34"), "notion.story_status", { storyId: "HU-34", status: "andamento" }));
+    later(16, 10, (when) => draft(when, "notion", person(EMAIL.marina), storySubject("HU-30"), "notion.story_status", { storyId: "HU-30", status: "concluida" }));
 
     // Discovery: a pesquisa valida; o checkout passa para o delivery no fim do dia.
     later(16, 50, (when) => draft(when, "notion", person(EMAIL.caio), { kind: "epic", id: "E-3" }, "notion.epic_status", { epicId: "E-3", status: "validado" }));
@@ -270,7 +271,7 @@ export class SimulatedDay implements ActivitySource {
   /**
    * A daily é o huddle do canal do squad. A tech lead abre às 09:30, quem está no escritório entra
    * no primeiro par de minutos, o Caio entra atrasado (dentro da tolerância) e quem está fora não
-   * entra. Os minutos vêm de um sorteio próprio da semente, para não mexer no resto do dia.
+   * entra. O diretor não é convidado. Os minutos vêm de um sorteio próprio da semente, para não mexer no resto do dia.
    */
   private dailyHuddle() {
     const daily = CALENDAR.find((entry) => entry.huddleChannel)!;
@@ -278,7 +279,7 @@ export class SimulatedDay implements ActivitySource {
     const subject: Subject = { kind: "huddle", id: "huddle-daily" };
     const joins: Array<[string, Instant]> = [
       [EMAIL.renata, daily.start],
-      ...[EMAIL.marina, EMAIL.diego, EMAIL.luana, EMAIL.rafael].map((email): [string, Instant] => [email, daily.start + rng.int(0, 2) * MINUTE]),
+      ...[EMAIL.marina, EMAIL.diego, EMAIL.luana].map((email): [string, Instant] => [email, daily.start + rng.int(0, 2) * MINUTE]),
       [EMAIL.caio, at(9, 36 + rng.int(0, 1))],
     ];
     joins.forEach(([email, join], index) => {
@@ -377,7 +378,7 @@ export class SimulatedDay implements ActivitySource {
           missing.length ? `sem critério de aceite: ${missing.join(", ")}` : null,
         ].filter(Boolean);
         const text = `Pauta da daily (${clockLabel(state.at)}) · ${lines.length ? lines.join(" · ") : "nada pendente"}`;
-        return { events: [draft(when, "slack", bot(botId), { kind: "channel", id: "squad-portal" }, "slack.app_message", { id: `m-${botId}-${when}`, to: "#squad-portal", text, about: target })], result: text };
+        return { events: [draft(when, "slack", bot(botId), { kind: "channel", id: DAILY_CHANNEL }, "slack.app_message", { id: `m-${botId}-${when}`, to: `#${DAILY_CHANNEL}`, text, about: target })], result: text };
       }
       case "atualizar_epico": {
         const changes = state.epics.flatMap((epic) => {
@@ -436,12 +437,12 @@ export class SimulatedDay implements ActivitySource {
           return { events: [], result: `Ninguém livre para revisar o PR #${pr.number} agora (${busy.join(", ")}).` };
         }
         const login = candidate.person.github!;
-        const text = `Oi, ${candidate.person.name.split(" ")[0]}! O PR #${pr.number} (${pr.title}) espera revisão ${ageLabel(when - waitingSince(pr))}. Você está livre agora pela agenda: consegue olhar?`;
+        const text = `@${candidate.person.name.split(" ")[0]}, o PR #${pr.number} (${pr.title}) está esperando revisão ${ageLabel(when - waitingSince(pr))} e a sua agenda está livre agora, consegue olhar?`;
         this.reviewWhenFree(when + 18 * MINUTE, candidate.person.email, pr.number, { merge: true, deployTo: pr.storyId ? "homologacao" : null });
         return {
           events: [
             draft(when, "github", bot(botId), prSubject(pr.number), "github.review_requested", { number: pr.number, reviewer: login }),
-            draft(when, "slack", bot(botId), personSubject(candidate.person.email), "slack.app_message", { id: `m-${botId}-${when}`, to: candidate.person.email, text, about: prSubject(pr.number) }),
+            draft(when, "slack", bot(botId), personSubject(candidate.person.email), "slack.app_message", { id: `m-${botId}-${when}`, to: NUDGE_CHANNEL, mentions: [candidate.person.email], text, about: prSubject(pr.number) }),
           ],
           result: `Pediu a revisão do PR #${pr.number} a ${candidate.person.name}, livre agora e sem outra revisão pendente.`,
         };
@@ -468,7 +469,7 @@ export class SimulatedDay implements ActivitySource {
       case "cobrar": {
         const story = storyOf(state, action.storyId);
         if (!story || story.status === "concluida") return { ok: false, problem: "Essa HU não está aberta." };
-        // Quem destrava: a pessoa esperada, o QA em QA, senão o responsável. A tela mostra a mesma
+        // Quem destrava: a pessoa esperada, senão o responsável. A tela mostra a mesma
         // pessoa e o mesmo texto antes de enviar (`nudgePreview`).
         const target = nudgeTarget(state, story)?.email;
         if (!target) return { ok: false, problem: "A HU não tem responsável para cobrar." };
@@ -484,8 +485,9 @@ export class SimulatedDay implements ActivitySource {
         this.schedule(answerAt, answer);
         return {
           ok: true,
-          note: `Mensagem enviada a ${personOf(state, target)?.name ?? target}. A resposta vem quando ${firstName(state, target)} puder olhar o Slack.`,
-          events: [draft(now, "slack", APP, storySubject(story.id), "slack.app_message", { id: `m-app-${now}-${story.id}`, to: target, text, about: storySubject(story.id) })],
+          note: `Mensagem enviada no ${NUDGE_CHANNEL}, marcando ${personOf(state, target)?.name ?? target}. A resposta vem quando ${firstName(state, target)} puder olhar o Slack.`,
+          // No canal do squad, marcando a pessoa: à vista do time, nunca por mensagem direta.
+          events: [draft(now, "slack", APP, storySubject(story.id), "slack.app_message", { id: `m-app-${now}-${story.id}`, to: NUDGE_CHANNEL, mentions: [target], text, about: storySubject(story.id) })],
         };
       }
       case "reatribuir": {
@@ -556,7 +558,8 @@ export class SimulatedDay implements ActivitySource {
       case "andamento": {
         // HU parada sem PR costuma ser trabalho pronto no computador de alguém: abre o PR e passa para revisão.
         const open = prsOfStory(state, storyId).find((pr) => pr.state === "open");
-        const author = personOf(state, story.assignee)?.github;
+        // Quem não vinculou o GitHub abre PR mesmo assim, com a conta dela: o login só não vira pessoa.
+        const author = personOf(state, story.assignee)?.github ?? (story.assignee ? LOGIN_BY_EMAIL[story.assignee] : undefined);
         if (open || !author) return { events: [draft(when, "notion", actor, subject, "notion.story_status", { storyId, status: "revisao" })] };
         const number = (this.prNumber += 1);
         const reviewer = reviewCandidates(state, { author })[0]?.person.github ?? LOGIN.renata;
