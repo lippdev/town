@@ -13,7 +13,8 @@
  * espera a cena alcançar o plano. A única prova com o relógio andando é a do próprio relógio.
  *
  * HQ_ONLY=visoes roda só o bloco das visões (Projetos e Painel); HQ_ONLY=acoes, só o das ações e
- * do cadastro. Servem para iterar num bloco.
+ * do cadastro; HQ_ONLY=daily, só o da daily pelo huddle; HQ_ONLY=barra, só o da barra lateral.
+ * Servem para iterar num bloco.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -117,7 +118,7 @@ const everyoneStill = (page) => page.waitForFunction(() => window.__HQ_OFFICE_QA
 const EMAIL = (name) => `${name}@lipp.example`;
 
 try {
-  // HQ_ONLY=visoes, acoes ou barra pula a cena e roda só aquele bloco (para iterar nele).
+  // HQ_ONLY=visoes, acoes, daily ou barra pula a cena e roda só aquele bloco (para iterar nele).
   if (!ONLY) {
     // ─── Abrir ─────────────────────────────────────────────────────────────────
     const page = await open(`${TECH}&velocidade=1&hora_sim=09:20`);
@@ -145,11 +146,19 @@ try {
       await shot(page, "tecnologia-manha");
     });
 
-    await check("a daily leva o squad à sala, e cada um volta à mesa depois", async () => {
-      const present = ["marina.lopes", "caio.rezende", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
-      // Daily das 9h30 às 9h45: no meio dela, o plano de todos já é a sala.
+    await check("a daily (huddle) leva à sala quem entrou, o atrasado chega depois, e cada um volta à mesa", async () => {
+      const present = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
+      // Daily das 9h30 às 9h45, no huddle do squad: às 09:35 quem entrou já está indo para a sala.
       await tech(page, "jumpToClock", "09:35");
       assert.equal((await tech(page, "plans")).find((plan) => plan.email === EMAIL("renata.okabe")).zone, "sala");
+      assert.equal((await tech(page, "plans")).find((plan) => plan.email === EMAIL("caio.rezende")).zone, "squad", "o Caio ainda não entrou no huddle");
+      await sceneCaughtUp(page, present, 90000);
+      await everyoneStill(page);
+      const early = await tech(page, "scene");
+      assert.ok(present.every((email) => early[email].home.startsWith("sala-")), JSON.stringify(early));
+      // O Caio entra atrasado (09:36 ou 09:37) e vai para a sala.
+      await tech(page, "jumpToClock", "09:40");
+      present.push(EMAIL("caio.rezende"));
       await sceneCaughtUp(page, present, 90000);
       await everyoneStill(page);
       const homes = await tech(page, "scene");
@@ -378,7 +387,7 @@ try {
   const urlView = (page) => page.evaluate(() => new URLSearchParams(window.location.search).get("visao"));
   report.visoes = { horas: VIEW_TIMES, leituras: [] };
 
-  if (ONLY !== "acoes" && ONLY !== "barra") {
+  if (!ONLY || ONLY === "visoes") {
   // Movimento reduzido: cada pessoa aparece já no lugar. A prova é de conteúdo, não de animação, e
   // assim não depende de quantos quadros por segundo a máquina sem GPU consegue desenhar.
   const views = await open(`${TECH}&andar=expansao-2&hora_sim=09:00&visao=painel`, { reducedMotion: "reduce" });
@@ -660,7 +669,7 @@ try {
 
   }
 
-  if (ONLY !== "visoes" && ONLY !== "barra") {
+  if (!ONLY || ONLY === "acoes") {
   // ─── Ações e cadastro ──────────────────────────────────────────────────────
   // Bloco à parte: cobrar, reatribuir, pedir ao bot e o cadastro do GitHub, tudo pela interface.
   // Relógio sempre parado e levado com jumpToClock; a ponte só lê o efeito, nunca age.
@@ -989,9 +998,88 @@ try {
   await acts.close();
   }
 
+  // ─── A daily é o huddle: prédio, Painel e barra dizem o mesmo ──────────────
+  // Bloco à parte (HQ_ONLY=daily). Movimento reduzido: a prova é de conteúdo, e cada pessoa
+  // aparece já no lugar. O relógio fica parado e salta com jumpToClock.
+  if (!ONLY || ONLY === "daily") {
+  report.daily = {};
+  const MARKS = ["na-sala", "ainda-nao-entrou", "ausente"];
+  const dailyPage = await open(`${TECH}&andar=expansao-2&hora_sim=09:30`, { reducedMotion: "reduce" });
+  await dailyPage.waitForFunction(() => window.__HQ_TECH_QA__);
+  await tech(dailyPage, "pause", true);
+  await dailyPage.waitForSelector('[data-roster-section="tecnologia-squad"]');
+  await settled(dailyPage);
+  /** Os três lugares, lidos do DOM: o quadro da sala no prédio, o Painel e a barra lateral. */
+  const dailyRead = (page, where) =>
+    page.evaluate(([marks, place]) => {
+      const people = (selector) => [...document.querySelectorAll(selector)].map((node) => node.dataset.person ?? node.dataset.squadMember).sort();
+      return Object.fromEntries(marks.map((mark) => {
+        if (place === "predio") return [mark, people(`[data-daily-board] [data-daily-group="${mark}"] [data-person]`)];
+        if (place === "painel") return [mark, people(`[data-panel-daily] [data-daily-group="${mark}"] .tv-presence-people > [data-person]`)];
+        return [mark, people(mark === "na-sala" ? '[data-squad-member][data-where="reuniao"]:not([data-daily])' : `[data-squad-member][data-daily="${mark}"]`)];
+      }));
+    }, [MARKS, where]);
+  const expectedDaily = async (page) => {
+    const groups = await tech(page, "daily");
+    assert.ok(groups, "há daily em curso");
+    return Object.fromEntries(MARKS.map((mark) => [mark, [...groups[mark]].sort()]));
+  };
+  /** Prédio e barra (na mesma tela), depois o Painel: os três iguais a dailyAttendance. */
+  const threePlaces = async (page, clock) => {
+    const expected = await expectedDaily(page);
+    await page.waitForFunction((list) => [...document.querySelectorAll('[data-daily-board] [data-daily-group="na-sala"] [data-person]')].length === list.length, expected["na-sala"]);
+    assert.deepEqual(await dailyRead(page, "predio"), expected, `${clock} · quadro da daily no prédio`);
+    assert.deepEqual(await dailyRead(page, "barra"), expected, `${clock} · barra lateral`);
+    // Clique no próprio rótulo da sala (não no ponto da tela, onde pode haver alguém sentado).
+    await page.locator('[data-room="expansao-2-sala"]').evaluate((node) => node.click());
+    await settled(page);
+    await shot(page, `daily-${clock.replace(":", "")}-predio`);
+    await page.locator('[data-roster-section="tecnologia-squad"]').screenshot({ path: path.join(OUT, `daily-${clock.replace(":", "")}-barra.png`), animations: "disabled", timeout: after(60000) });
+    await page.click('[data-view-tab="painel"]');
+    await viewIs(page, "painel");
+    await page.waitForSelector("[data-panel-daily]");
+    assert.deepEqual(await dailyRead(page, "painel"), expected, `${clock} · Painel`);
+    await page.locator("#painel-daily").scrollIntoViewIfNeeded();
+    await shot(page, `daily-${clock.replace(":", "")}-painel`);
+    await page.click('[data-view-tab="predio"]');
+    await viewIs(page, "predio");
+    if (await page.locator(".office-focus .office-button.primary").isVisible()) await page.click(".office-focus .office-button.primary");
+    await settled(page);
+    report.daily[clock] = expected;
+    return expected;
+  };
+
+  await check("09:35: quem ainda não entrou no huddle aparece como 'ainda não entrou' no prédio, no Painel e na barra", async () => {
+    await tech(dailyPage, "jumpToClock", "09:35");
+    const expected = await threePlaces(dailyPage, "09:35");
+    assert.deepEqual(expected["ainda-nao-entrou"], [EMAIL("bianca.sales"), EMAIL("caio.rezende"), EMAIL("tiago.nunes")].sort(), "o Caio (atrasado), o Tiago e a Bianca ainda não entraram");
+    assert.deepEqual(expected.ausente, [], "dentro da tolerância ninguém é ausente");
+    assert.equal(await tech(dailyPage, "where", EMAIL("caio.rezende")), "mesa", "fora do huddle, o Caio fica na mesa");
+  });
+
+  await check("09:40: a ausente aparece como ausente nos três lugares, e o atrasado está na sala", async () => {
+    await tech(dailyPage, "jumpToClock", "09:40");
+    const expected = await threePlaces(dailyPage, "09:40");
+    assert.deepEqual(expected.ausente, [EMAIL("bianca.sales"), EMAIL("tiago.nunes")].sort(), "Bianca e Tiago não entraram");
+    assert.deepEqual(expected["ainda-nao-entrou"], []);
+    assert.ok(expected["na-sala"].includes(EMAIL("caio.rezende")), "o Caio entrou atrasado");
+    assert.equal((await tech(dailyPage, "plans")).find((plan) => plan.email === EMAIL("caio.rezende")).zone, "sala");
+    await sceneCaughtUp(dailyPage, [EMAIL("caio.rezende")], 30000);
+    assert.ok((await tech(dailyPage, "scene"))[EMAIL("caio.rezende")].home.startsWith("sala-"), "o Caio está sentado na sala");
+    assert.match(await dailyPage.locator(`[data-squad-member="${EMAIL("bianca.sales")}"] [data-state]`).textContent(), /Daily · ausente/);
+  });
+
+  await check("depois da daily o quadro some e ninguém fica marcado", async () => {
+    await tech(dailyPage, "jumpToClock", "09:46");
+    await dailyPage.waitForFunction(() => !document.querySelector("[data-daily-board]") && !document.querySelector("[data-squad-member][data-daily]"));
+    assert.equal(await tech(dailyPage, "daily"), null);
+  });
+  await dailyPage.close();
+  }
+
   // ─── Squad na barra lateral ──────────────────────────────────────────
   // Bloco à parte: HQ_TECH_BARRA=1 roda só ele.
-  if (ONLY !== "visoes" && ONLY !== "acoes") {
+  if (!ONLY || ONLY === "barra") {
   report.barra = {};
   const barra = await open(`${TECH}&andar=expansao-2&hora_sim=09:35`, { reducedMotion: "reduce" });
   await barra.waitForFunction(() => window.__HQ_TECH_QA__);
@@ -1000,8 +1088,8 @@ try {
   if (isClosed) await barra.click('[aria-label="Abrir navegação"]');
   await barra.waitForSelector('[data-roster-section="tecnologia-squad"]');
 
-  await check("às 09:35 a seção mostra os seis da daily 'Em reunião' e Bianca/Tiago fora", async () => {
-    const dailyEmails = ["marina.lopes", "caio.rezende", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
+  await check("às 09:35 a seção mostra os cinco do huddle 'Em reunião' e os convidados que não entraram", async () => {
+    const dailyEmails = ["marina.lopes", "renata.okabe", "diego.martins", "luana.ferraz", "rafael.coutinho"].map(EMAIL);
     for (const email of dailyEmails) {
       const row = barra.locator(`[data-squad-member="${email}"]`);
       assert.ok(await row.isVisible(), `${email} visível na barra`);
@@ -1013,15 +1101,14 @@ try {
       assert.match(stateText, /^Em reunião/);
     }
 
-    const tiago = barra.locator(`[data-squad-member="${EMAIL("tiago.nunes")}"]`);
-    assert.equal(await tiago.getAttribute("data-where"), await tech(barra, "where", EMAIL("tiago.nunes")));
-    assert.equal(await tiago.getAttribute("data-where"), "fora");
-    assert.equal((await tiago.locator("[data-state]").textContent()).trim(), "Fora");
-
-    const bianca = barra.locator(`[data-squad-member="${EMAIL("bianca.sales")}"]`);
-    assert.equal(await bianca.getAttribute("data-where"), await tech(barra, "where", EMAIL("bianca.sales")));
-    assert.equal(await bianca.getAttribute("data-where"), "fora");
-    assert.equal((await bianca.locator("[data-state]").textContent()).trim(), "Férias");
+    // Na tolerância, o convidado que não entrou no huddle "ainda não entrou", esteja na mesa ou fora.
+    for (const [name, where] of [["caio.rezende", "mesa"], ["tiago.nunes", "fora"], ["bianca.sales", "fora"]]) {
+      const row = barra.locator(`[data-squad-member="${EMAIL(name)}"]`);
+      assert.equal(await row.getAttribute("data-where"), await tech(barra, "where", EMAIL(name)));
+      assert.equal(await row.getAttribute("data-where"), where);
+      assert.equal(await row.getAttribute("data-daily"), "ainda-nao-entrou");
+      assert.equal((await row.locator("[data-state]").textContent()).trim(), "Daily · ainda não entrou");
+    }
 
     await shot(barra, "barra-lateral-squad-0935-1440");
   });

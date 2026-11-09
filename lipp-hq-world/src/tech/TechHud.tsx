@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { FlaskConical, Link2, Pause, Play, RotateCcw, X } from "lucide-react";
 import { describeEvent, isNoise } from "@/activity/describe";
 import type { ActivityState } from "@/activity/events";
-import { blockersOf, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, presenceBuckets, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
+import { blockersOf, dailyAttendance, dailyGroups, directory, doingNow, epicHealth, githubSuggestedStatus, HEALTH_LABEL, meetingsOf, personHistory, personLoad, personOf, PLACE_LABEL, presenceBuckets, prsOfStory, reviewCandidates, storiesOf, trackingAnswers, upcomingReviewers, whereIs } from "@/activity/selectors";
 import { prAuthor } from "@/activity/identity";
 import { nudgeStatus } from "@/activity/actions";
 import { SPEEDS, simulatedStateAt } from "@/activity/simulation";
@@ -46,6 +46,11 @@ function techQaApi() {
     },
     speed: () => useTechStore.getState().speed,
     where: (email: string) => whereIs(useTechStore.getState().state, email).kind,
+    /** A daily agora: "na-sala", "ainda-nao-entrou" e "ausente", ou nulo fora dela. */
+    daily: () => {
+      const daily = dailyAttendance(useTechStore.getState().state);
+      return daily ? dailyGroups(daily) : null;
+    },
     plans: () => useTechStore.getState().people.map((plan) => ({ email: plan.email, place: plan.place.key, zone: plan.place.zone })),
     scene: () => Object.fromEntries(techSceneRuntime.people),
     board: () => techSceneRuntime.board,
