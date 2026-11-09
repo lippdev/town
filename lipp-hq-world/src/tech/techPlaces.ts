@@ -16,15 +16,14 @@ const SEATS = Object.fromEntries(expansionSeats(TECH_FLOOR).map((seat) => [seat.
 export const techSeat = (key: string) => SEATS[key]!;
 export const roomId = (zone: string) => `${TECH_FLOOR_ID}-${zone}`;
 
-/** A mesa de cada um. A da Bianca fica vazia enquanto ela está de férias. */
+/** A mesa de cada um. A da Bianca fica vazia enquanto ela está de férias; o diretor senta com o squad. */
 export const DESK_OF: Readonly<Record<string, string>> = {
   [EMAIL.marina]: "mesa-1",
   [EMAIL.caio]: "mesa-2",
   [EMAIL.renata]: "mesa-3",
-  [EMAIL.rafael]: "mesa-4",
+  [EMAIL.otavio]: "mesa-4",
   [EMAIL.diego]: "mesa-5",
   [EMAIL.luana]: "mesa-6",
-  [EMAIL.tiago]: "mesa-7",
   [EMAIL.bianca]: "mesa-8",
 };
 

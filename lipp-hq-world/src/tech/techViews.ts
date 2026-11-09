@@ -228,7 +228,7 @@ export interface BotItem {
 
 export interface PresenceItem {
   person: Person;
-  /** "Daily até 09:45", "#squad-portal", "Férias até 16/11". */
+  /** "Daily até 09:45", "#squad-hubsmart", "Férias até 16/11". */
   detail: string;
 }
 

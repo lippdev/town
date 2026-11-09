@@ -281,7 +281,7 @@ function PersonDrawer() {
   const status = state.slackStatus[email];
   const history = personHistory(state, email, 60).filter((event) => !isNoise(event)).slice(0, 14);
   // Quem não abre PR no dia a dia (produto, design) não perde nada visível sem o vínculo.
-  const opensPrs = person.role === "dev" || person.role === "techlead" || person.role === "qa";
+  const opensPrs = person.role === "dev" || person.role === "techlead";
   return (
     <ActionPlace.Provider value="gaveta-pessoa">
     <aside ref={node} className="drawer office-demo-panel tech-drawer" aria-label={`Pessoa ${person.name}`} data-tech-person={email}>

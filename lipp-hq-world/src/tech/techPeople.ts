@@ -10,9 +10,8 @@ const LOOK: Record<string, { parts: Partial<HumanPreset["parts"]>; colors: Parti
   [EMAIL.renata]: { parts: { hair: "Hair.011", glasses: "Glasses.003" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#f5c6a5", nose: "#f5c6a5", top: "#2f4256", bottom: "#23262c" } },
   [EMAIL.diego]: { parts: { hair: "Hair.003", facialHair: "FacialHair.005" }, colors: { hair: "#6b4426", eyebrow: "#6b4426", facialHair: "#6b4426", head: "#d4966e", nose: "#d4966e", top: "#22c55e", bottom: "#7a8087" } },
   [EMAIL.luana]: { parts: { hair: "Hair.004", top: "Top.003" }, colors: { hair: "#a8703a", eyebrow: "#a8703a", head: "#eab08c", nose: "#eab08c", top: "#a855f7", bottom: "#2f4256" }, expression: "smile" },
-  [EMAIL.tiago]: { parts: { hair: "Hair.005", hat: "Hat.007" }, colors: { hair: "#3b2417", eyebrow: "#3b2417", head: "#b97a52", nose: "#b97a52", top: "#f59e0b", bottom: "#23262c" } },
   [EMAIL.bianca]: { parts: { hair: "Hair.010", bow: "Bow.001" }, colors: { hair: "#b0413e", eyebrow: "#6b4426", head: "#f5c6a5", nose: "#f5c6a5", bow: "#2563eb", top: "#2563eb", bottom: "#23262c" } },
-  [EMAIL.rafael]: { parts: { hair: "Hair.001", top: "Top.002" }, colors: { hair: "#17120f", eyebrow: "#17120f", head: "#5f3b28", nose: "#5f3b28", top: "#a83232", bottom: "#2f4256" } },
+  [EMAIL.otavio]: { parts: { hair: "Hair.001", glasses: "Glasses.001", top: "Top.002" }, colors: { hair: "#9a9590", eyebrow: "#6f6a64", head: "#5f3b28", nose: "#5f3b28", top: "#334155", bottom: "#23262c" } },
 };
 
 const LOOK_DATE = "2026-11-10T00:00:00.000Z";
