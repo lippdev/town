@@ -290,7 +290,7 @@ const TECH_FLOOR: ExpansionFloor = {
     { key: "fluxo", name: "Fluxo dos épicos", color: "#c9a66b", bounds: { minX, maxX: 0.6, minZ, maxZ: -6.3 }, purpose: "Discovery à esquerda, delivery à direita. Cada épico é um cartão na cor da saúde dele. Simulação." },
     { key: "squad", name: "Mesas do squad", color: "#8fa8c9", bounds: { minX, maxX: 0.6, minZ: -6.3, maxZ: 4.2 }, purpose: TECH_PURPOSE },
     { key: "huddle", name: "Canto do huddle", color: "#7f9f83", bounds: { minX: 5.4, maxX, minZ: -5.6, maxZ: 2.4 }, purpose: "Quem entra num huddle do Slack vem para cá. Só se sabe quem entrou e saiu, nunca o que se falou." },
-    { key: "sala", name: "Sala de reunião", color: "#7f8fa8", bounds: { minX: 2.4, maxX, minZ: 2.6, maxZ }, purpose: "Reunião presencial na agenda do Outlook traz a pessoa para cá. Simulação." },
+    { key: "sala", name: "Sala de reunião", color: "#7f8fa8", bounds: { minX: 2.4, maxX, minZ: 2.6, maxZ }, purpose: "Reunião presencial na agenda do Outlook traz a pessoa para cá; na daily, quem entra no huddle do squad. Simulação." },
     { key: "apoio", name: "Apoio", color: SUPPORT_COLOR, bounds: { minX, maxX: 2.2, minZ: 4.4, maxZ }, purpose: TECH_PURPOSE },
   ],
   pieces: [

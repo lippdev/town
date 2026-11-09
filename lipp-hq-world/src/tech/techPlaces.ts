@@ -189,7 +189,8 @@ export function personPlans(state: ActivityState): PersonPlan[] {
       huddleSpots.set(huddle.id, Math.max(huddleSpots.get(huddle.id) ?? 0, index + 1));
       place = huddlePlace(index);
     } else if (where.kind === "mesa") {
-      const next = meetingsOf(state, person.email).find((entry) => entry.place === "sala" && entry.start > state.at && entry.start - state.at <= MEETING_LEAD_MS);
+      // A daily é huddle: ninguém vai à sala antes de entrar nele.
+      const next = meetingsOf(state, person.email).find((entry) => entry.place === "sala" && !entry.huddleChannel && entry.start > state.at && entry.start - state.at <= MEETING_LEAD_MS);
       if (next && !currentMeeting(state, person.email)) {
         meetingId = next.id;
         heading = `indo para ${next.title}`;
@@ -197,8 +198,9 @@ export function personPlans(state: ActivityState): PersonPlan[] {
     }
     if (meetingId) {
       const meeting = state.calendar.find((entry) => entry.id === meetingId)!;
-      // A ordem da agenda decide os lugares: ninguém troca de cadeira no meio da reunião.
-      const present = meeting.attendees.filter((email) => (state.presence[email] ?? "offline") !== "offline");
+      // A ordem da agenda decide os lugares (na daily, a ordem de entrada no huddle): ninguém troca
+      // de cadeira no meio da reunião.
+      const present = where.huddle ? where.huddle.participants : meeting.attendees.filter((email) => (state.presence[email] ?? "offline") !== "offline");
       const index = Math.max(0, present.indexOf(person.email));
       meetingSeats.set(meeting.id, index);
       place = meetingPlace(index);
@@ -207,6 +209,9 @@ export function personPlans(state: ActivityState): PersonPlan[] {
   }
   return plans;
 }
+
+/** Onde fica o quadro da daily: na parede norte da sala de reunião, acima da porta. */
+export const DAILY_BOARD_ANCHOR: readonly [number, number, number] = [7.4, 2.5, 2.6];
 
 // ─── Quadro dos épicos ───────────────────────────────────────────────────────
 
