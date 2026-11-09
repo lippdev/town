@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Moon } from "lucide-react";
-import { doingNow, epicHealth, HEALTH_LABEL, whereIs } from "@/activity/selectors";
+import { DAILY_MARK_LABEL, DAILY_MARKS, dailyAttendance, dailyGroups, doingNow, epicHealth, firstName, HEALTH_LABEL, whereIs } from "@/activity/selectors";
+import { clockLabel } from "@/activity/time";
 import { BOT_TASK_LABEL } from "@/activity/types";
 import { worldToScreen } from "@/world/office/officeCamera";
 import { humanActors, officeRuntime, useOfficeStore } from "@/world/office/officeStore";
-import { BOARD, TECH_FLOOR_ID, boardCards } from "./techPlaces";
+import { BOARD, DAILY_BOARD_ANCHOR, TECH_FLOOR_ID, boardCards } from "./techPlaces";
 import { squadHumanId } from "./techPeople";
 import { techSceneRuntime } from "./TechScene";
 import { useTechStore } from "./techStore";
@@ -28,6 +29,7 @@ export function TechStage() {
   const visits = useTechStore((store) => store.visits);
   const selectedEpicId = useTechStore((store) => store.selectedEpicId);
   const cards = useMemo(() => boardCards(state), [state]);
+  const daily = useMemo(() => dailyAttendance(state), [state]);
   const layer = useRef<HTMLDivElement | null>(null);
   const here = view === TECH_FLOOR_ID && shown === TECH_FLOOR_ID;
 
@@ -55,6 +57,11 @@ export function TechStage() {
         if (!robot || robot.gone) continue;
         const point = worldToScreen([robot.x, robot.y + 0.1, robot.z], camera, viewport);
         node.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+      }
+      const board = root.querySelector<HTMLElement>("[data-daily-board]");
+      if (board) {
+        const point = worldToScreen([...DAILY_BOARD_ANCHOR], camera, viewport);
+        board.style.transform = `translate3d(${point.x.toFixed(1)}px, ${point.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
       }
       for (const node of root.querySelectorAll<HTMLElement>("[data-epic-card]")) {
         const x = Number(node.dataset.x);
@@ -125,6 +132,31 @@ export function TechStage() {
           </div>
         );
       })}
+      {daily && (
+        // O quadro da daily na porta da sala: os mesmos grupos do Painel e da barra lateral.
+        <div className="tech-daily-board" data-daily-board>
+          <strong>
+            {daily.meeting.title} · huddle #{daily.meeting.huddleChannel}
+          </strong>
+          {DAILY_MARKS.map((mark) => {
+            const people = dailyGroups(daily)[mark];
+            if (mark !== "na-sala" && people.length === 0) return null;
+            return (
+              <span key={mark} className={`tech-daily-${mark}`} data-daily-group={mark}>
+                {DAILY_MARK_LABEL[mark]} {mark === "ainda-nao-entrou" ? `(até ${clockLabel(daily.graceUntil)})` : ""}:{" "}
+                {people.length === 0
+                  ? "ninguém"
+                  : people.map((email, index) => (
+                      <span key={email} data-person={email}>
+                        {index > 0 && ", "}
+                        {firstName(state, email)}
+                      </span>
+                    ))}
+              </span>
+            );
+          })}
+        </div>
+      )}
       {visits.map((visit) => {
         const task = state.botTasks.find((item) => item.id === visit.taskId);
         return (
