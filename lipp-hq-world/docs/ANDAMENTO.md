@@ -1,7 +1,7 @@
 # Trabalho em andamento
 
 Ponto de retomada para continuar de outro computador ou em outra sessão. Atualize ao pausar
-ou ao fechar um ciclo. Última atualização: 2026-11-07.
+ou ao fechar um ciclo. Última atualização: 2026-11-11.
 
 ## Onde estamos
 
@@ -11,43 +11,19 @@ figurantes, Diretoria com o chefe, esconderijo secreto, heliporto com voos, cida
 Gotham com ciclo de dia e noite pelo horário de Brasília, e primeiro carregamento leve.
 Detalhes em [ESCRITORIO.md](ESCRITORIO.md).
 
-### Em andamento: cenário de tecnologia (pausado)
+### Arquivado: cenário de tecnologia
 
-Objetivo: testar se um "campo virtual" do setor de tecnologia da empresa agrega ao time, ou
-se um dashboard bastaria. É um squad fictício simulado com a estrutura das ferramentas reais
-(Notion, GitHub, Slack, Microsoft 365), atrás de uma fronteira (`ActivitySource`) que depois
-recebe conectores de verdade sem mexer na cena.
+Um andar com um squad simulado (Notion, GitHub, Slack, M365) para testar se um "campo
+virtual" agregaria ao time mais que um dashboard. Em 2026-11-11 o Filipe decidiu não
+apresentar a ideia à empresa: o prédio segue só para os bots do Hermes. Nada entrou na
+`main`; as PRs [#111](https://github.com/lippdev/town/pull/111) a
+[#118](https://github.com/lippdev/town/pull/118) foram fechadas sem merge e as branches
+`feat/tecnologia-*` ficam no remoto caso a ideia volte.
 
-- URL: `/?escritorio=completo&modo=demonstracao&cenario=tecnologia`.
-- Notion real da empresa: **Projeto → Épico → HU → critérios de aceite**, tudo com responsável;
-  épicos em trilhas de **discovery** e **delivery**.
-- Identidade: Notion, Slack e M365 usam o e-mail corporativo; o GitHub é pessoal e a pessoa
-  vincula no cadastro.
-- Privacidade: dados fictícios, e nunca conteúdo de mensagem entre pessoas, só sinais.
-
-| PR | Branch | Estado |
-| - | - | - |
-| [#111](https://github.com/lippdev/town/pull/111) | `feat/tecnologia-modelo` → `main` | Pronta para revisão: modelo, identidade, simulação determinística, seletores, `ActivitySource` |
-| [#112](https://github.com/lippdev/town/pull/112) | `feat/tecnologia-andar` → `feat/tecnologia-modelo` | Parcial: andar da Tecnologia, quadro de épicos, gavetas, relógio da simulação |
-
-Próximos passos, nesta ordem:
-1. Completar o `qa:tecnologia` da #112: mesmas respostas no prédio e no painel, as três ações
-   e o cadastro do GitHub.
-2. `feat/tecnologia-visoes`, a partir da #112: visões **Projetos** (árvore estilo Notion) e
-   **Painel** (dashboard com os mesmos dados, usando `trackingAnswers`). O painel não pode ser
-   propositalmente fraco: ele existe para a comparação ser justa.
-3. `feat/tecnologia-acoes`: interface de cobrar o responsável, reatribuir HU, pedir ao bot, e a
-   tela de cadastro com vínculo do GitHub. A lógica já está no modelo, testada.
-4. Squad na barra lateral.
-5. Rodar o experimento: 4 a 6 perguntas reais da daily, respondidas no prédio e no painel por
-   3 a 5 pessoas, medindo tempo, acerto e se a pessoa sabe o que fazer em seguida.
-
-Depois do experimento, se valer: ligar conectores reais (apps e permissões de admin no
-GitHub, Slack, Notion e Azure/Graph para agenda e presença). Se não valer, o prédio segue
-como ferramenta pessoal com os bots do Hermes, e a camada de atividade serve ao dashboard.
+### Próximos passos (bots)
+- Ver a tela dos bots do Hermes (sessão e ferramenta em uso) ao abrir um bot.
 
 ### Ideias anotadas, sem prioridade
-- Ver a tela dos bots do Hermes (sessão e ferramenta em uso) ao abrir um bot.
 - Times novos na organização (além de Open Source, um time de desenvolvimento).
 - Elevador animado, trem e ponteiros do relógio na cidade (ficaram de fora por custo).
 
@@ -84,7 +60,6 @@ pnpm demo                         # build + preview em http://127.0.0.1:5199
 - `pnpm demo` serve o build de produção, que é o peso real; `pnpm dev` é só para programar
   (31 MB de JavaScript, bem mais lento).
 - O demo é um build: depois de mudar código, rode `pnpm demo` de novo.
-- Para ver o cenário em andamento: `git checkout feat/tecnologia-andar && pnpm demo`.
 
 ## Verificação
 
@@ -100,7 +75,6 @@ vez (`HQ_URL=http://127.0.0.1:5199 node scripts/visual-qa/<roteiro>.mjs <pasta>`
 | `qa:heliporto` | deque, chegada e saída de helicóptero |
 | `qa:cidade` | capturas e custo nas três horas do dia |
 | `qa:primeiro-load` | o que a abertura baixa e que entrar cedo num andar não trava |
-| `qa:tecnologia` | cenário de tecnologia (na branch dele) |
 
 Armadilhas conhecidas:
 - **Navegador:** os roteiros procuram o Chrome em `/usr/bin/google-chrome` (servidor sem GPU)
