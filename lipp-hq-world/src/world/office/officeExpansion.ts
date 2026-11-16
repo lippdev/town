@@ -1,6 +1,7 @@
 import { newPreset, type HumanPreset } from "@/avatar/human/preset";
 import { FLOOR_BOUNDS, type OfficeBounds, type OfficeSeat } from "./officeLayout";
 import { zone, type BuildingRoom, type SceneryHuman } from "./officeLobby";
+import { activeScenario, type ScenarioFloor, type ScenarioPanel } from "./officeScenario";
 
 /**
  * Os andares reservados para as próximas equipes, só na demonstração. Tudo aqui é dado: para uma
@@ -8,7 +9,7 @@ import { zone, type BuildingRoom, type SceneryHuman } from "./officeLobby";
  * Não há nome de equipe, bot, sessão nem atividade: quem aparece é figurante de cenário, e a
  * etiqueta diz isso.
  */
-export type ExpansionFloorId = "expansao-2" | "expansao-3" | "expansao-4" | "expansao-5";
+export type ExpansionFloorId = "expansao-2" | "expansao-3" | "expansao-4" | "expansao-5" | "expansao-7";
 
 /** Peça de mobília, em metros do andar. `kit` em `buildingInteriors.ts` sabe desenhar cada uma. */
 export type ExpansionPiece =
@@ -40,6 +41,8 @@ export interface ExpansionZoneSpec {
   name: string;
   color: string;
   bounds: OfficeBounds;
+  /** O que a zona é, quando não é a frase dos andares reservados. */
+  purpose?: string;
 }
 
 /**
@@ -72,7 +75,15 @@ export interface ExpansionFloor {
   zones: readonly ExpansionZoneSpec[];
   pieces: readonly ExpansionPiece[];
   figures: readonly ExpansionFigure[];
+  /** Andar de uma equipe do cenário: entra no seletor com o nome dela, fora da linha da Expansão. */
+  team?: string;
+  /** Postos dos bots da equipe: o lugar fica com o equipamento, sem cadeira. */
+  posts?: readonly ExpansionPost[];
+  /** Placas e telas com imagem. */
+  panels?: readonly ScenarioPanel[];
 }
+
+export type ExpansionPost = Omit<ExpansionFigure, "seated" | "parts" | "colors" | "expression">;
 
 const { minX, maxX, minZ, maxZ } = FLOOR_BOUNDS;
 
@@ -242,22 +253,55 @@ const FLOORS: readonly ExpansionFloor[] = [
   },
 ];
 
-export const EXPANSION_FLOORS = FLOORS;
+/** O andar de uma equipe do cenário: a planta é a de um andar reservado, com o nome e os bots dela. */
+function teamFloor(id: string, spec: ScenarioFloor, team: string): ExpansionFloor {
+  const base = FLOORS.find((floor) => floor.id === (spec.base ?? id));
+  if (!base) throw new Error(`Andar ${id}: planta ${spec.base ?? id} não existe.`);
+  return {
+    ...base,
+    id: id as ExpansionFloorId,
+    level: spec.level,
+    title: spec.title,
+    openShaft: spec.openShaft,
+    zones: base.zones.map((zoneSpec) => ({ ...zoneSpec, ...spec.zones[zoneSpec.key] })),
+    figures: [],
+    team,
+    posts: spec.posts,
+    panels: spec.panels,
+  };
+}
+
+/** Com um cenário, os andares de expansão são os das equipes dele; sem cenário, a tabela de sempre. */
+function scenarioFloors(): readonly ExpansionFloor[] {
+  const scenario = activeScenario();
+  if (!scenario) return FLOORS;
+  return Object.entries(scenario.floors).map(([id, spec]) => teamFloor(id, spec, scenario.teams.find((team) => team.floor === id)?.id ?? ""));
+}
+
+export const EXPANSION_FLOORS: readonly ExpansionFloor[] = scenarioFloors();
 
 export function expansionFloor(id: string): ExpansionFloor | undefined {
-  return FLOORS.find((floor) => floor.id === id);
+  return EXPANSION_FLOORS.find((floor) => floor.id === id);
 }
+
+/** Andar reservado de verdade, sem equipe: é o que entra na linha da Expansão do seletor. */
+export const isReservedFloor = (floor: ExpansionFloor) => !floor.team;
 
 const PURPOSE = "Espaço reservado para uma equipe futura. As figuras são cenário: sem equipe, sessão nem atividade real.";
 
 /** As zonas viram salas com o id do andar na frente: `expansao-3-apoio`, sem repetição no prédio. */
 export function expansionRooms(floor: ExpansionFloor): BuildingRoom[] {
-  return floor.zones.map((spec) => zone(`${floor.id}-${spec.key}`, spec.name, spec.color, PURPOSE, spec.bounds));
+  return floor.zones.map((spec) => zone(`${floor.id}-${spec.key}`, spec.name, spec.color, spec.purpose ?? PURPOSE, spec.bounds));
 }
 
 const FIGURE_DATE = "2026-11-06T00:00:00.000Z";
 
 const figureSeat = (floor: ExpansionFloor, figure: ExpansionFigure): OfficeSeat => ({ id: `${floor.id}-${figure.key}`, roomId: `${floor.id}-${figure.zone}`, kind: "reuniao", x: figure.x, z: figure.z, yaw: figure.yaw });
+
+/** Postos dos bots: o robô flutua no lugar da cadeira, que a mobília não desenha. */
+export function expansionPosts(floor: ExpansionFloor): OfficeSeat[] {
+  return (floor.posts ?? []).map((post) => ({ id: `${floor.id}-${post.key}`, roomId: `${floor.id}-${post.zone}`, kind: "posto", x: post.x, z: post.z, yaw: post.yaw }));
+}
 
 /** As cadeiras em que alguém senta: a mobília não desenha a fixa, e `HumanChairs` desenha esta. */
 export function expansionSeats(floor: ExpansionFloor): OfficeSeat[] {
@@ -279,7 +323,7 @@ function figureHuman(floor: ExpansionFloor, figure: ExpansionFigure): SceneryHum
   };
 }
 
-const FIGURES = Object.fromEntries(FLOORS.map((floor) => [floor.id, floor.figures.map((figure) => figureHuman(floor, figure))])) as Record<ExpansionFloorId, SceneryHuman[]>;
+const FIGURES = Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, floor.figures.map((figure) => figureHuman(floor, figure))])) as Record<ExpansionFloorId, SceneryHuman[]>;
 
 /** Figurantes de um andar: uma lista só por página, para a cena não refazer ninguém a cada leitura. */
 export function expansionScenery(id: ExpansionFloorId): readonly SceneryHuman[] {

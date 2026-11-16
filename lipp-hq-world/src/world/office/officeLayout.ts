@@ -1,5 +1,6 @@
 import type { RoomKind, RoomSide } from "@/types/hq";
 import { ROOMS_BY_ID } from "@/world/rooms/rooms";
+import { activeScenario } from "./officeScenario";
 
 /**
  * Planta compacta do escritório completo. As salas são as mesmas de
@@ -78,17 +79,21 @@ const PLAN: Array<{ id: string; column: number; row: number; purpose: string; do
   { id: "reunioes", column: 2, row: 2, purpose: "Mesa de reunião da equipe.", doors: [door("west", -0.95, 1.5), door("north", -1.7)] },
 ];
 
+/** Um cenário de empresa renomeia as salas da Operação; a planta e as cores ficam. */
+const RENAMED = activeScenario()?.operacao.rooms ?? {};
+
 export const OFFICE_ROOMS: OfficeRoom[] = PLAN.map((entry) => {
   const source = ROOMS_BY_ID[entry.id]!;
+  const renamed = RENAMED[entry.id];
   const x = band(COLUMN_WIDTHS, FLOOR_BOUNDS.minX, entry.column);
   const z = band(ROW_DEPTHS, FLOOR_BOUNDS.minZ, entry.row);
   return {
     id: source.id,
-    name: source.name,
+    name: renamed?.name ?? source.name,
     kind: source.kind,
     color: source.color,
     ...(source.agentId === undefined ? {} : { agentId: source.agentId }),
-    purpose: entry.purpose,
+    purpose: renamed?.purpose ?? entry.purpose,
     column: entry.column,
     row: entry.row,
     doors: entry.doors,
