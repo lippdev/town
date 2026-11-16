@@ -13,6 +13,12 @@ import { seatPlace, type OfficeBot } from "./officeRoster";
 import { RobotActor } from "./RobotActor";
 import { officeRuntime, robotActors, useOfficeStore } from "./officeStore";
 import { FloorGroup } from "./BuildingScene";
+import { SECONDS_PER_MINUTE, clockNow } from "./activityClock";
+import { meetingRoutes } from "./meetingRoutes";
+import { meetingDistanceAt, meetingsOf, type MeetingWindow } from "./officeActivity";
+import { activeScenario } from "./officeScenario";
+
+const SCENARIO = activeScenario();
 
 function softDisc() {
   const canvas = document.createElement("canvas");
@@ -43,10 +49,12 @@ function useGroundMark() {
   return shared;
 }
 
-function RobotBody({ bot, seat, plan, scene, clips, reduced, mark }: {
+function RobotBody({ bot, seat, plan, meetings, scene, clips, reduced, mark }: {
   bot: OfficeBot;
   seat: OfficeSeat;
   plan: FlightPlan | null;
+  /** Com o cenário, o plano é a ida à reunião, e quem manda é o relógio da atividade. */
+  meetings: readonly MeetingWindow[] | null;
   scene: Object3D;
   clips: AnimationClip[];
   reduced: boolean;
@@ -88,7 +96,8 @@ function RobotBody({ bot, seat, plan, scene, clips, reduced, mark }: {
 
   useFrame(({ clock }, delta) => {
     if (!actor) return;
-    actor.update(clock.elapsedTime, delta, selected);
+    const driven = meetings && plan ? meetingDistanceAt(meetings, clockNow(), plan.leg / SECONDS_PER_MINUTE, plan.length) : undefined;
+    actor.update(clock.elapsedTime, delta, selected, driven);
     const { x, y, z } = actor.position;
     officeRuntime.liveAnchors.set(bot.id, [x, y + actor.rig.height + 0.08, z]);
     shadow.current?.position.set(x, 0.058, z);
@@ -174,6 +183,8 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const plans = useMemo(() => {
     if (mode !== "demo" || reduced) return new Map<string, FlightPlan>();
     const seats = JSON.parse(seatedKey) as Record<string, string>;
+    // No cenário, o robô só sai do posto para a reunião da equipe, em qualquer andar.
+    if (SCENARIO) return meetingRoutes(SCENARIO, seats, world);
     // O voo é calculado na planta da Operação: os andares de equipe ficam com o robô no posto.
     const seated = Object.entries(seats).flatMap(([botId, seatId]) => {
       const place = seatPlace(seatId);
@@ -191,7 +202,7 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
           {bots.map((bot) => {
             const place = seatPlace(seating.seats[bot.id]);
             if (place?.floor !== floor) return null;
-            return <RobotBody key={bot.id} bot={bot} seat={place.seat} plan={plans.get(bot.id) ?? null} scene={model.scene} clips={model.clips} reduced={reduced} mark={mark} />;
+            return <RobotBody key={bot.id} bot={bot} seat={place.seat} plan={plans.get(bot.id) ?? null} meetings={SCENARIO ? meetingsOf(SCENARIO, bot.id) : null} scene={model.scene} clips={model.clips} reduced={reduced} mark={mark} />;
           })}
           <RobotRing floor={floor} />
         </FloorGroup>

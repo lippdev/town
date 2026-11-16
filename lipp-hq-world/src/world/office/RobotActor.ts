@@ -60,16 +60,24 @@ export class RobotActor {
     return this.distance;
   }
 
-  update(seconds: number, delta: number, selected: boolean) {
+  /**
+   * `driven` é a distância ditada de fora (a ida à reunião do cenário, que sai do relógio da
+   * atividade). Ela vale como está: selecionar não traz o robô de volta no meio da reunião.
+   */
+  update(seconds: number, delta: number, selected: boolean, driven?: number) {
     const step = Math.min(delta, LONGEST_FRAME);
     this.rig.update(this.reduced ? 0 : step);
     if (this.reduced) return;
 
     const before = this.distance;
     if (this.plan) {
-      const scheduled = flightDistanceAt(this.plan, seconds);
-      this.cap = nextFlightCap(this.cap, scheduled, selected, step);
-      this.distance = Math.min(scheduled, this.cap);
+      if (driven === undefined) {
+        const scheduled = flightDistanceAt(this.plan, seconds);
+        this.cap = nextFlightCap(this.cap, scheduled, selected, step);
+        this.distance = Math.min(scheduled, this.cap);
+      } else {
+        this.distance = Math.min(Math.max(driven, 0), this.plan.length);
+      }
       const pose = pathPose(this.plan.path, this.distance);
       this.x = pose.x;
       this.z = pose.z;
@@ -79,6 +87,8 @@ export class RobotActor {
         this.yaw = turnToward(this.yaw, moved > 0 ? pose.yaw : pose.yaw + Math.PI, TURN_PER_SECOND * step);
       } else if (this.distance === 0) {
         this.yaw = turnToward(this.yaw, this.seat.yaw, TURN_PER_SECOND * step);
+      } else if (this.distance === this.plan.length && this.plan.endYaw !== undefined) {
+        this.yaw = turnToward(this.yaw, this.plan.endYaw, TURN_PER_SECOND * step);
       }
       const speed = step > 0 ? Math.abs(moved) / step : 0;
       this.lean += (Math.min(speed * LEAN_PER_SPEED, 0.32) - this.lean) * Math.min(1, LEAN_EASE * step);
