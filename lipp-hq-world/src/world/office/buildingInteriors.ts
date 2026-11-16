@@ -2,7 +2,7 @@ import { CylinderGeometry, ExtrudeGeometry, Shape, type BufferGeometry } from "t
 import { KitBuilder, FLOOR_TILE, type Batch, type Footprint, type PropPlacement } from "./officeKit";
 import { BOARD_TABLE, BOARD_XS, CHIEF_DESK, CHIEF_DOOR, CHIEF_ROOM, CHIEF_SEAT, DIRECTOR_SEAT, LOUNGE_DOOR, LOUNGE_ROOM, MEETING_DOOR, MEETING_ROOM } from "./officeDirectorate";
 import { screenUv } from "./officeTextures";
-import { EXPANSION_CORRIDOR, expansionFloor, expansionSeats, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
+import { EXPANSION_CORRIDOR, expansionFloor, expansionPosts, expansionSeats, type ExpansionFloor, type ExpansionPiece } from "./officeExpansion";
 import { batEmblemGeometry, capeGeometry, cowlGeometry } from "./hideoutGear";
 import { BATTLE_CONSOLE, GIANT_COIN, HIDEOUT_DOOR, SIGNAL_LAMP, SUIT_CASE, TRAINING_MAT, TURNTABLE } from "./officeHideout";
 import { SECRET_CLOCK, SECRET_SHELF } from "./officeSecrets";
@@ -657,7 +657,8 @@ export function buildExpansion(id: string): FloorBuild {
   frontWall(b, "south");
   frontWall(b, "east");
   elevatorCore(b, stop);
-  const seats = expansionSeats(floor);
+  // Posto de bot também fica sem a cadeira fixa: o robô flutua ali, diante do equipamento.
+  const seats = [...expansionSeats(floor), ...expansionPosts(floor)];
   const taken: TakenSeat = (x, z) => seats.some((seat) => Math.abs(seat.x - x) < 0.01 && Math.abs(seat.z - z) < 0.01);
   for (const piece of floor.pieces) expansionPiece(b, piece, taken);
   for (const seat of seats) b.solid("cadeira", seat.x, seat.z, 0.62, 0.62);

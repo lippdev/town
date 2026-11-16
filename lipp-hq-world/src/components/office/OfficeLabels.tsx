@@ -4,7 +4,8 @@ import { stateLabel } from "@/components/hud/fleetView";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, chiefIsAway } from "@/world/office/officeChief";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, sceneryOfView, viewRooms } from "@/world/office/officeBuilding";
 import { expansionFloor } from "@/world/office/officeExpansion";
-import { ENTRANCE, FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "@/world/office/officeLayout";
+import { ENTRANCE, FLOOR_BOUNDS } from "@/world/office/officeLayout";
+import { seatPlace } from "@/world/office/officeRoster";
 import { boxSilhouette, worldToScreen, type OfficeView } from "@/world/office/officeCamera";
 import { secretCaption, secretSpotsOf, useSecretStore } from "@/world/office/officeSecrets";
 import { officeRuntime, triggerSpot, useOfficeStore } from "@/world/office/officeStore";
@@ -118,9 +119,10 @@ export function OfficeLabels() {
           </button>
         );
       })}
-      {buildingView === "operacao" && bots.map((bot) => {
-        const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
-        if (!seat) return null;
+      {bots.map((bot) => {
+        const place = seatPlace(seating.seats[bot.id]);
+        if (!place || place.floor !== buildingView) return null;
+        const { seat } = place;
         const active = bot.id === selectedBotId || bot.id === hoveredBotId;
         const elsewhere = focusedRoomId !== null && seat.roomId !== focusedRoomId;
         const classes = ["office-bot-tag", active ? "active" : "", seat.kind === "posto" ? "" : "extra", elsewhere ? "elsewhere" : ""].filter(Boolean).join(" ");
@@ -183,7 +185,7 @@ export function OfficeLabels() {
       ))}
       {expansion && !focusedRoomId && (
         <span className="office-scenery-tag office-expansion-tag" data-floor-title={expansion.id} ref={place([-0.2, 3.25, FLOOR_NORTH])}>
-          {expansion.title} · cenário simulado
+          {expansion.team ? `Equipe ${expansion.title} · demonstração` : `${expansion.title} · cenário simulado`}
         </span>
       )}
       {mode === "demo" && secretSpotsOf(buildingView).map((spot) => (

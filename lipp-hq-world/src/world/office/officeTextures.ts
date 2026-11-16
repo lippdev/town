@@ -1,5 +1,6 @@
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { OFFICE_ROOMS, type OfficeRoom } from "./officeLayout";
+import { activeScenario } from "./officeScenario";
 
 /**
  * Telas e placas locais, num atlas só: sem fontes ou imagens externas, e sem uma
@@ -103,7 +104,8 @@ function signRoom(room: OfficeRoom, index: number, ctx: CanvasRenderingContext2D
   ctx.fillText(room.name, 48, 112);
   ctx.fillStyle = "#94b4df";
   ctx.font = "32px sans-serif";
-  ctx.fillText(`LIPP HQ  /  ${String(index + 1).padStart(2, "0")}`, 50, 177);
+  const owner = activeScenario()?.brand.name.toLocaleUpperCase("pt-BR") ?? "LIPP HQ";
+  ctx.fillText(`${owner}  /  ${String(index + 1).padStart(2, "0")}`, 50, 177);
   ctx.fillStyle = room.color;
   ctx.fillRect(48, 220, 928, 5);
   ctx.restore();

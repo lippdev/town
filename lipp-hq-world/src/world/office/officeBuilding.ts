@@ -6,6 +6,7 @@ import { EXPANSION_FLOORS, expansionFloor, expansionRooms, expansionScenery, typ
 import { HIDEOUT_LEVEL, HIDEOUT_ROOMS, HIDEOUT_SCENERY } from "./officeHideout";
 import { LOBBY_ROOMS, LOBBY_SCENERY, type BuildingRoom, type SceneryHuman } from "./officeLobby";
 import type { OfficeMode } from "./officeRoute";
+import { activeScenario } from "./officeScenario";
 
 /**
  * O prédio do Lipp HQ, só na demonstração.
@@ -83,7 +84,7 @@ export const FLOOR_LEVEL = {
 
 export const FLOOR_LABEL = {
   diretoria: { name: "Diretoria", short: "D" },
-  operacao: { name: "Operação", short: "1" },
+  operacao: { name: activeScenario()?.operacao.title ?? "Operação", short: "1" },
   terreo: { name: "Térreo", short: "T" },
   [HIDEOUT]: { name: "Esconderijo", short: "E" },
   ...Object.fromEntries(EXPANSION_FLOORS.map((floor) => [floor.id, { name: floor.title, short: String(floor.level) }])),

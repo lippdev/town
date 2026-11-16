@@ -10,7 +10,7 @@ import { OfficeQa } from "@/world/office/OfficeQa";
 import { AVATAR_STORAGE_KEY, browserStorage, loadAvatars } from "@/avatar/human/persistence";
 import { ROBOT_STORAGE_KEY, loadRobotLooks } from "@/avatar/robot/robotLook";
 import { placeEveryone } from "@/world/office/officeChief";
-import { assignSeats, demoBots, fleetBots } from "@/world/office/officeRoster";
+import { assignSeats, demoBots, demoSeating, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
 import { OfficeHud } from "./OfficeHud";
@@ -24,7 +24,8 @@ function useRoster(mode: OfficeMode) {
   const previous = useRef<Record<string, string>>({});
   useEffect(() => {
     const bots = mode === "demo" ? demoBots() : fleetBots(fleet);
-    const seating = assignSeats(bots.map((bot) => bot.id), undefined, previous.current);
+    const ids = bots.map((bot) => bot.id);
+    const seating = mode === "demo" ? demoSeating(ids, previous.current) : assignSeats(ids, undefined, previous.current);
     previous.current = seating.seats;
     useOfficeStore.getState().setRoster(bots, seating);
     // A sala em foco continua, mas a gaveta não pode apontar para bot que saiu da frota.

@@ -8,11 +8,12 @@ import { stateLabel } from "@/components/hud/fleetView";
 import { BotDrawer } from "@/components/hud/BotDrawer";
 import { useHQStore } from "@/state/useHQStore";
 import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
-import { BUILDING_ROOMS_BY_ID } from "@/world/office/officeBuilding";
-import { OFFICE_ROOMS_BY_ID, OFFICE_SEATS_BY_ID, SEAT_KIND_LABEL } from "@/world/office/officeLayout";
+import { BUILDING_ROOMS_BY_ID, FLOOR_LABEL } from "@/world/office/officeBuilding";
+import { SEAT_KIND_LABEL } from "@/world/office/officeLayout";
+import { activeScenario } from "@/world/office/officeScenario";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
-import { botsInRoom, type OfficeBot } from "@/world/office/officeRoster";
+import { botsInRoom, seatPlace, type OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
 import { FloorSelector } from "./BuildingControls";
 import { OfficeAccountMenu } from "./OfficeAccountMenu";
@@ -89,7 +90,7 @@ function TopBar({ connection, title }: { connection: OfficeConnection | null; ti
     <header className="office-top" data-office-inset="top">
       <h1 className="office-page-title">{title}</h1>
       <ModeChip connection={connection} />
-      {demo && <span className="office-demo-note">Sete bots de exemplo, sem atividade real.</span>}
+      {demo && <span className="office-demo-note">{activeScenario() ? `${activeScenario()!.brand.slogan} Equipe de exemplo, dados fictícios.` : "Sete bots de exemplo, sem atividade real."}</span>}
       <nav className="office-nav" aria-label="Fonte dos dados">
         <a href={demo ? OFFICE_LIVE_URL : OFFICE_DEMO_URL}>{demo ? "Usar frota do Hermes" : "Ver demonstração"}</a>
       </nav>
@@ -204,6 +205,7 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   const seating = useOfficeStore((state) => state.seating);
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const mode = useOfficeStore((state) => state.mode);
+  const brand = activeScenario()?.brand;
   const [query, setQuery] = useState("");
   const [collapsedTeams, setCollapsedTeams] = useState(readCollapsedTeams);
   const matches = (text: string) => normalizeSearch(text).includes(normalizeSearch(query).trim());
@@ -223,8 +225,8 @@ function Roster({ open, onToggle, view, onView, conversationBotId, onConversatio
   return (
     <aside className="office-roster" data-office-inset="left" aria-label="Navegação do Lipp HQ">
       <div className="office-roster-head">
-        <span className="office-workspace-mark" aria-hidden>L</span>
-        <div className="office-workspace-title"><strong>Lipp HQ</strong><span>{bots.length} {bots.length === 1 ? "agente" : "agentes"}</span></div>
+        {brand ? <img className="office-workspace-logo" src={brand.logoOnDark} alt={brand.name} /> : <span className="office-workspace-mark" aria-hidden>L</span>}
+        <div className="office-workspace-title">{!brand && <strong>Lipp HQ</strong>}<span>{bots.length} {bots.length === 1 ? "agente" : "agentes"}{brand ? " · demonstração" : ""}</span></div>
         <button type="button" className="panel-close" onClick={onToggle} aria-expanded aria-label="Recolher navegação"><PanelLeftClose size={17} aria-hidden /></button>
       </div>
       <label className="office-agent-search"><Search size={16} aria-hidden /><input className="office-roster-search" type="search" aria-label="Buscar agentes ou pessoas" aria-keyshortcuts="Meta+K Control+K" placeholder="Buscar na equipe…" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd className="office-search-key" aria-hidden>{SEARCH_KEY}</kbd></label>
@@ -488,8 +490,10 @@ function DemoPanel({ onConversation }: { onConversation: (botId: string) => void
   const node = useDrawerInset(Boolean(bot));
 
   if (!bot) return null;
-  const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
-  const room = seat ? OFFICE_ROOMS_BY_ID[seat.roomId] : null;
+  const place = seatPlace(seating.seats[bot.id]);
+  const seat = place?.seat;
+  const room = seat ? BUILDING_ROOMS_BY_ID[seat.roomId] : null;
+  const scenario = activeScenario();
   return (
     <aside ref={node} className="drawer office-demo-panel" aria-label={`Bot ${bot.name}`} data-demo-panel={bot.id}>
       <header className="drawer-head">
@@ -513,13 +517,14 @@ function DemoPanel({ onConversation }: { onConversation: (botId: string) => void
             <dd>{room?.name ?? "—"}</dd>
           </div>
           <div>
-            <dt>Lugar</dt>
-            <dd>{seat ? SEAT_KIND_LABEL[seat.kind] : "—"}</dd>
+            <dt>{scenario ? "Andar" : "Lugar"}</dt>
+            <dd>{scenario ? (place ? FLOOR_LABEL[place.floor].name : "—") : seat ? SEAT_KIND_LABEL[seat.kind] : "—"}</dd>
           </div>
         </dl>
         <p className="panel-warn">
-          Isto é uma demonstração: o bot não está executando nada, e não há sessões, mensagens nem estado ao vivo aqui. O
-          voo é só desenho: não representa nenhuma tarefa.
+          {scenario
+            ? `Demonstração da ${scenario.brand.name}: equipe de exemplo, com clínicas e números fictícios. O bot não executa nada de verdade.`
+            : "Isto é uma demonstração: o bot não está executando nada, e não há sessões, mensagens nem estado ao vivo aqui. O voo é só desenho: não representa nenhuma tarefa."}
         </p>
         <button type="button" className="office-button primary" data-open-conversation onClick={() => onConversation(bot.id)}>
           <MessagesSquare size={14} aria-hidden /> Conversar com {bot.name}
@@ -660,7 +665,7 @@ export function OfficeHud({ live }: { live: boolean }) {
   }, [rosterOpen]);
 
   return (
-    <div className="office-hud" data-sidebar-open={rosterOpen} data-office-view={view} ref={layer}>
+    <div className="office-hud" data-sidebar-open={rosterOpen} data-office-view={view} data-scenario={activeScenario()?.id} ref={layer}>
       <TopBar connection={shown} title={VIEW_TITLE[view]} />
       <Roster
         open={rosterOpen}

@@ -215,6 +215,41 @@ máximo, dá para notar. Ele some ao chegar à porta e ao helicóptero, sem anim
 embarcar. O helicóptero não projeta sombra de verdade: há só uma sombra de contato no deque. No celular,
 a primeira parte do voo fica fora da tela ou atrás do seletor de andares.
 
+## Cenário Alyx Med (`&cenario=alyxmed`)
+
+A equipe de bots da própria Alyx Med, para mostrar o sistema a quem conhece a empresa. Só na
+demonstração: `/?escritorio=completo&modo=demonstracao&cenario=alyxmed`. A frota real ignora o
+parâmetro.
+
+| Andar | Equipe | Bots |
+| - | - | - |
+| Diretoria | Filipe, responsável | o chefe de sempre |
+| 7 | Performance | Gael (campanhas), Vera (CPL e funil), Dora (conversão de trial) |
+| 5 | Leads | Lia (qualificação), Davi (prospecção), Bia (agenda de demos) |
+| 4 | Tarefas | Otto (backlog e prioridades), Nina (prazos), Rui (atas e combinados) |
+| 3 | Desenvolvimento | Theo (agenda e prontuário com IA), Iris (convênios), Enzo (financeiro e qualidade) |
+| 2 | Social Media | Mel (pauta), Caio (posts e carrosséis), Lara (respostas) |
+| 1 | Processos | Ana (onboarding), Leo (suporte), Clara (LGPD e SIPNI), e a Alyx, direção geral |
+
+- **Uma fonte de dados:** `src/alyxmed/scenario.ts`. Equipes, bots, postos, nomes de zona e de sala,
+  placas e marca saem dali; cena, seletor, organograma e gaveta só leem.
+- **Chega antes do prédio.** Os módulos do prédio montam salas e andares ao serem importados, então
+  `App.tsx` baixa o cenário e o instala (`officeScenario.ts`) antes de importar o escritório. O arquivo
+  do cenário só importa tipos, e instalar depois de o prédio ler falha alto. Sem o parâmetro, nem o
+  arquivo nem as imagens são baixados.
+- **Os andares são os de expansão, com outros dados.** A planta fica; mudam nome, zonas, postos e
+  placas, e saem os figurantes. O sétimo pavimento, só de fachada sem o cenário, usa a planta do
+  quinto. A Operação vira Processos com as salas renomeadas. No posto do bot a mobília deixa o
+  equipamento e tira a cadeira: o robô flutua ali. No andar da equipe o robô fica no posto; o voo
+  segue só na planta da Operação.
+- **Marca:** só as artes oficiais do site, em `public/alyxmed/` (origem em `ORIGEM.md`). Logo na
+  navegação, na recepção, no letreiro do topo e na parede de cada andar; telas do sistema como TV de
+  parede. O slogan fica na barra do topo, e os destaques usam o azul da vela (`#2c8ea7`).
+- **Demonstração sempre à vista:** a barra do topo, a etiqueta do andar e a gaveta dizem que a equipe
+  e os dados são de exemplo.
+
+Prova em `pnpm qa:alyxmed`.
+
 ## Como usar
 
 | Ação              | Como                                                                                                 |

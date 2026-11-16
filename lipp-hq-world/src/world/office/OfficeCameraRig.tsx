@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import type { OrthographicCamera } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS_LEVELS, HIDEOUT, floorAtLevel, neighborView, viewRoomAt } from "./officeBuilding";
-import { OFFICE_SEATS_BY_ID } from "./officeLayout";
+import { seatPlace } from "./officeRoster";
 import {
   FORWARD,
   clampView,
@@ -30,11 +30,11 @@ const KEY_PAN = 60;
  */
 function botBoxes(onlyRoom?: string): PickBox[] {
   const { seating, buildingView } = useOfficeStore.getState();
-  // Bot só existe no escritório: fora dele, um clique nunca acha quem não está na tela.
-  if (buildingView !== "operacao") return [];
+  // Só os bots do andar em tela: um clique nunca acha quem não está na tela.
   return Object.entries(seating.seats).flatMap(([botId, seatId]) => {
-    const seat = OFFICE_SEATS_BY_ID[seatId];
-    if (!seat || (onlyRoom && seat.roomId !== onlyRoom)) return [];
+    const place = seatPlace(seatId);
+    if (!place || place.floor !== buildingView || (onlyRoom && place.seat.roomId !== onlyRoom)) return [];
+    const { seat } = place;
     const actor = robotActors.get(botId);
     const x = actor?.position.x ?? seat.x;
     const z = actor?.position.z ?? seat.z;

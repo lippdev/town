@@ -15,6 +15,16 @@ export function parseOfficeRoute(search: string): OfficeMode | null {
 export const OFFICE_LIVE_URL = `/?${OFFICE_QUERY}=completo`;
 export const OFFICE_DEMO_URL = `${OFFICE_LIVE_URL}&${DEMO_QUERY}=demonstracao`;
 
+const SCENARIO_QUERY = "cenario";
+
+/** Cenário de empresa: só na demonstração. A frota real nunca recebe dado simulado. */
+export function parseScenario(search: string): "alyxmed" | null {
+  if (parseOfficeRoute(search) !== "demo") return null;
+  return new URLSearchParams(search).get(SCENARIO_QUERY) === "alyxmed" ? "alyxmed" : null;
+}
+
+export const OFFICE_ALYXMED_URL = `${OFFICE_DEMO_URL}&${SCENARIO_QUERY}=alyxmed`;
+
 export type OfficeConnection =
   | { kind: "connecting" }
   /** Hermes fora: nenhuma frota lida. A cena fica sem corpos e oferece a demonstração. */

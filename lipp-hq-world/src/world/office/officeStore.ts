@@ -5,7 +5,7 @@ import { cutAt, lerp, planTravel, plateOpacity, restCut, shownAt, travelProgress
 import { CITY_BOUNDS } from "./officeCity";
 import { useSecretStore, type SecretSpotId } from "./officeSecrets";
 import type { ChiefRequest, ChiefStatus } from "./officeChief";
-import { FLOOR_BOUNDS, OFFICE_SEATS_BY_ID } from "./officeLayout";
+import { FLOOR_BOUNDS } from "./officeLayout";
 import { clampView, fitView, keepGroundInside, zoomLimits, zoomViewAt, type Insets, type OfficeView, type Viewport } from "./officeCamera";
 import type { Group } from "three";
 import type { HumanFigure } from "@/avatar/human/HumanFigure";
@@ -13,7 +13,7 @@ import type { RobotLooks } from "@/avatar/robot/robotLook";
 import type { HumanActor } from "./HumanActor";
 import type { RobotActor } from "./RobotActor";
 import type { HumanGoal, HumanPhase, OfficeHuman } from "./officeHumans";
-import { type OfficeBot, type Seating } from "./officeRoster";
+import { seatPlace, type OfficeBot, type Seating } from "./officeRoster";
 import type { OfficeMode } from "./officeRoute";
 
 export type Framing = "floor" | "room" | "free";
@@ -241,12 +241,11 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   selectBot: (botId) => {
     useHQStore.getState().selectBot(botId);
     set({ selectedHumanId: null });
-    const seatId = get().seating.seats[botId];
-    const seat = seatId ? OFFICE_SEATS_BY_ID[seatId] : undefined;
+    const place = seatPlace(get().seating.seats[botId]);
     // Bot sem posto não tem sala para focar: a gaveta abre e a câmera fica onde está.
-    if (!seat) return;
-    const moving = arrival(get(), "operacao");
-    set({ focusedRoomId: seat.roomId, framing: "room", ...moving });
+    if (!place) return;
+    const moving = arrival(get(), place.floor);
+    set({ focusedRoomId: place.seat.roomId, framing: "room", ...moving });
     if (moving.buildingView) arrived(moving.buildingView);
   },
   markFree: () => set({ framing: "free" }),

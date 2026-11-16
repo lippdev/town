@@ -4,7 +4,10 @@ import type { CharacterSpec } from "@/character-studio/model/schema";
 import type { BotSnapshot, FleetSnapshot } from "@/integrations/hq/types";
 import type { AgentAnimationState } from "@/types/hq";
 import { sceneAgentsFromFleet } from "@/world/characters/sceneAgents";
+import type { FloorId } from "./officeBuilding";
+import { EXPANSION_FLOORS, expansionPosts } from "./officeExpansion";
 import { OFFICE_SEATS, OFFICE_SEATS_BY_ID, type OfficeSeat } from "./officeLayout";
+import { activeScenario } from "./officeScenario";
 
 /** Um bot no escritório, seja da frota real, seja da demonstração. */
 export interface OfficeBot {
@@ -88,9 +91,9 @@ export function specForBot(id: string, color: string): CharacterSpec {
   };
 }
 
-/** Os sete de referência, sem estado: a demonstração não finge atividade. */
+/** Os sete de referência, ou a equipe do cenário, sem estado: a demonstração não finge atividade. */
 export function demoBots(): OfficeBot[] {
-  return AGENTS.map((agent) => ({
+  return (activeScenario()?.bots ?? AGENTS).map((agent) => ({
     id: agent.id,
     name: agent.name,
     role: agent.role,
@@ -174,14 +177,40 @@ export function assignSeats(
   return { seats: result, unseated };
 }
 
+/** Postos dos andares de equipe, com o andar de cada um. A Operação fica em `OFFICE_SEATS`. */
+const TEAM_POSTS = new Map(EXPANSION_FLOORS.flatMap((floor) => expansionPosts(floor).map((seat) => [seat.id, { seat, floor: floor.id as FloorId }] as const)));
+
+/** Onde fica um posto, em qualquer andar. */
+export function seatPlace(seatId: string | undefined): { seat: OfficeSeat; floor: FloorId } | null {
+  if (!seatId) return null;
+  const office = OFFICE_SEATS_BY_ID[seatId];
+  return office ? { seat: office, floor: "operacao" } : (TEAM_POSTS.get(seatId) ?? null);
+}
+
+/**
+ * Lugares da demonstração. No cenário de empresa cada bot tem posto fixo, no andar da equipe; um
+ * posto que não existe é erro de dado, e o bot fica sem corpo em vez de cair em outro andar.
+ */
+export function demoSeating(botIds: readonly string[], previous: Readonly<Record<string, string>> = {}): Seating {
+  const scenario = activeScenario();
+  if (!scenario) return assignSeats(botIds, OFFICE_SEATS, previous);
+  const seats: Record<string, string> = {};
+  const unseated: string[] = [];
+  for (const id of [...new Set(botIds)].sort()) {
+    const seat = scenario.bots.find((bot) => bot.id === id)?.seat;
+    if (seat && seatPlace(seat) && !Object.values(seats).includes(seat)) seats[id] = seat;
+    else unseated.push(id);
+  }
+  return { seats, unseated };
+}
+
 export function seatOf(seating: Seating, botId: string): OfficeSeat | null {
-  const id = seating.seats[botId];
-  return id ? (OFFICE_SEATS_BY_ID[id] ?? null) : null;
+  return seatPlace(seating.seats[botId])?.seat ?? null;
 }
 
 export function botsInRoom(seating: Seating, roomId: string): string[] {
   return Object.entries(seating.seats)
-    .filter(([, seatId]) => OFFICE_SEATS_BY_ID[seatId]?.roomId === roomId)
+    .filter(([, seatId]) => seatPlace(seatId)?.seat.roomId === roomId)
     .map(([botId]) => botId)
     .sort();
 }

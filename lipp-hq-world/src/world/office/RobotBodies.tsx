@@ -6,9 +6,10 @@ import { ROBOT_URL, loadGltf } from "@/avatar/human/humanAssets";
 import { RobotRig, findRobotProblems } from "@/avatar/robot/RobotRig";
 import { lookFor } from "@/avatar/robot/robotLook";
 import { useHQStore } from "@/state/useHQStore";
-import { OFFICE_SEATS_BY_ID, type OfficeSeat } from "./officeLayout";
+import type { OfficeSeat } from "./officeLayout";
+import type { FloorId } from "./officeBuilding";
 import { buildFlightPlans, type FlightPlan, type FlightWorld } from "./officeFlights";
-import type { OfficeBot } from "./officeRoster";
+import { seatPlace, type OfficeBot } from "./officeRoster";
 import { RobotActor } from "./RobotActor";
 import { officeRuntime, robotActors, useOfficeStore } from "./officeStore";
 import { FloorGroup } from "./BuildingScene";
@@ -102,13 +103,14 @@ function RobotBody({ bot, seat, plan, scene, clips, reduced, mark }: {
   );
 }
 
-/** Anel no chão de quem está selecionado; vai junto com o robô sem renderizar o React. */
-function RobotRing() {
+/** Anel no chão de quem está selecionado; vai junto com o robô sem renderizar o React. Só no andar dele. */
+function RobotRing({ floor }: { floor: FloorId }) {
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const hoveredBotId = useOfficeStore((state) => state.hoveredBotId);
   const bots = useOfficeStore((state) => state.bots);
+  const seating = useOfficeStore((state) => state.seating);
   const id = selectedBotId ?? hoveredBotId;
-  const bot = bots.find((candidate) => candidate.id === id);
+  const bot = seatPlace(seating.seats[id ?? ""])?.floor === floor ? bots.find((candidate) => candidate.id === id) : undefined;
   const group = useRef<Group | null>(null);
   useFrame(() => {
     const position = id ? robotActors.get(id)?.position : null;
@@ -138,7 +140,10 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const seating = useOfficeStore((state) => state.seating);
   const mode = useOfficeStore((state) => state.mode);
   const view = useOfficeStore((state) => state.buildingView);
-  const mounted = useOfficeStore((state) => state.mountedFloors.includes("operacao"));
+  const mountedFloors = useOfficeStore((state) => state.mountedFloors);
+  // Andares montados que têm bot: na demonstração de sempre, só a Operação.
+  const floors = mountedFloors.filter((floor) => Object.values(seating.seats).some((seatId) => seatPlace(seatId)?.floor === floor));
+  const mounted = floors.length > 0;
   const [model, setModel] = useState<{ scene: Object3D; clips: AnimationClip[] } | null>(null);
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const mark = useGroundMark();
@@ -169,20 +174,28 @@ export function OfficeRobots({ world }: { world: FlightWorld }) {
   const plans = useMemo(() => {
     if (mode !== "demo" || reduced) return new Map<string, FlightPlan>();
     const seats = JSON.parse(seatedKey) as Record<string, string>;
-    const seated = Object.entries(seats).map(([botId, seatId]) => ({ botId, seat: OFFICE_SEATS_BY_ID[seatId]! }));
+    // O voo é calculado na planta da Operação: os andares de equipe ficam com o robô no posto.
+    const seated = Object.entries(seats).flatMap(([botId, seatId]) => {
+      const place = seatPlace(seatId);
+      return place?.floor === "operacao" ? [{ botId, seat: place.seat }] : [];
+    });
     return new Map(buildFlightPlans(seated, world).map((plan) => [plan.botId, plan]));
   }, [mode, reduced, seatedKey, world]);
 
-  // Fica montado em todo andar, com o modelo à mão: ao voltar à Operação, os robôs já entram.
+  // O modelo fica à mão depois de carregado: ao voltar a um andar com bots, os robôs já entram.
   if (!model || !mounted) return null;
   return (
-    <FloorGroup floor="operacao">
-      {bots.map((bot) => {
-        const seat = OFFICE_SEATS_BY_ID[seating.seats[bot.id] ?? ""];
-        if (!seat) return null;
-        return <RobotBody key={bot.id} bot={bot} seat={seat} plan={plans.get(bot.id) ?? null} scene={model.scene} clips={model.clips} reduced={reduced} mark={mark} />;
-      })}
-      <RobotRing />
-    </FloorGroup>
+    <>
+      {floors.map((floor) => (
+        <FloorGroup key={floor} floor={floor}>
+          {bots.map((bot) => {
+            const place = seatPlace(seating.seats[bot.id]);
+            if (place?.floor !== floor) return null;
+            return <RobotBody key={bot.id} bot={bot} seat={place.seat} plan={plans.get(bot.id) ?? null} scene={model.scene} clips={model.clips} reduced={reduced} mark={mark} />;
+          })}
+          <RobotRing floor={floor} />
+        </FloorGroup>
+      ))}
+    </>
   );
 }

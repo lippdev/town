@@ -26,6 +26,7 @@
     "qa:cidade": "node scripts/visual-qa/office-city.mjs",
     "qa:heliporto": "node scripts/visual-qa/office-helipad.mjs",
     "qa:primeiro-load": "node scripts/visual-qa/office-first-load.mjs",
+    "qa:alyxmed": "node scripts/visual-qa/office-alyxmed.mjs",
     "qa:predio-quadros": "node scripts/visual-qa/office-building-frames.mjs",
     "contract:check": "node scripts/hermes/contract-check.mjs",
     "test": "vitest run"
