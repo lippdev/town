@@ -11,6 +11,10 @@ import { GRAPHICS_LABEL, GRAPHICS_MODES } from "@/world/quality";
 import { BUILDING_ROOMS_BY_ID, FLOOR_LABEL } from "@/world/office/officeBuilding";
 import { SEAT_KIND_LABEL } from "@/world/office/officeLayout";
 import { activeScenario } from "@/world/office/officeScenario";
+import { useClockMinute } from "@/world/office/activityClock";
+import { BOT_STATE_LABEL, activityAt, clockText } from "@/world/office/officeActivity";
+import { KANBAN_COLUMNS, loadCards } from "./kanbanModel";
+import { browserStorage } from "@/avatar/human/persistence";
 import { OFFICE_DEMO_URL, OFFICE_LIVE_URL, officeConnection, type OfficeConnection } from "@/world/office/officeRoute";
 import { HUMAN_CAPACITY, HUMAN_PHASE_LABEL } from "@/world/office/officeHumans";
 import { botsInRoom, seatPlace, type OfficeBot } from "@/world/office/officeRoster";
@@ -91,6 +95,7 @@ function TopBar({ connection, title }: { connection: OfficeConnection | null; ti
       <h1 className="office-page-title">{title}</h1>
       <ModeChip connection={connection} />
       {demo && <span className="office-demo-note">{activeScenario() ? `${activeScenario()!.brand.slogan} Equipe de exemplo, dados fictícios.` : "Sete bots de exemplo, sem atividade real."}</span>}
+      {demo && activeScenario() && <ScenarioClock />}
       <nav className="office-nav" aria-label="Fonte dos dados">
         <a href={demo ? OFFICE_LIVE_URL : OFFICE_DEMO_URL}>{demo ? "Usar frota do Hermes" : "Ver demonstração"}</a>
       </nav>
@@ -481,7 +486,60 @@ function ChiefAgenda() {
 }
 
 /** A gaveta da demonstração: quem é e onde senta. Nada de sessão, chat ou estado. */
-function DemoPanel({ onConversation }: { onConversation: (botId: string) => void }) {
+/** O relógio do dia simulado: os estados dos bots saem dele, não da hora de verdade. */
+function ScenarioClock() {
+  const minute = useClockMinute();
+  return (
+    <span className="office-demo-note office-clock" data-scenario-clock title="Relógio da simulação: anda um minuto a cada dois segundos">
+      {clockText(minute)} · dia simulado
+    </span>
+  );
+}
+
+const COLUMN_LABEL = Object.fromEntries(KANBAN_COLUMNS.map((column) => [column.id, column.label]));
+
+/** O que o bot do cenário faz agora, as tarefas dele no quadro e o fim da conversa de exemplo. */
+function ScenarioActivity({ bot, demo }: { bot: OfficeBot; demo: DemoConversations }) {
+  const scenario = activeScenario()!;
+  const minute = useClockMinute();
+  const now = activityAt(scenario, bot.id, minute);
+  const tasks = loadCards(browserStorage()).filter((card) => card.owner === bot.id);
+  const last = [...demo.threadOf(bot.id)].reverse().find((item) => item.kind === "message");
+  return (
+    <>
+      <p className="office-activity-now" data-activity={now.state}>
+        <span className={`bot-state-dot activity-${now.state}`} aria-hidden />
+        <strong>{BOT_STATE_LABEL[now.state]}</strong>
+        <small>{now.detail} · {clockText(minute)}</small>
+      </p>
+      <section className="office-demo-section" data-demo-tasks>
+        <h3>Tarefas no quadro</h3>
+        {tasks.length > 0 ? (
+          <ul>
+            {tasks.map((card) => (
+              <li key={card.id}>
+                <span>{card.title}</span>
+                <span>{COLUMN_LABEL[card.column]}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="panel-activity">Nenhuma tarefa no quadro.</p>
+        )}
+      </section>
+      {last?.kind === "message" && (
+        <section className="office-demo-section" data-demo-talk>
+          <h3>Última mensagem</h3>
+          <p className="office-demo-quote" style={{ "--tag-color": bot.color } as React.CSSProperties}>
+            {last.author === "bot" ? bot.name : "Você"}: {last.text}
+          </p>
+        </section>
+      )}
+    </>
+  );
+}
+
+function DemoPanel({ onConversation, demo }: { onConversation: (botId: string) => void; demo: DemoConversations }) {
   const selectedBotId = useHQStore((state) => state.selectedBotId);
   const clearSelection = useHQStore((state) => state.clearSelection);
   const bots = useOfficeStore((state) => state.bots);
@@ -511,6 +569,7 @@ function DemoPanel({ onConversation }: { onConversation: (botId: string) => void
       </header>
       <div className="drawer-body">
         <p className="panel-activity">{bot.responsibility}</p>
+        {scenario && <ScenarioActivity bot={bot} demo={demo} />}
         <dl className="panel-stats">
           <div>
             <dt>Sala</dt>
@@ -684,7 +743,7 @@ export function OfficeHud({ live }: { live: boolean }) {
       {!live && <FloorSelector />}
       <OfflineNotice connection={shown} />
       <CameraBar />
-      {live ? <BotDrawer characterTab={false} /> : <DemoPanel onConversation={openConversation} />}
+      {live ? <BotDrawer characterTab={false} /> : <DemoPanel onConversation={openConversation} demo={demo} />}
       {!live && <HumanPanel />}
       <LoadOverlay />
     </div>
