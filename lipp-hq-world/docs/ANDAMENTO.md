@@ -1,7 +1,7 @@
 # Trabalho em andamento
 
 Ponto de retomada para continuar de outro computador ou em outra sessão. Atualize ao pausar
-ou ao fechar um ciclo. Última atualização: 2026-11-07.
+ou ao fechar um ciclo. Última atualização: 2026-11-16.
 
 ## Onde estamos
 
@@ -10,6 +10,27 @@ A demonstração do escritório (`/?escritorio=completo&modo=demonstracao`) est�
 figurantes, Diretoria com o chefe, esconderijo secreto, heliporto com voos, cidade estilo
 Gotham com ciclo de dia e noite pelo horário de Brasília, e primeiro carregamento leve.
 Detalhes em [ESCRITORIO.md](ESCRITORIO.md).
+
+### Em andamento: cenário Alyx Med
+
+Objetivo: mostrar o sistema com a equipe de bots da própria Alyx Med (alyxmed.com.br), para
+exemplificar o prédio a quem vende o sistema de gestão para clínicas. Seis equipes de três bots,
+cada uma no seu andar, e a Alyx na direção geral, abaixo do Filipe.
+
+- URL: `/?escritorio=completo&modo=demonstracao&cenario=alyxmed`. Sem o parâmetro, a demonstração e
+  a frota real ficam como sempre, e nenhum arquivo do cenário é baixado.
+- Dados num lugar só: `src/alyxmed/scenario.ts`. Artes oficiais do site em `public/alyxmed/`
+  (`ORIGEM.md`); nada de arte nova da marca.
+- Andares: Performance (7), Leads (5), Tarefas (4), Desenvolvimento (3), Social Media (2) e
+  Processos (1, a Operação). O sétimo pavimento usa a planta do quinto.
+- Tudo marcado como demonstração: clínicas, números e conversas fictícios.
+
+| PR | Branch | Estado |
+| - | - | - |
+| _a abrir_ | `feat/alyxmed-equipes` → `main` | Equipes, andares, marca, organograma e seletor (`qa:alyxmed`) |
+
+Próximo passo: `feat/alyxmed-atividade`, a partir desta: estados ao longo do dia com relógio
+próprio, kanban por equipe e conversas de exemplo na gaveta.
 
 ### Em andamento: cenário de tecnologia (pausado)
 
@@ -101,6 +122,7 @@ vez (`HQ_URL=http://127.0.0.1:5199 node scripts/visual-qa/<roteiro>.mjs <pasta>`
 | `qa:cidade` | capturas e custo nas três horas do dia |
 | `qa:primeiro-load` | o que a abertura baixa e que entrar cedo num andar não trava |
 | `qa:tecnologia` | cenário de tecnologia (na branch dele) |
+| `qa:alyxmed` | cenário Alyx Med: equipes nos andares, marca, organograma, nada baixado sem ele |
 
 Armadilhas conhecidas:
 - **Navegador:** os roteiros procuram o Chrome em `/usr/bin/google-chrome` (servidor sem GPU)
