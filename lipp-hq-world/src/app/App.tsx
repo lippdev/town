@@ -1,13 +1,21 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Hud } from "@/components/hud/Hud";
 import { HermesConnection } from "@/integrations/hermes/HermesConnection";
-import { parseOfficeRoute } from "@/world/office/officeRoute";
+import { parseOfficeRoute, parseScenario } from "@/world/office/officeRoute";
 
 // three.js + toda a cena carregam num chunk próprio, depois do primeiro paint
 // da casca (HUD, boot e estados de erro).
 const WorldCanvas = lazy(() => import("@/world/scene/WorldCanvas").then((m) => ({ default: m.WorldCanvas })));
 // O escritório completo é outra página: não carrega a cena antiga, nem ela carrega ele.
-const OfficeApp = lazy(() => import("@/components/office/OfficeApp").then((m) => ({ default: m.OfficeApp })));
+// O cenário de empresa vem antes: o prédio lê os dados dele ao ser importado. Sem `cenario`, nada dele baixa.
+const OfficeApp = lazy(async () => {
+  if (parseScenario(window.location.search) === "alyxmed") {
+    const [{ ALYXMED }, { installScenario }] = await Promise.all([import("@/alyxmed/scenario"), import("@/world/office/officeScenario")]);
+    installScenario(ALYXMED);
+  }
+  const { OfficeApp } = await import("@/components/office/OfficeApp");
+  return { default: OfficeApp };
+});
 
 function detectWebGL(): boolean {
   try {
