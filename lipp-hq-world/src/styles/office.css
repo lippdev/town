@@ -1399,9 +1399,9 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .activity-reuniao { background: #38bdf8; }
 .activity-aprovacao { background: #facc15; }
 .activity-ocioso { background: #64748b; }
-.office-activity-now { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; }
+.drawer .office-activity-now, .office-activity-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 14px; font-size: 12px; }
 .office-activity-now small { color: var(--hq-text-dim); }
-.office-demo-section { display: grid; gap: 6px; }
+.office-demo-section { display: grid; gap: 6px; margin-bottom: 14px; }
 .office-demo-section h3 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hq-text-dim); }
 .office-demo-section ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .office-demo-section li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 1.35; }
