@@ -28,7 +28,7 @@ cada uma no seu andar, e a Alyx na direção geral, abaixo do Filipe.
 | PR | Branch | Estado |
 | - | - | - |
 | #120 | `feat/alyxmed-equipes` → `main` | Equipes, andares, marca, organograma e seletor (`qa:alyxmed`) |
-| _a abrir_ | `feat/alyxmed-atividade` → `feat/alyxmed-equipes` | Dia simulado: estados, ida à reunião, kanban por equipe e conversas (`qa:alyxmed`) |
+| #121 | `feat/alyxmed-atividade` → `feat/alyxmed-equipes` | Dia simulado: estados, ida à reunião, kanban por equipe e conversas (`qa:alyxmed`) |
 
 - Atividade: determinística (semente no cenário), com relógio próprio de um minuto a cada dois
   segundos, a partir da hora do céu. O QA pausa e pula por `window.__HQ_ALYX_QA__`.
