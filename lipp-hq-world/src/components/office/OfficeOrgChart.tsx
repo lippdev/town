@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
-import { ORG_OWNER, buildOrgChart } from "@/agents/organization";
+import { buildOrgChart, orgOwner } from "@/agents/organization";
 import { stateLabel } from "@/components/hud/fleetView";
+import { activeScenario } from "@/world/office/officeScenario";
 import type { OfficeBot } from "@/world/office/officeRoster";
 import { AgentPortrait } from "./AgentPortrait";
 
@@ -29,18 +30,19 @@ export function OfficeOrgChart({ bots, sheets, onOpen }: {
   onOpen: (botId: string) => void;
 }) {
   const { leadership, teams, unassigned } = buildOrgChart(bots);
+  const owner = orgOwner();
   const node = (bot: OfficeBot) => <AgentNode key={bot.id} bot={bot} sheet={sheets[bot.id]} onOpen={onOpen} />;
   return (
     <section className="org" aria-label="Equipe" data-org data-scene-keys-off>
       <header className="org-head">
         <h2>Equipe</h2>
-        <p>Organização definida no HQ, não informada pelo Hermes. Clique em um agente para conversar.</p>
+        <p>{activeScenario() ? `Equipe de exemplo da ${activeScenario()!.brand.name}, cada equipe no seu andar. Clique em um agente para conversar.` : "Organização definida no HQ, não informada pelo Hermes. Clique em um agente para conversar."}</p>
       </header>
       <div className="org-scroll">
         <div className="org-chart">
           <div className="org-node owner" data-org-owner>
-            <span className="office-account-initial" aria-hidden>{ORG_OWNER.name.slice(0, 1)}</span>
-            <span className="org-node-text"><strong>{ORG_OWNER.name}</strong><small>{ORG_OWNER.role}</small></span>
+            <span className="office-account-initial" aria-hidden>{owner.name.slice(0, 1)}</span>
+            <span className="org-node-text"><strong>{owner.name}</strong><small>{owner.role}</small></span>
           </div>
           {leadership.map((bot) => (
             <div key={bot.id} className="org-tier"><span className="org-link" aria-hidden />{node(bot)}</div>

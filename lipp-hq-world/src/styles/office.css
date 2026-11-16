@@ -1386,3 +1386,9 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .office-floor-back { color: #ffe7c4; }
 .office-floor-secret { color: #cfe4ff; }
 @media (prefers-reduced-motion: reduce) { .office-secret-spot { transition: none; } }
+
+/* Cenário de empresa: a marca dela no topo da navegação e a cor do logo nos destaques. */
+.office-workspace-logo { display: block; height: 28px; width: auto; flex-shrink: 0; }
+.office-hud[data-scenario="alyxmed"] { --hq-accent: #2c8ea7; }
+.office-hud[data-scenario="alyxmed"] .office-button.primary { background: #2c8ea7; color: #fff; }
+.office-hud[data-scenario="alyxmed"] .office-button.primary:hover { background: #1d6b82; }

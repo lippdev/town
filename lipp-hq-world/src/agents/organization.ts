@@ -1,3 +1,5 @@
+import { activeScenario } from "@/world/office/officeScenario";
+
 /**
  * Como a equipe se organiza. O Hermes não informa hierarquia nem equipes: isto é definido
  * aqui, a partir das funções dos agentes, e é o único lugar a mudar para reorganizar.
@@ -47,20 +49,38 @@ export interface OrgChart<Bot> {
   unassigned: Bot[];
 }
 
+/** Quem responde pela equipe: o dono, ou o responsável no cenário de empresa. */
+export const orgOwner = (): { name: string; role: string } => activeScenario()?.owner ?? ORG_OWNER;
+
+/** A organização em uso: a do HQ, ou a do cenário de empresa, com um subgrupo por função. */
+function orgDefinition(): { leadership: readonly string[]; teams: readonly OrgTeamDefinition[] } {
+  const scenario = activeScenario();
+  if (!scenario) return { leadership: ORG_LEADERSHIP, teams: ORG_TEAMS };
+  return {
+    leadership: scenario.leadership,
+    teams: scenario.teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+      groups: scenario.bots.filter((bot) => bot.team === team.id).map((bot) => ({ id: bot.id, name: bot.role, members: [bot.id] })),
+    })),
+  };
+}
+
 /** Monta o organograma só com quem existe na frota, sem inventar ninguém nem esconder ninguém. */
 export function buildOrgChart<Bot extends { id: string }>(bots: readonly Bot[]): OrgChart<Bot> {
+  const definition = orgDefinition();
   const byId = new Map(bots.map((bot) => [bot.id, bot]));
   const present = (ids: readonly string[]) => ids.flatMap((id) => {
     const bot = byId.get(id);
     return bot ? [bot] : [];
   });
   const placed = new Set([
-    ...ORG_LEADERSHIP,
-    ...ORG_TEAMS.flatMap((team) => team.groups.flatMap((group) => group.members)),
+    ...definition.leadership,
+    ...definition.teams.flatMap((team) => team.groups.flatMap((group) => group.members)),
   ]);
   return {
-    leadership: present(ORG_LEADERSHIP),
-    teams: ORG_TEAMS.flatMap((team) => {
+    leadership: present(definition.leadership),
+    teams: definition.teams.flatMap((team) => {
       const groups = team.groups
         .map((group) => ({ id: group.id, name: group.name, members: present(group.members) }))
         .filter((group) => group.members.length > 0);

@@ -1,10 +1,14 @@
 import { Building2, CornerLeftUp, Moon } from "lucide-react";
 import { FLOOR_LABEL, FLOOR_LEVEL, FLOOR_ORDER, HIDEOUT, type BuildingView } from "@/world/office/officeBuilding";
-import { EXPANSION_FLOORS, expansionFloor } from "@/world/office/officeExpansion";
+import { EXPANSION_FLOORS, expansionFloor, isReservedFloor } from "@/world/office/officeExpansion";
 import { useSecretStore } from "@/world/office/officeSecrets";
 import { useOfficeStore } from "@/world/office/officeStore";
 
-const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => !expansionFloor(floor));
+/** Andar de equipe entra com o nome dela; só os reservados dividem a linha da Expansão. */
+const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => {
+  const expansion = expansionFloor(floor);
+  return !expansion || !isReservedFloor(expansion);
+});
 
 /**
  * O seletor de andares, como um painel de elevador. Discreto e só na demonstração: a frota
@@ -14,7 +18,7 @@ const MAIN_FLOORS = FLOOR_ORDER.filter((floor) => !expansionFloor(floor));
 export function FloorSelector() {
   const view = useOfficeStore((state) => state.buildingView);
   const go = (next: BuildingView) => useOfficeStore.getState().goToView(next);
-  const expansions = [...EXPANSION_FLOORS].sort((a, b) => b.level - a.level);
+  const expansions = EXPANSION_FLOORS.filter(isReservedFloor).sort((a, b) => b.level - a.level);
   // O esconderijo só entra no painel depois de achado, e o painel esquece com a página.
   const found = useSecretStore((state) => state.found);
   const hidden = view === HIDEOUT;
@@ -44,7 +48,7 @@ export function FloorSelector() {
         </button>
       )}
       {/* Os andares reservados dividem uma linha: quatro botões a mais, sem o painel crescer quatro linhas. */}
-      <div className="office-floor-group" role="group" aria-label="Andares de expansão" style={{ order: -expansions[0]!.level }}>
+      {expansions.length > 0 && <div className="office-floor-group" role="group" aria-label="Andares de expansão" style={{ order: -expansions[0]!.level }}>
         <span aria-hidden>Expansão</span>
         <div>
           {expansions.map((floor) => (
@@ -53,7 +57,7 @@ export function FloorSelector() {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
     </nav>
   );
 }
