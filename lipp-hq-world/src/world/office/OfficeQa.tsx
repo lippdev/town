@@ -3,10 +3,10 @@ import { useThree } from "@react-three/fiber";
 import { Box3, OrthographicCamera, type Scene, type WebGLRenderer } from "three";
 import { useHQStore } from "@/state/useHQStore";
 import { BUILDING_HEIGHT, BUILDING_ROOMS_BY_ID, CROWN_HEIGHT, FACADE_BOUNDS, HELIPAD, STORY } from "./officeBuilding";
-import { OFFICE_SEATS_BY_ID } from "./officeLayout";
 import { worldToScreen } from "./officeCamera";
 import { helipadRuntime } from "./officeHelipad";
 import { SECRET_SPOTS, useSecretStore } from "./officeSecrets";
+import { seatPlace } from "./officeRoster";
 import { humanActors, humanFigures, officeRuntime, robotActors, sceneryActors, useOfficeStore } from "./officeStore";
 
 declare global {
@@ -132,7 +132,7 @@ function officeQaApi(gl: WebGLRenderer, scene: Scene) {
     /** Pixel do meio do robô na tela, onde ele estiver agora, para o harness clicar nele. */
     botPoint: (botId: string) => {
       const robot = robotActors.get(botId);
-      const seat = OFFICE_SEATS_BY_ID[useOfficeStore.getState().seating.seats[botId] ?? ""];
+      const seat = seatPlace(useOfficeStore.getState().seating.seats[botId])?.seat;
       if (robot) return worldToScreen([robot.position.x, robot.position.y + robot.rig.height / 2, robot.position.z], officeRuntime.view, officeRuntime.viewport);
       return seat ? worldToScreen([seat.x, 1.5, seat.z], officeRuntime.view, officeRuntime.viewport) : null;
     },
