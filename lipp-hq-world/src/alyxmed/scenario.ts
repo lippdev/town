@@ -1,4 +1,5 @@
-import type { OfficeScenario, ScenarioBot, ScenarioPanel, ScenarioPost } from "@/world/office/officeScenario";
+import type { ConversationItem } from "@/components/office/conversationModel";
+import type { OfficeScenario, ScenarioBot, ScenarioMeeting, ScenarioPanel, ScenarioPost, ScenarioSpot, ScenarioTask } from "@/world/office/officeScenario";
 
 /**
  * A Alyx Med na demonstração do prédio: a equipe de bots da própria empresa, seis equipes de três,
@@ -76,7 +77,161 @@ const BOTS: ScenarioBot[] = [
   bot("processos", "clara", "Clara", "LGPD e SIPNI", "Cuida da LGPD e do envio de vacinas ao SIPNI.", "pesquisa-0"),
 ];
 
+const meet = (title: string, start: string, end: string): ScenarioMeeting => ({ title, start, end });
+/** Três lugares de pé lado a lado, de frente para a câmera. */
+const row = (x: number, z: number, gap = 1.2, yaw = 0): ScenarioSpot[] => [-1, 0, 1].map((step) => ({ x: x + step * gap, z, yaw }));
+/** Atrás do sofá do lounge, no andar de Leads e no de Performance (a mesma planta). */
+const LOUNGE_SPOTS = row(8, 3.4, 1.1);
+
 const demo = (text: string) => `${text} Demonstração: dados fictícios.`;
+
+/** Cartão de exemplo. As clínicas e os números são inventados para a demonstração. */
+const task = (owner: string, n: number, column: ScenarioTask["column"], title: string): ScenarioTask => ({ id: `alyx-${owner}-${n}`, owner: `alyx-${owner}`, title, column });
+
+const TASKS: ScenarioTask[] = [
+  task("alyx", 1, "fazendo", "Resumo do dia das seis equipes para o Filipe"),
+  task("alyx", 2, "revisao", "Prioridade da semana: prontuário com IA antes do app do paciente"),
+
+  task("lia", 1, "fazendo", "Qualificar 12 clínicas que pediram teste pelo site"),
+  task("lia", 2, "revisao", "Clínica Bem Viver: plano de 5 profissionais, aguardando aprovação do desconto"),
+  task("lia", 3, "feito", "Separar leads de odontologia dos de medicina"),
+  task("davi", 1, "fazendo", "Lista de clínicas de dermatologia em Campinas para o primeiro contato"),
+  task("davi", 2, "afazer", "Mensagem de retorno para quem não respondeu em 7 dias"),
+  task("davi", 3, "revisao", "Primeira mensagem para clínicas de dermatologia, aguardando aprovação do texto"),
+  task("bia", 1, "fazendo", "Clínica Vida+ pediu demo do prontuário com IA, agendada qui 14h"),
+  task("bia", 2, "revisao", "Roteiro da demo para clínicas com convênio"),
+  task("bia", 3, "feito", "Demo da Odonto Sorriso Pleno feita, enviar proposta"),
+
+  task("otto", 1, "fazendo", "Ordenar o backlog da semana por impacto nas clínicas"),
+  task("otto", 2, "revisao", "Proposta: adiar o relatório de comissões para a próxima sprint"),
+  task("nina", 1, "fazendo", "Cobrar as 4 tarefas paradas há mais de 3 dias"),
+  task("nina", 2, "afazer", "Prazo da implantação da Clínica São Lucas: sexta"),
+  task("nina", 3, "revisao", "Novo prazo do relatório de glosas, aguardando aprovação"),
+  task("rui", 1, "fazendo", "Ata da reunião de prioridades, com dono para cada combinado"),
+  task("rui", 2, "feito", "Transformar os combinados de ontem em 6 tarefas"),
+  task("rui", 3, "revisao", "Ata da reunião de prioridades, aguardando aprovação"),
+
+  task("mel", 1, "fazendo", "Calendário de novembro: 3 posts por semana no Instagram"),
+  task("mel", 2, "afazer", "Pauta: o que a LGPD exige do prontuário eletrônico"),
+  task("mel", 3, "revisao", "Calendário de dezembro, aguardando aprovação"),
+  task("caio", 1, "revisao", "Carrossel 'faturamento de convênios sem glosa', aguardando aprovação"),
+  task("caio", 2, "fazendo", "Post 'da agenda ao DRE' com a tela de visão geral"),
+  task("caio", 3, "feito", "Vídeo curto: confirmação de consulta pelo WhatsApp"),
+  task("lara", 1, "fazendo", "Responder 9 comentários do post sobre prontuário com IA"),
+  task("lara", 2, "revisao", "Resposta padrão para quem pergunta o preço nos comentários"),
+
+  task("theo", 1, "revisao", "PR: transcrição por IA no prontuário, revisão"),
+  task("theo", 2, "fazendo", "Agenda: arrastar consulta entre profissionais"),
+  task("theo", 3, "feito", "Correção do lembrete duplicado de consulta"),
+  task("iris", 1, "fazendo", "Validação da guia TISS antes do envio ao convênio"),
+  task("iris", 2, "afazer", "Relatório de glosas por convênio"),
+  task("iris", 3, "revisao", "PR: aviso de campo errado na guia TISS, revisão"),
+  task("enzo", 1, "fazendo", "Testes do fechamento de caixa no módulo financeiro"),
+  task("enzo", 2, "revisao", "PR: DRE por unidade da clínica, revisão"),
+
+  task("gael", 1, "fazendo", "Campanha Clínicas RJ: trocar os criativos da semana"),
+  task("gael", 2, "revisao", "Nova campanha para clínicas de odontologia, aguardando aprovação do orçamento"),
+  task("vera", 1, "fazendo", "CPL da campanha Clínicas RJ caiu 18% na semana"),
+  task("vera", 2, "afazer", "Onde o funil perde clínicas entre o teste e a demo"),
+  task("vera", 3, "revisao", "Relatório semanal do funil, aguardando aprovação"),
+  task("dora", 1, "fazendo", "Acompanhar 7 clínicas no 10º dia de teste"),
+  task("dora", 2, "revisao", "E-mail de fim de teste com oferta de implantação"),
+
+  task("ana", 1, "fazendo", "Onboarding da Clínica São Lucas: importar agenda"),
+  task("ana", 2, "afazer", "Cadastrar os 6 usuários da Clínica Aurora"),
+  task("ana", 3, "feito", "Treinamento da recepção do Centro Médico Horizonte"),
+  task("ana", 4, "revisao", "Plano de implantação da Clínica Aurora, aguardando aprovação"),
+  task("leo", 1, "fazendo", "Chamado: Clínica Vida+ não vê o repasse do mês"),
+  task("leo", 2, "revisao", "Abrir chamado no Desenvolvimento: lembrete fora do horário"),
+  task("clara", 1, "fazendo", "Envio das vacinas da semana ao SIPNI"),
+  task("clara", 2, "revisao", "Termo de consentimento LGPD para o prontuário com IA"),
+];
+
+const say = (id: string, author: "user" | "bot", text: string): ConversationItem => ({ kind: "message", id, author, text });
+const ask = (id: string, title: string, detail: string, fields: Array<[string, string]>): ConversationItem => ({
+  kind: "approval",
+  id,
+  title,
+  detail,
+  fields: [...fields.map(([label, value]) => ({ label, value })), { label: "Quem decide", value: "você" }],
+  expires: "expira em 24 h",
+});
+
+/** Conversas de exemplo com o Filipe. Nenhuma linha vem de atividade real. */
+const TALKS: Record<string, ConversationItem[]> = {
+  "alyx-alyx": [
+    say("alyx-1", "user", "Como estão as equipes hoje?"),
+    say("alyx-2", "bot", "Tudo andando. Leads tem a demo da Clínica Vida+ na quinta, Desenvolvimento está revisando a transcrição por IA e Performance investiga a queda do CPL no RJ. Duas coisas esperam você: o carrossel de convênios e o desconto da Clínica Bem Viver."),
+  ],
+  "alyx-lia": [
+    say("lia-1", "bot", "Das 12 clínicas que pediram teste ontem, 5 têm o perfil ideal: mais de 3 profissionais e convênio. Já passei as 5 para a Bia marcar demo."),
+    ask("lia-2", "Lia quer oferecer 10% de desconto à Clínica Bem Viver", "Plano de 5 profissionais, pagamento anual. Exemplo da demonstração.", [["Clínica", "Bem Viver (fictícia)"], ["Desconto", "10% no anual"]]),
+  ],
+  "alyx-davi": [
+    say("davi-1", "user", "Achou clínicas novas para contato?"),
+    say("davi-2", "bot", "Montei uma lista de 20 clínicas de dermatologia em Campinas que ainda usam agenda em planilha. Mando a primeira mensagem amanhã cedo."),
+  ],
+  "alyx-bia": [
+    say("bia-1", "bot", "A Clínica Vida+ pediu demo do prontuário com IA. Agendei quinta às 14h com a diretora e a recepção."),
+    say("bia-2", "user", "Mostra também o faturamento de convênios, eles atendem três."),
+    say("bia-3", "bot", "Combinado, coloquei no roteiro logo depois do prontuário."),
+  ],
+  "alyx-otto": [
+    say("otto-1", "bot", "Reordenei o backlog: o prontuário com IA sobe, o relatório de comissões desce. Quer ver a proposta?"),
+    ask("otto-2", "Otto quer adiar o relatório de comissões", "Vai para a próxima sprint, para o Desenvolvimento fechar a transcrição por IA.", [["Sprint", "atual → próxima"]]),
+  ],
+  "alyx-nina": [
+    say("nina-1", "bot", "Quatro tarefas estão paradas há mais de 3 dias. Já cobrei os donos; a mais antiga é o relatório de glosas da Iris."),
+  ],
+  "alyx-rui": [
+    say("rui-1", "user", "Registrou o que combinamos na reunião de prioridades?"),
+    say("rui-2", "bot", "Sim. Seis combinados, cada um com dono e prazo, já estão no Kanban."),
+  ],
+  "alyx-mel": [
+    say("mel-1", "bot", "O calendário de novembro está pronto: três posts por semana, com um tema de LGPD e um de convênios."),
+  ],
+  "alyx-caio": [
+    say("caio-1", "bot", "Terminei o carrossel 'faturamento de convênios sem glosa': são 7 telas, com a tela do módulo financeiro no fim."),
+    ask("caio-2", "Caio quer publicar o carrossel no Instagram", "Sai amanhã às 11h, no perfil da Alyx Med. Exemplo da demonstração.", [["Rede", "Instagram"], ["Quando", "amanhã, 11h"]]),
+  ],
+  "alyx-lara": [
+    say("lara-1", "bot", "O post sobre prontuário com IA teve 9 comentários com dúvidas. Respondi 6; os 3 sobre preço eu deixei para você ver a resposta padrão."),
+  ],
+  "alyx-theo": [
+    say("theo-1", "user", "Como está a transcrição por IA no prontuário?"),
+    { kind: "steps", id: "theo-2", tools: ["GitHub", "Testes"], steps: [{ id: "theo-2a", label: "Rodei os testes do prontuário" }, { id: "theo-2b", label: "Abri o PR da transcrição para revisão" }] },
+    { kind: "consult", id: "theo-3", withBotId: "alyx-clara", question: "A transcrição pode guardar o áudio da consulta?", answer: "Só com consentimento do paciente. Guarde o texto e descarte o áudio." },
+    say("theo-4", "bot", "O PR está em revisão. Segui a orientação da Clara: o áudio é descartado depois da transcrição."),
+  ],
+  "alyx-iris": [
+    say("iris-1", "bot", "Estou validando a guia TISS antes do envio: os campos errados agora aparecem antes de a guia sair, não depois da glosa."),
+  ],
+  "alyx-enzo": [
+    say("enzo-1", "bot", "Os testes do fechamento de caixa passaram. O PR do DRE por unidade está esperando revisão do Theo."),
+  ],
+  "alyx-gael": [
+    say("gael-1", "bot", "Troquei os criativos da campanha Clínicas RJ. A nova campanha de odontologia está pronta, falta o orçamento."),
+    ask("gael-2", "Gael quer ativar a campanha de odontologia", "Orçamento de exemplo, só para a demonstração.", [["Campanha", "Clínicas de odontologia"], ["Duração", "14 dias"]]),
+  ],
+  "alyx-vera": [
+    say("vera-1", "user", "Por que o CPL do RJ mudou?"),
+    say("vera-2", "bot", "O CPL da campanha Clínicas RJ caiu 18% na semana depois da troca de criativos. O vídeo de confirmação pelo WhatsApp foi o que mais trouxe clínicas."),
+  ],
+  "alyx-dora": [
+    say("dora-1", "bot", "Sete clínicas estão no 10º dia de teste. Três já usam a agenda todo dia; escrevi o e-mail de fim de teste para as outras quatro."),
+  ],
+  "alyx-ana": [
+    say("ana-1", "bot", "Comecei o onboarding da Clínica São Lucas: importar a agenda dos últimos 6 meses e cadastrar os profissionais."),
+    say("ana-2", "user", "Precisa de algo deles?"),
+    say("ana-3", "bot", "Só a planilha de convênios. Já pedi à recepção."),
+  ],
+  "alyx-leo": [
+    say("leo-1", "bot", "A Clínica Vida+ não vê o repasse do mês. Parece filtro de data; vou abrir chamado no Desenvolvimento se não for."),
+  ],
+  "alyx-clara": [
+    say("clara-1", "bot", "O envio das vacinas da semana ao SIPNI está em andamento. Também revisei o termo de consentimento para o prontuário com IA."),
+  ],
+};
 
 export const ALYXMED: OfficeScenario = {
   id: "alyxmed",
@@ -92,12 +247,12 @@ export const ALYXMED: OfficeScenario = {
   owner: { name: "Filipe", role: "Responsável pela Alyx Med" },
   leadership: ["alyx-alyx"],
   teams: [
-    { id: "leads", name: "Leads", floor: "expansao-5" },
-    { id: "tarefas", name: "Tarefas", floor: "expansao-4" },
-    { id: "social", name: "Social Media", floor: "expansao-2" },
-    { id: "dev", name: "Desenvolvimento", floor: "expansao-3" },
-    { id: "performance", name: "Performance", floor: "expansao-7" },
-    { id: "processos", name: "Processos", floor: "operacao" },
+    { id: "leads", name: "Leads", floor: "expansao-5", meetingRoom: "expansao-5-jardim", spots: LOUNGE_SPOTS, meetings: [meet("Daily de Leads", "09:00", "09:30"), meet("Revisão das demos da semana", "15:00", "15:30")] },
+    { id: "tarefas", name: "Tarefas", floor: "expansao-4", meetingRoom: "expansao-4-oficina", spots: row(-6.6, -5.75), meetings: [meet("Prioridades do dia", "09:30", "10:00"), meet("Fechamento do dia", "16:30", "17:00")] },
+    { id: "social", name: "Social Media", floor: "expansao-2", meetingRoom: "expansao-2-lounge", spots: row(6.8, 3.2), meetings: [meet("Pauta da semana", "10:00", "10:30"), meet("Aprovação de posts", "14:00", "14:30")] },
+    { id: "dev", name: "Desenvolvimento", floor: "expansao-3", meetingRoom: "expansao-3-reuniao", spots: row(6.8, 3.6, 1.4), meetings: [meet("Daily de Desenvolvimento", "09:15", "09:45"), meet("Revisão de PRs", "14:30", "15:00")] },
+    { id: "performance", name: "Performance", floor: "expansao-7", meetingRoom: "expansao-7-jardim", spots: LOUNGE_SPOTS, meetings: [meet("Leitura do funil", "10:30", "11:00"), meet("Ajuste das campanhas", "16:00", "16:30")] },
+    { id: "processos", name: "Processos", floor: "operacao", meetingRoom: "reunioes", spots: row(7.1, 4.8, 1.1), meetings: [meet("Clínicas em implantação", "11:00", "11:30"), meet("Chamados da semana", "15:30", "16:00")] },
   ],
   bots: BOTS,
   floors: {
@@ -181,4 +336,5 @@ export const ALYXMED: OfficeScenario = {
   },
   lobby: { panels: [{ url: `${ASSETS}/logo-texto-claro.svg`, at: [-4.35, 1.8, -8.8], width: 4.8, height: 1.1, background: INK, pad: 0.16, ratio: LOGO_RATIO }] },
   facade: { url: `${ASSETS}/logo-texto-claro.svg`, background: INK, pad: 0.16, ratio: LOGO_RATIO },
+  activity: { seed: 20261116, tasks: TASKS, talks: TALKS },
 };

@@ -1,3 +1,5 @@
+import { activeScenario } from "@/world/office/officeScenario";
+
 /**
  * Quadro de tarefas de exemplo, salvo só neste navegador. Não fala com o Hermes: nenhum bot
  * recebe ou executa nada daqui. Serve para avaliar como o quadro ficaria.
@@ -40,20 +42,39 @@ function validCard(value: unknown): value is KanbanCard {
   return Boolean(card) && typeof card!.id === "string" && typeof card!.title === "string" && typeof card!.owner === "string" && isColumn(card!.column);
 }
 
-export function loadCards(storage: Pick<Storage, "getItem"> | null): KanbanCard[] {
+/** Onde o quadro guarda os cartões e com o que começa. O cenário tem o próprio quadro, à parte do de sempre. */
+export interface KanbanSource {
+  key: string;
+  samples: readonly KanbanCard[];
+}
+
+export const DEFAULT_KANBAN: KanbanSource = { key: KANBAN_STORAGE_KEY, samples: SAMPLE_CARDS };
+
+/** Os cartões de exemplo de um cenário, já no formato do quadro. */
+export const scenarioCards = (scenario: { activity: { tasks: readonly KanbanCard[] } }): KanbanCard[] => scenario.activity.tasks.map((task) => ({ ...task }));
+
+export const scenarioKanban = (scenario: { id: string; activity: { tasks: readonly KanbanCard[] } }): KanbanSource => ({ key: `hq.kanban.${scenario.id}.v1`, samples: scenarioCards(scenario) });
+
+/** O quadro em uso: o do cenário, quando há um, sem misturar com o quadro de sempre. */
+export function activeKanban(): KanbanSource {
+  const scenario = activeScenario();
+  return scenario ? scenarioKanban(scenario) : DEFAULT_KANBAN;
+}
+
+export function loadCards(storage: Pick<Storage, "getItem"> | null, source: KanbanSource = activeKanban()): KanbanCard[] {
   try {
-    const raw = storage?.getItem(KANBAN_STORAGE_KEY);
-    if (!raw) return [...SAMPLE_CARDS];
+    const raw = storage?.getItem(source.key);
+    if (!raw) return [...source.samples];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(validCard) : [...SAMPLE_CARDS];
+    return Array.isArray(parsed) ? parsed.filter(validCard) : [...source.samples];
   } catch {
-    return [...SAMPLE_CARDS];
+    return [...source.samples];
   }
 }
 
-export function saveCards(storage: Pick<Storage, "setItem"> | null, cards: readonly KanbanCard[]) {
+export function saveCards(storage: Pick<Storage, "setItem"> | null, cards: readonly KanbanCard[], source: KanbanSource = activeKanban()) {
   try {
-    storage?.setItem(KANBAN_STORAGE_KEY, JSON.stringify(cards));
+    storage?.setItem(source.key, JSON.stringify(cards));
   } catch {
     // Sem armazenamento, o quadro só não sobrevive a recarregar.
   }

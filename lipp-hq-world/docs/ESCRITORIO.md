@@ -240,13 +240,26 @@ parâmetro.
 - **Os andares são os de expansão, com outros dados.** A planta fica; mudam nome, zonas, postos e
   placas, e saem os figurantes. O sétimo pavimento, só de fachada sem o cenário, usa a planta do
   quinto. A Operação vira Processos com as salas renomeadas. No posto do bot a mobília deixa o
-  equipamento e tira a cadeira: o robô flutua ali. No andar da equipe o robô fica no posto; o voo
-  segue só na planta da Operação.
+  equipamento e tira a cadeira: o robô flutua ali. O voo de sempre sai de cena: o robô só deixa o
+  posto para ir à reunião da equipe.
 - **Marca:** só as artes oficiais do site, em `public/alyxmed/` (origem em `ORIGEM.md`). Logo na
   navegação, na recepção, no letreiro do topo e na parede de cada andar; telas do sistema como TV de
   parede. O slogan fica na barra do topo, e os destaques usam o azul da vela (`#2c8ea7`).
 - **Demonstração sempre à vista:** a barra do topo, a etiqueta do andar e a gaveta dizem que a equipe
   e os dados são de exemplo.
+- **Dia simulado** (`officeActivity.ts`): cada bot passa por trabalhando, em reunião, esperando
+  aprovação e ocioso. Reuniões são fixas por equipe; fora delas, cada meia hora tira o estado da
+  semente do cenário, sem relógio do sistema nem sorteio. Na meia hora depois da reunião, quem tem
+  cartão em revisão espera aprovação. Almoço e fora do expediente (8h às 18h) são ociosos.
+- **Relógio próprio** (`activityClock.ts`): começa na hora do céu (`?hora=` ou Brasília) e anda um
+  minuto a cada dois segundos. Os robôs leem a cada quadro, fora do zustand. O QA usa
+  `window.__HQ_ALYX_QA__` (`pause`, `resume`, `jumpToClock("14:20")`, `clock`).
+- **Ida à reunião** (`meetingRoutes.ts`): o A* dos voos acha o caminho do posto até o lugar de pé de
+  cada bot na sala da equipe, contornando móveis e divisórias; na Operação, só pela sala de casa,
+  pela de reunião e pelos corredores. A posição sai do relógio, então pausar e pular funcionam.
+- **Quadro e conversas:** o kanban do cenário tem chave própria no navegador (`hq.kanban.alyxmed.v1`)
+  e filtra por equipe; a conversa de cada bot vem do cenário. O rótulo mostra o estado; a gaveta mostra
+  o que o bot faz agora, as tarefas dele no quadro e a última mensagem.
 
 Prova em `pnpm qa:alyxmed`.
 

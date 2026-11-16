@@ -27,10 +27,11 @@ cada uma no seu andar, e a Alyx na direção geral, abaixo do Filipe.
 
 | PR | Branch | Estado |
 | - | - | - |
-| _a abrir_ | `feat/alyxmed-equipes` → `main` | Equipes, andares, marca, organograma e seletor (`qa:alyxmed`) |
+| #120 | `feat/alyxmed-equipes` → `main` | Equipes, andares, marca, organograma e seletor (`qa:alyxmed`) |
+| #121 | `feat/alyxmed-atividade` → `feat/alyxmed-equipes` | Dia simulado: estados, ida à reunião, kanban por equipe e conversas (`qa:alyxmed`) |
 
-Próximo passo: `feat/alyxmed-atividade`, a partir desta: estados ao longo do dia com relógio
-próprio, kanban por equipe e conversas de exemplo na gaveta.
+- Atividade: determinística (semente no cenário), com relógio próprio de um minuto a cada dois
+  segundos, a partir da hora do céu. O QA pausa e pula por `window.__HQ_ALYX_QA__`.
 
 ### Em andamento: cenário de tecnologia (pausado)
 
@@ -122,7 +123,7 @@ vez (`HQ_URL=http://127.0.0.1:5199 node scripts/visual-qa/<roteiro>.mjs <pasta>`
 | `qa:cidade` | capturas e custo nas três horas do dia |
 | `qa:primeiro-load` | o que a abertura baixa e que entrar cedo num andar não trava |
 | `qa:tecnologia` | cenário de tecnologia (na branch dele) |
-| `qa:alyxmed` | cenário Alyx Med: equipes nos andares, marca, organograma, nada baixado sem ele |
+| `qa:alyxmed` | cenário Alyx Med: equipes nos andares, marca, organograma, gaveta com conversa e tarefas, quadro por equipe, bot na reunião numa hora fixa, nada baixado sem ele |
 
 Armadilhas conhecidas:
 - **Navegador:** os roteiros procuram o Chrome em `/usr/bin/google-chrome` (servidor sem GPU)

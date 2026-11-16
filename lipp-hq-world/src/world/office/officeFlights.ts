@@ -29,6 +29,8 @@ export interface FlightPlan {
   leg: number;
   /** Instante em que este robô decola, dentro do período. */
   start: number;
+  /** Para onde olha ao chegar ao fim do caminho; sem ele, olha para onde andava. */
+  endYaw?: number;
 }
 
 export interface FlightWorld {
@@ -116,12 +118,12 @@ class FlightGrid {
 }
 
 /** A* em 8 direções sobre a grade. Empates decididos pela ordem das células: sempre igual. */
-function findPath(grid: FlightGrid, room: OfficeRoom, from: Point, to: Point): Point[] | null {
+function findPath(grid: FlightGrid, allowed: (x: number, z: number) => boolean, from: Point, to: Point): Point[] | null {
   const { columns, rows, blocked } = grid;
   // O posto é a saída: a folga da mesa, que fica colada nele, não pode prender o robô ali.
   const onOwnPost = (column: number, row: number) => Math.abs(grid.x(column) - from.x) <= POST_HALF && Math.abs(grid.z(row) - from.z) <= POST_HALF;
   const free = (column: number, row: number) =>
-    column >= 0 && row >= 0 && column < columns && row < rows && (onOwnPost(column, row) || !blocked[row * columns + column]) && flightAllowed(room, grid.x(column), grid.z(row));
+    column >= 0 && row >= 0 && column < columns && row < rows && (onOwnPost(column, row) || !blocked[row * columns + column]) && allowed(grid.x(column), grid.z(row));
   const startColumn = grid.column(from.x);
   const startRow = grid.row(from.z);
   const endColumn = grid.column(to.x);
@@ -196,6 +198,12 @@ function findPath(grid: FlightGrid, room: OfficeRoom, from: Point, to: Point): P
   return kept;
 }
 
+/** Um caminho livre entre dois pontos de um andar, ou null. Quem chama diz onde se pode passar. */
+export function routeBetween(solids: readonly OfficeBounds[], allowed: (x: number, z: number) => boolean, from: Point, to: Point): Point[] | null {
+  const path = findPath(new FlightGrid(solids), allowed, from, to);
+  return path && [{ x: from.x, z: from.z }, ...path.slice(1, -1), { x: to.x, z: to.z }];
+}
+
 /** Para onde cada sala voa. Pontos diferentes para os robôs se encontrarem pouco. */
 function destinations(): Record<string, Point> {
   const west = OFFICE_ROOMS_BY_ID.engenharia!.bounds.maxX + CORRIDOR / 2;
@@ -225,7 +233,7 @@ export function buildFlightPlans(seated: readonly { botId: string; seat: OfficeS
   const plans: FlightPlan[] = [];
   flyers.forEach(({ botId, seat }, index) => {
     const room = OFFICE_ROOMS_BY_ID[seat.roomId]!;
-    const path = findPath(grid, room, seat, goals[seat.roomId]!);
+    const path = findPath(grid, (x, z) => flightAllowed(room, x, z), seat, goals[seat.roomId]!);
     if (!path) return;
     const route = [{ x: seat.x, z: seat.z }, ...path.slice(1)];
     const length = pathLength(route);

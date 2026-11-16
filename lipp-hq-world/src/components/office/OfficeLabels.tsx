@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useHQStore } from "@/state/useHQStore";
 import { stateLabel } from "@/components/hud/fleetView";
+import { useClockMinute } from "@/world/office/activityClock";
+import { activeScenario } from "@/world/office/officeScenario";
+import { BOT_STATE_LABEL, activityAt, type BotState } from "@/world/office/officeActivity";
 import { CHIEF_ID, CHIEF_STATUS_LABEL, chiefIsAway } from "@/world/office/officeChief";
 import { BUILDING_ROOMS_BY_ID, FACADE_BOUNDS, FLOOR_LABEL, STORY, floorAtLevel, sceneryOfView, viewRooms } from "@/world/office/officeBuilding";
 import { expansionFloor } from "@/world/office/officeExpansion";
@@ -36,6 +39,8 @@ export function OfficeLabels() {
   const buildingView = useOfficeStore((state) => state.buildingView);
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
   const traveling = useOfficeStore((state) => state.traveling);
+  const scenario = mode === "demo" ? activeScenario() : null;
+  const minute = useClockMinute(Boolean(scenario));
   const expansion = expansionFloor(buildingView);
   const secrets = useSecretStore();
   const hoveredFloor = hoveredLevel === null ? null : floorAtLevel(hoveredLevel);
@@ -148,6 +153,7 @@ export function OfficeLabels() {
             {mode === "live" && bot.state && <span className={`bot-state-dot bot-state-${bot.state}`} aria-hidden />}
             <strong>{bot.name}</strong>
             {mode === "live" && bot.state && focusedRoomId === seat.roomId && <em>{stateLabel(bot.state)}</em>}
+            {scenario && <ActivityNote state={activityAt(scenario, bot.id, minute).state} />}
           </button>
         );
       })}
@@ -209,5 +215,15 @@ export function OfficeLabels() {
         </span>
       )}
     </div>
+  );
+}
+
+/** O estado simulado do bot no cenário, ao lado do nome: bolinha e palavra. */
+function ActivityNote({ state }: { state: BotState }) {
+  return (
+    <em className="office-activity" data-activity={state}>
+      <span className={`bot-state-dot activity-${state}`} aria-hidden />
+      {BOT_STATE_LABEL[state]}
+    </em>
   );
 }

@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
  * Prova do cenário Alyx Med (`&cenario=alyxmed`): seis equipes de três bots, cada uma no seu andar,
- * com a marca oficial; organograma e seletor com as equipes; e, sem o parâmetro, nada do cenário
- * baixado nem bot da Alyx Med na demonstração de sempre.
+ * com a marca oficial; organograma e seletor com as equipes; a atividade simulada (gaveta com
+ * conversa e tarefas, quadro por equipe, bot na sala de reunião numa hora fixa); e, sem o parâmetro,
+ * nada do cenário baixado nem bot da Alyx Med na demonstração de sempre.
+ *
+ * O relógio da simulação fica pausado e só anda por salto (`__HQ_ALYX_QA__`): nada aqui corre contra
+ * o relógio de verdade, por mais lenta que seja a máquina.
  *
  * Uso: HQ_TIMEOUT_SCALE=3 HQ_URL=http://127.0.0.1:5263 node scripts/visual-qa/office-alyxmed.mjs [pasta]
  * Perfil novo e /api/hq bloqueado: não fala com Hermes nenhum nem toca no navegador de ninguém.
@@ -37,6 +41,8 @@ const TEAMS = [
   // Na Operação, que vira Processos, senta também a direção geral.
   { floor: "operacao", name: "Processos", bots: ["alyx-ana", "alyx-leo", "alyx-clara"], extra: ["alyx-alyx"] },
 ];
+/** A reunião de Social Media das 14h, no lounge do andar 2 (limites da zona em `officeExpansion.ts`). */
+const MEETING = { floor: "expansao-2", at: "14:20", after: "15:10", bots: ["alyx-mel", "alyx-caio", "alyx-lara"], room: { minX: 2.4, maxX: 11.2, minZ: 1.6, maxZ: 9 } };
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({
@@ -64,6 +70,11 @@ async function open(url, requests = []) {
   page.on("pageerror", (error) => problems.push(String(error)));
   await page.goto(`${BASE}${url}`);
   await page.waitForFunction(() => window.__HQ_OFFICE_QA__?.state().load === "ready", null, { timeout: after(90000) });
+  // Meio-dia parado: todos no posto, na pausa do almoço, até alguém pular o relógio.
+  await page.evaluate(() => {
+    window.__HQ_ALYX_QA__?.pause();
+    window.__HQ_ALYX_QA__?.jumpToClock("12:00");
+  });
   const collapsed = await page.evaluate(() => document.querySelector(".office-hud")?.dataset.sidebarOpen === "false");
   if (collapsed && VW > 860) await page.click('[aria-label="Abrir navegação"]');
   return page;
@@ -144,7 +155,7 @@ for (const team of TEAMS) {
   });
 }
 
-await check("clicar num bot abre a gaveta dele, com a equipe e o andar", async () => {
+await check("clicar num bot abre a gaveta dele, com a equipe, o andar, o estado, as tarefas e a conversa", async () => {
   const team = TEAMS[1];
   await goTo(page, team.floor);
   await floorReady(page, team.floor, team.bots);
@@ -156,9 +167,65 @@ await check("clicar num bot abre a gaveta dele, com a equipe e o andar", async (
   assert.match(drawer, /Qualificação de leads/);
   assert.match(drawer, new RegExp(team.name));
   assert.match(drawer, /fictíci/);
+  // Ao meio-dia parado, a Lia está na pausa; as tarefas e a última mensagem vêm do cenário.
+  assert.equal(await page.getAttribute(`[data-demo-panel="${team.bots[0]}"] [data-activity]`, "data-activity"), "ocioso");
+  assert.match(drawer, /Pausa do meio-dia · 12:00/);
+  const tasks = await page.locator(`[data-demo-panel="${team.bots[0]}"] [data-demo-tasks] li`).count();
+  assert.ok(tasks >= 3, `tarefas na gaveta: ${tasks}`);
+  assert.match(await page.textContent("[data-demo-tasks]"), /Clínica Bem Viver/);
+  assert.match(await page.textContent("[data-demo-talk]"), /Lia: .*desconto|Lia: Das 12 clínicas/);
   await settled(page);
   await shot(page, "gaveta-bot");
+  await page.click("[data-open-conversation]");
+  await page.waitForSelector("[data-conversations]");
+  const talk = await page.textContent("[data-conversations]");
+  assert.match(talk, /Das 12 clínicas que pediram teste ontem/);
+  assert.match(talk, /Clínica Bem Viver/);
+  await shot(page, "conversa-bot");
+  await page.getByRole("button", { name: "Escritório", exact: true }).click();
   await page.keyboard.press("Escape");
+});
+
+await check("às 14h20, a equipe de Social Media está no lounge, em reunião; às 15h10, de volta ao posto", async () => {
+  await goTo(page, MEETING.floor);
+  await floorReady(page, MEETING.floor, MEETING.bots);
+  const before = (await state(page)).robots;
+  await page.evaluate((at) => window.__HQ_ALYX_QA__.jumpToClock(at), MEETING.at);
+  const { minX, maxX, minZ, maxZ } = MEETING.room;
+  await page.waitForFunction(({ bots, box }) => {
+    const robots = window.__HQ_OFFICE_QA__.state().robots;
+    return bots.every((id) => robots[id] && robots[id].x > box.minX && robots[id].x < box.maxX && robots[id].z > box.minZ && robots[id].z < box.maxZ);
+  }, { bots: MEETING.bots, box: { minX, maxX, minZ, maxZ } }, { timeout: after(30000) });
+  await page.waitForFunction((bots) => bots.every((id) => document.querySelector(`.office-labels [data-bot="${id}"] [data-activity]`)?.dataset.activity === "reuniao"), MEETING.bots, { timeout: after(15000) });
+  assert.match(await page.textContent("[data-scenario-clock]"), /14:20/);
+  const meeting = (await state(page)).robots;
+  for (const a of MEETING.bots) for (const b of MEETING.bots) {
+    if (a < b) assert.ok(Math.hypot(meeting[a].x - meeting[b].x, meeting[a].z - meeting[b].z) > 0.8, `${a} sobre ${b} na reunião`);
+  }
+  await page.mouse.move(4, 4);
+  await shot(page, "reuniao-expansao-2");
+  await page.evaluate((at) => window.__HQ_ALYX_QA__.jumpToClock(at), MEETING.after);
+  await page.waitForFunction(({ bots, before }) => {
+    const robots = window.__HQ_OFFICE_QA__.state().robots;
+    return bots.every((id) => Math.hypot(robots[id].x - before[id].x, robots[id].z - before[id].z) < 0.05);
+  }, { bots: MEETING.bots, before }, { timeout: after(15000) });
+  await page.evaluate(() => window.__HQ_ALYX_QA__.jumpToClock("12:00"));
+});
+
+await check("o quadro filtra por equipe, e cada uma tem cartões de exemplo", async () => {
+  await page.getByRole("button", { name: "Kanban", exact: true }).click();
+  await page.waitForSelector("[data-kanban]");
+  assert.match(await page.textContent("[data-kanban]"), /fictíci/);
+  const counts = {};
+  for (const id of ["leads", "tarefas", "social", "dev", "performance", "processos"]) {
+    await page.click(`[data-kanban-filter="equipe:${id}"]`);
+    counts[id] = await page.locator("[data-kanban-card]").count();
+    assert.ok(counts[id] >= 5, `${id}: ${counts[id]} cartões`);
+  }
+  await page.click('[data-kanban-filter="equipe:leads"]');
+  assert.match(await page.textContent("[data-kanban]"), /Clínica Vida\+ pediu demo do prontuário com IA, agendada qui 14h/);
+  await shot(page, "kanban-leads");
+  await page.getByRole("button", { name: "Escritório", exact: true }).click();
 });
 
 await check("o térreo recebe com a marca no lugar da placa do Lipp HQ", async () => {
@@ -190,6 +257,8 @@ await check("sem cenário, nenhum arquivo dele é baixado e não há bot da Alyx
   await plain.waitForLoadState("networkidle");
   const now = await state(plain);
   assert.ok(!now.bots.some((id) => id.startsWith("alyx-")), now.bots.join());
+  assert.equal(await plain.evaluate(() => "__HQ_ALYX_QA__" in window), false, "relógio do cenário fora do cenário");
+  assert.equal(await plain.locator("[data-scenario-clock], .office-labels [data-activity]").count(), 0);
   assert.equal(now.bots.length, 7);
   assert.ok(now.scenery.length >= 3, "os figurantes da expansão continuam");
   const leaked = requests.filter((url) => SCENARIO_FILE.test(url));

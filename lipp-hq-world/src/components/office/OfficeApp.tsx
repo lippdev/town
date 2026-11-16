@@ -13,6 +13,9 @@ import { placeEveryone } from "@/world/office/officeChief";
 import { assignSeats, demoBots, demoSeating, fleetBots } from "@/world/office/officeRoster";
 import type { OfficeMode } from "@/world/office/officeRoute";
 import { useOfficeStore } from "@/world/office/officeStore";
+import { activeScenario } from "@/world/office/officeScenario";
+import { startClock } from "@/world/office/activityClock";
+import { currentMinutes } from "@/world/office/dayCycle";
 import { OfficeHud } from "./OfficeHud";
 import { OfficeLabels } from "./OfficeLabels";
 import "@fontsource-variable/onest";
@@ -79,6 +82,8 @@ export function OfficeApp({ mode }: { mode: OfficeMode }) {
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   // Antes do primeiro quadro: a frota real nunca chega a montar o prédio.
   useState(() => useOfficeStore.getState().setMode(mode));
+  // O dia simulado do cenário começa na hora do céu: a de `?hora=` ou a de Brasília.
+  useState(() => activeScenario() && mode === "demo" && startClock(currentMinutes(window.location.search)));
   useRoster(mode);
   useHumans(mode);
   useRobotLooks();

@@ -1392,3 +1392,19 @@ button.org-node:hover { border-color: #4a4a47; background: #262625; }
 .office-hud[data-scenario="alyxmed"] { --hq-accent: #2c8ea7; }
 .office-hud[data-scenario="alyxmed"] .office-button.primary { background: #2c8ea7; color: #fff; }
 .office-hud[data-scenario="alyxmed"] .office-button.primary:hover { background: #1d6b82; }
+
+/* Atividade simulada do cenário: a mesma cor no rótulo, na gaveta e no relógio. */
+.office-activity { display: inline-flex; align-items: center; gap: 4px; }
+.activity-trabalhando { background: #4ade80; box-shadow: 0 0 6px rgba(74, 222, 128, 0.8); }
+.activity-reuniao { background: #38bdf8; }
+.activity-aprovacao { background: #facc15; }
+.activity-ocioso { background: #64748b; }
+.drawer .office-activity-now, .office-activity-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 14px; font-size: 12px; }
+.office-activity-now small { color: var(--hq-text-dim); }
+.office-demo-section { display: grid; gap: 6px; margin-bottom: 14px; }
+.office-demo-section h3 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hq-text-dim); }
+.office-demo-section ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.office-demo-section li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 1.35; }
+.office-demo-section li span:last-child { flex: none; color: var(--hq-text-dim); font-size: 11px; }
+.office-demo-quote { margin: 0; padding: 6px 8px; border-left: 2px solid var(--tag-color, #2c8ea7); background: rgba(255, 255, 255, 0.04); font-size: 12px; line-height: 1.4; }
+.office-clock { font-variant-numeric: tabular-nums; }

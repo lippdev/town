@@ -7,6 +7,9 @@
  * fosse avaliado antes, `installScenario` falha alto em vez de mostrar um prédio pela metade.
  */
 
+import type { ConversationItem } from "@/components/office/conversationModel";
+import type { KanbanColumnId } from "@/components/office/kanbanModel";
+
 export type ScenarioId = "alyxmed";
 
 export interface ScenarioPoint {
@@ -62,11 +65,43 @@ export interface ScenarioBot {
   seat: string;
 }
 
+/** Lugar de pé na sala de reunião, com o rosto para onde olha. */
+export interface ScenarioSpot extends ScenarioPoint {
+  yaw: number;
+}
+
+/** Reunião fixa da equipe, todo dia, em horas do relógio da demonstração ("09:30"). */
+export interface ScenarioMeeting {
+  title: string;
+  start: string;
+  end: string;
+}
+
 export interface ScenarioTeam {
   id: string;
   name: string;
   /** Andar da equipe. */
   floor: string;
+  /** Sala onde a equipe se reúne, e um lugar de pé ali para cada bot, na ordem da equipe. */
+  meetingRoom: string;
+  spots: readonly ScenarioSpot[];
+  meetings: readonly ScenarioMeeting[];
+}
+
+/** Cartão de exemplo do quadro: sempre de um bot, sempre fictício. */
+export interface ScenarioTask {
+  id: string;
+  owner: string;
+  title: string;
+  column: KanbanColumnId;
+}
+
+/** A atividade simulada: a mesma semente dá o mesmo dia. */
+export interface ScenarioActivity {
+  seed: number;
+  tasks: readonly ScenarioTask[];
+  /** Conversa de exemplo de cada bot, pelo id. As mensagens não levam horário. */
+  talks: Readonly<Record<string, readonly ConversationItem[]>>;
 }
 
 export interface OfficeScenario {
@@ -95,6 +130,7 @@ export interface OfficeScenario {
   lobby: { panels: readonly ScenarioPanel[] };
   /** O letreiro do topo da torre: a placa é a de sempre, muda a imagem. */
   facade: Pick<ScenarioPanel, "url" | "background" | "pad" | "ratio">;
+  activity: ScenarioActivity;
 }
 
 let active: OfficeScenario | null = null;
