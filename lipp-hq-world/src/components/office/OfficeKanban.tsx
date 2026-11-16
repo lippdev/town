@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { browserStorage } from "@/avatar/human/persistence";
 import { useOfficeStore } from "@/world/office/officeStore";
+import { activeScenario } from "@/world/office/officeScenario";
 import { KANBAN_COLUMNS, OWNER_FILIPE, TITLE_MAX, addCard, loadCards, moveCard, removeCard, saveCards, type KanbanCard, type KanbanColumnId } from "./kanbanModel";
 
 const ALL = "todos";
 const FILIPE = { id: OWNER_FILIPE, name: "Filipe", color: "#f2f5fa" };
+const TEAM = "equipe:";
 
 /** Quadro de tarefas da demonstração, por cima da cena. Arrastar ou escolher a coluna move o cartão. */
 export function OfficeKanban({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
@@ -28,13 +30,19 @@ export function OfficeKanban({ onClose, embedded = false }: { onClose: () => voi
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const visible = cards.filter((card) => filter === ALL || card.owner === filter);
+  // No cenário, o filtro é por equipe: dezenove donos não cabem numa fileira de botões.
+  const scenario = activeScenario();
+  const teamOf = (owner: string) => scenario?.bots.find((bot) => bot.id === owner)?.team;
+  const filters = scenario
+    ? scenario.teams.map((team) => ({ id: `${TEAM}${team.id}`, name: team.name, color: scenario.bots.find((bot) => bot.team === team.id)?.color ?? "" }))
+    : owners;
+  const visible = cards.filter((card) => filter === ALL || card.owner === filter || (filter.startsWith(TEAM) && teamOf(card.owner) === filter.slice(TEAM.length)));
   return (
     <div className={embedded ? "kanban embedded" : "kanban"} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : true} aria-label="Quadro de tarefas" data-kanban>
       <header className="kanban-head">
         <div>
           <h2>Kanban</h2>
-          <p>Exemplo salvo só neste navegador. Ainda não envia nada aos bots.</p>
+          <p>{scenario ? `Exemplo da ${scenario.brand.name}: clínicas e números fictícios, salvo só neste navegador.` : "Exemplo salvo só neste navegador. Ainda não envia nada aos bots."}</p>
         </div>
         <button type="button" className="panel-close" onClick={onClose} aria-label="Fechar (Esc)" title="Fechar (Esc)">
           <X size={18} aria-hidden />
@@ -56,9 +64,9 @@ export function OfficeKanban({ onClose, embedded = false }: { onClose: () => voi
         </select>
         <button type="submit" className="office-button primary" disabled={!title.trim()}>Adicionar</button>
       </form>
-      <div className="kanban-filter" role="group" aria-label="Filtrar por responsável">
-        {[{ id: ALL, name: "Todos", color: "" }, ...owners].map((candidate) => (
-          <button key={candidate.id} type="button" className={filter === candidate.id ? "active" : undefined} aria-pressed={filter === candidate.id} onClick={() => setFilter(candidate.id)}>
+      <div className="kanban-filter" role="group" aria-label={scenario ? "Filtrar por equipe" : "Filtrar por responsável"}>
+        {[{ id: ALL, name: "Todos", color: "" }, ...filters].map((candidate) => (
+          <button key={candidate.id} type="button" data-kanban-filter={candidate.id} className={filter === candidate.id ? "active" : undefined} aria-pressed={filter === candidate.id} onClick={() => setFilter(candidate.id)}>
             {candidate.color && <span className="agent-dot" style={{ background: candidate.color }} aria-hidden />}
             {candidate.name}
           </button>

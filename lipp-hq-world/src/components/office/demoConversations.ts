@@ -1,3 +1,4 @@
+import { activeScenario } from "@/world/office/officeScenario";
 import type { ConversationItem } from "./conversationModel";
 
 const MINUTE = 60_000;
@@ -88,6 +89,9 @@ const SCRIPTS: Record<string, Script> = {
 };
 
 export function demoThread(botId: string, now: number): ConversationItem[] {
+  // O cenário traz a conversa dos bots dele; as mensagens ficam sem horário, porque o dia é simulado.
+  const talk = activeScenario()?.activity.talks[botId];
+  if (talk) return talk.map((item) => ({ ...item }));
   return SCRIPTS[botId]?.((minutesAgo) => now - minutesAgo * MINUTE) ?? [];
 }
 
