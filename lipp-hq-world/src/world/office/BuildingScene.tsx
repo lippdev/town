@@ -6,6 +6,8 @@ import { buildFacade, buildingSignTexture } from "./buildingFacade";
 import { OfficeCity } from "./CityScene";
 import { TOWER_TOP, sectionAt } from "./floorTravel";
 import { officeRuntime, travelSinks, useOfficeStore } from "./officeStore";
+import { activeScenario } from "./officeScenario";
+import { panelTexture } from "./ImagePanel";
 
 const CUT_SINK = 0.05;
 const PLATE_DEPTH = 0.3;
@@ -73,12 +75,17 @@ function LevelBand({ level }: { level: number }) {
   );
 }
 
+const SIGN_SIZE: [number, number] = [11.4, 1.9];
+
 function Facade() {
   const hoveredLevel = useOfficeStore((state) => state.hoveredLevel);
   const closed = useOfficeStore((state) => state.buildingView === "exterior" && !state.traveling);
   const gl = useThree((state) => state.gl);
   const build = useMemo(buildFacade, []);
-  const sign = useMemo(buildingSignTexture, []);
+  const sign = useMemo(() => {
+    const facade = activeScenario()?.facade;
+    return facade ? panelTexture(facade, SIGN_SIZE[0], SIGN_SIZE[1]) : buildingSignTexture();
+  }, []);
   const clip = useMemo(() => [new Plane(new Vector3(0, -1, 0), 1000)], []);
   const holder = useRef<Group>(null);
   const plate = useRef<Mesh>(null);
@@ -140,7 +147,7 @@ function Facade() {
         <meshStandardMaterial ref={plateMaterial} color="#31353c" roughness={0.9} transparent />
       </mesh>
       <mesh position={[(minX + maxX) / 2, BUILDING_HEIGHT + 1.85, maxZ - CROWN_STEPS[0]!.inset + 0.2]} name="placa-do-predio">
-        <planeGeometry args={[11.4, 1.9]} />
+        <planeGeometry args={SIGN_SIZE} />
         <meshBasicMaterial map={sign} toneMapped={false} clippingPlanes={clip} />
       </mesh>
       {closed && hoveredLevel !== null && <LevelBand level={hoveredLevel} />}

@@ -59,6 +59,8 @@ import { OfficeRobots } from "./RobotBodies";
 import { thinIslands } from "./thinIslands";
 import type { OfficeMode } from "./officeRoute";
 import { travelSinks, useOfficeStore } from "./officeStore";
+import { activeScenario, type ScenarioPanel } from "./officeScenario";
+import { ImagePanel } from "./ImagePanel";
 
 type BuildingFloors = readonly FloorId[];
 
@@ -528,8 +530,17 @@ function FloorSign({ spec }: { spec: FloorSignSpec }) {
   );
 }
 
+/** Placas com a marca do cenário: o nome leva o andar, e o QA acha cada uma por ele. */
+function Panels({ floor, panels }: { floor: FloorId; panels?: readonly ScenarioPanel[] }) {
+  return <>{panels?.map((spec, index) => <ImagePanel key={`${spec.url}-${index}`} spec={spec} name={`marca-${floor}-${index}`} />)}</>;
+}
+
+/** No cenário de empresa, a recepção mostra a marca dela no lugar da placa do Lipp HQ. */
+const SCENARIO = activeScenario();
+const LOBBY_SIGNS_SHOWN = SCENARIO ? LOBBY_SIGNS.filter((spec) => spec.text !== "LIPP HQ") : LOBBY_SIGNS;
+
 /** Andar feito só de peças do kit: sem as paredes que sobem nem as cadeiras do hall. */
-function KitFloor({ floor, build, signs, seats, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; seats?: readonly OfficeSeat[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
+function KitFloor({ floor, build, signs, seats, panels, quality, materials }: { floor: FloorId; build: FloorBuild; signs: readonly FloorSignSpec[]; seats?: readonly OfficeSeat[]; panels?: readonly ScenarioPanel[]; quality: GraphicsQuality; materials: Record<SurfaceKey, Material> }) {
   return (
     <>
       <group name={`andar-${floor}`}>
@@ -537,6 +548,7 @@ function KitFloor({ floor, build, signs, seats, quality, materials }: { floor: F
       </group>
       {seats && <HumanChairs material={materials.matte} seats={seats} />}
       {signs.map((spec) => <FloorSign key={spec.text} spec={spec} />)}
+      <Panels floor={floor} panels={panels} />
       <FloorProps floor={floor} props={build.props} quality={quality} />
     </>
   );
@@ -552,6 +564,7 @@ function OperacaoFloor({ quality, materials }: { quality: GraphicsQuality; mater
       </group>
       <HumanChairs material={materials.matte} />
       <RaisedWalls build={build} materials={materials} />
+      <Panels floor="operacao" panels={SCENARIO?.operacao.panels} />
       <FloorProps floor="operacao" props={build.props} quality={quality} />
     </>
   );
@@ -580,7 +593,7 @@ function FloorsWorld({ quality }: { quality: GraphicsQuality }) {
       )}
       {mounted.includes("terreo") && (
         <FloorGroup floor="terreo">
-          <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS} quality={quality} materials={materials} />
+          <KitFloor floor="terreo" build={buildLobby()} signs={LOBBY_SIGNS_SHOWN} panels={SCENARIO?.lobby.panels} quality={quality} materials={materials} />
         </FloorGroup>
       )}
       {mounted.includes("esconderijo") && (
@@ -591,7 +604,7 @@ function FloorsWorld({ quality }: { quality: GraphicsQuality }) {
       )}
       {EXPANSION_FLOORS.filter((floor) => mounted.includes(floor.id)).map((floor) => (
         <FloorGroup key={floor.id} floor={floor.id}>
-          <KitFloor floor={floor.id} build={buildExpansion(floor.id)} signs={expansionSigns(floor)} seats={expansionSeats(floor)} quality={quality} materials={materials} />
+          <KitFloor floor={floor.id} build={buildExpansion(floor.id)} signs={expansionSigns(floor)} seats={expansionSeats(floor)} panels={floor.panels} quality={quality} materials={materials} />
         </FloorGroup>
       ))}
       {/* Um único par de render targets: remontar ContactShadows por andar vaza GPU no drei. */}
